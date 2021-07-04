@@ -16,8 +16,8 @@ from .protocol import Request
 from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
+from .url import parse_uri
 from .workspace import is_subpath_of
-from urllib.parse import urlparse
 import html
 import itertools
 import linecache
@@ -97,6 +97,14 @@ COMPLETION_KINDS = [
     (sublime.KIND_ID_KEYWORD,    "o", "Operator"),
     (sublime.KIND_ID_TYPE,       "t", "Type Parameter"),
 ]
+
+
+class InvalidUriSchemeException(Exception):
+    def __init__(self, uri: str) -> None:
+        self.uri = uri
+
+    def __str__(self) -> str:
+        return "invalid URI scheme: {}".format(self.uri)
 
 
 def get_line(window: sublime.Window, file_name: str, row: int) -> str:
@@ -194,7 +202,11 @@ def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str
     """
     DEPRECATED
     """
-    return to_encoded_filename(*get_uri_and_position_from_location(location))
+    uri, position = get_uri_and_position_from_location(location)
+    scheme, parsed = parse_uri(uri)
+    if scheme == "file":
+        return to_encoded_filename(parsed, position)
+    raise InvalidUriSchemeException(uri)
 
 
 class MissingUriError(Exception):
@@ -664,8 +676,8 @@ def location_to_human_readable(
     Format an LSP Location (or LocationLink) into a string suitable for a human to read
     """
     uri, position = get_uri_and_position_from_location(location)
-    parsed = urlparse(uri)
-    if parsed.scheme == "file":
+    scheme, parsed = parse_uri(uri)
+    if scheme == "file":
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):

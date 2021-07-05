@@ -5,6 +5,7 @@ import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_lens import LspCodeLensCommand
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionItemCommand
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
@@ -21,6 +22,7 @@ from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.panels import WindowPanelListener
+from .plugin.core.protocol import Location
 from .plugin.core.protocol import Response
 from .plugin.core.protocol import WorkspaceFolder
 from .plugin.core.registry import LspRecheckSessionsCommand
@@ -36,8 +38,8 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.types import ClientConfig
 from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
+from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
-from .plugin.code_lens import LspCodeLensCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
@@ -227,3 +229,32 @@ class Listener(sublime_plugin.EventListener):
             view = window.active_view()
             if view:
                 view.run_command("lsp_hover", {"only_diagnostics": True})
+
+
+class LspOpenLocationCommand(sublime_plugin.TextCommand):
+    """
+    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
+    """
+
+    def run(
+        self,
+        _: sublime.Edit,
+        location: Location,
+        session_name: Optional[str] = None,
+        flags: int = 0,
+        group: int = -1
+    ) -> None:
+        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+
+    def _run_async(self, location: Location, session_name: Optional[str], flags: int = 0, group: int = -1) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        windows.lookup(window).open_location_async(location, session_name, self.view, flags, group).then(
+            lambda success: self._handle_continuation(location, success))
+
+    def _handle_continuation(self, location: Location, success: bool) -> None:
+        if not success:
+            uri, _ = get_uri_and_position_from_location(location)
+            message = "Failed to open {}".format(uri)
+            sublime.status_message(message)

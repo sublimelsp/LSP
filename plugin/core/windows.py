@@ -6,8 +6,10 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
+from .promise import Promise
 from .protocol import Diagnostic
 from .protocol import Error
+from .protocol import Location
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
@@ -188,6 +190,19 @@ class WindowManager(Manager):
 
     def disable_config_async(self, config_name: str) -> None:
         self._configs.disable_config(config_name)
+
+    def open_location_async(
+        self,
+        location: Location,
+        session_name: Optional[str],
+        view: sublime.View,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[bool]:
+        for session in self.sessions(view):
+            if session_name is None or session_name == session.config.name:
+                return session.open_location_async(location, flags, group)
+        return Promise.resolve(False)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)

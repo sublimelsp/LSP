@@ -28,6 +28,11 @@ GOTO_RESPONSE = [
                 'character': 5,
                 'line': 1
             },
+            'end':
+            {
+                'character': 5,
+                'line': 1
+            }
         }
     }
 ]

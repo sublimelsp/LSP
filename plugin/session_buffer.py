@@ -121,6 +121,13 @@ class SessionBuffer:
             return sv.get_language_id()
         return None
 
+    def get_view_in_group(self, group: int) -> sublime.View:
+        for sv in self.session_views:
+            view = sv.get_view_for_group(group)
+            if view:
+                return view
+        return next(iter(self.session_views)).view
+
     @property
     def language_id(self) -> str:
         """

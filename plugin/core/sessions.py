@@ -933,7 +933,14 @@ class Session(TransportCallbacks):
                 if not isinstance(candidate, str):
                     return False
                 candidate_scheme, candidate_path = parse_uri(candidate)
-                return candidate_scheme == "file" and os.path.samefile(parsed, candidate_path)
+                if candidate_scheme != "file":
+                    return False
+                if parsed == candidate_path:
+                    return True
+                try:
+                    return os.path.samefile(parsed, candidate_path)
+                except FileNotFoundError:
+                    return False
 
             predicate = compare_by_samefile
         else:

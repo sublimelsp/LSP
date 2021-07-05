@@ -338,6 +338,9 @@ class SessionViewProtocol(Protocol):
     def get_language_id(self) -> Optional[str]:
         ...
 
+    def get_view_for_group(self, group: int) -> Optional[sublime.View]:
+        ...
+
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
@@ -375,6 +378,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def get_language_id(self) -> Optional[str]:
+        ...
+
+    def get_view_in_group(self, group: int) -> sublime.View:
         ...
 
     def register_capability_async(
@@ -923,7 +929,6 @@ class Session(TransportCallbacks):
         scheme, parsed = parse_uri(uri)
         if scheme == "file":
             if not os.path.exists(parsed):
-                debug("{}: path does not exist:".format(self.config.name), uri)
                 return None
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
@@ -1153,6 +1158,15 @@ class Session(TransportCallbacks):
             pos = r["start"] if r else {"line": 0, "character": 0}  # type: Position
             self.window.open_file(to_encoded_filename(path, pos), flags | sublime.ENCODED_POSITION, group)
             return Promise.resolve(True)
+        # Try to find a pre-existing session-buffer
+        sb = self.get_session_buffer_for_uri_async(uri)
+        if sb:
+            view = sb.get_view_in_group(group)
+            self.window.focus_view(view)
+            if r:
+                center_selection(view, r)
+            return Promise.resolve(True)
+        # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             # I cannot type-hint an unpacked tuple
             pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]

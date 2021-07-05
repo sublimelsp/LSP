@@ -944,8 +944,6 @@ class Session(TransportCallbacks):
         else:
 
             def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
-                if not sb:
-                    return False
                 return sb.get_uri() == parsed if sb else False
 
             predicate = compare_by_string

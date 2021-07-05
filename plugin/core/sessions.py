@@ -928,8 +928,6 @@ class Session(TransportCallbacks):
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         scheme, path = parse_uri(uri)
         if scheme == "file":
-            if not os.path.exists(path):
-                return None
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:

@@ -217,8 +217,7 @@ class SessionView:
         for key_tag in key_tags.values():
             self.view.erase_regions(key_tag)
         data = self.session_buffer.data_per_severity.get((severity, multiline))
-        # TODO: Why do we have this data.icon check?
-        if data and data.icon and severity <= max_severity_level:
+        if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
                 tag_scope = self.diagnostics_tag_scope(tag)

@@ -1,7 +1,6 @@
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.url import uri_to_filename
 from LSP.plugin.core.url import view_to_uri
-from LSP.plugin.core.url import _to_resource_uri
 import sys
 import unittest
 import unittest.mock

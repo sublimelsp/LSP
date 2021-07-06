@@ -68,7 +68,7 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 
     See: https://github.com/sublimehq/sublime_text/issues/3742
     """
-    return "res://Packages{}".format(quote(path[len(prefix):]))
+    return "res://Packages{}".format(pathname2url(path[len(prefix):]))
 
 
 def _uppercase_driveletter(match: Any) -> str:

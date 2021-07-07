@@ -1,5 +1,4 @@
 from .typing import Any, Tuple
-from urllib.parse import quote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
@@ -68,7 +67,7 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 
     See: https://github.com/sublimehq/sublime_text/issues/3742
     """
-    return "res://Packages{}".format(quote(path[len(prefix):]))
+    return "res://Packages{}".format(pathname2url(path[len(prefix):]))
 
 
 def _uppercase_driveletter(match: Any) -> str:

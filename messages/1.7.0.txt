@@ -1,0 +1,39 @@
+=> 1.7.0
+
+# New Helper Packages
+
+- LSP-tailwindcss: https://packagecontrol.io/packages/LSP-tailwindcss
+
+# Fixes and Features
+
+- Fix res URIs for Windows (#1785) (Raoul Wols)
+- draw the diagnostics in the view regardless if we have an icon for the gutter (Predrag Nikolic)
+- Even more fixes for matching up buffers with URIs (#1782) (Raoul Wols)
+- Allow third-party packages to open abstract URIs as well (#1781) (Raoul Wols)
+- Open existing views with custom URIs (#1779) (Raoul Wols)
+- Fix key errors for log messages when running tests (#1780) (Raoul Wols)
+- Fix location_to_encoded_filename function (Raoul Wols)
+- Allow styling of code lens phantoms (Janos Wortmann)
+- Fix: should reset when uri changes via settings() (Raoul Wols)
+- Add API for registering an external file watcher implementation (#1764) (Rafał Chłodnicki)
+- You can display Code Lenses as phantoms (#1750) (Danny)
+  See the setting "show_code_lens".
+- Fix file comparisons (#1775) (Raoul Wols)
+- Unify mac and linux CI workflows (#1773) (Rafał Chłodnicki)
+- Add Windows CI (#1765) (Raoul Wols)
+- Normalize drive letter in Windows filepaths to uppercase (#1772) (jwortmann)
+- Account for FS case-insensitivity (#1771) (Raoul Wols)
+- Update sublime-package.json for 'schemes' (#1769) (Raoul Wols)
+- Ignore plugin classes that don't return name() (#1768) (Rafał Chłodnicki)
+- Send a code lens request if one hasn't been sent yet (Rapptz)
+- Allow attaching to URI schemes other than the 'file' scheme (#1758) (Raoul Wols)
+- Document LSP-tailwindcss (#1767) (Предраг Николић / Predrag Nikolic)
+- Make language-ids.sublime-settings accessible (Raoul Wols)
+  See the command LSP: Language ID Mapping Overrides in the command palette.
+- Index SessionBuffer weak value dictionary by id(session) (#1762) (Raoul Wols)
+- New key binding context: lsp.session_with_name (Raoul Wols)
+  You can refer to language server configuration names in key binding contexts.
+- Remove unneeded abstract methods (Raoul Wols)
+- Fix wrong indent (Raoul Wols)
+- Prevent infinite loop when server returns empty code lenses (Raoul Wols)
+- Refactor code lenses (#1755) (Danny)

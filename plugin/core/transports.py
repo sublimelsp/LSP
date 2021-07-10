@@ -236,8 +236,8 @@ def kill_all_subprocesses() -> None:
             pass
 
 
-def _fixup_startup_args(args: List[str]) -> Optional[subprocess.STARTUPINFO]:
-    startupinfo = None  # type: Optional[subprocess.STARTUPINFO]
+def _fixup_startup_args(args: List[str]) -> Any:
+    startupinfo = None
     if sublime.platform() == "windows":
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW

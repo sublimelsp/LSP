@@ -311,15 +311,7 @@ Follow installation instructions on [LSP-promql](https://github.com/prometheus-c
 
 ## PHP
 
-There are multiple options:
-
-### Intelephense
-
 Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
-
-### Serenata
-
-Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/LSP-serenata).
 
 ## PowerShell
 

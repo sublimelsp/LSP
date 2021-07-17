@@ -16,8 +16,8 @@ def open_location_async(session: Session, location: Union[Location, LocationLink
     if side_by_side:
         flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
 
-    def check_success_async(success: bool) -> None:
-        if not success:
+    def check_success_async(view: Optional[sublime.View]) -> None:
+        if not view:
             sublime.error_message("Unable to open URI")
 
     session.open_location_async(location, flags).then(check_success_async)

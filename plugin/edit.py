@@ -1,9 +1,10 @@
+from .core.edit import TextEditTuple
+from .core.logging import debug
+from .core.typing import List, Optional, Any, Generator, Iterable
+from contextlib import contextmanager
+import operator
 import sublime
 import sublime_plugin
-from .core.edit import sort_by_application_order, TextEditTuple
-from .core.logging import debug
-from .core.typing import List, Optional, Any, Generator
-from contextlib import contextmanager
 
 
 @contextmanager
@@ -29,7 +30,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
             view_version = self.view.change_count()
             last_row, _ = self.view.rowcol_utf16(self.view.size())
-            for start, end, replacement, version in reversed(sort_by_application_order(changes)):
+            for start, end, replacement, version in reversed(_sort_by_application_order(changes)):
                 if version is not None and version != view_version:
                     debug('ignoring edit due to non-matching document version')
                     continue
@@ -53,3 +54,15 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 self.view.replace(edit, region, replacement)
             else:
                 self.view.erase(edit, region)
+
+
+def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> List[TextEditTuple]:
+    # The spec reads:
+    # > However, it is possible that multiple edits have the same start position: multiple
+    # > inserts, or any number of inserts followed by a single remove or replace edit. If
+    # > multiple inserts have the same position, the order in the array defines the order in
+    # > which the inserted strings appear in the resulting text.
+    # So we sort by start position. But if multiple text edits start at the same position,
+    # we use the index in the array as the key.
+
+    return list(sorted(changes, key=operator.itemgetter(0)))

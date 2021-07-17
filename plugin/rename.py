@@ -1,4 +1,3 @@
-from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
 from .core.edit import TextEditTuple
 from .core.panels import ensure_panel
@@ -8,10 +7,16 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
+from .core.sessions import Session
+from .core.types import PANEL_FILE_REGEX
+from .core.types import PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
-from .core.views import first_selection_region, range_to_region, get_line
+from .core.url import parse_uri
+from .core.views import first_selection_region
+from .core.views import get_line
+from .core.views import range_to_region
 from .core.views import text_document_position_params
+import functools
 import os
 import sublime
 import sublime_plugin
@@ -107,33 +112,28 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)
-        if session:
-            params = text_document_position_params(self.view, position)
-            params["newName"] = new_name
-            session.send_request(
-                Request("textDocument/rename", params, self.view, progress=True),
-                # This has to run on the main thread due to calling apply_workspace_edit
-                lambda r: sublime.set_timeout(lambda: self.on_rename_result(r))
-            )
+        if not session:
+            return
+        params = text_document_position_params(self.view, position)
+        params["newName"] = new_name
+        request = Request("textDocument/rename", params, self.view, progress=True)
+        session.send_request(request, functools.partial(self._on_rename_result_async, session))
 
-    def on_rename_result(self, response: Any) -> None:
-        window = self.view.window()
-        if window:
-            if response:
-                changes = parse_workspace_edit(response)
-                file_count = len(changes.keys())
-                if file_count > 1:
-                    total_changes = sum(map(len, changes.values()))
-                    message = "Replace {} occurrences across {} files?".format(total_changes, file_count)
-                    choice = sublime.yes_no_cancel_dialog(message, "Replace", "Dry Run")
-                    if choice == sublime.DIALOG_YES:
-                        apply_workspace_edit(window, changes)
-                    elif choice == sublime.DIALOG_NO:
-                        self._render_rename_panel(changes, total_changes, file_count)
-                else:
-                    apply_workspace_edit(window, changes)
-            else:
-                window.status_message('Nothing to rename')
+    def _on_rename_result_async(self, session: Session, response: Any) -> None:
+        if not response:
+            return session.window.status_message('Nothing to rename')
+        changes = parse_workspace_edit(response)
+        count = len(changes.keys())
+        if count == 1:
+            session.apply_parsed_workspace_edits(changes)
+            return
+        total_changes = sum(map(len, changes.values()))
+        message = "Replace {} occurrences across {} files?".format(total_changes, count)
+        choice = sublime.yes_no_cancel_dialog(message, "Replace", "Dry Run")
+        if choice == sublime.DIALOG_YES:
+            session.apply_parsed_workspace_edits(changes)
+        elif choice == sublime.DIALOG_NO:
+            self._render_rename_panel(changes, total_changes, count)
 
     def on_prepare_result(self, response: Any, pos: int) -> None:
         if response is None:
@@ -165,7 +165,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _render_rename_panel(
         self,
-        changes: Dict[str, List[TextEditTuple]],
+        changes_per_uri: Dict[str, List[TextEditTuple]],
         total_changes: int,
         file_count: int
     ) -> None:
@@ -176,11 +176,18 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not panel:
             return
         to_render = []  # type: List[str]
-        for file, file_changes in changes.items():
-            to_render.append('{}:'.format(self._get_relative_path(file)))
-            for edit in file_changes:
+        for uri, changes in changes_per_uri.items():
+            scheme, file = parse_uri(uri)
+            if scheme == "file":
+                to_render.append('{}:'.format(self._get_relative_path(file)))
+            else:
+                to_render.append('{}:'.format(uri))
+            for edit in changes:
                 start = edit[0]
-                line_content = get_line(window, file, start[0])
+                if scheme == "file":
+                    line_content = get_line(window, file, start[0])
+                else:
+                    line_content = '<no preview available>'
                 to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
             to_render.append("")  # this adds a spacing between filenames
         characters = "\n".join(to_render)

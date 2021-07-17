@@ -198,11 +198,11 @@ class WindowManager(Manager):
         view: sublime.View,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[bool]:
+    ) -> Promise[Optional[sublime.View]]:
         for session in self.sessions(view):
             if session_name is None or session_name == session.config.name:
                 return session.open_location_async(location, flags, group)
-        return Promise.resolve(False)
+        return Promise.resolve(None)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)

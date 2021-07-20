@@ -325,7 +325,7 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
     ```json
     {
         "clients": {
-            "reason": {
+            "phpactor": {
                 "enabled": true,
                 "command": ["PATH/TO/phpactor", "language-server"],
                 "selector": "source.php"

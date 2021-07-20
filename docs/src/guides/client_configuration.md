@@ -1,13 +1,18 @@
 # Client Configuration
 
+## Custom client configuration
+
+!!! Note
+    The external LSP-* helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.
+
 After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
-LSP ships with default configurations for a few language servers, but these need to be enabled before they will start.
+LSP ships with configurations for a few language servers, but these need to be enabled before they will start.
 To globally enable a server, open the Command Palette and choose "LSP: Enable Language Server Globally".
 This will add `"enabled": true` to the corresponding language server setting under the `"clients"` key in your user-settings file for LSP.
-Your user-settings file is stored at `Packages/User/LSP.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Settings" from the menu.
+Your user-settings file is stored at `Packages/User/LSP.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Settings" from the menu or with the `Preferences: LSP Settings` command from the Command Palette.
 If your language server is missing or not configured correctly, you need to add/override further settings which are explained below.
 
-Here is an example of the `LSP.sublime-settings` file with configurations for the JavaScript/TypeScript server:
+Below is an example of the `LSP.sublime-settings` file with configurations for the JavaScript/TypeScript server. Note that for this particular example it's recommended to use the `LSP-typescript` package instead of creating a custom client configuration.
 
 ```js
 {
@@ -59,14 +64,15 @@ Some language servers support multiple languages, which can be specified in the 
 | initializationOptions | options to send to the server at startup (rarely used) |
 | document_selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "document_selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
 | feature_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "feature_selector" to `text.html` for HTML server and `source.php` to PHP server. Note: when the "feature_selector" is missing, it will be the same as the "document_selector".
-| languageId | identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#textDocumentItem) |
-| languages | group `document_selector` and `languageId` together for servers that support more than one language |
+| languageId | Identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem) |
+| languages | Group `document_selector` and `languageId` together for servers that support more than one language |
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
+| disabled_capabilities | Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being `true`. Refer to the `ServerCapabilities` structure in [LSP capabilities](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) to find capabilities that you might want to disable. Note that the value should be `true` rather than `false` for capabilites that you want to disable. For example: `"signatureHelpProvider": true` |
 
-You can figure out the scope with Tools > Developer > Show Scope Name.
+You can figure out the scope of the current view with `Tools > Developer > Show Scope`.
 You can figure out the syntax by opening the ST console and running `view.settings().get("syntax")`.
 
 The default transport is stdio, but TCP is also supported.
@@ -99,7 +105,7 @@ Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_acti
 }
 ```
 
-Also global language server settings can be added or overridden per-project by adding an `LSP` object within the `settings` object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the `clients` key in `LSP.sublime-settings` or those provided by external packages.
+Also global language server settings can be added or overridden per-project by adding an `LSP` object within the `settings` object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the `clients` key in `LSP.sublime-settings` or those provided by external helper packages.
 
 > **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
@@ -116,7 +122,7 @@ Also global language server settings can be added or overridden per-project by a
       "jsts": {
         "enabled": false,
       },
-      "eslint": {
+      "LSP-eslint": {
         "settings": {
           "eslint.autoFixOnSave": true  // This property will be merged with original settings for
                                         // this client (potentially overriding original value).

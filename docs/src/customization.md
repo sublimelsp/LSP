@@ -15,7 +15,7 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 ## Keyboard shortcuts (key bindings)
 
-LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command from the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment and pick the key shortcut of your choice.
+LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command from the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice.
 
 If you want to customize the provided key bindings (or create new ones) and make them only be active when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running, you can make use of the `lsp.session_with_capability` context. For example, the following example overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
 
@@ -40,7 +40,7 @@ If you want to customize the provided key bindings (or create new ones) and make
 },
 ```
 
-But generally you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
+But generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
 
 ## Mouse map configuration
 

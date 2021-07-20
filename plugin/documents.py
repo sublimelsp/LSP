@@ -6,6 +6,7 @@ from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error
 from .core.protocol import Range
@@ -277,16 +278,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def diagnostics_touching_point_async(
         self,
-        pt: int
+        pt: int,
+        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
-        max_severity_level = userprefs().show_diagnostics_severity_level
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 severity = diagnostic_severity(diagnostic)
-                if severity > max_severity_level:
+                if severity > max_diagnostic_severity_level:
                     continue
                 if candidate.contains(pt):
                     covering = covering.cover(candidate)
@@ -305,7 +306,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_diagnostics_in_view_status:
             r = self._stored_region
             if r is not None:
-                session_buffer_diagnostics, _ = self.diagnostics_touching_point_async(r.b)
+                session_buffer_diagnostics, _ = self.diagnostics_touching_point_async(
+                    r.b, userprefs().show_diagnostics_severity_level)
                 if session_buffer_diagnostics:
                     for _, diagnostics in session_buffer_diagnostics:
                         diag = next(iter(diagnostics), None)

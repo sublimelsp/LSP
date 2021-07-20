@@ -23,6 +23,7 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import view_to_uri
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import diagnostic_severity
 from .core.views import document_color_params
 from .core.views import first_selection_region
 from .core.views import format_completion
@@ -280,9 +281,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        max_severity_level = userprefs().show_diagnostics_severity_level
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
+                severity = diagnostic_severity(diagnostic)
+                if severity > max_severity_level:
+                    continue
                 if candidate.contains(pt):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)

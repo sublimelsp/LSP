@@ -74,19 +74,3 @@ Some completion items can have documentation associated with them.
 
 To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
 or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
-
-You can change the default keybinding by remapping the command as below:
-
-```js
-{
-    "command": "auto_complete_open_link",
-    "keys": ["f13"],
-    "context": [
-        {
-            "key": "auto_complete_visible",
-            "operator": "equal",
-            "operand": true
-        }
-    ]
-},
-```

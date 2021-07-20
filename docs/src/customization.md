@@ -44,7 +44,7 @@ But generally you should not need to restrict your key bindings to specific scop
 
 ## Mouse map configuration
 
-If you want to bind some action to a mouse, open `Preferences / Browser Packages` from the main menu and, depending on your platform, create a sublime-mousemap file in the following location within the Packages folder:
+If you want to bind some action to a mouse, open `Preferences / Browser Packages` from the main menu and create a sublime-mousemap file in the following location within the Packages folder:
 
 | Platform | Path |
 | -------- | ---- |

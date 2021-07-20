@@ -102,7 +102,8 @@ class LspHoverCommand(LspTextCommand):
                 return
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, hover_point)
-            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
+            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
+                hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:

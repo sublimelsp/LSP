@@ -1,34 +1,3 @@
-## Common problems
-
-### 1. LSP doesn't start my language server
-
-When language server is started, its name appears on the left side of the status bar. If you expect your server to start for a particular file but it doesn't then:
-
-* Make sure that the root scope (eg. `source.php`) of the file matches the scope handled by the language server. You can check the root scope of the file by running `Show Scope Name` from the `Tools -> Developer` menu. Refer to the documentation of the language server or its own settings to know the expected scope.
-* Make sure that the language server is not disabled globally either in its own settings or in `Preferences: LSP Settings`, or in the project settings (`Project: Edit Project` from the Command Palette).
-
-### 2. LSP cannot find my language server (`No such file or directory: 'xyz'`)
-
-If you are getting an error that the server binary can't be found but it does start when running it from the terminal, then the issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
-
-See ["Updating the PATH used by LSP servers"](troubleshooting.md#updating-the-path-used-by-lsp-servers) on how to make Sublime Text aware of the location of your langugage server.
-
-### 3. Popup error `Language server <your_server_language_name> has crashed`
-
-The reason for this can be the same as in problem number 2. Additionally, the language servers may have dependencies that should also be in your `PATH` in addition to the server binary itself.
-
-For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
-
-If that doesn't solve the issue, try running `LSP: Troubleshoot server` and providing its output when asking for help.
-
-## Known Issues
-
-### Completions not shown after certain keywords
-
-Sublime Text's built-in `Completion Rules.tmPreferences` for some languages suppresses completions after certain keywords.
-The solution is to put an edited version of the `Completion Rules.tmPreferences` in the `Packages` folder (you may need to clear the copy in the Cache folder afterwards).
-More details on [workaround and a final fix for Lua](https://forum.sublimetext.com/t/bug-lua-autocomplete-not-working-between-if-then/36635)
-
 ## Self-help instructions
 
 To get more visibility into the inner-workings of the LSP client and the server and be able to diagnose problems, open `Preferences: LSP Settings` from the Command Palette and set the following options:
@@ -94,3 +63,34 @@ Another solution could be (at least on Linux) to update the server `PATH` using 
     }
 }
 ```
+
+## Common problems
+
+### 1. LSP doesn't start my language server
+
+When language server is started, its name appears on the left side of the status bar. If you expect your server to start for a particular file but it doesn't then:
+
+* Make sure that the root scope (eg. `source.php`) of the file matches the scope handled by the language server. You can check the root scope of the file by running `Show Scope Name` from the `Tools -> Developer` menu. Refer to the documentation of the language server or its own settings to know the expected scope.
+* Make sure that the language server is not disabled globally either in its own settings or in `Preferences: LSP Settings`, or in the project settings (`Project: Edit Project` from the Command Palette).
+
+### 2. LSP cannot find my language server (`No such file or directory: 'xyz'`)
+
+If you are getting an error that the server binary can't be found but it does start when running it from the terminal, then the issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
+
+See ["Updating the PATH used by LSP servers"](troubleshooting.md#updating-the-path-used-by-lsp-servers) on how to make Sublime Text aware of the location of your langugage server.
+
+### 3. Popup error `Language server <your_server_language_name> has crashed`
+
+The reason for this can be the same as in problem number 2. Additionally, the language servers may have dependencies that should also be in your `PATH` in addition to the server binary itself.
+
+For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
+
+If that doesn't solve the issue, try running `LSP: Troubleshoot server` and providing its output when asking for help.
+
+## Known Issues
+
+### Completions not shown after certain keywords
+
+Sublime Text's built-in `Completion Rules.tmPreferences` for some languages suppresses completions after certain keywords.
+The solution is to put an edited version of the `Completion Rules.tmPreferences` in the `Packages` folder (you may need to clear the copy in the Cache folder afterwards).
+More details on [workaround and a final fix for Lua](https://forum.sublimetext.com/t/bug-lua-autocomplete-not-working-between-if-then/36635)

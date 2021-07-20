@@ -311,7 +311,28 @@ Follow installation instructions on [LSP-promql](https://github.com/prometheus-c
 
 ## PHP
 
+There are multiple options:
+
+### Intelephense
+
 Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
+
+### Phpactor
+
+1. Install [Phpactor globally](https://phpactor.readthedocs.io/en/master/usage/standalone.html#installation-global).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"phpactor"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "reason": {
+                "enabled": true,
+                "command": ["PATH/TO/phpactor", "language-server"],
+                "selector": "source.php"
+            }
+        }
+    }
+    ```
 
 ## PowerShell
 

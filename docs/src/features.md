@@ -66,43 +66,6 @@ You can include special variables in the `command_args` array that will be autom
 | `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
 | `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
-### Overriding keybindings
-
-LSP's keybindings can be edited from the `Preferences: LSP Keybindings` command from the command palette.
-There is a special context called `lsp.session_with_capability` that can check whether there is a language server active
-with the given [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
-Refer to the `ServerCapabilities` structure in that link.
-The following example overrides `ctrl+r` to use LSP's symbol provider when we're in a javascript or typescript view:
-
-```js
-{
-    "command": "lsp_document_symbols",
-    "keys": [
-        "ctrl+r"
-    ],
-    "context": [
-        {
-            "key": "lsp.session_with_capability",
-            "operator": "equal",
-            "operand": "documentSymbolProvider"
-        },
-        {
-            "key": "selector",
-            "operator": "equal",
-            "operand": "source.ts, source.js"
-        }
-    ]
-},
-```
-
-More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
-```js
-  { "keys": ["f2"], "command": "lsp_symbol_rename" },
-  { "keys": ["f12"], "command": "lsp_symbol_definition" },
-  { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
-  { "keys": ["super+option+h"], "command": "lsp_hover"}
-```
-
 ### Show autocomplete documentation
 
 Some completion items can have documentation associated with them.
@@ -117,7 +80,7 @@ You can change the default keybinding by remapping the command as below:
 ```js
 {
     "command": "auto_complete_open_link",
-    "keys": ["f12"],
+    "keys": ["f13"],
     "context": [
         {
             "key": "auto_complete_visible",
@@ -127,31 +90,3 @@ You can change the default keybinding by remapping the command as below:
     ]
 },
 ```
-Note that <kbd>F12</kbd> may conflict with your Goto Definition keybinding. To avoid the conflict, make sure that you
-have a context which checks that the AC widget is not visible:
-```js
-{
-    "command": "lsp_symbol_definition",
-    "keys": [
-        "f12"
-    ],
-    "context": [
-        {
-            "key": "lsp.session_with_capability",
-            "operator": "equal",
-            "operand": "definitionProvider"
-        },
-        {
-            "key": "auto_complete_visible",
-            "operator": "equal",
-            "operand": false
-        }
-    ]
-},
-```
-There is an example of this in LSP's default keybindings.
-
-### Mouse map configuration
-
-See below link, but bind to `lsp_symbol_definition` command
-https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition

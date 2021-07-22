@@ -15,9 +15,37 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 ## Keyboard shortcuts (key bindings)
 
-LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command from the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice.
+LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command in the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice.
 
-If you want to customize the provided key bindings (or create new ones) and make them only be active when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running, you can make use of the `lsp.session_with_capability` context. For example, the following example overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
+Below is a list of supported key bindings and the corresponding keyboard shortcut (if assigned). Most of those are also available from the Command Palette and the main menu.
+
+!!! Mac
+    If you using macOS, replace <kbd>ctrl</kbd> with <kbd>command</kbd>.
+
+| Feature | Shortcut | Command |
+| ------- | -------- | ------- |
+| Auto Complete | <kbd>ctrl</kbd> <kbd>space</kbd> (also on macOS) | `auto_complete`
+| Expand Selection | unbound | `lsp_expand_selection`
+| Find References | <kbd>shift</kbd> <kbd>f12</kbd> | `lsp_symbol_references`
+| Format File | unbound | `lsp_format_document`
+| Format Selection | unbound | `lsp_format_document_range`
+| Goto Declaration | unbound | `lsp_symbol_declaration`
+| Goto Definition | unbound<br>suggested: <kbd>f12</kbd> | `lsp_symbol_definition`
+| Goto Implementation | unbound | `lsp_symbol_implementation`
+| Goto Symbol | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>r</kbd> | `lsp_document_symbols`
+| Goto Symbol in Project | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>shift</kbd> <kbd>r</kbd> | `lsp_workspace_symbols`
+| Goto Type Definition | unbound | `lsp_symbol_type_definition`
+| Rename | unbound | `lsp_symbol_rename`
+| Restart Server | unbound | `lsp_restart_server`
+| Run Code Action | unbound | `lsp_code_actions`
+| Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
+| Run Code Lens | unbound | `lsp_code_lens`
+| Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | -
+| Hover Popup | unbound | `lsp_hover`
+| Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
+| Toggle Log Panel | unbound | `lsp_show_diagnostics_panel`
+
+If you want to create new key bindings, different from the ones that are included you might want to make them be active only when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running. In that case you can make use of the `lsp.session_with_capability` context. For example, the following key binding overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
 
 ```js
 {
@@ -40,7 +68,7 @@ If you want to customize the provided key bindings (or create new ones) and make
 },
 ```
 
-But generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
+Generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.
 
 ## Mouse map configuration
 

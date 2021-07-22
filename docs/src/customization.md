@@ -17,7 +17,7 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command in the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice.
 
-Below is a list of supported key bindings and the corresponding keyboard shortcut (if assigned). Most of those are also available from the Command Palette and the main menu.
+Below is a list of supported key bindings and the corresponding keyboard shortcut (if assigned). Most of those are also available from the Command Palette, the main menu and the mouse context menu.
 
 !!! Mac
     If you using macOS, replace <kbd>ctrl</kbd> with <kbd>command</kbd>.

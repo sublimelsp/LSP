@@ -12,7 +12,7 @@ Apart from the commands listed in the [Keyboard Shortcuts](keyboard_shortcuts.md
 * `LSP: Troubleshoot Server`: allows to troubleshoot chosen server to help diagnose issues
 * `Preferences: LSP Language ID Mapping Overrides`: opens settings that define how to map the file's syntax scope to language server `languageId` identifier (advanced)
 
-### Execute server commands
+## Execute server commands
 
 For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available in Sublime's Command Palette by adding an entry to your existing `*.sublime-commands` file or by creating a new one.
 
@@ -51,7 +51,7 @@ You can include special variables in the `command_args` array that will be autom
 | `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
 | `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
-### Show autocomplete documentation
+## Show autocomplete documentation
 
 Some completion items can have documentation associated with them.
 

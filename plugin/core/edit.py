@@ -2,9 +2,8 @@ from .logging import debug
 from .open import open_file
 from .promise import Promise
 from .protocol import TextEdit as LspTextEdit, Position
-from .typing import List, Dict, Any, Iterable, Optional, Tuple
+from .typing import List, Dict, Any, Optional, Tuple
 from functools import partial
-import operator
 import sublime
 
 

@@ -17,7 +17,7 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, CodeLens, Location, LocationLink, Position
+from .protocol import CodeAction, CodeLens, Location, LocationLink
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -1265,7 +1265,6 @@ class Session(TransportCallbacks):
         for uri, edits in changes.items():
             promises.append(self.open_uri_async(uri).then(functools.partial(apply_edits, edits)))
         return Promise.all(promises).then(lambda _: None)
-
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

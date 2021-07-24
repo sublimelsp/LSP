@@ -28,4 +28,4 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | -
 | Hover Popup | unbound | `lsp_hover`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
-| Toggle Log Panel | unbound | `lsp_show_diagnostics_panel`
+| Toggle Log Panel | unbound | `lsp_toggle_server_panel`

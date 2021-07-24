@@ -62,7 +62,7 @@ def open_externally(uri: str, take_focus: bool) -> bool:
     try:
         # TODO: handle take_focus
         if sublime.platform() == "windows":
-            os.startfile(uri)
+            os.startfile(uri)  # type: ignore
         elif sublime.platform() == "osx":
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux

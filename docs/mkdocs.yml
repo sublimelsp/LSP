@@ -37,6 +37,7 @@ nav:
     - Getting Started: 'index.md'
     - Language Servers: 'language_servers.md'
     - Features: 'features.md'
+    - Keyboard Shortcuts: 'keyboard_shortcuts.md'
     - Customization: 'customization.md'
     - Guides:
       - Client Configuration: 'guides/client_configuration.md'

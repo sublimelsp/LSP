@@ -62,12 +62,24 @@
         "command": "lsp_format_document_range",
     },
     {
+        "caption": "LSP: Expand Selection",
+        "command": "lsp_expand_selection",
+    },
+    {
         "caption": "LSP: Restart Server",
         "command": "lsp_restart_server",
     },
     {
         "caption": "LSP: Goto Symbol",
         "command": "lsp_document_symbols",
+    },
+    {
+        "caption": "LSP: Goto Implementation",
+        "command": "lsp_symbol_implementation",
+    },
+    {
+        "caption": "LSP: Goto Declaration",
+        "command": "lsp_symbol_declaration",
     },
     {
         "caption": "LSP: Toggle Log Panel",
@@ -78,20 +90,29 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
-        "caption": "LSP: Next Diagnostic",
-        "command": "lsp_next_diagnostic",
-    },
-    {
-        "caption": "LSP: Previous Diagnostic",
-        "command": "lsp_previous_diagnostic",
-    },
-    {
         "caption": "LSP: Goto Symbol In Project",
         "command": "lsp_workspace_symbols"
     },
     {
         "caption": "LSP: Rename",
         "command": "lsp_symbol_rename"
+    },
+    {
+        "caption": "LSP: Run Code Action",
+        "command": "lsp_code_actions"
+    },
+    {
+        "caption": "LSP: Run Source Action",
+        "command": "lsp_code_actions",
+        "args": {
+            "only_kinds": [
+                "source"
+            ]
+        }
+    },
+    {
+        "caption": "LSP: Run Code Lens",
+        "command": "lsp_code_lens"
     },
     {
         "caption": "LSP: Find References",

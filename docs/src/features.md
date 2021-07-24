@@ -1,33 +1,18 @@
 
 ## Commands and shortcuts
 
-### Plugin commands
+Apart from the commands listed in the [Keyboard Shortcuts](keyboard_shortcuts.md) section, LSP also provides more generic commands in the Command Palette:
 
-* Restart Servers: kills all language servers belonging to the active window
-    * This command only works when in a supported document.
-    * It may change in the future to be always available, or only kill the relevant language server.
-* LSP Settings: Opens package settings.
+* `LSP: Restart Server`: restarts running language server belonging to the active window
+    * This command only works when in a document with a running server.
+* `Preferences: LSP Settings`: opens LSP settings
+* `Preferences: LSP Key Bindings`: opens LSP key bindings configuration - see [Keyboard Shortcuts](keyboard_shortcuts.md)
+* `LSP: Enable / Disable Language Server Globally`: enables or disables chosen server globally (you can disable a server globally and enable it only per project, for example)
+* `LSP: Enable / Disable Language Server in Project`: enables or disables chosen server for the current project (the project must be saved on disk first using `Project -> Save Project As...`)
+* `LSP: Troubleshoot Server`: allows to troubleshoot chosen server to help diagnose issues
+* `Preferences: LSP Language ID Mapping Overrides`: opens settings that define how to map the file's syntax scope to language server `languageId` identifier (advanced)
 
-### Document actions
-
-* Show Code Actions: UNBOUND
-* Symbol References: `shift+f12`
-* Rename Symbol: UNBOUND
-    * Recommendation: Override `F2` (next bookmark)
-* Go to definition / type definition / declaration / implementation: UNBOUND
-    * Recommendation: Override `f12` (built-in goto definition),
-    * LSP falls back to ST3's built-in goto definition command in case LSP fails.
-* Format Document: UNBOUND
-* Format Selection: UNBOUND
-* Document Symbols: UNBOUND
-
-### Workspace actions
-
-* Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
-* Next/Previous Diagnostic From panel: `F4` / `shift+F4`
-* Workspace Symbol Search: via command Palette `LSP: workspace symbol`
-
-### Execute server commands
+## Execute server commands
 
 For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available in Sublime's Command Palette by adding an entry to your existing `*.sublime-commands` file or by creating a new one.
 
@@ -66,7 +51,7 @@ You can include special variables in the `command_args` array that will be autom
 | `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
 | `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
-### Show autocomplete documentation
+## Show autocomplete documentation
 
 Some completion items can have documentation associated with them.
 

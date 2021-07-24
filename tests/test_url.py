@@ -1,11 +1,11 @@
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.url import parse_uri
 from LSP.plugin.core.url import view_to_uri
+import os
+import sublime
 import sys
 import unittest
 import unittest.mock
-import sublime
-import os
 
 
 @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
@@ -29,6 +29,11 @@ class WindowsTests(unittest.TestCase):
         )
         uri = view_to_uri(view)
         self.assertEqual(uri, "file:///C:/Users/A%20b/popups.css")
+
+    def test_unc_path(self):
+        scheme, path = parse_uri('file://192.168.80.2/D%24/www/File.php')
+        self.assertEqual(scheme, "file")
+        self.assertEqual(path, R'\\192.168.80.2\D$\www\File.php')
 
 
 @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")

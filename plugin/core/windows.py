@@ -8,6 +8,7 @@ from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
 from .promise import Promise
 from .protocol import Diagnostic
+from .protocol import DiagnosticSeverity
 from .protocol import Error
 from .protocol import Location
 from .sessions import get_plugin
@@ -82,7 +83,8 @@ class AbstractViewListener(metaclass=ABCMeta):
     @abstractmethod
     def diagnostics_touching_point_async(
         self,
-        pt: int
+        pt: int,
+        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 

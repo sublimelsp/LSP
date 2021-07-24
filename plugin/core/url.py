@@ -33,17 +33,11 @@ def view_to_uri(view: sublime.View) -> str:
 def uri_to_filename(uri: str) -> str:
     """
     DEPRECATED: An URI associated to a view does not necessarily have a "file:" scheme.
-    Use urllib.parse.urlparse to determine the scheme and go from there.
-    Use urllib.parse.unquote to unquote the path.
+    Use parse_uri instead.
     """
-    parsed = urlparse(uri)
-    assert parsed.scheme == "file"
-    if os.name == 'nt':
-        # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
-        path = url2pathname(parsed.path).strip('\\')
-        return re.sub(r"^([a-z]):", _uppercase_driveletter, path)
-    else:
-        return url2pathname(parsed.path)
+    scheme, path = parse_uri(uri)
+    assert scheme == "file"
+    return path
 
 
 def parse_uri(uri: str) -> Tuple[str, str]:
@@ -54,10 +48,16 @@ def parse_uri(uri: str) -> Tuple[str, str]:
     """
     parsed = urlparse(uri)
     if parsed.scheme == "file":
+        path = url2pathname(parsed.path)
         if os.name == 'nt':
-            # TODO: this is wrong for UNC paths
-            return parsed.scheme, url2pathname(parsed.path).strip('\\')
-        return parsed.scheme, url2pathname(parsed.path)
+            path = path.lstrip("\\")
+            path = re.sub(r"^([a-z]):", _uppercase_driveletter, path)
+            if parsed.netloc:
+                # Convert to UNC path
+                return parsed.scheme, "\\\\{}\\{}".format(parsed.netloc, path)
+            else:
+                return parsed.scheme, path
+        return parsed.scheme, path
     return parsed.scheme, uri
 
 

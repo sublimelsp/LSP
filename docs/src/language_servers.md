@@ -317,9 +317,22 @@ There are multiple options:
 
 Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
 
-### Serenata
+### Phpactor
 
-Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/LSP-serenata).
+1. Install [Phpactor globally](https://phpactor.readthedocs.io/en/master/usage/standalone.html#installation-global).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"phpactor"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "phpactor": {
+                "enabled": true,
+                "command": ["PATH/TO/phpactor", "language-server"],
+                "selector": "source.php"
+            }
+        }
+    }
+    ```
 
 ## PowerShell
 

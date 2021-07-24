@@ -42,7 +42,6 @@ nav:
     - Guides:
       - Client Configuration: 'guides/client_configuration.md'
       - Setup C/C++: 'guides/cplusplus.md'
-    - LSP implementation status: 'lsp_implementation_status.md'
     - Troubleshooting: 'troubleshooting.md'
 
 extra:

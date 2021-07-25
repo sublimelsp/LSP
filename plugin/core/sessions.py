@@ -171,7 +171,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 },
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
-                }
+                },
+                "insertReplaceSupport": True
             },
             "completionItemKind": {
                 "valueSet": completion_kinds

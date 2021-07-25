@@ -120,6 +120,10 @@
   // sorting algorithm and instead uses the sorting defined by the relevant language server.
   "inhibit_word_completions": true,
 
+  // Controls whether words are overwritten when accepting completions.
+  // Note that a language server needs to support this feature to work.
+  "completion_insert_mode": "insert",
+
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 

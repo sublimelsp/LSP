@@ -44,7 +44,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(self) -> Callable[[], bool]:
+    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Callable[[], bool]:
         committed = False
         current_change_count = self.view.change_count()
 
@@ -54,7 +54,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
             nonlocal committed
             nonlocal current_change_count
             if not committed:
-                self.view.run_command("commit_completion")
+                self.view.run_command(commit_completion_command)
                 committed = True
             return self.view.change_count() > current_change_count
 
@@ -63,6 +63,10 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def select_completion(self) -> 'Generator':
         self.view.run_command('auto_complete')
         yield self.create_commit_completion_closure()
+
+    def shift_select_completion(self) -> 'Generator':
+        self.view.run_command('auto_complete')
+        yield self.create_commit_completion_closure("lsp_commit_completion_with_opposite_insert_mode")
 
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
@@ -585,6 +589,36 @@ class QueryCompletionsTests(CompletionsTestsBase):
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
+
+    def test_insert_insert_mode(self) -> 'Generator':
+        self.type('{{ title }}')
+        self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
+        self.set_response("textDocument/completion", [{
+           'label': 'title',
+           'textEdit': {
+                'newText': 'title',
+                'insert': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 5}},
+                'replace': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 8}}
+            }
+        }])
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        self.assertEqual(self.read_file(), '{{ titletle }}')
+
+    def test_replace_insert_mode(self) -> 'Generator':
+        self.type('{{ title }}')
+        self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
+        self.set_response("textDocument/completion", [{
+           'label': 'title',
+           'textEdit': {
+                'newText': 'title',
+                'insert': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 5}},
+                'replace': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 8}}
+            }
+        }])
+        yield from self.shift_select_completion()  # commit the opposite insert mode
+        yield from self.await_message("textDocument/completion")
+        self.assertEqual(self.read_file(), '{{ title }}')
 
     def test_show_deprecated_flag(self) -> 'Generator':
         item_with_deprecated_flag = {

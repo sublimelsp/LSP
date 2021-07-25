@@ -1,16 +1,27 @@
 import sublime
 import webbrowser
-from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
+from .core.logging import debug
+from .core.protocol import InsertReplaceEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem, TextEdit
 from .core.registry import LspTextCommand
-from .core.typing import List, Dict, Optional, Generator, Union
+from .core.settings import userprefs
+from .core.typing import List, Dict, Optional, Generator, Union, cast
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import update_lsp_popup
 
 SessionName = str
+
+
+def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeLsp:
+    if 'insert' in text_edit and 'replace' in text_edit:
+        text_edit = cast(InsertReplaceEdit, text_edit)
+        insert_mode = userprefs().completion_insert_mode
+        if LspCommitCompletionWithOppositeInsertMode.shift_pressed: # if shift is pressed, we want the oposite insert mode range
+            insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
+        return text_edit.get(insert_mode, 'insert')
+    return text_edit['range']
 
 
 class LspResolveDocsCommand(LspTextCommand):
@@ -66,12 +77,22 @@ class LspResolveDocsCommand(LspTextCommand):
         webbrowser.open(url)
 
 
+class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
+    shift_pressed = False
+
+    def run(self, edit: sublime.Edit) -> None:
+        LspCommitCompletionWithOppositeInsertMode.shift_pressed = True
+        self.view.run_command("commit_completion")
+        LspCommitCompletionWithOppositeInsertMode.shift_pressed = False
+
+
+
 class LspSelectCompletionItemCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"]
-            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
                 for region in self.translated_regions(edit_region):
                     self.view.erase(edit, region)

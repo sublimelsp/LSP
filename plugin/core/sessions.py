@@ -95,6 +95,12 @@ class Manager(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        """
+        Should the diagnostics for this URI be shown in the view? Return a reason why not
+        """
+
     # Mutators
 
     @abstractmethod
@@ -1275,9 +1281,18 @@ class Session(TransportCallbacks):
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
         uri = params["uri"]
+        mgr = self.manager()
+        if not mgr:
+            # debug("ignoring diagnostics for", uri, "due to missing window manager")
+            return
+        reason = mgr.should_present_diagnostics(uri)
+        if isinstance(reason, str):
+            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
-            sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
+        if not sb:
+            # debug("ignoring diagnostics for", uri, "due to missing session buffer")
+            return
+        sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

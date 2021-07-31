@@ -28,6 +28,10 @@ class Transport(metaclass=ABCMeta):
     def close(self) -> None:
         pass
 
+    @abstractmethod
+    def get_working_directory(self) -> Optional[str]:
+        pass
+
 
 class TransportCallbacks(Protocol):
 
@@ -43,10 +47,20 @@ class TransportCallbacks(Protocol):
 
 class JsonRpcTransport(Transport):
 
-    def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
-                 writer: IO[bytes], stderr: Optional[IO[bytes]], callback_object: TransportCallbacks) -> None:
+    def __init__(
+        self,
+        name: str,
+        process: subprocess.Popen,
+        cwd: Optional[str],
+        socket: Optional[socket.socket],
+        reader: IO[bytes],
+        writer: IO[bytes],
+        stderr: Optional[IO[bytes]],
+        callback_object: TransportCallbacks
+    ) -> None:
         self._closed = False
         self._process = process
+        self._cwd = cwd
         self._socket = socket
         self._reader = reader
         self._writer = writer
@@ -69,6 +83,9 @@ class JsonRpcTransport(Transport):
             if self._socket:
                 self._socket.close()
             self._closed = True
+
+    def get_working_directory(self) -> Optional[str]:
+        return self._cwd
 
     def _join_thread(self, t: threading.Thread) -> None:
         if t.ident == threading.current_thread().ident:
@@ -215,7 +232,16 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             reader = process.stdout  # type: ignore
             writer = process.stdin  # type: ignore
     assert writer
-    return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
+    return JsonRpcTransport(
+        name=config.name,
+        process=process,
+        cwd=cwd,
+        socket=sock,
+        reader=reader,
+        writer=writer,
+        stderr=process.stderr,
+        callback_object=callback_object
+    )
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

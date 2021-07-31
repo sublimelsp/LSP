@@ -870,6 +870,9 @@ class Session(TransportCallbacks):
     def get_workspace_folders(self) -> List[WorkspaceFolder]:
         return self._workspace_folders
 
+    def get_working_directory(self) -> Optional[str]:
+        return self.transport.get_working_directory() if self.transport else None
+
     def uses_plugin(self) -> bool:
         return self._plugin is not None
 

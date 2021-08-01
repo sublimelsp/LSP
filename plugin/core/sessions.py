@@ -832,6 +832,7 @@ class Session(TransportCallbacks):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.transport = None  # type: Optional[Transport]
+        self.working_directory = None  # type: Optional[str]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
@@ -1050,8 +1051,15 @@ class Session(TransportCallbacks):
         else:
             self._workspace_folders = folders[:1]
 
-    def initialize_async(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
+    def initialize_async(
+        self,
+        variables: Dict[str, str],
+        working_directory: Optional[str],
+        transport: Transport,
+        init_callback: InitCallback
+    ) -> None:
         self.transport = transport
+        self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
         self.send_request_async(

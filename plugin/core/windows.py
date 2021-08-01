@@ -21,6 +21,7 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
+from .types import matches_pattern
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
 from .url import parse_uri
 from .views import extract_variables
@@ -34,7 +35,6 @@ from subprocess import CalledProcessError
 from time import time
 from weakref import ref
 from weakref import WeakSet
-import fnmatch
 import functools
 import json
 import os
@@ -450,23 +450,13 @@ class WindowManager(Manager):
         if not view:
             return None
         settings = view.settings()
-        if self._matches_glob(path, settings.get("binary_file_patterns")):
-            return "matches a glob in binary_file_patterns"
-        if self._matches_glob(path, settings.get("file_exclude_patterns")):
-            return "matches a glob in file_exclude_patterns"
-        if self._matches_glob(path, settings.get("folder_exclude_patterns")):
-            return "matches a glob in folder_exclude_patterns"
+        if matches_pattern(path, settings.get("binary_file_patterns")):
+            return "matches a pattern in binary_file_patterns"
+        if matches_pattern(path, settings.get("file_exclude_patterns")):
+            return "matches a pattern in file_exclude_patterns"
+        if matches_pattern(path, settings.get("folder_exclude_patterns")):
+            return "matches a pattern in folder_exclude_patterns"
         return None
-
-    def _matches_glob(self, path: str, patterns: Any) -> bool:
-        if not isinstance(patterns, list):
-            return False
-        for pattern in patterns:
-            if not isinstance(pattern, str):
-                continue
-            if fnmatch.fnmatch(path, pattern):
-                return True
-        return False
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)

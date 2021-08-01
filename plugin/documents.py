@@ -380,8 +380,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
         # filesystem.
         uri = view_to_uri(self.view)
-        new_scheme = parse_uri(uri)[0]
-        old_scheme = parse_uri(self._uri)[0]
+        new_scheme, _ = parse_uri(uri)
+        old_scheme, _ = parse_uri(self._uri)
         self.set_uri(uri)
         if new_scheme == old_scheme:
             # The URI scheme hasn't changed so the only thing we have to do is to inform the attached session views

@@ -106,9 +106,20 @@
               "type": "object",
               "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
               "additionalProperties": {
-                "type": "string",
-                "markdownDescription": "The value for this environment variable."
-              },
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "markdownDescription": "The value for this environment variable."
+                  },
+                  {
+                    "type": "array",
+                    "markdownDescription": "A list of values. The list will be joined into a string with your native file system's path separator. For example, `[\"a\", \"b\"]` will turn into `\"a;b\"` on Windows.",
+                      "items": {
+                        "type": "string"
+                      }
+                  }
+                ]
+              }
             },
             "ClientSelector": {
               // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373

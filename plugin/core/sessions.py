@@ -1283,16 +1283,13 @@ class Session(TransportCallbacks):
         uri = params["uri"]
         mgr = self.manager()
         if not mgr:
-            # debug("ignoring diagnostics for", uri, "due to missing window manager")
             return
         reason = mgr.should_present_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         sb = self.get_session_buffer_for_uri_async(uri)
-        if not sb:
-            # debug("ignoring diagnostics for", uri, "due to missing session buffer")
-            return
-        sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
+        if sb:
+            sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

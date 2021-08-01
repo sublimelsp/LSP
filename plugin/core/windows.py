@@ -350,16 +350,21 @@ class WindowManager(Manager):
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if not cwd:
-                cwd = workspace_folders[0].path if workspace_folders else None
+            if cwd:
+                transport_cwd = cwd  # type: Optional[str]
+            else:
+                transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, cwd, session)
+            transport = create_transport(transport_config, transport_cwd, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
-                variables, transport,
-                lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
+                variables=variables,
+                transport=transport,
+                working_directory=cwd,
+                init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
+            )
             self._new_session = session
         except Exception as e:
             message = "".join((

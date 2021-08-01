@@ -553,7 +553,7 @@ class ClientConfig:
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
-                 env: Dict[str, str] = {},
+                 env: Dict[str, Union[str, List[str]]] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
@@ -693,6 +693,8 @@ class ClientConfig:
             command = [a.replace('{port}', str(tcp_port)) for a in command]
         env = os.environ.copy()
         for key, value in self.env.items():
+            if isinstance(value, list):
+                value = os.path.pathsep.join(value)
             if key == 'PATH':
                 env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
             else:

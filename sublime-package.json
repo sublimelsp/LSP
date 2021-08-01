@@ -114,9 +114,9 @@
                   {
                     "type": "array",
                     "markdownDescription": "A list of values. The list will be joined into a string with your native file system's path separator. For example, `[\"a\", \"b\"]` will turn into `\"a;b\"` on Windows.",
-                      "items": {
-                        "type": "string"
-                      }
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 ]
               }

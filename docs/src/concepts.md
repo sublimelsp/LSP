@@ -10,7 +10,7 @@ The LSP package enhances the auto-complete functionality.
 
 ## Goto Definition
 
-Sublime Text provides a "goto-def" feature by indexing the files in your project, and building a database out of the parsed files. The feature is accessible by clicking on Goto > Goto Definition. Sublime will attempt to jump to the definition of the word enclosing the caret. The files are parsed according to the `.sublime-syntax` associated to them. Entities which are assigned the `entity.name.*` scope are considered to be a "definition". Because a single `.sublime-syntax` file has no knowledge of the project structure, there may be multiple such "definitions".
+Sublime Text provides a "Goto Definition" feature by indexing the files in your project, and building a database out of the parsed files. The feature is accessible by clicking on Goto > Goto Definition. Sublime will attempt to jump to the definition of the word enclosing the caret. The files are parsed according to the `.sublime-syntax` associated to them. Entities which are assigned the `entity.name.*` scope are considered to be a "definition". Because a single `.sublime-syntax` file has no knowledge of the project structure, there may be multiple such "definitions".
 
 This package provides a replacement for Sublime's Goto Definition if your language server has this capability. The feature is accessible by right-clicking with your mouse on the word (or any character) and clicking on LSP > Goto Definition. Similarly, an entry in the Goto menu in the top Menu Bar is also available.
 

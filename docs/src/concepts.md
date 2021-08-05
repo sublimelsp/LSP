@@ -112,8 +112,8 @@ A language server may itself also expose settings that you can use to customize 
 
 ## Server Initialization Options
 
-Initialization Options are like Server Settings, except they are static in the sense that they cannot be changed once the language server subprocess has started.
+Initialization Options are like [Server Settings](concepts.md#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
 
 ## Subprocesses
 
-A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a client configuration matches, a subprocess is started that will then serve you language smartness.
+A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](guides/client_configuration.md) matches, a subprocess is started that will then serve you language smartness.

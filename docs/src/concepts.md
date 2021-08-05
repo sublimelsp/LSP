@@ -40,10 +40,6 @@ Goto Symbol can be accessed by clicking on Goto > Goto Symbol. A common key bind
 
 Goto Symbol In Project is a great feature of Sublime Text. It is like Goto Symbol, except you can search for a symbol through your entire project. It is a two-step UX process where you first select an identifier, and you are then presented with the possible locations of your selected identifier. This package provides a replacement if your language server has this capability. The "LSP" Goto Symbol In Project works slightly different because it is a one-step process instead of a two-step process. You select the appropriate symbol immediately.
 
-<!-- Additional complexity is added because the "LSP Goto Symbol In Project" is asynchronous and should be refreshed upon the user typing another character for the identifier. In contrast, the "Sublime Text Goto Symbol In Project" has all identifiers greedily indexed and ready to be presented. A problem for this greedy behavior is that at start-up of Sublime Text, "Sublime Text Goto Symbol In Project" does not work right away; running the feature presents the user with nothing, and there is no indication of what the problem is.
-
-In any case, these differences and the fact that Sublime Text as of this writing does not provide a suitable Python API endpoint for this feature makes the "LSP Goto Symbol In Project" rather hard to do. Pull requests for improvement are welcome. -->
-
 ## Expand Selection
 
 Expand Selection can be accessed by clicking on Selection > Expand Selection. A common key binding for this is <kbd>ctrl</kbd><kbd>shift</kbd><kbd>A</kbd>. A language server may also have this capability and is in a better position to decide what a "smart" Expand Selection should do.

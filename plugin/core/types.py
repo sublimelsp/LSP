@@ -11,6 +11,7 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
+import fnmatch
 import os
 import socket
 import sublime
@@ -57,6 +58,17 @@ def diff(old: Iterable[T], new: Iterable[T]) -> Tuple[Set[T], Set[T]]:
     added = new_set - old_set
     removed = old_set - new_set
     return added, removed
+
+
+def matches_pattern(path: str, patterns: Any) -> bool:
+    if not isinstance(patterns, list):
+        return False
+    for pattern in patterns:
+        if not isinstance(pattern, str):
+            continue
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
 
 
 def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,

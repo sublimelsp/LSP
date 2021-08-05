@@ -9,6 +9,7 @@ from .panels import log_server_message
 from .promise import Promise
 from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
 from .sessions import get_plugin
@@ -20,7 +21,9 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
+from .types import matches_pattern
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .url import parse_uri
 from .views import extract_variables
 from .views import make_link
 from .workspace import ProjectFolders
@@ -441,6 +444,24 @@ class WindowManager(Manager):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder
         return candidate
+
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        scheme, path = parse_uri(uri)
+        if scheme != "file":
+            return None
+        if not self._workspace.contains(path):
+            return "not inside window folders"
+        view = self._window.active_view()
+        if not view:
+            return None
+        settings = view.settings()
+        if matches_pattern(path, settings.get("binary_file_patterns")):
+            return "matches a pattern in binary_file_patterns"
+        if matches_pattern(path, settings.get("file_exclude_patterns")):
+            return "matches a pattern in file_exclude_patterns"
+        if matches_pattern(path, settings.get("folder_exclude_patterns")):
+            return "matches a pattern in folder_exclude_patterns"
+        return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)

@@ -1,5 +1,6 @@
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Diagnostic
+from LSP.plugin.core.protocol import DocumentUri
 from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull
 from LSP.plugin.core.protocol import TextDocumentSyncKindIncremental
@@ -30,6 +31,9 @@ class MockManager(Manager):
         pass
 
     def get_project_path(self, file_name: str) -> Optional[str]:
+        return None
+
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
         return None
 
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:

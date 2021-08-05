@@ -6,7 +6,7 @@ This package enhances existing concepts from Sublime Text and introduces new con
 
 The auto-complete functionality of Sublime Text is well-known to any user. It provides word completions from the current buffer, and, since ST4, completions from other files. It presents the auto-complete widget in a synchronous fashion.
 
-The LSP package enhances the auto-complete functionality.
+The LSP package enhances the auto-complete list with results provided by the language server.
 
 ## Goto Definition
 

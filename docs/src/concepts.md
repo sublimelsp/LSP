@@ -44,6 +44,14 @@ By parsing and indexing a project with `.sublime-syntax` files, Sublime Text is 
 
 This package provides a replacement of that functionality if your language server has this capability.
 
+## Highlights
+
+[Example GIF 1](https://user-images.githubusercontent.com/6579999/128552021-d9058c65-d6f6-48f5-b7aa-652eafe23247.gif)
+
+Sublime Text subtly highlights words that equal the one under your caret.
+
+This package does that as well, if your language server has that capability. It is enhanced in the sense that a language server can also annotate a region as being _written to_, to being _read from_. This is what stock Sublime Text cannot determine.
+
 ## Goto Symbol
 
 [Example GIF 1](https://user-images.githubusercontent.com/2431823/128565305-a38cdcba-d05a-42f9-ae5f-1e1236661f68.gif)

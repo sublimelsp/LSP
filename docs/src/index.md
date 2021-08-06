@@ -12,4 +12,4 @@ If you are having issues with starting the server, check the [Troubleshooting](t
 The package "LSP" is an acronym for **L**anguage **S**erver **P**rotocol. This is a specification for the communication protocol for use between text editors or IDEs and *language servers* - tools which provide language-specific features like autocomplete, go to definition, or documentation on hover.
 This package acts as an interface between Sublime Text and your language server, which means that to obtain these features you need to install a server for your language first.
 Language servers can be provided as standalone executables or might require a runtime environment like Node.js or Python.
-Many new concepts not native to Sublime Text are in use. For an overview of these concepts, please see the [Concepts](concepts.md) page.
+Many new concepts not native to Sublime Text are in use. For an overview of these concepts, please see the [Features](features.md) page.

@@ -1,3 +1,4 @@
+# Commands
 
 ## Commands and shortcuts
 

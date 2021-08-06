@@ -50,12 +50,3 @@ You can include special variables in the `command_args` array that will be autom
 | `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (topmost) selection |
 | `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
 | `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
-
-## Show autocomplete documentation
-
-Some completion items can have documentation associated with them.
-
-![documentation popup](images/show-docs-popup.png)
-
-To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
-or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.

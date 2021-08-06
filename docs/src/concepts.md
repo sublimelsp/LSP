@@ -12,6 +12,9 @@ The auto-complete functionality of Sublime Text is well-known to any user. It pr
 
 The LSP package enhances the auto-complete list with results provided by the language server.
 
+To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
+or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
+
 ## Goto Definition
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128551655-bfd55991-70a9-43da-a54a-f8d4cb3244c4.gif)

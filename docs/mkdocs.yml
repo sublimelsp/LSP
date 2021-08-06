@@ -37,7 +37,7 @@ nav:
     - Getting Started: index.md
     - Concepts: concepts.md
     - Language Servers: language_servers.md
-    - Features: features.md
+    - Commands: commands.md
     - Keyboard Shortcuts: keyboard_shortcuts.md
     - Customization: customization.md
     - Guides:

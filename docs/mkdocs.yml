@@ -35,7 +35,7 @@ markdown_extensions:
 
 nav:
     - Getting Started: index.md
-    - Concepts: concepts.md
+    - Features: features.md
     - Language Servers: language_servers.md
     - Commands: commands.md
     - Keyboard Shortcuts: keyboard_shortcuts.md

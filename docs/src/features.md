@@ -25,17 +25,11 @@ Sublime Text provides a "Goto Definition" feature by indexing the files in your 
 
 This package provides a replacement for Sublime's Goto Definition if your language server has this capability. The feature is accessible by right-clicking with your mouse on the word (or any character) and clicking on LSP > Goto Definition. Similarly, an entry in the Goto menu in the top Menu Bar is also available.
 
-## Goto Type Definition
+In addition to the basic "Goto Definition", the protocol also provides further refinements of "goto" functionality:
 
-Some languages have the notion of a "type definition". The functionality is similar to Goto Definition.
-
-## Goto Declaration
-
-Some languages have the notion of a "declaration". The functionality is similar to Goto Definition.
-
-## Goto Implementation
-
-Some languages have the notion of an "implementation". The functionality is similar to Goto Definition.
+- Goto Type Definition
+- Goto Declaration
+- Goto Implementation
 
 ## Find References
 

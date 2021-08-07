@@ -95,6 +95,12 @@ class Manager(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        """
+        Should the diagnostics for this URI be shown in the view? Return a reason why not
+        """
+
     # Mutators
 
     @abstractmethod
@@ -832,6 +838,7 @@ class Session(TransportCallbacks):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.transport = None  # type: Optional[Transport]
+        self.working_directory = None  # type: Optional[str]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
@@ -1050,8 +1057,15 @@ class Session(TransportCallbacks):
         else:
             self._workspace_folders = folders[:1]
 
-    def initialize_async(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
+    def initialize_async(
+        self,
+        variables: Dict[str, str],
+        working_directory: Optional[str],
+        transport: Transport,
+        init_callback: InitCallback
+    ) -> None:
         self.transport = transport
+        self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
         self.send_request_async(
@@ -1275,6 +1289,12 @@ class Session(TransportCallbacks):
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
         uri = params["uri"]
+        mgr = self.manager()
+        if not mgr:
+            return
+        reason = mgr.should_present_diagnostics(uri)
+        if isinstance(reason, str):
+            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))

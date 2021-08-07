@@ -9,6 +9,7 @@ from .panels import log_server_message
 from .promise import Promise
 from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
 from .sessions import get_plugin
@@ -20,7 +21,9 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
+from .types import matches_pattern
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .url import parse_uri
 from .views import extract_variables
 from .views import make_link
 from .workspace import ProjectFolders
@@ -347,16 +350,21 @@ class WindowManager(Manager):
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if not cwd:
-                cwd = workspace_folders[0].path if workspace_folders else None
+            if cwd:
+                transport_cwd = cwd  # type: Optional[str]
+            else:
+                transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, cwd, session)
+            transport = create_transport(transport_config, transport_cwd, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
-                variables, transport,
-                lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
+                variables=variables,
+                transport=transport,
+                working_directory=cwd,
+                init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
+            )
             self._new_session = session
         except Exception as e:
             message = "".join((
@@ -436,6 +444,24 @@ class WindowManager(Manager):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder
         return candidate
+
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        scheme, path = parse_uri(uri)
+        if scheme != "file":
+            return None
+        if not self._workspace.contains(path):
+            return "not inside window folders"
+        view = self._window.active_view()
+        if not view:
+            return None
+        settings = view.settings()
+        if matches_pattern(path, settings.get("binary_file_patterns")):
+            return "matches a pattern in binary_file_patterns"
+        if matches_pattern(path, settings.get("file_exclude_patterns")):
+            return "matches a pattern in file_exclude_patterns"
+        if matches_pattern(path, settings.get("folder_exclude_patterns")):
+            return "matches a pattern in folder_exclude_patterns"
+        return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)

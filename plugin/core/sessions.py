@@ -1106,12 +1106,12 @@ class Session(TransportCallbacks):
         self.end_async()
 
     def _get_global_ignore_globs(self, root_path: str) -> List[str]:
-        folder_exclude_patterns = globalprefs().get('folder_exclude_patterns')  # type: List[str]
+        folder_exclude_patterns = cast(List[str], globalprefs().get('folder_exclude_patterns'))
         folder_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
             for pattern in folder_exclude_patterns
         ]
-        file_exclude_patterns = globalprefs().get('file_exclude_patterns')  # type: List[str]
+        file_exclude_patterns = cast(List[str], globalprefs().get('file_exclude_patterns'))
         file_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=False, root_path=root_path)
             for pattern in file_exclude_patterns

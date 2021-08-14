@@ -13,6 +13,7 @@ from wcmatch.glob import GLOBSTAR
 import contextlib
 import fnmatch
 import os
+import posixpath
 import socket
 import sublime
 import time
@@ -93,7 +94,7 @@ def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path:
             glob += '**'
         # If pattern begins with '//', it will be compared as a relative path from the project root.
         if glob.startswith('//') and root_path:
-            glob = os.path.join(root_path, glob[2:])
+            glob = posixpath.join(root_path, glob[2:])
         # If a pattern begins with a single /, it will be treated as an absolute path.
         if not glob.startswith('/') and not glob.startswith('**/'):
             glob = '**/{}'.format(glob)

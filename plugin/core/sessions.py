@@ -1106,13 +1106,15 @@ class Session(TransportCallbacks):
         self.end_async()
 
     def _get_global_ignore_globs(self, root_path: str) -> List[str]:
+        folder_exclude_patterns = globalprefs().get('folder_exclude_patterns')  # type: List[str]
         folder_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
-            for pattern in globalprefs().get('folder_exclude_patterns')
+            for pattern in folder_exclude_patterns
         ]
+        file_exclude_patterns = globalprefs().get('file_exclude_patterns')  # type: List[str]
         file_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=False, root_path=root_path)
-            for pattern in globalprefs().get('file_exclude_patterns')
+            for pattern in file_exclude_patterns
         ]
         return folder_excludes + file_excludes + ['**/node_modules/**']
 
@@ -1347,7 +1349,8 @@ class Session(TransportCallbacks):
                     pattern = config.get("globPattern", '')
                     kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
-                        watcher = self._watcher_impl.create(folder.path, pattern, kind, DEFAULT_IGNORES, self)
+                        ignores = self._get_global_ignore_globs(folder.path)
+                        watcher = self._watcher_impl.create(folder.path, pattern, kind, ignores, self)
                         file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))

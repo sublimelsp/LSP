@@ -13,6 +13,7 @@ from wcmatch.glob import GLOBSTAR
 import contextlib
 import fnmatch
 import os
+import posixpath
 import socket
 import sublime
 import time
@@ -69,6 +70,37 @@ def matches_pattern(path: str, patterns: Any) -> bool:
         if fnmatch.fnmatch(path, pattern):
             return True
     return False
+
+
+def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path: Optional[str] = None) -> str:
+    """
+    Convert a Sublime Text pattern (http://www.sublimetext.com/docs/file_patterns.html)
+    to a glob pattern that utilizes globstar extension.
+    """
+    glob = pattern
+    if '/' not in glob:  # basic pattern: compared against exact file or directory name
+        glob = '**/{}'.format(glob)
+        if is_directory_pattern:
+            glob += '/**'
+    else:  # complex pattern
+        # With '*/' prefix or '/*' suffix, the '*' matches '/' characters.
+        if glob.startswith('*/'):
+            glob = '*{}'.format(glob)
+        if glob.endswith('/*'):
+            glob += '*'
+        # If a pattern ends in '/' it will be treated as a directory pattern, and will match both a directory with that
+        # name and any contained files or subdirectories.
+        if glob.endswith('/'):
+            glob += '**'
+        # If pattern begins with '//', it will be compared as a relative path from the project root.
+        if glob.startswith('//') and root_path:
+            glob = posixpath.join(root_path, glob[2:])
+        # If a pattern begins with a single /, it will be treated as an absolute path.
+        if not glob.startswith('/') and not glob.startswith('**/'):
+            glob = '**/{}'.format(glob)
+        if is_directory_pattern and not glob.endswith('/**'):
+            glob += '/**'
+    return glob
 
 
 def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,

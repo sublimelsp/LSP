@@ -74,6 +74,57 @@ There is an example in the [official ST documentation](https://www.sublimetext.c
 
 The following tables give an overview about the scope names used by LSP.
 
+### Semantic Highlighting
+
+!!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
+    Language servers which support semantic highlighting are for example *clangd*, *rust-analyzer* and *lua-language-server*.
+
+In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
+To add such a rule to your color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
+
+```json
+{
+    "rules": [
+        {
+            "scope": "meta.semantic-token",
+            "background": "#00000101"
+        },
+    ]
+}
+```
+
+Furthermore it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
+
+| scope | [SemanticTokenTypes](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenTypes) |
+| ----- | ------------------ |
+| `meta.semantic-token.namespace` | namespace |
+| `meta.semantic-token.type` | type |
+| `meta.semantic-token.class` | class |
+| `meta.semantic-token.enum` | enum |
+| `meta.semantic-token.interface` | interface |
+| `meta.semantic-token.struct` | struct |
+| `meta.semantic-token.typeparameter` | typeParameter |
+| `meta.semantic-token.parameter` | parameter |
+| `meta.semantic-token.variable` | variable |
+| `meta.semantic-token.property` | property |
+| `meta.semantic-token.enummember` | enumMember |
+| `meta.semantic-token.event` | event |
+| `meta.semantic-token.function` | function |
+| `meta.semantic-token.method` | method |
+| `meta.semantic-token.macro` | macro |
+| `meta.semantic-token.keyword` | keyword |
+| `meta.semantic-token.modifier` | modifier |
+| `meta.semantic-token.comment` | comment |
+| `meta.semantic-token.string` | string |
+| `meta.semantic-token.number` | number |
+| `meta.semantic-token.regexp` | regexp |
+| `meta.semantic-token.operator` | operator |
+
+By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define rules (with foreground colors) for the scopes specified above, the latter will take precedence.
+
+Language servers can also add their own non-standard token types.
+Those will only be highlighted if they are supported by a "LSP-*" helper package.
+
 ### Document Highlights
 
 !!! info "This feature is only available if the server has the *documentHighlightProvider* capability."

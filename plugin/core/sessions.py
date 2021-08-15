@@ -279,6 +279,56 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "codeLens": {
             "dynamicRegistration": True
+        },
+        "semanticTokens": {
+            "dynamicRegistration": True,
+            "requests": {
+                "range": True,
+                "full": {
+                    "delta": True
+                }
+            },
+            "tokenTypes": [  # TODO append additional token types supported by a helper plugin
+                "namespace",
+                "type",
+                "class",
+                "enum",
+                "interface",
+                "struct",
+                "typeParameter",
+                "parameter",
+                "variable",
+                "property",
+                "enumMember",
+                "event",
+                "function",
+                "method",
+                "macro",
+                "keyword",
+                "modifier",
+                "comment",
+                "string",
+                "number",
+                "regexp",
+                "operator"
+            ],
+            "tokenModifiers": [
+                "declaration",
+                "definition",
+                "readonly",
+                "static",
+                "deprecated",
+                "abstract",
+                "async",
+                "modification",
+                "documentation",
+                "defaultLibrary"
+            ],
+            "formats": [
+                "relative"
+            ],
+            "overlappingTokenSupport": False,
+            "multilineTokenSupport": True
         }
     }
     workspace_capabilites = {
@@ -301,7 +351,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "valueSet": symbol_tag_value_set
             }
         },
-        "configuration": True
+        "configuration": True,
+        "semanticTokens": {
+            "refreshSupport": True
+        }
     }
     window_capabilities = {
         "showDocument": {
@@ -499,6 +552,15 @@ class AbstractPlugin(metaclass=ABCMeta):
         In addition to the above variables, add more variables here to be expanded.
         """
         return None
+
+    @classmethod
+    def semantic_tokens(cls) -> Dict[str, str]:
+        """
+        If the server is a semanticTokensProvider and uses custom token types that are not defined in the protocol,
+        you can provide a mapping which assigns scopes to token types and is used by the color scheme for semantic
+        highlighting. Keys of the returned dictionary should be token types and values are the corresponding scopes.
+        """
+        return {}
 
     @classmethod
     def storage_path(cls) -> str:
@@ -1104,6 +1166,12 @@ class Session(TransportCallbacks):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+        semantic_token_types = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if semantic_token_types is not None:
+            debug('{}: Supported semantic token types: {}'.format(self.config.name, semantic_token_types))
+        semantic_token_modifiers = self.get_capability('semanticTokensProvider.legend.tokenModifiers')
+        if semantic_token_modifiers is not None:
+            debug('{}: Supported semantic token modifiers: {}'.format(self.config.name, semantic_token_modifiers))
         if self._watcher_impl:
             config = self.config.file_watcher
             pattern = config.get('pattern')
@@ -1322,6 +1390,19 @@ class Session(TransportCallbacks):
         """handles the workspace/applyEdit request"""
         self._apply_workspace_edit_async(params.get('edit', {})).then(
             lambda _: self.send_response(Response(request_id, {"applied": True})))
+
+    def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
+        """handles the workspace/semanticTokens/refresh request"""
+        self.send_response(Response(request_id, None))
+        debug("server requested a refresh of semantic tokens")
+        # TODO should we send a request only for the active view, or also for all other SessionBuffers of the Session?
+        active_view = sublime.active_window().active_view()
+        if not active_view:
+            return
+        session_view = self.session_view_for_view_async(active_view)
+        if not session_view:
+            return
+        session_view.session_buffer.do_semantic_tokens_async()
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

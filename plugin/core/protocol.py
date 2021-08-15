@@ -293,6 +293,18 @@ class Request:
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
+    def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full", params, view)
+
+    @classmethod
+    def semanticTokensFullDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full/delta", params, view)
+
+    @classmethod
+    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/range", params, view)
+
+    @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 

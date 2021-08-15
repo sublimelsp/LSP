@@ -333,6 +333,11 @@
               "default": "dot",
               "markdownDescription": "Gutter marker for code diagnostics."
             },
+            "semantic_highlighting": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Enable semantic highlighting in addition to standard syntax highlighting."
+            },
             "show_code_actions": {
               "enum": [
                 "annotation",

@@ -201,6 +201,7 @@ class Settings:
     only_show_lsp_completions = None  # type: bool
     popup_max_characters_height = None  # type: int
     popup_max_characters_width = None  # type: int
+    semantic_highlighting = None  # type: bool
     show_code_actions = None  # type: str
     show_code_lens = None  # type: str
     show_code_actions_in_hover = None  # type: bool
@@ -236,6 +237,7 @@ class Settings:
         r("only_show_lsp_completions", False)
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
+        r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
         r("show_code_actions_in_hover", True)

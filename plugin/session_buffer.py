@@ -1,7 +1,10 @@
+# from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
+from .core.protocol import Point
 from .core.protocol import Range
+from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
@@ -10,7 +13,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
+from .core.typing import Any, Iterable, Optional, List, Dict, Tuple, Set
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -19,8 +22,14 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import format_diagnostic_for_panel
 from .core.views import MissingUriError
+from .core.views import point_to_offset
 from .core.views import range_to_region
+from .core.views import region_to_range
+from .core.views import text_document_identifier
 from .core.views import will_save
+from .semantic_highlighting import SemanticToken
+from .semantic_highlighting import SEMANTIC_TOKENS_MAP
+from .semantic_highlighting import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from weakref import WeakSet
 import sublime
 import time
@@ -83,6 +92,13 @@ class SessionBuffer:
         self.total_warnings = 0
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
+        self.semantic_token_types = None  # type: Optional[List[str]]
+        self.semantic_token_modifiers = None  # type: Optional[List[str]]
+        self.semantic_tokens_pending_request = False
+        self.semantic_tokens_data = []  # type: List[int]
+        self.semantic_tokens_result_id = None  # type: Optional[str]
+        self.semantic_tokens = []  # type: List[SemanticToken]
+        self.semantic_tokens_keys = set()  # type: Set[str]
         self._check_did_open(view)
         self.session.register_session_buffer_async(self)
 
@@ -375,6 +391,128 @@ class SessionBuffer:
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()
+
+    def do_semantic_tokens_async(self) -> None:
+        if not userprefs().semantic_highlighting:
+            return
+        if self.semantic_tokens_pending_request:
+            return
+        if not self.session.has_capability("semanticTokensProvider"):
+            return
+        self.semantic_token_types = self.session.get_capability('semanticTokensProvider.legend.tokenTypes')
+        self.semantic_token_modifiers = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')
+        if self.semantic_token_types is None or self.semantic_token_modifiers is None:
+            return
+        view = self.some_view()
+        if view is None:
+            return
+        # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
+        if "background" not in view.style_for_scope("meta.semantic-token"):
+            return
+
+        params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
+
+        if self.semantic_tokens_result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+            params["previousResultId"] = self.semantic_tokens_result_id
+            request = Request.semanticTokensFullDelta(params, view)
+            self.session.send_request_async(request, self._on_semantic_tokens_delta)
+            self.semantic_tokens_pending_request = True
+        elif self.session.has_capability("semanticTokensProvider.full"):
+            request = Request.semanticTokensFull(params, view)
+            self.session.send_request_async(request, self._on_semantic_tokens)
+            self.semantic_tokens_pending_request = True
+        elif self.session.has_capability("semanticTokensProvider.range"):
+            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            request = Request.semanticTokensRange(params, view)
+            self.session.send_request(request, self._on_semantic_tokens)
+            self.semantic_tokens_pending_request = True
+
+    def _on_semantic_tokens(self, response: Optional[Dict]) -> None:
+        self.semantic_tokens_pending_request = False
+        if response:
+            self.semantic_tokens_result_id = response.get("resultId")
+            self.semantic_tokens_data = response["data"]
+            self._draw_semantic_tokens_async()
+
+    def _on_semantic_tokens_delta(self, response: Optional[Dict]) -> None:
+        self.semantic_tokens_pending_request = False
+        if response:
+            self.semantic_tokens_result_id = response.get("resultId")
+            if "edits" in response:  # response is of type SemanticTokensDelta
+                for semantic_tokens_edit in response["edits"]:
+                    start = semantic_tokens_edit["start"]
+                    end = start + semantic_tokens_edit["deleteCount"]
+                    del self.semantic_tokens_data[start:end]
+                    data = semantic_tokens_edit.get("data")
+                    if data:
+                        self.semantic_tokens_data[start:start] = data
+            elif "data" in response:  # response is of type SemanticTokens
+                self.semantic_tokens_data = response["data"]
+            else:
+                return
+            self._draw_semantic_tokens_async()
+
+    def _draw_semantic_tokens_async(self) -> None:
+        view = self.some_view()
+        if view is None:
+            return
+
+        semantic_tokens_mapping = SEMANTIC_TOKENS_MAP
+        # TODO this mapping better should only be updated when a plugin is registered/unregistered and then stored in the
+        #      Session, and not over and over again for each request
+        if self.session._plugin is not None:
+            semantic_tokens_mapping.update(self.session._plugin.semantic_tokens())
+
+        # TODO compare old and new regions to only remove regions that don't exist anymore
+        for sv in self.session_views:
+            for key in self.semantic_tokens_keys:
+                sv.view.erase_regions(key)
+        self.semantic_tokens.clear()
+        self.semantic_tokens_keys.clear()
+
+        scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
+        prev_line = 0
+        prev_col = 0
+
+        for idx in range(0, len(self.semantic_tokens_data), 5):
+            delta_line = self.semantic_tokens_data[idx]
+            delta_start = self.semantic_tokens_data[idx + 1]
+            length = self.semantic_tokens_data[idx + 2]
+            token_type_encoded = self.semantic_tokens_data[idx + 3]
+            token_modifiers_encoded = self.semantic_tokens_data[idx + 4]
+            line = prev_line + delta_line
+            col = prev_col + delta_start if delta_line == 0 else delta_start
+            a = point_to_offset(Point(line, col), view)
+            b = a + length
+            r = sublime.Region(a, b)
+            prev_line = line
+            prev_col = col
+            token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
+            token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
+                               for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+            if token_type in semantic_tokens_mapping:
+                scope = semantic_tokens_mapping[token_type]
+                for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
+                    # TODO there must be a better way than to iterate through all entries
+                    if entry[0] == token_type and entry[1] in token_modifiers:
+                        scope = entry[2]
+                        break  # first match wins (in case of multiple modifiers)
+                scope += " meta.semantic-token.{}.lsp".format(token_type)
+            else:
+                # skip this token if no scope is defined for its token type
+                continue
+            self.semantic_tokens.append(SemanticToken(r, token_type, token_modifiers))
+            if scope in scope_regions:
+                scope_regions[scope].append(r)
+            else:
+                scope_regions[scope] = [r]
+
+        for scope, regions in scope_regions.items():
+            key = "lsp_{}".format(str(abs(hash(scope))))  # TODO find a better way to name region keys
+            self.semantic_tokens_keys.add(key)
+            # TODO compare old and new regions to only update regions that were changed
+            for sv in self.session_views:
+                sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

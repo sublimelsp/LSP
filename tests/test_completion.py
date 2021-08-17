@@ -636,9 +636,9 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=False,
-            expected_regex=r"^<p><b>f</b>\(X&amp; x\)<i> does things</i></p>$",
+            expected_regex=r"^<p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",
             label="f",
-            label_details={"detail": "(X& x)", "description": " does things"}
+            label_details={"detail": "(X& x)", "description": "does things"}
         )
         check(
             resolve_support=True,
@@ -654,9 +654,9 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)<i> does things</i></p>$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",  # noqa: E501
             label="f",
-            label_details={"detail": "(X& x)", "description": " does things"}
+            label_details={"detail": "(X& x)", "description": "does things"}
         )
 
 

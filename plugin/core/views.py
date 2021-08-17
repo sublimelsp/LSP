@@ -777,10 +777,8 @@ def _is_completion_item_deprecated(item: CompletionItem) -> bool:
     return False
 
 
-def _wrap_in_tags(tag: str, item: Union[str, None], escape: bool) -> str:
-    if isinstance(item, str):
-        return "<{0}>{1}</{0}>".format(tag, html.escape(item) if escape else item)
-    return ""
+def _wrap_in_tags(tag: str, item: str) -> str:
+    return "<{0}>{1}</{0}>".format(tag, html.escape(item))
 
 
 def format_completion(
@@ -812,20 +810,20 @@ def format_completion(
         if lsp_label_details:
             lsp_label_detail = lsp_label_details.get("detail")
             lsp_label_description = lsp_label_details.get("description")
-            st_details += _wrap_in_tags(
-                "p",
-                "{label}{detail}{description}".format(
-                    # `label` should be rendered most prominent.
-                    label=_wrap_in_tags("b", lsp_label, escape=True),
-                    # `detail` should be rendered less prominent than `label`.
-                    detail=html.escape(lsp_label_detail) if isinstance(lsp_label_detail, str) else "",
-                    # `description` should be rendered less prominent than `detail`.
-                    description=_wrap_in_tags("i", lsp_label_description, escape=True)
-                ),
-                escape=False
-            )
+            st_details += "<p>"
+            # `label` should be rendered most prominent.
+            st_details += _wrap_in_tags("b", lsp_label)
+            if isinstance(lsp_label_detail, str):
+                # `detail` should be rendered less prominent than `label`.
+                # The string is appended directly after `label`, with no additional white space applied.
+                st_details += html.escape(lsp_label_detail)
+            if isinstance(lsp_label_description, str):
+                # `description` should be rendered less prominent than `detail`.
+                # Additional separation is added.
+                st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
+            st_details += "</p>"
         else:
-            st_details += _wrap_in_tags("p", lsp_label, escape=True)
+            st_details += _wrap_in_tags("p", lsp_label)
     else:
         st_trigger = lsp_label
 

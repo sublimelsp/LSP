@@ -70,7 +70,7 @@ class LspSelectCompletionItemCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
-            new_text = text_edit["newText"]
+            new_text = text_edit["newText"].replace("\r", "")
             edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
                 for region in self.translated_regions(edit_region):
@@ -82,7 +82,8 @@ class LspSelectCompletionItemCommand(LspTextCommand):
                     self.view.erase(edit, region)
                     self.view.insert(edit, region.a, new_text)
         else:
-            insert_text = item.get("insertText") or item.get("label")
+            insert_text = item.get("insertText") or item["label"]
+            insert_text = insert_text.replace("\r", "")
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": insert_text})
             else:

@@ -612,7 +612,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
         def check(
             resolve_support: bool,
-            expected: str,
+            expected_regex: str,
             label: str,
             label_details: Optional[CompletionItemLabelDetails]
         ) -> None:
@@ -620,41 +620,41 @@ class QueryCompletionsTests(CompletionsTestsBase):
             if label_details is not None:
                 lsp["labelDetails"] = label_details
             native = format_completion(lsp, 0, resolve_support, "")
-            self.assertEqual(native.details, expected)
+            self.assertRegex(native.details, expected_regex)
 
         check(
             resolve_support=False,
-            expected="<p>f</p>",
+            expected_regex=r"^<p>f</p>$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=False,
-            expected="<p><b>f</b>(X&amp; x)</p>",
+            expected_regex=r"^<p><b>f</b>\(X&amp; x\)</p>$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=False,
-            expected="<p><b>f</b>(X&amp; x)<i> does things</i></p>",
+            expected_regex=r"^<p><b>f</b>\(X&amp; x\)<i> does things</i></p>$",
             label="f",
             label_details={"detail": "(X& x)", "description": " does things"}
         )
         check(
             resolve_support=True,
-            expected="<a href='subl:lsp_resolve_docs {&quot;index&quot;:0,&quot;session_name&quot;:&quot;&quot;}'>More</a> | <p>f</p>",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p>f</p>$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=True,
-            expected="<a href='subl:lsp_resolve_docs {&quot;index&quot;:0,&quot;session_name&quot;:&quot;&quot;}'>More</a> | <p><b>f</b>(X&amp; x)</p>",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)</p>$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=True,
-            expected="<a href='subl:lsp_resolve_docs {&quot;index&quot;:0,&quot;session_name&quot;:&quot;&quot;}'>More</a> | <p><b>f</b>(X&amp; x)<i> does things</i></p>",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)<i> does things</i></p>$",  # noqa: E501
             label="f",
             label_details={"detail": "(X& x)", "description": " does things"}
         )

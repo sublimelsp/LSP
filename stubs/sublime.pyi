@@ -284,6 +284,7 @@ class Syntax:
 
 class CompletionItem:
     flags = ...  # type: int
+    details = ...  # type: str
 
     def __init__(
             self,

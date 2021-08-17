@@ -777,6 +777,12 @@ def _is_completion_item_deprecated(item: CompletionItem) -> bool:
     return False
 
 
+def _wrap_in_tags(tag: str, item: Union[str, None], escape: bool) -> str:
+    if isinstance(item, str):
+        return "<{0}>{1}</{0}>".format(tag, html.escape(item) if escape else item)
+    return ""
+
+
 def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
@@ -791,6 +797,7 @@ def format_completion(
         kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
     lsp_label = item["label"]
+    lsp_label_details = item.get("labelDetails")
     lsp_filter_text = item.get("filterText")
     st_annotation = (item.get("detail") or "").replace('\n', ' ')
 
@@ -802,7 +809,23 @@ def format_completion(
         st_trigger = lsp_filter_text
         if st_details:
             st_details += " | "
-        st_details += "<p>{}</p>".format(html.escape(lsp_label))
+        if lsp_label_details:
+            lsp_label_detail = lsp_label_details.get("detail")
+            lsp_label_description = lsp_label_details.get("description")
+            st_details += _wrap_in_tags(
+                "p",
+                "{label}{detail}{description}".format(
+                    # `label` should be rendered most prominent.
+                    label=_wrap_in_tags("b", lsp_label, escape=True),
+                    # `detail` should be rendered less prominent than `label`.
+                    detail=html.escape(lsp_label_detail) if isinstance(lsp_label_detail, str) else "",
+                    # `description` should be rendered less prominent than `detail`.
+                    description=_wrap_in_tags("i", lsp_label_description, escape=True)
+                ),
+                escape=False
+            )
+        else:
+            st_details += _wrap_in_tags("p", lsp_label, escape=True)
     else:
         st_trigger = lsp_label
 

@@ -284,6 +284,7 @@ class Syntax:
 
 class CompletionItem:
     flags = ...  # type: int
+    kind = ...  # type: Tuple[int, str, str]
 
     def __init__(
             self,

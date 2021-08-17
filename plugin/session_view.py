@@ -294,7 +294,6 @@ class SessionView:
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
-        self._code_lenses.clear_annotations()
         if not isinstance(response, list):
             return
         self._code_lenses.handle_response(self.session.config.name, response)

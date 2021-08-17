@@ -802,8 +802,9 @@ def format_completion(
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
-        st_details += " | "
     if lsp_label_details:
+        if st_details:
+            st_details += " | "
         lsp_label_detail = lsp_label_details.get("detail")
         lsp_label_description = lsp_label_details.get("description")
         st_details += "<p>"
@@ -818,11 +819,13 @@ def format_completion(
             # Additional separation is added.
             st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
         st_details += "</p>"
-    else:
+    elif lsp_filter_text and lsp_filter_text != lsp_label:
+        if st_details:
+            st_details += " | "
         st_details += _wrap_in_tags("p", lsp_label)
 
     completion = sublime.CompletionItem.command_completion(
-        trigger=lsp_filter_text if lsp_filter_text else lsp_label,
+        trigger=lsp_filter_text or lsp_label,
         command="lsp_select_completion_item",
         args={"item": item, "session_name": session_name},
         annotation=st_annotation,

@@ -675,7 +675,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
         check(
             resolve_support=False,
-            expected_regex=r"^<p>f</p>$",
+            expected_regex=r"^$",
             label="f",
             label_details=None
         )
@@ -693,7 +693,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p>f</p>$",
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a>$",
             label="f",
             label_details=None
         )

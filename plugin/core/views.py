@@ -802,33 +802,27 @@ def format_completion(
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
-
-    if lsp_filter_text and lsp_filter_text != lsp_label:
-        st_trigger = lsp_filter_text
-        if st_details:
-            st_details += " | "
-        if lsp_label_details:
-            lsp_label_detail = lsp_label_details.get("detail")
-            lsp_label_description = lsp_label_details.get("description")
-            st_details += "<p>"
-            # `label` should be rendered most prominent.
-            st_details += _wrap_in_tags("b", lsp_label)
-            if isinstance(lsp_label_detail, str):
-                # `detail` should be rendered less prominent than `label`.
-                # The string is appended directly after `label`, with no additional white space applied.
-                st_details += html.escape(lsp_label_detail)
-            if isinstance(lsp_label_description, str):
-                # `description` should be rendered less prominent than `detail`.
-                # Additional separation is added.
-                st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
-            st_details += "</p>"
-        else:
-            st_details += _wrap_in_tags("p", lsp_label)
+        st_details += " | "
+    if lsp_label_details:
+        lsp_label_detail = lsp_label_details.get("detail")
+        lsp_label_description = lsp_label_details.get("description")
+        st_details += "<p>"
+        # `label` should be rendered most prominent.
+        st_details += _wrap_in_tags("b", lsp_label)
+        if isinstance(lsp_label_detail, str):
+            # `detail` should be rendered less prominent than `label`.
+            # The string is appended directly after `label`, with no additional white space applied.
+            st_details += html.escape(lsp_label_detail)
+        if isinstance(lsp_label_description, str):
+            # `description` should be rendered less prominent than `detail`.
+            # Additional separation is added.
+            st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
+        st_details += "</p>"
     else:
-        st_trigger = lsp_label
+        st_details += _wrap_in_tags("p", lsp_label)
 
     completion = sublime.CompletionItem.command_completion(
-        trigger=st_trigger,
+        trigger=lsp_filter_text if lsp_filter_text else lsp_label,
         command="lsp_select_completion_item",
         args={"item": item, "session_name": session_name},
         annotation=st_annotation,

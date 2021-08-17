@@ -608,7 +608,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
-    def test_label_details(self) -> None:
+    def test_label_details_with_filter_text(self) -> None:
 
         def check(
             resolve_support: bool,
@@ -617,6 +617,57 @@ class QueryCompletionsTests(CompletionsTestsBase):
             label_details: Optional[CompletionItemLabelDetails]
         ) -> None:
             lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
+            if label_details is not None:
+                lsp["labelDetails"] = label_details
+            native = format_completion(lsp, 0, resolve_support, "")
+            self.assertRegex(native.details, expected_regex)
+
+        check(
+            resolve_support=False,
+            expected_regex=r"^<p>f</p>$",
+            label="f",
+            label_details=None
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^<p><b>f</b>\(X&amp; x\)</p>$",
+            label="f",
+            label_details={"detail": "(X& x)"}
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^<p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",
+            label="f",
+            label_details={"detail": "(X& x)", "description": "does things"}
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p>f</p>$",
+            label="f",
+            label_details=None
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)</p>$",
+            label="f",
+            label_details={"detail": "(X& x)"}
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",  # noqa: E501
+            label="f",
+            label_details={"detail": "(X& x)", "description": "does things"}
+        )
+
+    def test_label_details_without_filter_text(self) -> None:
+
+        def check(
+            resolve_support: bool,
+            expected_regex: str,
+            label: str,
+            label_details: Optional[CompletionItemLabelDetails]
+        ) -> None:
+            lsp = {"label": label}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
             native = format_completion(lsp, 0, resolve_support, "")

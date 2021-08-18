@@ -1,4 +1,5 @@
 from copy import deepcopy
+from LSP.plugin.core.protocol import CompletionItem
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from LSP.plugin.core.views import format_completion
@@ -586,25 +587,46 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
 
-    def test_show_deprecated_flag(self) -> 'Generator':
+    def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {
             "label": 'hello',
             "kind": 2,  # Method
             "deprecated": True
-        }
+        }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
-    def test_show_deprecated_tag(self) -> 'Generator':
+    def test_show_deprecated_tag(self) -> None:
         item_with_deprecated_tags = {
             "label": 'hello',
             "kind": 2,  # Method
             "tags": [CompletionItemTag.Deprecated]
-        }
+        }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+    def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'greeting',
+                'insertText': 'hello\r\nworld'
+            }],
+            insert_text='',
+            expected_text='hello\nworld')
+
+    def test_strips_carriage_return_in_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'greeting',
+                'textEdit': {
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                    'newText': 'hello\r\nworld'
+                }
+            }],
+            insert_text='',
+            expected_text='hello\nworld')
 
 
 class QueryCompletionsNoResolverTests(CompletionsTestsBase):

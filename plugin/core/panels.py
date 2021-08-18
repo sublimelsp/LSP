@@ -37,9 +37,19 @@ class PanelName:
 
 @contextmanager
 def mutable(view: sublime.View) -> Generator:
+    # Unset the read-only flag temporarily
     view.set_read_only(False)
-    yield
-    view.set_read_only(True)
+    try:
+        yield
+    finally:
+        # Compatible with v4113 and below
+        # todo: call directly some day
+        clear_undo_stack = getattr(view, "clear_undo_stack", None)
+        if callable(clear_undo_stack):
+            # We don't want an infinite undo stack for any of our panels.
+            clear_undo_stack()
+        # Put back the read-only flag.
+        view.set_read_only(True)
 
 
 class WindowPanelListener(sublime_plugin.EventListener):

@@ -1,7 +1,7 @@
 site_name: LSP for Sublime Text
 site_url: https://sublimelsp.github.io/LSP/
 repo_url: https://github.com/sublimelsp/LSP/
-edit_uri: edit/main/docs/src/
+edit_uri: tree/main/docs/src
 docs_dir: 'src'
 copyright: |
   Copyright &copy; 2017 - 2021 Tom van Ommeren

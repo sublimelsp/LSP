@@ -15,7 +15,7 @@ If the server is crashing on startup, try running `LSP: Troubleshoot server` fro
 
 ## Updating the PATH used by LSP servers
 
-Sublime Text might see a different `PATH` from what your shell environment uses and might not be able to find the server binary due to that. You can see what ST thinks your `PATH` is by opening the ST console by clicking on *View > Show Console*, and running `import os; os.environ["PATH"]` in that console.
+Sublime Text might see a different `PATH` from what your shell environment uses and might not be able to find the server binary due to that. You can see what ST thinks your `PATH` is by opening the ST console by clicking on *View > Show Console*, and running `#!py import os; os.environ["PATH"]` in that console.
 
 The solution is to make ST use the same `PATH` that is read by your shell (or OS in general in the case of Windows).
 
@@ -52,7 +52,7 @@ Another solution could be (at least on Linux) to update the server `PATH` using 
   - `<your_language_server_name>` is the server name
   - `<added_path>` is the directory needed for the server to behave correctly
 
-```json
+```js
 "<your_language_server_name>":
 {
     // ...
@@ -83,7 +83,7 @@ See ["Updating the PATH used by LSP servers"](troubleshooting.md#updating-the-pa
 
 The reason for this can be the same as in problem number 2. Additionally, the language servers may have dependencies that should also be in your `PATH` in addition to the server binary itself.
 
-For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
+For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `#!sh ~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
 
 If that doesn't solve the issue, try running `LSP: Troubleshoot server` and providing its output when asking for help.
 

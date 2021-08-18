@@ -35,7 +35,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
 1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"clojure-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```js
     {
         "clients": {
             "clojure-lsp": {
@@ -59,7 +59,7 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"dls"` client configuration to the `"clients"`:
 
-    ```json
+    ```js
     {
         "clients": {
             "dls": {
@@ -92,7 +92,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"erlang-ls"` client configuration to the `"clients"`:
 
-    ```json
+    ```js
     {
         "clients": {
             "erlang-ls": {
@@ -201,7 +201,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"julials"` client configuration to the `"clients"`:
 
-    ```json
+    ```js
     {
         "clients": {
             "julials": {
@@ -244,7 +244,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"kotlinls"` client configuration to the `"clients"`:
 
-    ```json
+    ```js
     {
         "clients": {
             "kotlinls": {
@@ -293,7 +293,7 @@ Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"reason"` client configuration to the `"clients"`:
 
 
-    ```json
+    ```js
     {
         "clients": {
             "reason": {
@@ -383,12 +383,16 @@ There are multiple options:
 
 1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
-        gem install sorbet
-        gem install sorbet-runtime
+    ```sh
+    gem install sorbet
+    gem install sorbet-runtime
+    ```
 
     If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
 
-        bundle install
+    ```sh
+    bundle install
+    ```
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"sorbet"` client configuration to the `"clients"`:
 

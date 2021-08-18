@@ -23,7 +23,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Rename | unbound | `lsp_symbol_rename`
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
-| Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
+| Run Source Action | unbound | `lsp_code_actions` (with args: `#!json {"only_kinds": ["source"]}`)
 | Run Code Lens | unbound | `lsp_code_lens`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | -
 | Hover Popup | unbound | `lsp_hover`

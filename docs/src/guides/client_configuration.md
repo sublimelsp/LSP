@@ -3,7 +3,7 @@
 ## Custom client configuration
 
 !!! Note
-    The external LSP-* helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.
+    External `LSP-*` helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.
 
 After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
 LSP ships with configurations for a few language servers, but these need to be enabled before they will start.
@@ -16,18 +16,18 @@ Below is an example of the `LSP.sublime-settings` file with configurations for t
 
 ```js
 {
-  // General settings
-  "show_diagnostics_panel_on_save": 0,
+    // General settings
+    "show_diagnostics_panel_on_save": 0,
 
-  // Language server configurations
-  "clients": {
-    "lsp-tsserver": {
-      "command": ["lsp-tsserver"],
-      "enabled": true,
-      "languageId": "typescript",
-      "document_selector": "source.ts | source.tsx"
+    // Language server configurations
+    "clients": {
+        "lsp-tsserver": {
+            "command": ["lsp-tsserver"],
+            "enabled": true,
+            "languageId": "typescript",
+            "document_selector": "source.ts | source.tsx"
+        }
     }
-  }
 }
 ```
 
@@ -35,42 +35,42 @@ Some language servers support multiple languages, which can be specified in the 
 
 ```js
 {
-  // General settings
-  "show_diagnostics_panel_on_save": 0,
+    // General settings
+    "show_diagnostics_panel_on_save": 0,
 
-  // Language server configurations
-  "clients": {
-    "lsp-tsserver": {
-      "command": ["lsp-tsserver"],
-      "enabled": true,
-      "languages": [{
-        "languageId": "javascript",
-        "document_selector": "source.js | source.jsx"
-      }, {
-        "languageId": "typescript",
-        "document_selector": "source.ts | source.tsx"
-      }]
+    // Language server configurations
+    "clients": {
+        "lsp-tsserver": {
+            "command": ["lsp-tsserver"],
+            "enabled": true,
+            "languages": [{
+                "languageId": "javascript",
+                "document_selector": "source.js | source.jsx"
+            }, {
+                "languageId": "typescript",
+                "document_selector": "source.ts | source.tsx"
+            }]
+        }
     }
-  }
 }
 ```
 
 | Setting | Description |
 | ------- | ----------- |
-| enabled | enables a language server (default is disabled) |
-| command | must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured) |
-| env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
-| settings | per-project settings (equivalent to VS Code's Workspace Settings) |
-| initializationOptions | options to send to the server at startup (rarely used) |
-| document_selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "document_selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
-| feature_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "feature_selector" to `text.html` for HTML server and `source.php` to PHP server. Note: when the "feature_selector" is missing, it will be the same as the "document_selector".
-| languageId | Identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem) |
-| languages | Group `document_selector` and `languageId` together for servers that support more than one language |
-| tcp_port | see instructions below |
-| tcp_host | see instructions below |
-| tcp_mode | see instructions below |
-| experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
-| disabled_capabilities | Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being `true`. Refer to the `ServerCapabilities` structure in [LSP capabilities](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) to find capabilities that you might want to disable. Note that the value should be `true` rather than `false` for capabilites that you want to disable. For example: `"signatureHelpProvider": true` |
+| `enabled` | enables a language server (default is disabled) |
+| `command` | must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured) |
+| `env` | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
+| `settings` | per-project settings (equivalent to VS Code's Workspace Settings) |
+| `initializationOptions` | options to send to the server at startup (rarely used) |
+| `document_selector` | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "document_selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
+| `feature_selector` | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "feature_selector" to `text.html` for HTML server and `source.php` to PHP server. Note: when the "feature_selector" is missing, it will be the same as the "document_selector".
+| `languageId` | Identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem) |
+| `languages` | Group `document_selector` and `languageId` together for servers that support more than one language |
+| `tcp_port` | see instructions below |
+| `tcp_host` | see instructions below |
+| `tcp_mode` | see instructions below |
+| `experimental_capabilities` | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
+| `disabled_capabilities` | Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being `true`. Refer to the `ServerCapabilities` structure in [LSP capabilities](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) to find capabilities that you might want to disable. Note that the value should be `true` rather than `false` for capabilites that you want to disable. For example: `"signatureHelpProvider": true` |
 
 You can figure out the scope of the current view with `Tools > Developer > Show Scope`.
 You can figure out the syntax by opening the ST console and running `view.settings().get("syntax")`.
@@ -93,15 +93,15 @@ Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_acti
 
 ```json
 {
-  "folders":
-  [
-    {
-      "path": "."
+    "folders":
+    [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "lsp_format_on_save": true,
     }
-  ],
-  "settings": {
-    "lsp_format_on_save": true,
-  }
 }
 ```
 
@@ -111,24 +111,25 @@ Also global language server settings can be added or overridden per-project by a
 
 ```json
 {
-  "folders":
-  [
-    {
-      "path": "."
-    }
-  ],
-  "settings": {
-    "LSP": {
-      "jsts": {
-        "enabled": false,
-      },
-      "LSP-eslint": {
-        "settings": {
-          "eslint.autoFixOnSave": true  // This property will be merged with original settings for
-                                        // this client (potentially overriding original value).
+    "folders":
+    [
+        {
+            "path": "."
         }
-      }
+    ],
+    "settings": {
+        "LSP": {
+            "jsts": {
+                "enabled": false,
+            },
+            "LSP-eslint": {
+                "settings": {
+                    "eslint.autoFixOnSave": true
+                    // This property will be merged with original settings for
+                    // this client (potentially overriding original value).
+                }
+            }
+        }
     }
-  }
 }
 ```

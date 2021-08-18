@@ -21,16 +21,16 @@ Example:
 
 ```js
 [
-  // ...
-  {
-    "caption": "Thread First",
-    "command": "lsp_execute",
-    "args": {
-      "session_name": "LSP-pyright",
-      "command_name": "thread-first",
-      "command_args": ["${file_uri}", 0, 0]
+    // ...
+    {
+        "caption": "Thread First",
+        "command": "lsp_execute",
+        "args": {
+            "session_name": "LSP-pyright",
+            "command_name": "thread-first",
+            "command_args": ["${file_uri}", 0, 0]
+        }
     }
-  }
 ]
 ```
 

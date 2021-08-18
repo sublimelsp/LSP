@@ -181,6 +181,11 @@ TextEdit = TypedDict('TextEdit', {
     'range': RangeLsp
 }, total=True)
 
+CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
+    'detail': str,
+    'description': str
+}, total=False)
+
 CompletionItem = TypedDict('CompletionItem', {
     'additionalTextEdits': List[TextEdit],
     'command': Command,
@@ -195,9 +200,10 @@ CompletionItem = TypedDict('CompletionItem', {
     'insertTextMode': InsertTextMode,
     'kind': int,
     'label': str,
+    'labelDetails': CompletionItemLabelDetails,
     'preselect': bool,
     'sortText': str,
-    'tags': List[CompletionItemTag],
+    'tags': List[int],
     'textEdit': TextEdit
 }, total=False)
 

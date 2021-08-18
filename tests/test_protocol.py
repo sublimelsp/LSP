@@ -1,8 +1,6 @@
-from LSP.plugin.core.protocol import (
-    Point, Range, Request, Notification
-)
-import unittest
+from LSP.plugin.core.protocol import Point, Range, Request, Notification
 from LSP.plugin.core.transports import _encode, _decode
+import unittest
 
 
 LSP_START_POSITION = {'line': 10, 'character': 4}

@@ -777,6 +777,10 @@ def _is_completion_item_deprecated(item: CompletionItem) -> bool:
     return False
 
 
+def _wrap_in_tags(tag: str, item: str) -> str:
+    return "<{0}>{1}</{0}>".format(tag, html.escape(item))
+
+
 def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
@@ -791,23 +795,37 @@ def format_completion(
         kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
     lsp_label = item["label"]
+    lsp_label_details = item.get("labelDetails")
     lsp_filter_text = item.get("filterText")
     st_annotation = (item.get("detail") or "").replace('\n', ' ')
 
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
-
-    if lsp_filter_text and lsp_filter_text != lsp_label:
-        st_trigger = lsp_filter_text
+    if lsp_label_details:
         if st_details:
             st_details += " | "
-        st_details += "<p>{}</p>".format(html.escape(lsp_label))
-    else:
-        st_trigger = lsp_label
+        lsp_label_detail = lsp_label_details.get("detail")
+        lsp_label_description = lsp_label_details.get("description")
+        st_details += "<p>"
+        # `label` should be rendered most prominent.
+        st_details += _wrap_in_tags("b", lsp_label)
+        if isinstance(lsp_label_detail, str):
+            # `detail` should be rendered less prominent than `label`.
+            # The string is appended directly after `label`, with no additional white space applied.
+            st_details += html.escape(lsp_label_detail)
+        if isinstance(lsp_label_description, str):
+            # `description` should be rendered less prominent than `detail`.
+            # Additional separation is added.
+            st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
+        st_details += "</p>"
+    elif lsp_filter_text and lsp_filter_text != lsp_label:
+        if st_details:
+            st_details += " | "
+        st_details += _wrap_in_tags("p", lsp_label)
 
     completion = sublime.CompletionItem.command_completion(
-        trigger=st_trigger,
+        trigger=lsp_filter_text or lsp_label,
         command="lsp_select_completion_item",
         args={"item": item, "session_name": session_name},
         annotation=st_annotation,

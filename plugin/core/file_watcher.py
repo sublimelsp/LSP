@@ -4,7 +4,6 @@ from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
 
-DEFAULT_IGNORES = ['**/.git/**', '**/node_modules/**', '**/.hg/**']
 DEFAULT_KIND = WatchKindCreate | WatchKindChange | WatchKindDelete
 
 FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]

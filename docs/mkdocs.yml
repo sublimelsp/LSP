@@ -12,28 +12,20 @@ theme:
     scheme: slate
     accent: orange
     primary: orange
-
   icon:
-    logo: fontawesome/solid/book-open
+    logo: material/book-open-page-variant
 
-# override css
 extra_css:
   - stylesheets/extra.css
 
 markdown_extensions:
-  # tabs for ST4 and ST3 content
-  - pymdownx.tabbed
-
-  # higlight code block
-  - pymdownx.highlight
-  - pymdownx.superfences
-
-  # add tip, warning info boxes
-  - admonition
-
-  # show # after each header
-  - toc:
+  - markdown.extensions.admonition
+  - markdown.extensions.toc:
       permalink: '#'
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed
 
 nav:
     - Getting Started: index.md
@@ -49,5 +41,7 @@ nav:
 
 extra:
   social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sublimelsp/LSP
     - icon: fontawesome/brands/discord
       link: https://discordapp.com/channels/280102180189634562/645268178397560865

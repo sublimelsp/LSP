@@ -45,3 +45,6 @@ extra:
       link: https://github.com/sublimelsp/LSP
     - icon: fontawesome/brands/discord
       link: https://discordapp.com/channels/280102180189634562/645268178397560865
+
+plugins:
+  - git-revision-date-localized

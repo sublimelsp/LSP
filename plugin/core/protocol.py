@@ -203,7 +203,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'labelDetails': CompletionItemLabelDetails,
     'preselect': bool,
     'sortText': str,
-    'tags': List[CompletionItemTag],
+    'tags': List[int],
     'textEdit': TextEdit
 }, total=False)
 

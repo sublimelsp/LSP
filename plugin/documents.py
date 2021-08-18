@@ -22,6 +22,7 @@ from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
@@ -378,10 +379,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_post_save_async(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
         # filesystem.
-        self.set_uri(view_to_uri(self.view))
-        if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_post_save_async(self._uri)
+        uri = view_to_uri(self.view)
+        new_scheme, _ = parse_uri(uri)
+        old_scheme, _ = parse_uri(self._uri)
+        self.set_uri(uri)
+        if new_scheme == old_scheme:
+            # The URI scheme hasn't changed so the only thing we have to do is to inform the attached session views
+            # about the new URI.
+            if self.view.is_primary():
+                for sv in self.session_views_async():
+                    sv.on_post_save_async(self._uri)
+        else:
+            # The URI scheme has changed. This means we need to re-determine whether any language servers should
+            # be attached to the view.
+            sublime.set_timeout(self._reset)
 
     def on_close(self) -> None:
         if self._registered and self._manager:

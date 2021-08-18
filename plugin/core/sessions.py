@@ -2,7 +2,6 @@ from .collections import DottedDict
 from .edit import apply_edits
 from .edit import parse_workspace_edit
 from .edit import TextEditTuple
-from .file_watcher import DEFAULT_IGNORES
 from .file_watcher import DEFAULT_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -35,6 +34,7 @@ from .protocol import Response
 from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
+from .settings import globalprefs
 from .transports import Transport
 from .transports import TransportCallbacks
 from .types import Capabilities
@@ -45,6 +45,7 @@ from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
+from .types import sublime_pattern_to_glob
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import filename_to_uri
 from .url import parse_uri
@@ -95,6 +96,12 @@ class Manager(metaclass=ABCMeta):
         Get the project path for the given file.
         """
         pass
+
+    @abstractmethod
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        """
+        Should the diagnostics for this URI be shown in the view? Return a reason why not
+        """
 
     # Mutators
 
@@ -172,7 +179,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 },
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
-                }
+                },
+                "labelDetailsSupport": True
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
@@ -833,6 +841,7 @@ class Session(TransportCallbacks):
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.transport = None  # type: Optional[Transport]
+        self.working_directory = None  # type: Optional[str]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
@@ -1051,8 +1060,15 @@ class Session(TransportCallbacks):
         else:
             self._workspace_folders = folders[:1]
 
-    def initialize_async(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
+    def initialize_async(
+        self,
+        variables: Dict[str, str],
+        working_directory: Optional[str],
+        transport: Transport,
+        init_callback: InitCallback
+    ) -> None:
         self.transport = transport
+        self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
         self.send_request_async(
@@ -1078,8 +1094,8 @@ class Session(TransportCallbacks):
             pattern = config.get('pattern')
             if pattern:
                 events = config.get('events') or ['create', 'change', 'delete']
-                ignores = config.get('ignores') or DEFAULT_IGNORES
                 for folder in self.get_workspace_folders():
+                    ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, pattern, events, ignores, self)
                     self._static_file_watchers.append(watcher)
         if self._init_callback:
@@ -1090,6 +1106,19 @@ class Session(TransportCallbacks):
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
+
+    def _get_global_ignore_globs(self, root_path: str) -> List[str]:
+        folder_exclude_patterns = cast(List[str], globalprefs().get('folder_exclude_patterns'))
+        folder_excludes = [
+            sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
+            for pattern in folder_exclude_patterns
+        ]
+        file_exclude_patterns = cast(List[str], globalprefs().get('file_exclude_patterns'))
+        file_excludes = [
+            sublime_pattern_to_glob(pattern, is_directory_pattern=False, root_path=root_path)
+            for pattern in file_exclude_patterns
+        ]
+        return folder_excludes + file_excludes + ['**/node_modules/**']
 
     def call_manager(self, method: str, *args: Any) -> None:
         mgr = self.manager()
@@ -1303,6 +1332,12 @@ class Session(TransportCallbacks):
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
         uri = params["uri"]
+        mgr = self.manager()
+        if not mgr:
+            return
+        reason = mgr.should_present_diagnostics(uri)
+        if isinstance(reason, str):
+            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
@@ -1343,7 +1378,8 @@ class Session(TransportCallbacks):
                     pattern = config.get("globPattern", '')
                     kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
-                        watcher = self._watcher_impl.create(folder.path, pattern, kind, DEFAULT_IGNORES, self)
+                        ignores = self._get_global_ignore_globs(folder.path)
+                        watcher = self._watcher_impl.create(folder.path, pattern, kind, ignores, self)
                         file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))

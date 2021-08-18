@@ -1,3 +1,4 @@
+import sublime
 from LSP.plugin.core.settings import read_client_config, update_client_config
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
@@ -80,6 +81,23 @@ class ConfigParsingTests(DeferrableTestCase):
         original_path = environ.copy()['PATH']
         resolved_path = transport_config.env['PATH']
         self.assertEqual(resolved_path, '/a/b/{}{}'.format(pathsep, original_path))
+
+    def test_list_in_environment(self):
+        settings = {
+            "command": ["pyls"],
+            "selector": "source.python",
+            "env": {
+                "FOO": ["C:/hello", "X:/there", "Y:/$foobar"],
+                "BAR": "baz"
+            }
+        }
+        config = read_client_config("pyls", settings)
+        resolved = config.resolve_transport_config({"foobar": "asdf"})
+        if sublime.platform() == "windows":
+            self.assertEqual(resolved.env["FOO"], "C:/hello;X:/there;Y:/asdf")
+        else:
+            self.assertEqual(resolved.env["FOO"], "C:/hello:X:/there:Y:/asdf")
+        self.assertEqual(resolved.env["BAR"], "baz")
 
     def test_disabled_capabilities(self):
         settings = {

@@ -22,7 +22,7 @@
             }
         ]
     },
-    // Show Code Actions
+    // Run Code Action
     // {
     //     "command": "lsp_code_actions",
     //     "keys": [
@@ -36,7 +36,7 @@
     //         }
     //     ]
     // },
-    // Show Source Actions
+    // Run Source Actions
     // {
     //     "command": "lsp_code_actions",
     //     "args": {
@@ -55,7 +55,7 @@
     //         }
     //     ]
     // },
-    // Select Code Lens
+    // Run Code Lens
     // {
     //     "command": "lsp_code_lens",
     //     "keys": [
@@ -69,7 +69,7 @@
     //         }
     //     ]
     // },
-    // Show/Hide Diagnostics Panel
+    // Toggle Diagnostics Panel
     {
         "command": "lsp_show_diagnostics_panel",
         "keys": [
@@ -81,7 +81,7 @@
             }
         ]
     },
-    // Show/Hide Language Server Logs Panel
+    // Toggle Language Server Logs Panel
     // {
     //     "command": "lsp_toggle_server_panel",
     //     "keys": [
@@ -134,7 +134,7 @@
             }
         ]
     },
-    // Find Symbol References
+    // Find References
     {
         "command": "lsp_symbol_references",
         "keys": [
@@ -148,7 +148,7 @@
             },
         ]
     },
-    // Go To Definition
+    // Goto Definition
     // {
     //     "command": "lsp_symbol_definition",
     //     "args": {
@@ -170,7 +170,7 @@
     //         }
     //     ]
     // },
-    // Go To Type Definition
+    // Goto Type Definition
     // {
     //     "command": "lsp_symbol_type_definition",
     //     "args": {
@@ -192,7 +192,7 @@
     //         }
     //     ]
     // },
-    // Go To Declaration
+    // Goto Declaration
     // {
     //     "command": "lsp_symbol_declaration",
     //     "args": {
@@ -214,7 +214,7 @@
     //         }
     //     ]
     // },
-    // Go To Implementation
+    // Goto Implementation
     // {
     //     "command": "lsp_symbol_implementation",
     //     "args": {
@@ -236,7 +236,7 @@
     //         }
     //     ]
     // },
-    // Rename Symbol
+    // Rename
     // {
     //     "command": "lsp_symbol_rename",
     //     "keys": [
@@ -250,7 +250,7 @@
     //         }
     //     ]
     // },
-    // Format Document
+    // Format File
     // {
     //     "command": "lsp_format_document",
     //     "keys": [
@@ -306,7 +306,7 @@
     //         }
     //     ]
     // },
-    // Symbol Hover
+    // Hover Popup
     // {
     //     "command": "lsp_hover",
     //     "keys": [

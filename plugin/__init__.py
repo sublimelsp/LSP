@@ -15,6 +15,7 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
+from .core.types import matches_pattern
 from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
@@ -32,6 +33,7 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'matches_pattern',
     'Notification',
     'parse_uri',
     'register_file_watcher_implementation',

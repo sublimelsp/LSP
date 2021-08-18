@@ -14,7 +14,7 @@ from .open import open_externally
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, CodeLens, Location, LocationLink, Position
+from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink, Position
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -179,11 +179,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
                 },
+                "insertTextModeSupport": {
+                    "valueSet": [InsertTextMode.AdjustIndentation]
+                },
                 "labelDetailsSupport": True
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
-            }
+            },
+            "insertTextMode": InsertTextMode.AdjustIndentation
         },
         "signatureHelp": {
             "dynamicRegistration": True,

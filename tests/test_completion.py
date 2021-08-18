@@ -2,6 +2,7 @@ from copy import deepcopy
 from LSP.plugin.core.protocol import CompletionItem
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
+from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
@@ -212,7 +213,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                         }
                     }
                 },
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "insertText": "const",
                 "filterText": "const",
                 "score": 6
@@ -244,7 +245,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "additionalTextEdits": None,
                 "data": None,
                 "range": None,
-                "insertTextFormat": 1,
+                "insertTextFormat": InsertTextFormat.PlainText,
                 "sortText": "0001UniqueId",
                 "kind": 6,
                 "detail": "[string[]]"
@@ -309,7 +310,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "label": "apply[A](xs: A*): List[A]",
                 "sortText": "00000",
                 "preselect": True,
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "filterText": "apply",
                 "data": {
                     "symbol": "scala/collection/immutable/List.apply().",
@@ -342,7 +343,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "kind": 12,
                 "sortText": "00002",
                 "filterText": "e",
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "textEdit": {
                     "range": {
                         "start": {"line": 0, "character": 0},
@@ -587,6 +588,22 @@ class QueryCompletionsTests(CompletionsTestsBase):
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
+
+    def test_text_edit_plaintext_with_multiple_lines_indented(self) -> Generator[None, None, None]:
+        self.type("\t\n\t")
+        self.move_cursor(1, 2)
+        self.set_response("textDocument/completion", [{
+            'label': 'a',
+            'textEdit': {
+                'range': {'start': {'line': 1, 'character': 4}, 'end': {'line': 1, 'character': 4}},
+                'newText': 'a\n\tb'
+            },
+            'insertTextFormat': InsertTextFormat.PlainText
+        }])
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        # the "b" should be intended one level deeper
+        self.assertEqual(self.read_file(), '\t\n\ta\n\t\tb')
 
     def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {

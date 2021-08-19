@@ -139,7 +139,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
-    code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
     semantic_tokens_debounce_time = FEATURES_TIMEOUT
 
     _uri = None  # type: str

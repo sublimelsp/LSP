@@ -192,6 +192,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
+        self._clear_semantic_token_regions()
         self._clear_session_views_async()
 
     def _reset(self) -> None:
@@ -661,47 +662,57 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 Request.semanticTokens(params, self.view),
                 lambda response: self._on_semantic_tokens_async(response, semantic_tokens_legend['legend']))
 
-    def _on_semantic_tokens_async(self, response: dict, semantic_tokens_legend: dict) -> None:
-        regions = cast(dict, {})
+    def _on_semantic_tokens_async(self, response: dict, legend: dict) -> None:
+        scope2regions = self._process_semantic_tokens_response(response, legend)
+        self._update_semantic_token_regions(scope2regions)
+
+    def _process_semantic_tokens_response(
+        self,
+        response: Dict[str, List[int]],
+        legend: dict
+    ) -> Dict[str, List[sublime.Region]]:
+        scope2regions = {}  # type: Dict[str, List[sublime.Region]]
         data = response['data']
-        prev_row = None
-        prev_col = None
-        for x in range(0, len(data), 5):
-            encoded_token = data[x:x+5]
+        row = 0
+        col = 0
+        for i in range(0, len(data), 5):
+            token = data[i:i+5]
 
-            if prev_row is not None:
-                if encoded_token[0] == 0:
-                    encoded_token[1] += prev_col
-                    encoded_token[0] = prev_row
-                else:
-                    encoded_token[0] += prev_row
+            if token[0] == 0:
+                token[1] += col
+                token[0] = row
+            else:
+                token[0] += row
 
-            point1 = self.view.text_point(encoded_token[0], encoded_token[1])
-            point2 = self.view.text_point(encoded_token[0], encoded_token[1]+encoded_token[2])
-            my_region = sublime.Region(point1, point2)
+            scope = get_semantic_scope_from_modifier(token, legend)
+            region = sublime.Region(
+                self.view.text_point_utf16(token[0], token[1]),
+                self.view.text_point_utf16(token[0], token[1] + token[2]))
+            scope2regions.setdefault(scope, []).append(region)
 
-            scope = get_semantic_scope_from_modifier(encoded_token, semantic_tokens_legend)
+            row = token[0]
+            col = token[1]
+        return scope2regions
 
-            try:
-                regions[scope].append(my_region)
-            except KeyError:
-                regions[scope] = []
-                regions[scope].append(my_region)
+    def _update_semantic_token_regions(self, scope2regions: Dict[str, List[sublime.Region]]) -> None:
+        keys = []
+        for scope, regions in scope2regions.items():
+            if not scope:
+                continue
+            # in case of multiple modifiers, getting a _single modifier_ unique key
+            # instead of a long _combined key_, to comply with init_region_keys()
+            key = scope.split(', ')[0]
+            if key in keys:
+                for i in range(1, len(scope.split(', ')) - 1):
+                    if scope.split(', ')[i] not in keys:
+                        key = scope.split(', ')[i]
+                        break
+            keys.append(key)
+            self.view.add_regions(key, regions, 'meta.semantic-token.lsp ' + scope, flags=sublime.DRAW_NO_OUTLINE)
 
-            prev_row = encoded_token[0]
-            prev_col = encoded_token[1]
-
-        region_keys = []
-        for key, value in regions.items():
-            if key:
-                reg_key = key.split(', ')[0]  # in case of multiple modifiers, getting a _single modifier_ unique key
-                if reg_key in region_keys:    # instead of a long _combined key_, to comply with init_region_keys()
-                    for i in range(1, len(key.split(', ')) - 1):
-                        if key.split(', ')[i] not in region_keys:
-                            reg_key = key.split(', ')[i]
-                            break
-                region_keys.append(reg_key)
-                self.view.add_regions(reg_key, value, 'meta.semantic-token.lsp ' + key, flags=sublime.DRAW_NO_OUTLINE)
+    def _clear_semantic_token_regions(self) -> None:
+        # TODO
+        pass
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 

@@ -38,6 +38,7 @@ from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
+from .semantic import get_semantic_scope_from_modifier
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -49,7 +50,6 @@ import sublime_plugin
 import textwrap
 import weakref
 import webbrowser
-from .semantic import get_semantic_scope_from_modifier
 
 SUBLIME_WORD_MASK = 515
 

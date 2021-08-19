@@ -695,19 +695,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return scope2regions
 
     def _update_semantic_token_regions(self, scope2regions: Dict[str, List[sublime.Region]]) -> None:
-        keys = []
         for scope, regions in scope2regions.items():
             if not scope:
                 continue
             # in case of multiple modifiers, getting a _single modifier_ unique key
             # instead of a long _combined key_, to comply with init_region_keys()
             key = scope.split(', ')[0]
-            if key in keys:
-                for i in range(1, len(scope.split(', ')) - 1):
-                    if scope.split(', ')[i] not in keys:
-                        key = scope.split(', ')[i]
-                        break
-            keys.append(key)
             self.view.add_regions(key, regions, 'meta.semantic-token.lsp ' + scope, flags=sublime.DRAW_NO_OUTLINE)
 
     def _clear_semantic_token_regions(self) -> None:

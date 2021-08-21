@@ -23,11 +23,13 @@ def format_document(text_command: LspTextCommand) -> Promise[FormatResponse]:
     session = text_command.best_session(LspFormatDocumentCommand.capability)
     if session:
         # Either use the documentFormattingProvider ...
-        return session.send_request_task(text_document_formatting(view))
+        options = session.get_formatting_options(view)
+        return session.send_request_task(text_document_formatting(view, options))
     session = text_command.best_session(LspFormatDocumentRangeCommand.capability)
     if session:
         # ... or use the documentRangeFormattingProvider and format the entire range.
-        return session.send_request_task(text_document_range_formatting(view, entire_content_region(view)))
+        options = session.get_formatting_options(view)
+        return session.send_request_task(text_document_range_formatting(view, options, entire_content_region(view)))
     return Promise.resolve(None)
 
 

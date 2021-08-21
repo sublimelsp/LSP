@@ -50,6 +50,7 @@ from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
+from .views import formatting_options
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SYMBOL_KINDS
@@ -647,6 +648,18 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_before_formatting(self, view: sublime.View, formatting_options: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Called when a language server is about to perform a document or selection formatting.
+
+        :param view: The view on which formatting is about to be performed.
+        :param formatting_options: The initial formatting options. The object can be modified and returned or a new
+                                   object can be returned.
+
+        :returns: The object with formatting options.
+        """
+        return formatting_options
+
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
@@ -1182,6 +1195,12 @@ class Session(TransportCallbacks):
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+
+    def get_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
+        options = formatting_options(view.settings())
+        if self._plugin:
+            options = self._plugin.on_before_formatting(view, options)
+        return options
 
     def open_uri_async(
         self,

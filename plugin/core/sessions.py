@@ -648,17 +648,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_before_formatting(self, view: sublime.View, formatting_options: Dict[str, Any]) -> Dict[str, Any]:
+    def additional_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
         """
-        Called when a language server is about to perform a document or selection formatting.
+        Called when a language server is about to perform a document or range formatting. The returned formatting
+        options will be merged with the default options.
 
         :param view: The view on which formatting is about to be performed.
-        :param formatting_options: The initial formatting options. The object can be modified and returned or a new
-                                   object can be returned.
 
-        :returns: The object with formatting options.
+        :returns: An object with formatting options.
         """
-        return formatting_options
+        return {}
 
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
@@ -1199,7 +1198,7 @@ class Session(TransportCallbacks):
     def get_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
         options = formatting_options(view.settings())
         if self._plugin:
-            options = self._plugin.on_before_formatting(view, options)
+            options.update(self._plugin.additional_formatting_options(view))
         return options
 
     def open_uri_async(

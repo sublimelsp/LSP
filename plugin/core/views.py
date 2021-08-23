@@ -357,17 +357,17 @@ def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
     }
 
 
-def text_document_formatting(view: sublime.View) -> Request:
+def text_document_formatting(view: sublime.View, options: Dict[str, Any]) -> Request:
     return Request("textDocument/formatting", {
         "textDocument": text_document_identifier(view),
-        "options": formatting_options(view.settings())
+        "options": options
     }, view, progress=True)
 
 
-def text_document_range_formatting(view: sublime.View, region: sublime.Region) -> Request:
+def text_document_range_formatting(view: sublime.View, options: Dict[str, Any], region: sublime.Region) -> Request:
     return Request("textDocument/rangeFormatting", {
         "textDocument": text_document_identifier(view),
-        "options": formatting_options(view.settings()),
+        "options": options,
         "range": region_to_range(view, region).to_lsp()
     }, view, progress=True)
 

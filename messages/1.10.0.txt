@@ -1,0 +1,5 @@
+=> 1.10.0
+
+# Features
+
+- Add additional_formatting_options plugin API for adjusting formatting options (#1832) (Rafał Chłodnicki)

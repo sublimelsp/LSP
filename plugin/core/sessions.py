@@ -693,9 +693,10 @@ def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -
         return
     try:
         settings, base_file = plugin.configuration()
-        if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
-            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+        if base_file in sublime.find_resources('{}.*'.format(name)):
+            if client_configs.add_external_config(name, settings, base_file, notify_listener):
+                on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
+                _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
         exception_log('Failed to register plugin "{}"'.format(name), ex)
 

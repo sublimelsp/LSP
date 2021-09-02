@@ -108,7 +108,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
 
-## F#
+## F\#
 
 1. Install the [F#](https://packagecontrol.io/packages/F%23) package from Package Control for syntax highlighting.
 2. Make sure you have installed the latest [.NET SDK](https://dotnet.microsoft.com/download).

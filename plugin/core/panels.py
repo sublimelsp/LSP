@@ -43,7 +43,7 @@ def mutable(view: sublime.View) -> Generator:
 
 
 def clear_undo_stack(view: sublime.View) -> None:
-    clear_undo_stack = getattr(view, "clear_undo_stack")
+    clear_undo_stack = getattr(view, "clear_undo_stack", None)
     if not callable(clear_undo_stack):
         return
     # The clear_undo_stack method cannot be called from within a text command...

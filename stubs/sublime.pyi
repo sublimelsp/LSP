@@ -782,6 +782,9 @@ class View:
     def scope_name(self, pt: int) -> str:
         ...
 
+    def context_backtrace(self, pt: int) -> List[str]:
+        ...
+
     def match_selector(self, pt: int, selector: str) -> bool:
         ...
 

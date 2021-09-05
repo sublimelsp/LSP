@@ -3,44 +3,6 @@ from .core.typing import List
 import sublime
 
 
-class SemanticTokenTypes:
-    Namespace = "namespace"
-    Type = "type"
-    Class = "class"
-    Enum = "enum"
-    Interface = "interface"
-    Struct = "struct"
-    TypeParameter = "typeParameter"
-    Parameter = "parameter"
-    Variable = "variable"
-    Property = "property"
-    EnumMember = "enumMember"
-    Event = "event"
-    Function = "function"
-    Method = "method"
-    Macro = "macro"
-    Keyword = "keyword"
-    Modifier = "modifier"
-    Comment = "comment"
-    String = "string"
-    Number = "number"
-    Regexp = "regexp"
-    Operator = "operator"
-
-
-class SemanticTokenModifiers:
-    Declaration = "declaration"
-    Definition = "definition"
-    Readonly = "readonly"
-    Static = "static"
-    Deprecated = "deprecated"
-    Abstract = "abstract"
-    Async = "async"
-    Modification = "modification"
-    Documentation = "documentation"
-    DefaultLibrary = "defaultLibrary"
-
-
 SEMANTIC_TOKENS_MAP = {
     "namespace": "variable.other.namespace.lsp",
     "type": "storage.type.lsp",
@@ -199,7 +161,7 @@ class LspShowScopeNameCommand(LspTextCommand):
             </body>
         """ % (digits_len, scope, scope_list, backtrace, token_type, token_modifiers)
 
-        def copy(view, text: str) -> None:
+        def copy(view: sublime.View, text: str) -> None:
             sublime.set_clipboard(text)
             view.hide_popup()
             sublime.status_message('Scope name copied to clipboard')

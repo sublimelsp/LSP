@@ -1,8 +1,6 @@
-# from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
-from .core.protocol import Point
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
@@ -22,7 +20,6 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import format_diagnostic_for_panel
 from .core.views import MissingUriError
-from .core.views import point_to_offset
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
@@ -452,6 +449,26 @@ class SessionBuffer:
                 return
             self._draw_semantic_tokens_async()
 
+    def _decode_semantic_token(
+        self,
+        semantic_tokens_mapping: Dict[str, str],
+        token_type_encoded: int,
+        token_modifiers_encoded: int
+    ) -> Tuple[str, List[str], Optional[str]]:
+        token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
+        token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
+                           for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+        scope = None
+        if token_type in semantic_tokens_mapping:
+            scope = semantic_tokens_mapping[token_type]
+            for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
+                # TODO there must be a better way than to iterate through all entries
+                if entry[0] == token_type and entry[1] in token_modifiers:
+                    scope = entry[2]
+                    break  # first match wins (in case of multiple modifiers)
+            scope += " meta.semantic-token.{}.lsp".format(token_type)
+        return token_type, token_modifiers, scope
+
     def _draw_semantic_tokens_async(self) -> None:
         view = self.some_view()
         if view is None:
@@ -463,52 +480,38 @@ class SessionBuffer:
         if self.session._plugin is not None:
             semantic_tokens_mapping.update(self.session._plugin.semantic_tokens())
 
+        self.semantic_tokens.clear()
+
+        scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
+        prev_line = 0
+        prev_col_utf16 = 0
+
+        for idx in range(0, len(self.semantic_tokens_data), 5):
+            delta_line = self.semantic_tokens_data[idx]
+            delta_start_utf16 = self.semantic_tokens_data[idx + 1]
+            length_utf16 = self.semantic_tokens_data[idx + 2]
+            token_type_encoded = self.semantic_tokens_data[idx + 3]
+            token_modifiers_encoded = self.semantic_tokens_data[idx + 4]
+            line = prev_line + delta_line
+            col_utf16 = prev_col_utf16 + delta_start_utf16 if delta_line == 0 else delta_start_utf16
+            a = view.text_point_utf16(line, col_utf16, clamp_column=False)
+            b = view.text_point_utf16(line, col_utf16 + length_utf16, clamp_column=False)
+            r = sublime.Region(a, b)
+            prev_line = line
+            prev_col_utf16 = col_utf16
+            token_type, token_modifiers, scope = self._decode_semantic_token(semantic_tokens_mapping, token_type_encoded, token_modifiers_encoded)
+            self.semantic_tokens.append(SemanticToken(r, token_type, token_modifiers))
+            if scope:
+                scope_regions.setdefault(scope, []).append(r)
+
         # TODO compare old and new regions to only remove regions that don't exist anymore
         for sv in self.session_views:
             for key in self.semantic_tokens_keys:
                 sv.view.erase_regions(key)
-        self.semantic_tokens.clear()
         self.semantic_tokens_keys.clear()
 
-        scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
-        prev_line = 0
-        prev_col = 0
-
-        for idx in range(0, len(self.semantic_tokens_data), 5):
-            delta_line = self.semantic_tokens_data[idx]
-            delta_start = self.semantic_tokens_data[idx + 1]
-            length = self.semantic_tokens_data[idx + 2]
-            token_type_encoded = self.semantic_tokens_data[idx + 3]
-            token_modifiers_encoded = self.semantic_tokens_data[idx + 4]
-            line = prev_line + delta_line
-            col = prev_col + delta_start if delta_line == 0 else delta_start
-            a = point_to_offset(Point(line, col), view)
-            b = a + length
-            r = sublime.Region(a, b)
-            prev_line = line
-            prev_col = col
-            token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
-            token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
-                               for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
-            if token_type in semantic_tokens_mapping:
-                scope = semantic_tokens_mapping[token_type]
-                for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-                    # TODO there must be a better way than to iterate through all entries
-                    if entry[0] == token_type and entry[1] in token_modifiers:
-                        scope = entry[2]
-                        break  # first match wins (in case of multiple modifiers)
-                scope += " meta.semantic-token.{}.lsp".format(token_type)
-            else:
-                # skip this token if no scope is defined for its token type
-                continue
-            self.semantic_tokens.append(SemanticToken(r, token_type, token_modifiers))
-            if scope in scope_regions:
-                scope_regions[scope].append(r)
-            else:
-                scope_regions[scope] = [r]
-
         for scope, regions in scope_regions.items():
-            key = "lsp_{}".format(str(abs(hash(scope))))  # TODO find a better way to name region keys
+            key = "lsp_{}".format(scope)
             self.semantic_tokens_keys.add(key)
             # TODO compare old and new regions to only update regions that were changed
             for sv in self.session_views:

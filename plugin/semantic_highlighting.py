@@ -3,63 +3,6 @@ from .core.typing import List
 import sublime
 
 
-SEMANTIC_TOKENS_MAP = {
-    "namespace": "variable.other.namespace.lsp",
-    "type": "storage.type.lsp",
-    "class": "storage.type.class.lsp",
-    "enum": "variable.other.enum.lsp",
-    "interface": "entity.other.inherited-class.lsp",
-    "struct": "storage.type.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
-    "parameter": "variable.parameter.lsp",
-    "variable": "variable.other.lsp",
-    "property": "variable.other.lsp",
-    "enumMember": "constant.other.enum.lsp",
-    "event": "entity.name.function.lsp",
-    "function": "variable.function.lsp",
-    "method": "variable.function.lsp",
-    "macro": "variable.macro.lsp",
-    "keyword": "keyword.lsp",
-    "modifier": "storage.modifier.lsp",
-    "comment": "comment.lsp",
-    "string": "string.lsp",
-    "number": "constant.numeric.lsp",
-    "regexp": "string.regexp.lsp",
-    "operator": "keyword.operator.lsp"
-}
-
-# overrides for the scope names above, which should apply in combination with certain modifiers
-SEMANTIC_TOKENS_WITH_MODIFIERS_MAP = [
-#    tokenType    tokenModifier     scope
-    ("namespace", "declaration",    "entity.name.namespace.lsp"),
-    ("namespace", "definition",     "entity.name.namespace.lsp"),
-    ("type",      "declaration",    "entity.name.type.lsp"),
-    ("type",      "definition",     "entity.name.type.lsp"),
-    ("type",      "defaultLibrary", "support.type.lsp"),
-    ("class",     "declaration",    "entity.name.class.lsp"),
-    ("class",     "definition",     "entity.name.class.lsp"),
-    ("class",     "defaultLibrary", "support.class.lsp"),
-    ("enum",      "declaration",    "entity.name.enum.lsp"),
-    ("enum",      "definition",     "entity.name.enum.lsp"),
-    ("interface", "declaration",    "entity.name.interface.lsp"),
-    ("interface", "definition",     "entity.name.interface.lsp"),
-    ("struct",    "declaration",    "entity.name.struct.lsp"),
-    ("struct",    "definition",     "entity.name.struct.lsp"),
-    ("struct",    "defaultLibrary", "support.struct.lsp"),
-    ("variable",  "readonly",       "constant.other.lsp"),
-    ("function",  "declaration",    "entity.name.function.lsp"),
-    ("function",  "definition",     "entity.name.function.lsp"),
-    ("function",  "defaultLibrary", "support.function.builtin.lsp"),
-    ("method",    "declaration",    "entity.name.function.lsp"),
-    ("method",    "definition",     "entity.name.function.lsp"),
-    ("method",    "defaultLibrary", "support.function.builtin.lsp"),
-    ("macro",     "declaration",    "entity.name.macro.lsp"),
-    ("macro",     "definition",     "entity.name.macro.lsp"),
-    ("macro",     "defaultLibrary", "support.macro.lsp"),
-    ("comment",   "documentation",  "comment.block.documentation.lsp")
-]
-
-
 class SemanticToken:
 
     __slots__ = ("region", "type", "modifiers")

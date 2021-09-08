@@ -22,11 +22,10 @@ from .core.views import format_diagnostic_for_panel
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
+from .core.views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .semantic_highlighting import SemanticToken
-from .semantic_highlighting import SEMANTIC_TOKENS_MAP
-from .semantic_highlighting import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from weakref import WeakSet
 import sublime
 import time
@@ -450,17 +449,13 @@ class SessionBuffer:
             self._draw_semantic_tokens_async()
 
     def _decode_semantic_token(
-        self,
-        semantic_tokens_mapping: Dict[str, str],
-        token_type_encoded: int,
-        token_modifiers_encoded: int
-    ) -> Tuple[str, List[str], Optional[str]]:
+        self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
         token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
         token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
                            for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
         scope = None
-        if token_type in semantic_tokens_mapping:
-            scope = semantic_tokens_mapping[token_type]
+        if token_type in self.session.semantic_tokens_map:
+            scope = self.session.semantic_tokens_map[token_type]
             for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
                 # TODO there must be a better way than to iterate through all entries
                 if entry[0] == token_type and entry[1] in token_modifiers:
@@ -473,12 +468,6 @@ class SessionBuffer:
         view = self.some_view()
         if view is None:
             return
-
-        semantic_tokens_mapping = SEMANTIC_TOKENS_MAP
-        # TODO this mapping better should only be updated when a plugin is registered/unregistered and then stored in the
-        #      Session, and not over and over again for each request
-        if self.session._plugin is not None:
-            semantic_tokens_mapping.update(self.session._plugin.semantic_tokens())
 
         self.semantic_tokens.clear()
 
@@ -499,7 +488,8 @@ class SessionBuffer:
             r = sublime.Region(a, b)
             prev_line = line
             prev_col_utf16 = col_utf16
-            token_type, token_modifiers, scope = self._decode_semantic_token(semantic_tokens_mapping, token_type_encoded, token_modifiers_encoded)
+            token_type, token_modifiers, scope = self._decode_semantic_token(
+                token_type_encoded, token_modifiers_encoded)
             self.semantic_tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)

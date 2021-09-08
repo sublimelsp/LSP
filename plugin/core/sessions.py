@@ -29,6 +29,8 @@ from .protocol import Notification
 from .protocol import RangeLsp
 from .protocol import Request
 from .protocol import Response
+from .protocol import SemanticTokenModifiers
+from .protocol import SemanticTokenTypes
 from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
@@ -53,6 +55,7 @@ from .views import extract_variables
 from .views import formatting_options
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
+from .views import SEMANTIC_TOKENS_MAP
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
 from .workspace import is_subpath_of
@@ -141,6 +144,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     diagnostic_tag_value_set = [v for k, v in DiagnosticTag.__dict__.items() if not k.startswith('_')]
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
+    semantic_token_types = [v for k, v in SemanticTokenTypes.__dict__.items() if not k.startswith('_')]
+    if config.semantic_tokens is not None:
+        for token_type in config.semantic_tokens.keys():
+            if token_type not in semantic_token_types:
+                semantic_token_types.append(token_type)
+    semantic_token_modifiers = [v for k, v in SemanticTokenModifiers.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -288,42 +297,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                     "delta": True
                 }
             },
-            "tokenTypes": [  # TODO append additional token types supported by a helper plugin
-                "namespace",
-                "type",
-                "class",
-                "enum",
-                "interface",
-                "struct",
-                "typeParameter",
-                "parameter",
-                "variable",
-                "property",
-                "enumMember",
-                "event",
-                "function",
-                "method",
-                "macro",
-                "keyword",
-                "modifier",
-                "comment",
-                "string",
-                "number",
-                "regexp",
-                "operator"
-            ],
-            "tokenModifiers": [
-                "declaration",
-                "definition",
-                "readonly",
-                "static",
-                "deprecated",
-                "abstract",
-                "async",
-                "modification",
-                "documentation",
-                "defaultLibrary"
-            ],
+            "tokenTypes": semantic_token_types,
+            "tokenModifiers": semantic_token_modifiers,
             "formats": [
                 "relative"
             ],
@@ -552,15 +527,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         In addition to the above variables, add more variables here to be expanded.
         """
         return None
-
-    @classmethod
-    def semantic_tokens(cls) -> Dict[str, str]:
-        """
-        If the server is a semanticTokensProvider and uses custom token types that are not defined in the protocol,
-        you can provide a mapping which assigns scopes to token types and is used by the color scheme for semantic
-        highlighting. Keys of the returned dictionary should be token types and values are the corresponding scopes.
-        """
-        return {}
 
     @classmethod
     def storage_path(cls) -> str:
@@ -942,6 +908,9 @@ class Session(TransportCallbacks):
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
+        self.semantic_tokens_map = SEMANTIC_TOKENS_MAP  # type: Dict[str, str]
+        if config.semantic_tokens is not None:
+            self.semantic_tokens_map.update(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
         """

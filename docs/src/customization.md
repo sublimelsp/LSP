@@ -120,10 +120,22 @@ Furthermore it is possible to adjust the colors for semantic tokens by applying 
 | `meta.semantic-token.regexp` | regexp |
 | `meta.semantic-token.operator` | operator |
 
-By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define rules (with foreground colors) for the scopes specified above, the latter will take precedence.
+By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define rules for the scopes specified above, the latter will take precedence.
 
-Language servers can also add their own non-standard token types.
-Those will only be highlighted if they are supported by a "LSP-*" helper package.
+Language servers can also add their own custom token types, which are not defined in the protocol.
+A "LSP-*" helper package (or user) can provide a "semantic_tokens" mapping in the server configuration for such additional token types.
+Keys of this mapping should be the token types and values should be the corresponding scopes, for example:
+
+```json
+{
+    "semantic_tokens": {
+        "magicFunction": "support.function.builtin",
+        "selfParameter": "variable.language.self"
+    }
+}
+```
+
+If no scope for a custom token type is defined, it will only be highlighted via the regular syntax highlighting.
 
 ### Document Highlights
 

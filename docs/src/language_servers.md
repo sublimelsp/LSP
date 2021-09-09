@@ -309,6 +309,10 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
     }
     ```
 
+## Leo
+
+Follow installation instructions on [LSP-leo](https://github.com/sublimelsp/LSP-leo).
+
 ## Lua
 
 Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-lua).

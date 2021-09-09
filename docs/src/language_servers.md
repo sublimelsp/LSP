@@ -559,7 +559,15 @@ For development using the Deno framework follow installation instructions on [LS
 
 ## Vue
 
+There are multiple options:
+
+### Vetur
+
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
+
+### Volar
+
+Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
 
 ## Vala
 

@@ -37,19 +37,17 @@ class PanelName:
 
 @contextmanager
 def mutable(view: sublime.View) -> Generator:
-    # Unset the read-only flag temporarily
     view.set_read_only(False)
-    try:
-        yield
-    finally:
-        # Compatible with v4113 and below
-        # todo: call directly some day
-        clear_undo_stack = getattr(view, "clear_undo_stack", None)
-        if callable(clear_undo_stack):
-            # We don't want an infinite undo stack for any of our panels.
-            clear_undo_stack()
-        # Put back the read-only flag.
-        view.set_read_only(True)
+    yield
+    view.set_read_only(True)
+
+
+def clear_undo_stack(view: sublime.View) -> None:
+    clear_undo_stack = getattr(view, "clear_undo_stack", None)
+    if not callable(clear_undo_stack):
+        return
+    # The clear_undo_stack method cannot be called from within a text command...
+    sublime.set_timeout(clear_undo_stack)
 
 
 class WindowPanelListener(sublime_plugin.EventListener):
@@ -122,7 +120,6 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_panel command to clear the error panel.
     """
-
     def run(self, edit: sublime.Edit) -> None:
         with mutable(self.view):
             self.view.erase(edit, sublime.Region(0, self.view.size()))
@@ -143,6 +140,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         # Clear the selection
         selection = self.view.sel()
         selection.clear()
+        clear_undo_stack(self.view)
 
 
 def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
@@ -192,3 +190,4 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 erase_region = sublime.Region(0, last_region_end)
                 if not erase_region.empty():
                     self.view.erase(edit, erase_region)
+        clear_undo_stack(self.view)

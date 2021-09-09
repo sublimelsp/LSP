@@ -449,7 +449,7 @@ class SessionBuffer:
             self._draw_semantic_tokens_async()
 
     def _decode_semantic_token(
-        self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
+            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
         token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
         token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
                            for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]

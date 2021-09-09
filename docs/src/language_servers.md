@@ -294,7 +294,15 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## LaTeX
 
+There are multiple options:
+
+### TexLab
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
+
+### LTeX
+
+Follow installation instructions on [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## Lisp
 

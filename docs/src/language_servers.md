@@ -22,6 +22,10 @@ Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP
 
 Also see [Shell](#shell).
 
+## Bicep
+
+Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LSP-Bicep).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.

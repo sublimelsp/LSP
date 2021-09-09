@@ -377,10 +377,6 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
     }
     ```
 
-### Serenata
-
-Follow installation instructions on [LSP-serenata](https://github.com/sublimelsp/LSP-Serenata).
-
 ## PowerShell
 
 Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/sublimelsp/LSP-PowerShellEditorServices).

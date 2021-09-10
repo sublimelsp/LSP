@@ -11,7 +11,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Iterable, Optional, List, Dict, Tuple, Set
+from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -94,7 +94,7 @@ class SessionBuffer:
         self.semantic_tokens_data = []  # type: List[int]
         self.semantic_tokens_result_id = None  # type: Optional[str]
         self.semantic_tokens = []  # type: List[SemanticToken]
-        self.semantic_tokens_keys = set()  # type: Set[str]
+        self.semantic_tokens_active_regions = {}  # type: Dict[str, int]
         self._check_did_open(view)
         self.session.register_session_buffer_async(self)
 
@@ -494,18 +494,21 @@ class SessionBuffer:
             if scope:
                 scope_regions.setdefault(scope, []).append(r)
 
-        # TODO compare old and new regions to only remove regions that don't exist anymore
-        for sv in self.session_views:
-            for key in self.semantic_tokens_keys:
-                sv.view.erase_regions(key)
-        self.semantic_tokens_keys.clear()
+        for scope in self.semantic_tokens_active_regions.keys():
+            if scope not in scope_regions.keys():
+                del self.semantic_tokens_active_regions[scope]
+                key = "lsp_{}".format(scope)
+                for sv in self.session_views:
+                    sv.view.erase_regions(key)
 
         for scope, regions in scope_regions.items():
-            key = "lsp_{}".format(scope)
-            self.semantic_tokens_keys.add(key)
-            # TODO compare old and new regions to only update regions that were changed
-            for sv in self.session_views:
-                sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+            regions_hash = hash(tuple(hash((r.a, r.b)) for r in regions))
+            if scope not in self.semantic_tokens_active_regions or \
+                    self.semantic_tokens_active_regions[scope] != regions_hash:
+                self.semantic_tokens_active_regions[scope] = regions_hash
+                key = "lsp_{}".format(scope)
+                for sv in self.session_views:
+                    sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

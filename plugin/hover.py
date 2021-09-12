@@ -143,7 +143,7 @@ class LspHoverCommand(LspTextCommand):
                 hovers.append(response)
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
-            sublime.status_message('Completion error: {}'.format(error_messages))
+            sublime.status_message('Hover error: {}'.format(error_messages))
         self._hover_responses = hovers
         self.show_hover(listener, point, only_diagnostics=False)
 

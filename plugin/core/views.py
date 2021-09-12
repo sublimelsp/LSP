@@ -433,7 +433,7 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allowed_formats: int) -> str:
+def minihtml(view: sublime.View, content: Union[str, Dict[str, str], List[Union[str, dict]]], allowed_formats: int) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 

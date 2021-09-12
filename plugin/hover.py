@@ -12,7 +12,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import List, Optional, Any, Dict, Tuple, Sequence, Union
+from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html

@@ -123,12 +123,9 @@ class LspHoverCommand(LspTextCommand):
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         document_position = text_document_position_params(self.view, point)
         for session in sessions:
-            def hover_request() -> Promise[ResolvedHover]:
-                return session.send_request_task(
-                    Request("textDocument/hover", document_position, self.view),
-                )
-
-            hover_promises.append(hover_request())
+            hover_promises.append(session.send_request_task(
+                Request("textDocument/hover", document_position, self.view)
+            ))
 
         Promise.all(hover_promises).then(lambda responses: self._on_all_settled(responses, listener, point))
 

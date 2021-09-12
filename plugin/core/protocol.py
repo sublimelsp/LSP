@@ -212,6 +212,11 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
+Hover = TypedDict('Hover', {
+    'contents': Union[str, Dict[str, str], list],
+    'range': RangeLsp,
+}, total=False)
+
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
     'uri': DocumentUri,
     'version': Optional[int],

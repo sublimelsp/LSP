@@ -1,7 +1,10 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .core.logging import debug
+from .core.promise import Promise
 from .core.protocol import Diagnostic
+from .core.protocol import Error
+from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import RangeLsp
 from .core.protocol import Request
@@ -9,7 +12,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
+from .core.typing import List, Optional, Any, Dict, Tuple, Sequence, Union
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html
@@ -30,6 +33,8 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
+SessionName = str
+ResolvedHover = Union[Hover, Error]
 
 
 _test_contents = []  # type: List[str]
@@ -90,7 +95,7 @@ class LspHoverCommand(LspTextCommand):
         hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
-        self._hover = None  # type: Optional[Any]
+        self._hover_responses = []  # type: List[Hover]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -114,12 +119,33 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
-        session = listener.session_async('hoverProvider', point)
-        if session:
-            document_position = text_document_position_params(self.view, point)
-            session.send_request_async(
-                Request("textDocument/hover", document_position, self.view),
-                lambda response: self.handle_response(listener, response, point))
+        sessions = list(listener.sessions_async('hoverProvider'))
+        hover_promises = []  # type: List[Promise[ResolvedHover]]
+        document_position = text_document_position_params(self.view, point)
+        for session in sessions:
+            def hover_request() -> Promise[ResolvedHover]:
+                return session.send_request_task(
+                    Request("textDocument/hover", document_position, self.view),
+                )
+
+            hover_promises.append(hover_request())
+
+        Promise.all(hover_promises).then(lambda responses: self._on_all_settled(responses, listener, point))
+
+    def _on_all_settled(self, responses: List[ResolvedHover], listener: AbstractViewListener, point: int) -> None:
+        hovers = []  # type: List[Hover]
+        errors = []  # type: List[Error]
+        for response in responses:
+            if isinstance(response, Error):
+                errors.append(response)
+                continue
+            if response:
+                hovers.append(response)
+        if errors:
+            error_messages = ", ".join(str(error) for error in errors)
+            sublime.status_message('Completion error: {}'.format(error_messages))
+        self._hover_responses = hovers
+        self.show_hover(listener, point, only_diagnostics=False)
 
     def handle_code_actions(
         self,
@@ -128,10 +154,6 @@ class LspHoverCommand(LspTextCommand):
         responses: Dict[str, List[CodeActionOrCommand]]
     ) -> None:
         self._actions_by_config = responses
-        self.show_hover(listener, point, only_diagnostics=False)
-
-    def handle_response(self, listener: AbstractViewListener, response: Optional[Any], point: int) -> None:
-        self._hover = response
         self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
@@ -172,8 +194,11 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
-        return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
+        contents = []
+        for hover_response in self._hover_responses:
+            content = (hover_response.get('contents') or '') if isinstance(hover_response, dict) else ''
+            contents.append(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT))
+        return ''.join(contents)
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))

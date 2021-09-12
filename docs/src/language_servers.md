@@ -22,6 +22,10 @@ Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP
 
 Also see [Shell](#shell).
 
+## Bicep
+
+Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LSP-Bicep).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
@@ -290,7 +294,15 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## LaTeX
 
+There are multiple options:
+
+### TexLab
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
+
+### LTeX
+
+Follow installation instructions on [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## Lisp
 
@@ -308,6 +320,10 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
         }
     }
     ```
+
+## Leo
+
+Follow installation instructions on [LSP-leo](https://github.com/sublimelsp/LSP-leo).
 
 ## Lua
 
@@ -559,7 +575,15 @@ For development using the Deno framework follow installation instructions on [LS
 
 ## Vue
 
+There are multiple options:
+
+### Vetur
+
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
+
+### Volar
+
+Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
 
 ## Vala
 

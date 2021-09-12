@@ -7,6 +7,8 @@ from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import MarkedString
+from .protocol import MarkupContent
 from .protocol import Notification
 from .protocol import Point
 from .protocol import Position
@@ -433,7 +435,11 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, Dict[str, str], List[Union[str, dict]]], allowed_formats: int) -> str:
+def minihtml(
+    view: sublime.View,
+    content: Union[MarkedString, MarkupContent, List[MarkedString]],
+    allowed_formats: int
+) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 

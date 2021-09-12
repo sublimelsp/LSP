@@ -212,8 +212,12 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
+MarkedString = Union[str, Dict[str, str]]
+
+MarkupContent = Dict[str, str]
+
 Hover = TypedDict('Hover', {
-    'contents': Union[str, Dict[str, str], List[Union[str, dict]]],
+    'contents': Union[MarkedString, MarkupContent, List[MarkedString]],
     'range': RangeLsp,
 }, total=False)
 

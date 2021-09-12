@@ -122,7 +122,7 @@ class LspHoverCommand(LspTextCommand):
         sessions = list(listener.sessions_async('hoverProvider'))
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         document_position = text_document_position_params(self.view, point)
-        for session in sessions:
+        for session in listener.sessions_async('hoverProvider'):
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

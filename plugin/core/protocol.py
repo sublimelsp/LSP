@@ -213,7 +213,7 @@ CompletionList = TypedDict('CompletionList', {
 }, total=True)
 
 Hover = TypedDict('Hover', {
-    'contents': Union[str, Dict[str, str], list],
+    'contents': Union[str, Dict[str, str], List[str]],
     'range': RangeLsp,
 }, total=False)
 

@@ -119,7 +119,6 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
-        sessions = list(listener.sessions_async('hoverProvider'))
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         document_position = text_document_position_params(self.view, point)
         for session in listener.sessions_async('hoverProvider'):

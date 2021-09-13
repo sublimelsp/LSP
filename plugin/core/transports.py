@@ -1,8 +1,7 @@
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
-from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
-from abc import ABCMeta, abstractmethod
+from .typing import Dict, Any, Optional, IO, Protocol, Generic, List, Callable, Tuple, TypeVar, Union
 from contextlib import closing
 from functools import partial
 from queue import Queue
@@ -18,15 +17,16 @@ import time
 import weakref
 
 
-class Transport(metaclass=ABCMeta):
+T = TypeVar('T')
 
-    @abstractmethod
-    def send(self, payload: Dict[str, Any]) -> None:
-        pass
 
-    @abstractmethod
+class Transport(Generic[T]):
+
+    def send(self, payload: T) -> None:
+        raise NotImplementedError()
+
     def close(self) -> None:
-        pass
+        raise NotImplementedError()
 
 
 class TransportCallbacks(Protocol):
@@ -41,26 +41,65 @@ class TransportCallbacks(Protocol):
         ...
 
 
-class JsonRpcTransport(Transport):
+class AbstractProcessor(Generic[T]):
+
+    def write_data(self, writer: IO[bytes], data: T) -> None:
+        raise NotImplementedError()
+
+    def read_data(self, reader: IO[bytes]) -> Optional[T]:
+        raise NotImplementedError()
+
+
+class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
+
+    def write_data(self, writer: IO[bytes], data: Dict[str, Any]) -> None:
+        body = self._encode(data)
+        writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
+
+    def read_data(self, reader: IO[bytes]) -> Optional[Dict[str, Any]]:
+        headers = http.client.parse_headers(reader)  # type: ignore
+        body = reader.read(int(headers.get("Content-Length")))
+        try:
+            return self._decode(body)
+        except Exception as ex:
+            exception_log("JSON decode error", ex)
+            return None
+
+    def _encode(self, data: Dict[str, Any]) -> bytes:
+        return json.dumps(
+            data,
+            ensure_ascii=False,
+            sort_keys=False,
+            check_circular=False,
+            separators=(',', ':')
+        ).encode('utf-8')
+
+    def _decode(self, message: bytes) -> Dict[str, Any]:
+        return json.loads(message.decode('utf-8'))
+
+
+class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
-                 writer: IO[bytes], stderr: Optional[IO[bytes]], callback_object: TransportCallbacks) -> None:
+                 writer: IO[bytes], stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
+                 callback_object: TransportCallbacks) -> None:
         self._closed = False
         self._process = process
         self._socket = socket
         self._reader = reader
         self._writer = writer
         self._stderr = stderr
+        self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
         self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
         self._callback_object = weakref.ref(callback_object)
-        self._send_queue = Queue(0)  # type: Queue[Optional[Dict[str, Any]]]
+        self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
         self._reader_thread.start()
         self._writer_thread.start()
         self._stderr_thread.start()
 
-    def send(self, payload: Dict[str, Any]) -> None:
+    def send(self, payload: T) -> None:
         self._send_queue.put_nowait(payload)
 
     def close(self) -> None:
@@ -87,24 +126,16 @@ class JsonRpcTransport(Transport):
     def _read_loop(self) -> None:
         try:
             while self._reader:
-                headers = http.client.parse_headers(self._reader)  # type: ignore
-                body = self._reader.read(int(headers.get("Content-Length")))
-                try:
-                    payload = _decode(body)
-
-                    def invoke(p: Dict[str, Any]) -> None:
-                        callback_object = self._callback_object()
-                        if callback_object:
-                            callback_object.on_payload(p)
-
-                    sublime.set_timeout_async(partial(invoke, payload))
-                except Exception as ex:
-                    exception_log("JSON decode error", ex)
+                payload = self._processor.read_data(self._reader)
+                if payload is None:
                     continue
-                finally:
-                    # We don't need these anymore
-                    del body
-                    del headers
+
+                def invoke(p: Dict[str, Any]) -> None:
+                    callback_object = self._callback_object()
+                    if callback_object:
+                        callback_object.on_payload(p)
+
+                sublime.set_timeout_async(partial(invoke, payload))
         except (AttributeError, BrokenPipeError, TypeError):
             pass
         except Exception as ex:
@@ -146,8 +177,7 @@ class JsonRpcTransport(Transport):
                 d = self._send_queue.get()
                 if d is None:
                     break
-                body = _encode(d)
-                self._writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
+                self._processor.write_data(self._writer, d)
                 self._writer.flush()
         except (BrokenPipeError, AttributeError):
             pass
@@ -176,8 +206,12 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
+# Can be a singleton since it doesn't hold any state.
+json_rpc_processor = JsonRpcProcessor()
+
+
 def create_transport(config: TransportConfig, cwd: Optional[str],
-                     callback_object: TransportCallbacks) -> JsonRpcTransport:
+                     callback_object: TransportCallbacks) -> Transport[Dict[str, Any]]:
     if config.tcp_port is not None:
         assert config.tcp_port is not None
         if config.tcp_port < 0:
@@ -214,8 +248,10 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         else:
             reader = process.stdout  # type: ignore
             writer = process.stdin  # type: ignore
-    assert writer
-    return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
+    if not reader or not writer:
+        raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
+    return ProcessTransport(config.name, process, sock, reader, writer, process.stderr, json_rpc_processor,
+                            callback_object)
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
@@ -321,17 +357,3 @@ def _connect_tcp(port: int) -> Optional[socket.socket]:
         except ConnectionRefusedError:
             pass
     return None
-
-
-def _encode(d: Dict[str, Any]) -> bytes:
-    return json.dumps(
-        d,
-        ensure_ascii=False,
-        sort_keys=False,
-        check_circular=False,
-        separators=(',', ':')
-    ).encode('utf-8')
-
-
-def _decode(message: bytes) -> Dict[str, Any]:
-    return json.loads(message.decode('utf-8'))

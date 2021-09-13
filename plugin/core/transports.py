@@ -65,7 +65,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
             exception_log("JSON decode error", ex)
             return None
 
-    def _encode(self, data: Dict[str, Any]) -> bytes:
+    @staticmethod
+    def _encode(data: Dict[str, Any]) -> bytes:
         return json.dumps(
             data,
             ensure_ascii=False,
@@ -74,7 +75,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
             separators=(',', ':')
         ).encode('utf-8')
 
-    def _decode(self, message: bytes) -> Dict[str, Any]:
+    @staticmethod
+    def _decode(message: bytes) -> Dict[str, Any]:
         return json.loads(message.decode('utf-8'))
 
 

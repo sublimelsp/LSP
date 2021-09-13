@@ -18,6 +18,7 @@ import weakref
 
 
 T = TypeVar('T')
+T_contra = TypeVar('T_contra', contravariant=True)
 
 
 class Transport(Generic[T]):
@@ -29,12 +30,12 @@ class Transport(Generic[T]):
         raise NotImplementedError()
 
 
-class TransportCallbacks(Protocol):
+class TransportCallbacks(Protocol[T_contra]):
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
         ...
 
-    def on_payload(self, payload: Dict[str, Any]) -> None:
+    def on_payload(self, payload: T_contra) -> None:
         ...
 
     def on_stderr_message(self, message: str) -> None:
@@ -84,7 +85,7 @@ class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
                  writer: IO[bytes], stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
-                 callback_object: TransportCallbacks) -> None:
+                 callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
         self._socket = socket
@@ -132,7 +133,7 @@ class ProcessTransport(Transport[T]):
                 if payload is None:
                     continue
 
-                def invoke(p: Dict[str, Any]) -> None:
+                def invoke(p: T) -> None:
                     callback_object = self._callback_object()
                     if callback_object:
                         callback_object.on_payload(p)

@@ -153,7 +153,7 @@ class ProcessTransport(Transport[T]):
                 exit_code = self._process.wait(1)
             except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
                 pass
-        if self._process.poll() is not None:
+        if self._process.poll() is None:
             try:
                 # The process didn't stop itself. Terminate!
                 self._process.kill()

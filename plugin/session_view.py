@@ -81,7 +81,7 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
 
-    def _initialize_region_keys(self):
+    def _initialize_region_keys(self) -> None:
         """
         Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
         diagnostics, semantic tokens and document highlights, see https://github.com/sublimelsp/LSP/issues/1593.

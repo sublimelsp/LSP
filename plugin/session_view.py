@@ -101,7 +101,7 @@ class SessionView:
         for severity in range(1, 5):
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
-                for tag in range(1, 2):
+                for tag in range(1, 3):
                     self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
         if document_highlight_style != "fill":
             for kind in document_highlight_kinds:

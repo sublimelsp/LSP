@@ -406,7 +406,7 @@ class SessionBuffer:
         self.semantic_tokens.types_legend = self.session.get_capability('semanticTokensProvider.legend.tokenTypes')
         if self.semantic_tokens.types_legend is None:
             return
-        self.semantic_tokens.modifiers_legend = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')
+        self.semantic_tokens.modifiers_legend = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')  # noqa: E501
         if self.semantic_tokens.modifiers_legend is None:
             return
         view = self.some_view()

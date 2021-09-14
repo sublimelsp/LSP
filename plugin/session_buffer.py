@@ -58,6 +58,20 @@ class DiagnosticSeverityData:
             self.icon = userprefs().diagnostics_gutter_marker
 
 
+class SemanticTokensData:
+
+    __slots__ = ('data', 'types_legend', 'modifiers_legend', 'pending_request', 'result_id', 'active_scopes', 'tokens')
+
+    def __init__(self) -> None:
+        self.data = []  # type: List[int]
+        self.types_legend = None  # type: Optional[List[str]]
+        self.modifiers_legend = None  # type: Optional[List[str]]
+        self.pending_request = False
+        self.result_id = None  # type: Optional[str]
+        self.active_scopes = {}  # type: Dict[str, int]
+        self.tokens = []  # type: List[SemanticToken]
+
+
 class SessionBuffer:
     """
     Holds state per session per buffer.
@@ -88,13 +102,7 @@ class SessionBuffer:
         self.total_warnings = 0
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
-        self.semantic_token_types = None  # type: Optional[List[str]]
-        self.semantic_token_modifiers = None  # type: Optional[List[str]]
-        self.semantic_tokens_pending_request = False
-        self.semantic_tokens_data = []  # type: List[int]
-        self.semantic_tokens_result_id = None  # type: Optional[str]
-        self.semantic_tokens = []  # type: List[SemanticToken]
-        self.semantic_tokens_active_regions = {}  # type: Dict[str, int]
+        self.semantic_tokens = SemanticTokensData()
         self._check_did_open(view)
         self.session.register_session_buffer_async(self)
 
@@ -391,13 +399,15 @@ class SessionBuffer:
     def do_semantic_tokens_async(self) -> None:
         if not userprefs().semantic_highlighting:
             return
-        if self.semantic_tokens_pending_request:
+        if self.semantic_tokens.pending_request:
             return
         if not self.session.has_capability("semanticTokensProvider"):
             return
-        self.semantic_token_types = self.session.get_capability('semanticTokensProvider.legend.tokenTypes')
-        self.semantic_token_modifiers = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')
-        if self.semantic_token_types is None or self.semantic_token_modifiers is None:
+        self.semantic_tokens.types_legend = self.session.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if self.semantic_tokens.types_legend is None:
+            return
+        self.semantic_tokens.modifiers_legend = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')
+        if self.semantic_tokens.modifiers_legend is None:
             return
         view = self.some_view()
         if view is None:
@@ -408,50 +418,50 @@ class SessionBuffer:
 
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
 
-        if self.semantic_tokens_result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
-            params["previousResultId"] = self.semantic_tokens_result_id
+        if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+            params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
             self.session.send_request_async(request, self._on_semantic_tokens_delta)
-            self.semantic_tokens_pending_request = True
+            self.semantic_tokens.pending_request = True
         elif self.session.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(params, view)
             self.session.send_request_async(request, self._on_semantic_tokens)
-            self.semantic_tokens_pending_request = True
+            self.semantic_tokens.pending_request = True
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region()).to_lsp()
             request = Request.semanticTokensRange(params, view)
             self.session.send_request_async(request, self._on_semantic_tokens)
-            self.semantic_tokens_pending_request = True
+            self.semantic_tokens.pending_request = True
 
     def _on_semantic_tokens(self, response: Optional[Dict]) -> None:
-        self.semantic_tokens_pending_request = False
+        self.semantic_tokens.pending_request = False
         if response:
-            self.semantic_tokens_result_id = response.get("resultId")
-            self.semantic_tokens_data = response["data"]
+            self.semantic_tokens.result_id = response.get("resultId")
+            self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
     def _on_semantic_tokens_delta(self, response: Optional[Dict]) -> None:
-        self.semantic_tokens_pending_request = False
+        self.semantic_tokens.pending_request = False
         if response:
-            self.semantic_tokens_result_id = response.get("resultId")
+            self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
                 for semantic_tokens_edit in response["edits"]:
                     start = semantic_tokens_edit["start"]
                     end = start + semantic_tokens_edit["deleteCount"]
-                    del self.semantic_tokens_data[start:end]
+                    del self.semantic_tokens.data[start:end]
                     data = semantic_tokens_edit.get("data")
                     if data:
-                        self.semantic_tokens_data[start:start] = data
+                        self.semantic_tokens.data[start:start] = data
             elif "data" in response:  # response is of type SemanticTokens
-                self.semantic_tokens_data = response["data"]
+                self.semantic_tokens.data = response["data"]
             else:
                 return
             self._draw_semantic_tokens_async()
 
     def _decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        token_type = self.semantic_token_types[token_type_encoded]  # type: ignore
-        token_modifiers = [self.semantic_token_modifiers[idx]  # type: ignore
+        token_type = self.semantic_tokens.types_legend[token_type_encoded]  # type: ignore
+        token_modifiers = [self.semantic_tokens.modifiers_legend[idx]  # type: ignore
                            for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
         scope = None
         if token_type in self.session.semantic_tokens_map:
@@ -469,18 +479,18 @@ class SessionBuffer:
         if view is None:
             return
 
-        self.semantic_tokens.clear()
+        self.semantic_tokens.tokens.clear()
 
         scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
         prev_line = 0
         prev_col_utf16 = 0
 
-        for idx in range(0, len(self.semantic_tokens_data), 5):
-            delta_line = self.semantic_tokens_data[idx]
-            delta_start_utf16 = self.semantic_tokens_data[idx + 1]
-            length_utf16 = self.semantic_tokens_data[idx + 2]
-            token_type_encoded = self.semantic_tokens_data[idx + 3]
-            token_modifiers_encoded = self.semantic_tokens_data[idx + 4]
+        for idx in range(0, len(self.semantic_tokens.data), 5):
+            delta_line = self.semantic_tokens.data[idx]
+            delta_start_utf16 = self.semantic_tokens.data[idx + 1]
+            length_utf16 = self.semantic_tokens.data[idx + 2]
+            token_type_encoded = self.semantic_tokens.data[idx + 3]
+            token_modifiers_encoded = self.semantic_tokens.data[idx + 4]
             line = prev_line + delta_line
             col_utf16 = prev_col_utf16 + delta_start_utf16 if delta_line == 0 else delta_start_utf16
             a = view.text_point_utf16(line, col_utf16, clamp_column=False)
@@ -490,22 +500,22 @@ class SessionBuffer:
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self._decode_semantic_token(
                 token_type_encoded, token_modifiers_encoded)
-            self.semantic_tokens.append(SemanticToken(r, token_type, token_modifiers))
+            self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)
 
-        for scope in self.semantic_tokens_active_regions.keys():
+        for scope in self.semantic_tokens.active_scopes.keys():
             if scope not in scope_regions.keys():
-                del self.semantic_tokens_active_regions[scope]
+                del self.semantic_tokens.active_scopes[scope]
                 key = "lsp_{}".format(scope)
                 for sv in self.session_views:
                     sv.view.erase_regions(key)
 
         for scope, regions in scope_regions.items():
             regions_hash = hash(tuple(hash((r.a, r.b)) for r in regions))
-            if scope not in self.semantic_tokens_active_regions or \
-                    self.semantic_tokens_active_regions[scope] != regions_hash:
-                self.semantic_tokens_active_regions[scope] = regions_hash
+            if scope not in self.semantic_tokens.active_scopes or \
+                    self.semantic_tokens.active_scopes[scope] != regions_hash:
+                self.semantic_tokens.active_scopes[scope] = regions_hash
                 key = "lsp_{}".format(scope)
                 for sv in self.session_views:
                     sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)

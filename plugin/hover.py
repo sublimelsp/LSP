@@ -194,7 +194,7 @@ class LspHoverCommand(LspTextCommand):
         for hover_response in self._hover_responses:
             content = (hover_response.get('contents') or '') if isinstance(hover_response, dict) else ''
             contents.append(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT))
-        return ''.join(contents)
+        return '<hr>'.join(contents)
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))

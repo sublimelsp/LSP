@@ -11,6 +11,8 @@ from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import SEMANTIC_TOKENS_MAP
+from .core.views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .core.views import text_document_identifier
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
@@ -39,6 +41,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self.view = listener.view
         self.session = session
+        self._initialize_region_keys()
         self.active_requests = {}  # type: Dict[int, Request]
         self.listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
@@ -77,6 +80,33 @@ class SessionView:
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
+
+    def _initialize_region_keys(self):
+        """
+        Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
+        diagnostics, semantic tokens and document highlights, see https://github.com/sublimelsp/LSP/issues/1593.
+        """
+        r = [sublime.Region(0, 0)]
+        document_highlight_style = userprefs().document_highlight_style
+        document_highlight_kinds = ["text", "read", "write"]
+        line_modes = ["m", "s"]
+        for token_type, scope in SEMANTIC_TOKENS_MAP.items():
+            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, token_type), r)
+        for token_type, _, scope in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
+            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, token_type), r)
+        if document_highlight_style == "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        for severity in range(1, 5):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+                for tag in range(1, 2):
+                    self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
+        if document_highlight_style != "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

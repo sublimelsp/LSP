@@ -420,7 +420,7 @@ class SessionBuffer:
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region()).to_lsp()
             request = Request.semanticTokensRange(params, view)
-            self.session.send_request(request, self._on_semantic_tokens)
+            self.session.send_request_async(request, self._on_semantic_tokens)
             self.semantic_tokens_pending_request = True
 
     def _on_semantic_tokens(self, response: Optional[Dict]) -> None:

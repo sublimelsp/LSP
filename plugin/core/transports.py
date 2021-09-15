@@ -21,6 +21,10 @@ T = TypeVar('T')
 T_contra = TypeVar('T_contra', contravariant=True)
 
 
+class StopLoopError(Exception):
+    pass
+
+
 class Transport(Generic[T]):
 
     def send(self, payload: T) -> None:
@@ -59,7 +63,11 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
     def read_data(self, reader: IO[bytes]) -> Optional[Dict[str, Any]]:
         headers = http.client.parse_headers(reader)  # type: ignore
-        body = reader.read(int(headers.get("Content-Length")))
+        try:
+            body = reader.read(int(headers.get("Content-Length")))
+        except TypeError:
+            # Expected error on process stopping. Stop the read loop.
+            raise StopLoopError()
         try:
             return self._decode(body)
         except Exception as ex:
@@ -139,7 +147,7 @@ class ProcessTransport(Transport[T]):
                         callback_object.on_payload(p)
 
                 sublime.set_timeout_async(partial(invoke, payload))
-        except (AttributeError, BrokenPipeError, TypeError):
+        except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
             exception_log("Unexpected exception", ex)

@@ -90,6 +90,9 @@ class LspSaveCommand(LspTextCommand):
         else:
             self._trigger_native_save()
 
+    def is_enabled(self) -> bool:
+        return True
+
     def _trigger_on_pre_save_async(self) -> None:
         # Supermassive hack that will go away later.
         listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])

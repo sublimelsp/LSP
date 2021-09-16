@@ -1,6 +1,6 @@
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Callable, List, Type
+from .core.typing import Callable, List, Optional, Type
 from abc import ABCMeta, abstractmethod
 import sublime
 import sublime_plugin
@@ -90,7 +90,7 @@ class LspSaveCommand(LspTextCommand):
         else:
             self._trigger_native_save()
 
-    def is_enabled(self) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         return True
 
     def _trigger_on_pre_save_async(self) -> None:

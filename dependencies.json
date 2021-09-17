@@ -3,12 +3,7 @@
         ">=3124": [
             "backrefs",
             "bracex",
-            "markupsafe",
             "mdpopups",
-            "pygments",
-            "pymdownx",
-            "python-jinja2",
-            "python-markdown",
             "pyyaml",
             "wcmatch"
         ]

@@ -250,6 +250,15 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
+MarkedString = Union[str, Dict[str, str]]
+
+MarkupContent = Dict[str, str]
+
+Hover = TypedDict('Hover', {
+    'contents': Union[MarkedString, MarkupContent, List[MarkedString]],
+    'range': RangeLsp,
+}, total=False)
+
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
     'uri': DocumentUri,
     'version': Optional[int],

@@ -85,6 +85,20 @@
   // When set to the empty string (""), no document highlighting is requested.
   "document_highlight_style": "underline",
 
+  // Highlight style of code diagnostics.
+  // Can be a string, or a dict of strings for severity-based styling
+  // Valid string values are "default", "box", "underline", "stippled", "squiggly" or "".
+  // "default" is equivalent to:
+  // {
+  //   "error": "squiggly",
+  //   "warning": "squiggly",
+  //   "info": "stippled",
+  //   "hint": "stippled"
+  // }
+  // When set to the empty string (""), no document highlighting is requested.
+  // Diagnostics which span multiple lines are always drawn with the "box" style.  
+  "diagnostics_highlight_style": "default",
+
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
@@ -105,10 +119,10 @@
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
 
-  // Show diagnostics (error/warning squigglies) in the view. When disabled,
-  // gutter markers are still drawn, unless "diagnostics_gutter_marker" is
-  // set to "".
-  "show_diagnostics_highlights": true,
+  // Show diagnostics spanning multiple lines in the view (as "box" style).
+  // When disabled, gutter markers are still drawn, unless "diagnostics_gutter_marker"
+  // is set to "".
+  "show_multiline_diagnostics_highlights": true,
 
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,

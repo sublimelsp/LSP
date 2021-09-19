@@ -187,6 +187,7 @@ class Settings:
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
+    diagnostics_highlight_style = None  # type: Union[str, Dict[str, str]]
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
@@ -205,7 +206,7 @@ class Settings:
     show_code_lens = None  # type: str
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
-    show_diagnostics_highlights = None  # type: bool
+    show_multiline_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
@@ -241,7 +242,7 @@ class Settings:
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
-        r("show_diagnostics_highlights", True)
+        r("show_multiline_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
@@ -275,11 +276,14 @@ class Settings:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
 
-        # Backwards-compatible with "diagnostics_highlight_style"
-        diagnostics_highlight_style = s.get("diagnostics_highlight_style")
-        if isinstance(diagnostics_highlight_style, str):
-            if not diagnostics_highlight_style:
-                self.show_diagnostics_highlights = False
+        # correctness checking will happen inside diagnostics_highlight_style_flags method
+        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")
+
+        # Backwards-compatible with "show_diagnostics_highlights"
+        if self.diagnostics_highlight_style is None:
+            show_diagnostics_highlights = s.get("show_diagnostics_highlights")
+            self.diagnostics_highlight_style = "default" if show_diagnostics_highlights else ""
+
 
         # Backwards-compatible with "code_action_on_save_timeout_ms"
         code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
@@ -295,6 +299,39 @@ class Settings:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+
+    @staticmethod
+    def _style_str_to_flag(style_str: str) -> int:
+        # This method could be a dict or lru_cache
+        if style_str == "":
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        elif style_str == "box":
+            return sublime.DRAW_NO_FILL
+        elif style_str == "underline":
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+        elif style_str == "stippled":
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE
+        elif style_str == "squiggly":
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE
+        else:
+            return 0  # default styling
+
+    def diagnostics_highlight_style_flags(self) -> List[int]:
+        """Returns flags for highlighting diagnostics on single lines per severity"""
+        if isinstance(self.diagnostics_highlight_style, str):
+            # same style for all severity levels
+            return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
+        elif isinstance(self.diagnostics_highlight_style, dict):
+            flags = []
+            for sev in ("error", "warning", "info", "hint"):
+                user_style = self.diagnostics_highlight_style.get(sev)
+                if user_style is None:  # user did not provide a style
+                    flags.append(0)
+                else:
+                    flags.append(self._style_str_to_flag(user_style))
+            return flags
+        else:
+            return [0] * 4  # default styling
 
 
 class ClientStates:

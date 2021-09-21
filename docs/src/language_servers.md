@@ -449,7 +449,7 @@ There are multiple options:
 
 ## Rust
 
-Follow installation instructions on [LSP-rust-analyzer](https://github.com/scalameta/LSP-rust-analyzer).
+Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
 ## Scala
 

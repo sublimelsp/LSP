@@ -647,9 +647,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for session in sessions:
 
             def completion_request() -> Promise[ResolvedCompletions]:
+                config_name = session.config.name
                 return session.send_request_task(
                     Request.complete(text_document_position_params(self.view, location), self.view)
-                ).then(lambda response: (response, session.config.name))
+                ).then(lambda response: (response, config_name))
 
             completion_promises.append(completion_request())
 

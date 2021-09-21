@@ -1,11 +1,11 @@
-from LSP.plugin.core.protocol import Point, Range, Request, Notification
-from LSP.plugin.core.transports import _encode, _decode
+from LSP.plugin.core.protocol import Point, Position, Range, RangeLsp, Request, Notification
+from LSP.plugin.core.transports import JsonRpcProcessor
 import unittest
 
 
-LSP_START_POSITION = {'line': 10, 'character': 4}
-LSP_END_POSITION = {'line': 11, 'character': 3}
-LSP_RANGE = {'start': LSP_START_POSITION, 'end': LSP_END_POSITION}
+LSP_START_POSITION = {'line': 10, 'character': 4}  # type: Position
+LSP_END_POSITION = {'line': 11, 'character': 3}  # type: Position
+LSP_RANGE = {'start': LSP_START_POSITION, 'end': LSP_END_POSITION}  # type: RangeLsp
 LSP_MINIMAL_DIAGNOSTIC = {
     'message': 'message',
     'range': LSP_RANGE
@@ -21,7 +21,7 @@ LSP_FULL_DIAGNOSTIC = {
 
 class PointTests(unittest.TestCase):
 
-    def test_lsp_conversion(self):
+    def test_lsp_conversion(self) -> None:
         point = Point.from_lsp(LSP_START_POSITION)
         self.assertEqual(point.row, 10)
         self.assertEqual(point.col, 4)
@@ -32,7 +32,7 @@ class PointTests(unittest.TestCase):
 
 class RangeTests(unittest.TestCase):
 
-    def test_lsp_conversion(self):
+    def test_lsp_conversion(self) -> None:
         range = Range.from_lsp(LSP_RANGE)
         self.assertEqual(range.start.row, 10)
         self.assertEqual(range.start.col, 4)
@@ -44,7 +44,7 @@ class RangeTests(unittest.TestCase):
         self.assertEqual(lsp_range['end']['line'], 11)
         self.assertEqual(lsp_range['end']['character'], 3)
 
-    def test_contains(self):
+    def test_contains(self) -> None:
         range = Range.from_lsp(LSP_RANGE)
         point = Point.from_lsp(LSP_START_POSITION)
         self.assertTrue(range.contains(point))
@@ -67,7 +67,7 @@ class RangeTests(unittest.TestCase):
         point = Point.from_lsp({'line': 0, 'character': 4})
         self.assertTrue(range.contains(point))
 
-    def test_intersects(self):
+    def test_intersects(self) -> None:
         # range2 fully contained within range1
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 0},
@@ -128,16 +128,16 @@ class RangeTests(unittest.TestCase):
 
 
 class EncodingTests(unittest.TestCase):
-    def test_encode(self):
-        encoded = _encode({"text": "😃"})
+    def test_encode(self) -> None:
+        encoded = JsonRpcProcessor._encode({"text": "😃"})
         self.assertEqual(encoded, b'{"text":"\xF0\x9F\x98\x83"}')
-        decoded = _decode(encoded)
+        decoded = JsonRpcProcessor._decode(encoded)
         self.assertEqual(decoded, {"text": "😃"})
 
 
 class RequestTests(unittest.TestCase):
 
-    def test_initialize(self):
+    def test_initialize(self) -> None:
         req = Request.initialize({"param": 1})
         payload = req.to_payload(1)
         self.assertEqual(payload["jsonrpc"], "2.0")
@@ -145,7 +145,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(payload["method"], "initialize")
         self.assertEqual(payload["params"], {"param": 1})
 
-    def test_shutdown(self):
+    def test_shutdown(self) -> None:
         req = Request.shutdown()
         payload = req.to_payload(1)
         self.assertEqual(payload["jsonrpc"], "2.0")
@@ -156,7 +156,7 @@ class RequestTests(unittest.TestCase):
 
 class NotificationTests(unittest.TestCase):
 
-    def test_initialized(self):
+    def test_initialized(self) -> None:
         notification = Notification.initialized()
         payload = notification.to_payload()
         self.assertEqual(payload["jsonrpc"], "2.0")
@@ -164,7 +164,7 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(payload["method"], "initialized")
         self.assertEqual(payload["params"], dict())
 
-    def test_exit(self):
+    def test_exit(self) -> None:
         notification = Notification.exit()
         payload = notification.to_payload()
         self.assertEqual(payload["jsonrpc"], "2.0")

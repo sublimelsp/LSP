@@ -1,0 +1,7 @@
+# New Client Configurations
+
+- Add instructions for F# (FSharpAutoComplete) (Evgeniy Andreev)
+
+# Features and Fixes
+
+- Revert "Always clear undo stack after a mutation on any panel (#1824)" (Raoul Wols)

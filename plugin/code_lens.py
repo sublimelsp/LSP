@@ -79,7 +79,7 @@ class CodeLensView:
     def is_initialized(self) -> bool:
         return self._init
 
-    def clear_annotations(self) -> None:
+    def _clear_annotations(self) -> None:
         for index, _ in enumerate(self._flat_iteration()):
             self.view.erase_regions(self._region_key(index))
 
@@ -88,7 +88,7 @@ class CodeLensView:
 
     def clear_view(self) -> None:
         self._phantom.update([])
-        self.clear_annotations()
+        self._clear_annotations()
 
     def handle_response(self, session_name: str, response: List[CodeLens]) -> None:
         self._init = True

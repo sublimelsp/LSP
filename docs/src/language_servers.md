@@ -22,6 +22,10 @@ Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP
 
 Also see [Shell](#shell).
 
+## Bicep
+
+Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LSP-Bicep).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
@@ -107,6 +111,33 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 ## ESLint
 
 Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
+
+## F\#
+
+1. Install the [F#](https://packagecontrol.io/packages/F%23) package from Package Control for syntax highlighting.
+2. Make sure you have installed the latest [.NET SDK](https://dotnet.microsoft.com/download).
+3. Install the [FsAutoComplete](https://github.com/fsharp/FsAutoComplete) from command prompt using the following command:
+
+    ```
+    dotnet tool install --global fsautocomplete
+    ```
+
+4. Open `Preferences > Package Settings > LSP > Settings` and add the `"fsautocomplete"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "fsautocomplete": {
+                "enabled": true,
+                "command": ["dotnet", "fsautocomplete", "--background-service-enabled"],
+                "selector": "source.fsharp",
+                "initializationOptions": {
+                    "AutomaticWorkspaceInit": true
+                }
+            }
+        }
+    }
+    ```
 
 ## Flow
 
@@ -263,7 +294,15 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## LaTeX
 
+There are multiple options:
+
+### TexLab
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
+
+### LTeX
+
+Follow installation instructions on [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## Lisp
 
@@ -281,6 +320,10 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
         }
     }
     ```
+
+## Leo
+
+Follow installation instructions on [LSP-leo](https://github.com/sublimelsp/LSP-leo).
 
 ## Lua
 
@@ -406,26 +449,7 @@ There are multiple options:
 
 ## Rust
 
-There are multiple options:
-
-### Rust Analyzer
-
-1. Download a binary from the release page of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
-2. Rename the binary to `rust-analyzer`.
-3. Make sure the binary is in your `$PATH`.
-4. Open `Preferences > Package Settings > LSP > Settings` and add the `"rust-analyzer"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "rust-analyzer": {
-                "enabled": true,
-                "command": ["rust-analyzer"],
-                "selector": "source.rust"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
 ## Scala
 
@@ -532,7 +556,15 @@ For development using the Deno framework follow installation instructions on [LS
 
 ## Vue
 
+There are multiple options:
+
+### Vetur
+
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
+
+### Volar
+
+Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
 
 ## Vala
 

@@ -115,7 +115,7 @@ def build_release(args: argparse.Namespace) -> None:
 def publish_release(args: argparse.Namespace) -> None:
     """Publish the new release."""
     if not args.token:
-        print('The GitHub token must be provided either through argument of GITHUB_TOKEN environment variable.')
+        print('The GitHub token must be provided either through argument or GITHUB_TOKEN environment variable.')
         sys.exit(1)
 
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))

@@ -16,7 +16,7 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, CodeLens, Location, LocationLink
+from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -52,6 +52,7 @@ from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
+from .views import formatting_options
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SYMBOL_KINDS
@@ -180,11 +181,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
                 },
+                "insertTextModeSupport": {
+                    "valueSet": [InsertTextMode.AdjustIndentation]
+                },
                 "labelDetailsSupport": True
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
-            }
+            },
+            "insertTextMode": InsertTextMode.AdjustIndentation
         },
         "signatureHelp": {
             "dynamicRegistration": True,
@@ -643,6 +648,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param    notification:  The notification object. The notification params can be modified by the plugin.
         """
         pass
+
+    def additional_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
+        """
+        Called when a language server is about to perform a document or range formatting. The returned formatting
+        options will be merged with the default options.
+
+        :param view: The view on which formatting is about to be performed.
+
+        :returns: An object with formatting options.
+        """
+        return {}
 
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
@@ -1179,6 +1195,12 @@ class Session(TransportCallbacks):
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+
+    def get_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
+        options = formatting_options(view.settings())
+        if self._plugin:
+            options.update(self._plugin.additional_formatting_options(view))
+        return options
 
     def open_uri_async(
         self,

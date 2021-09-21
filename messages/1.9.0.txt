@@ -1,0 +1,13 @@
+=> 1.9.0
+
+# Fixes and Features
+
+- Fix typo in release.py (Brenton Bostick)
+- Make code lenses have the same behavior for both variants (#1825) (Raoul Wols)
+- Advertise that we only do "adjust indentation" for completions (Raoul Wols)
+- Fix inconsistency in indent adjustment behavior when completing (Raoul Wols)
+- Update client configuration docs (Raoul Wols)
+- Always clear undo stack after a mutation on any panel (#1824) (Raoul Wols)
+- Implement labelDetailsSupport (#1827) (Raoul Wols)
+- Strip carriage returns in completion insertions as well (Raoul Wols)
+- Pass ignore patterns obtained from ST to the file watcher (#1823) (Rafał Chłodnicki)

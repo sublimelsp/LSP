@@ -27,7 +27,7 @@ PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 FileWatcherConfig = TypedDict("FileWatcherConfig", {
-    "pattern": Optional[str],
+    "patterns": List[str],
     "events": Optional[List[FileWatcherEventType]],
     "ignores": Optional[List[str]],
 }, total=False)

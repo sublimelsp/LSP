@@ -113,7 +113,7 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
             super().get_stdio_test_config(),
             {
                 'file_watcher': {
-                    'patterns': '*.js',
+                    'patterns': ['*.js'],
                     'events': ['change'],
                     'ignores': ['.git'],
                 }

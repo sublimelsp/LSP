@@ -449,26 +449,7 @@ There are multiple options:
 
 ## Rust
 
-There are multiple options:
-
-### Rust Analyzer
-
-1. Download a binary from the release page of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
-2. Rename the binary to `rust-analyzer`.
-3. Make sure the binary is in your `$PATH`.
-4. Open `Preferences > Package Settings > LSP > Settings` and add the `"rust-analyzer"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "rust-analyzer": {
-                "enabled": true,
-                "command": ["rust-analyzer"],
-                "selector": "source.rust"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
 ## Scala
 

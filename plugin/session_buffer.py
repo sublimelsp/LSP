@@ -60,7 +60,16 @@ class DiagnosticSeverityData:
 
 class SemanticTokensData:
 
-    __slots__ = ('data', 'types_legend', 'modifiers_legend', 'pending_request', 'result_id', 'active_scopes', 'tokens')
+    __slots__ = (
+        'data',
+        'types_legend',
+        'modifiers_legend',
+        'pending_request',
+        'result_id',
+        'active_scopes',
+        'tokens',
+        'view_change_count'
+    )
 
     def __init__(self) -> None:
         self.data = []  # type: List[int]
@@ -70,6 +79,7 @@ class SemanticTokensData:
         self.result_id = None  # type: Optional[str]
         self.active_scopes = {}  # type: Dict[str, int]
         self.tokens = []  # type: List[SemanticToken]
+        self.view_change_count = 0
 
 
 class SessionBuffer:
@@ -416,6 +426,8 @@ class SessionBuffer:
         if "background" not in view.style_for_scope("meta.semantic-token"):
             return
 
+        self.semantic_tokens.view_change_count = view.change_count()
+
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
 
         if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
@@ -503,6 +515,10 @@ class SessionBuffer:
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)
+
+        # don't update regions if there were additional changes to the buffer in the meantime
+        if self.semantic_tokens.view_change_count != view.change_count():
+            return
 
         for scope in self.semantic_tokens.active_scopes.keys():
             if scope not in scope_regions.keys():

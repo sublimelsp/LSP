@@ -54,7 +54,7 @@ class FileWatcher(metaclass=ABCMeta):
     def create(
         cls,
         root_path: str,
-        pattern: str,
+        patterns: List[str],
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
@@ -62,7 +62,7 @@ class FileWatcher(metaclass=ABCMeta):
         """
         Creates a new instance of the file watcher.
 
-        :param pattern: The glob pattern to enable watching for.
+        :param patterns: The list of glob pattern to enable watching for.
         :param events: The type of events that should be watched.
         :param ignores: The list of glob patterns that should excluded from file watching.
 

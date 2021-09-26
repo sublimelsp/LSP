@@ -1107,12 +1107,12 @@ class Session(TransportCallbacks):
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
         if self._watcher_impl:
             config = self.config.file_watcher
-            pattern = config.get('pattern')
-            if pattern:
+            patterns = config.get('patterns')
+            if patterns:
                 events = config.get('events') or ['create', 'change', 'delete']
                 for folder in self.get_workspace_folders():
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
-                    watcher = self._watcher_impl.create(folder.path, pattern, events, ignores, self)
+                    watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
         if self._init_callback:
             self._init_callback(self, False)
@@ -1401,7 +1401,7 @@ class Session(TransportCallbacks):
                     kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
                         ignores = self._get_global_ignore_globs(folder.path)
-                        watcher = self._watcher_impl.create(folder.path, pattern, kind, ignores, self)
+                        watcher = self._watcher_impl.create(folder.path, [pattern], kind, ignores, self)
                         file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))

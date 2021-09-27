@@ -533,7 +533,7 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 ## Terraform
 
 1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
+2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
 
     ```json
@@ -541,6 +541,9 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
         "clients": {
             "terraform": {
                 "enabled": true,
+                // For terraform-ls
+                "command": ["terraform-ls", "serve"],
+                // For terraform-lsp
                 "command": ["terraform-lsp"],
                 "selector": "source.terraform"
             }

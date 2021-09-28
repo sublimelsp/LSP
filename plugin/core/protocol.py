@@ -63,6 +63,15 @@ RangeLsp = TypedDict('RangeLsp', {
     'end': Position
 })
 
+TextDocumentIdentifier = TypedDict('TextDocumentIdentifier', {
+    'uri': DocumentUri,
+}, total=True)
+
+TextDocumentPositionParams = TypedDict('TextDocumentPositionParams', {
+    'textDocument': TextDocumentIdentifier,
+    'position': Position,
+}, total=True)
+
 CodeDescription = TypedDict('CodeDescription', {
     'href': str
 }, total=True)
@@ -156,7 +165,6 @@ SymbolInformation = TypedDict('SymbolInformation', {
 LocationLink = TypedDict('LocationLink', {
     'originSelectionRange': Optional[RangeLsp],
     'targetUri': DocumentUri,
-    'targetRange': RangeLsp,
     'targetSelectionRange': RangeLsp
 }, total=False)
 
@@ -456,7 +464,7 @@ class Point(object):
     def from_lsp(cls, point: Position) -> 'Point':
         return Point(point['line'], point['character'])
 
-    def to_lsp(self) -> Dict[str, Any]:
+    def to_lsp(self) -> Position:
         return {
             "line": self.row,
             "character": self.col
@@ -481,7 +489,7 @@ class Range(object):
     def from_lsp(cls, range: RangeLsp) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
-    def to_lsp(self) -> Dict[str, Any]:
+    def to_lsp(self) -> RangeLsp:
         return {
             'start': self.start.to_lsp(),
             'end': self.end.to_lsp()

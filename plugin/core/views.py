@@ -389,16 +389,16 @@ def text_document_code_action_params(
     diagnostics: Sequence[Diagnostic],
     on_save_actions: Optional[Sequence[str]] = None
 ) -> Dict[str, Any]:
-    params = {
+    context = {
+        "diagnostics": diagnostics
+    }  # type: Dict[str, Any]
+    if on_save_actions:
+        context['only'] = on_save_actions
+    return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),
-        "context": {
-            "diagnostics": diagnostics
-        }
+        "context": context
     }
-    if on_save_actions:
-        params['context']['only'] = on_save_actions
-    return params
 
 
 # Workaround for a limited margin-collapsing capabilities of the minihtml.

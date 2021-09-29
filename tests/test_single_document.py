@@ -40,6 +40,7 @@ GOTO_RESPONSE_LOCATION_LINK = [
     {
         'originSelectionRange': {'start': {'line': 0, 'character': 0}},
         'targetUri': GOTO_RESPONSE[0]['uri'],
+        'targetRange': GOTO_RESPONSE[0]['range'],
         'targetSelectionRange': GOTO_RESPONSE[0]['range']
     }
 ]

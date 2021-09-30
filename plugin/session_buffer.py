@@ -472,6 +472,13 @@ class SessionBuffer:
 
     def _decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
+        """
+        This function converts the token type and token modifiers from encoded numbers into names, based on the legend
+        from the server. It also returns the corresponding scope name, which will be used for the highlighting color, if
+        the token type is one of the types defined in the LSP specs, or if a scope for it was added in the client
+        configuration. In case there is no such scope defined, but a particular rule in the color scheme for this token
+        type exists, then a generic scope name matching this rule will be used.
+        """
         token_type = self.semantic_tokens.types_legend[token_type_encoded]  # type: ignore
         token_modifiers = [self.semantic_tokens.modifiers_legend[idx]  # type: ignore
                            for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
@@ -484,6 +491,16 @@ class SessionBuffer:
                     scope = entry[2]
                     break  # first match wins (in case of multiple modifiers)
             scope += " meta.semantic-token.{}.lsp".format(token_type)
+        # use only the meta-scope if there is a particular rule in the color scheme for this scope / token type
+        else:
+            view = self.some_view()
+            if view is not None:
+                token_general_style = view.style_for_scope("meta.semantic-token")
+                token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type))
+                if token_general_style["source_line"] != token_type_style["source_line"] or \
+                        token_general_style["source_column"] != token_type_style["source_column"]:
+                    scope = "meta.semantic-token.{}.lsp".format(token_type)
+
         return token_type, token_modifiers, scope
 
     def _draw_semantic_tokens_async(self) -> None:

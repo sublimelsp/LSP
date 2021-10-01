@@ -30,15 +30,18 @@
               "type": "object",
               "examples": [
                 {
-                  "pattern": "{**/*.js,**/*.ts,**/*.json}",
-                  "events": ["create", "change", "delete"],
-                  "ignores": ["**/.git/**", "**/node_modules/**", "**/.hg/**"]
+                  "patterns": ["{**/*.js,**/*.ts,**/*.json}"],
                 }
               ],
               "additionalProperties": false,
+              "required": ["patterns"],
               "properties": {
-                "pattern": {
-                  "type": "string"
+                "patterns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true
                 },
                 "events": {
                   "type": "array",

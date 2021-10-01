@@ -15,6 +15,8 @@ from .protocol import Position
 from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import Request
+from .protocol import TextDocumentIdentifier
+from .protocol import TextDocumentPositionParams
 from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
@@ -211,7 +213,7 @@ def offset_to_point(view: sublime.View, offset: int) -> Point:
     return Point(*view.rowcol_utf16(offset))
 
 
-def position(view: sublime.View, offset: int) -> Dict[str, Any]:
+def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
@@ -280,7 +282,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
     raise MissingUriError(view.id())
 
 
-def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> Dict[str, Any]:
+def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> TextDocumentIdentifier:
     if isinstance(view_or_uri, DocumentUri):
         uri = view_or_uri
     else:
@@ -320,8 +322,8 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict
     return {"uri": uri_from_view(view), "version": version}
 
 
-def text_document_position_params(view: sublime.View, location: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view), "position": offset_to_point(view, location).to_lsp()}
+def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
+    return {"textDocument": text_document_identifier(view), "position": position(view, location)}
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
@@ -333,7 +335,7 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
     return {
         "range": {
             "start": {"line": change.a.row, "character": change.a.col_utf16},
-            "end":   {"line": change.b.row, "character": change.b.col_utf16}},
+            "end": {"line": change.b.row, "character": change.b.col_utf16}},
         "rangeLength": change.len_utf16,
         "text": change.str
     }
@@ -442,16 +444,16 @@ def text_document_code_action_params(
     diagnostics: Sequence[Diagnostic],
     on_save_actions: Optional[Sequence[str]] = None
 ) -> Dict[str, Any]:
-    params = {
+    context = {
+        "diagnostics": diagnostics
+    }  # type: Dict[str, Any]
+    if on_save_actions:
+        context['only'] = on_save_actions
+    return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),
-        "context": {
-            "diagnostics": diagnostics
-        }
+        "context": context
     }
-    if on_save_actions:
-        params['context']['only'] = on_save_actions
-    return params
 
 
 # Workaround for a limited margin-collapsing capabilities of the minihtml.
@@ -737,7 +739,7 @@ def location_to_human_readable(
     Format an LSP Location (or LocationLink) into a string suitable for a human to read
     """
     uri, position = get_uri_and_position_from_location(location)
-    scheme, parsed = parse_uri(uri)
+    scheme, _ = parse_uri(uri)
     if scheme == "file":
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)

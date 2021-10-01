@@ -30,17 +30,17 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     capability = 'referencesProvider'
 
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self._picker = None  # type: Optional[LocationPicker]
-
     def run(self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
         pos = get_position(self.view, event, point)
         if session and file_path and pos is not None:
-            params = text_document_position_params(self.view, pos)
-            params['context'] = {"includeDeclaration": False}
+            position_params = text_document_position_params(self.view, pos)
+            params = {
+                'textDocument': position_params['textDocument'],
+                'position': position_params['position'],
+                'context': {"includeDeclaration": False},
+            }
             request = Request("textDocument/references", params, self.view, progress=True)
             session.send_request(
                 request,

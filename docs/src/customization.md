@@ -77,7 +77,7 @@ The following tables give an overview about the scope names used by LSP.
 ### Semantic Highlighting
 
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
-    Language servers which support semantic highlighting are for example *clangd*, *rust-analyzer* and *lua-language-server*.
+    Language servers which support semantic highlighting are for example *clangd* and *rust-analyzer*.
 
 In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
 To add such a rule to your color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
@@ -120,7 +120,7 @@ Furthermore it is possible to adjust the colors for semantic tokens by applying 
 | `meta.semantic-token.regexp` | regexp |
 | `meta.semantic-token.operator` | operator |
 
-By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define rules for the scopes specified above, the latter will take precedence.
+By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the scopes specified above, the latter will take precedence.
 
 Language servers can also add their own custom token types, which are not defined in the protocol.
 A "LSP-*" helper package (or user) can provide a "semantic_tokens" mapping in the server configuration for such additional token types.
@@ -130,12 +130,13 @@ Keys of this mapping should be the token types and values should be the correspo
 {
     "semantic_tokens": {
         "magicFunction": "support.function.builtin",
-        "selfParameter": "variable.language.self"
+        "selfParameter": "variable.language"
     }
 }
 ```
 
-If no scope for a custom token type is defined, it will only be highlighted via the regular syntax highlighting.
+The color for custom token types can also be adjusted via a color scheme rule for the scope `meta.semantic-token.<token-type>`, where `<token-type>` is the name of the custom token type, but with all letters lowercased (similar to the listed scopes in the table above).
+If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via the regular syntax highlighting.
 
 ### Document Highlights
 

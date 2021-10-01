@@ -490,16 +490,16 @@ class SessionBuffer:
                 if entry[0] == token_type and entry[1] in token_modifiers:
                     scope = entry[2]
                     break  # first match wins (in case of multiple modifiers)
-            scope += " meta.semantic-token.{}.lsp".format(token_type)
+            scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
         # use only the meta-scope if there is a particular rule in the color scheme for this scope / token type
         else:
             view = self.some_view()
             if view is not None:
                 token_general_style = view.style_for_scope("meta.semantic-token")
-                token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type))
+                token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \
                         token_general_style["source_column"] != token_type_style["source_column"]:
-                    scope = "meta.semantic-token.{}.lsp".format(token_type)
+                    scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
 
         return token_type, token_modifiers, scope
 

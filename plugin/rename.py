@@ -108,8 +108,12 @@ class LspSymbolRenameCommand(LspTextCommand):
     def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = text_document_position_params(self.view, position)
-            params["newName"] = new_name
+            position_params = text_document_position_params(self.view, position)
+            params = {
+                "textDocument": position_params["textDocument"],
+                "position": position_params["position"],
+                "newName": new_name,
+            }
             session.send_request(
                 Request("textDocument/rename", params, self.view, progress=True),
                 # This has to run on the main thread due to calling apply_workspace_edit

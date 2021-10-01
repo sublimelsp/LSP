@@ -35,10 +35,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         file_path = self.view.file_name()
         pos = get_position(self.view, event, point)
         if session and file_path and pos is not None:
-            textDocumentPositionParams = text_document_position_params(self.view, pos)
+            position_params = text_document_position_params(self.view, pos)
             params = {
-                'textDocument': textDocumentPositionParams['textDocument'],
-                'position': textDocumentPositionParams['position'],
+                'textDocument': position_params['textDocument'],
+                'position': position_params['position'],
                 'context': {"includeDeclaration": False},
             }
             request = Request("textDocument/references", params, self.view, progress=True)

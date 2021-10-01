@@ -108,10 +108,10 @@ class LspSymbolRenameCommand(LspTextCommand):
     def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)
         if session:
-            textDocumentPositionParams = text_document_position_params(self.view, position)
+            position_params = text_document_position_params(self.view, position)
             params = {
-                "textDocument": textDocumentPositionParams["textDocument"],
-                "position": textDocumentPositionParams["position"],
+                "textDocument": position_params["textDocument"],
+                "position": position_params["position"],
                 "newName": new_name,
             }
             session.send_request(

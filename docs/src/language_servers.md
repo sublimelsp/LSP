@@ -60,18 +60,22 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
 ## D
 
-1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"dls"` client configuration to the `"clients"`:
+1. Install the [D Language Server](https://github.com/Pure-D/serve-d#installation).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"serve-d"` client configuration to the `"clients"`:
 
     ```json
     {
-        "clients": {
-            "dls": {
-                "enabled": true,
-                "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
-                "selector": "source.d"
-            }
-        }
+    	"clients": {
+    		"serve-d": {
+    			"enabled": true,
+    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+    			"selector": "source.d",
+    			"settings": {
+    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+    			}
+    		}
+    	}
     }
     ```
 

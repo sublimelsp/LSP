@@ -1,4 +1,6 @@
 [
+    // To change the keybind of a command, copy its section, and edit the 'keys' part
+    
     // Show a list of available LSP commands
     // {
     //     "keys": ["f1"],

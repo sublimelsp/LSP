@@ -114,8 +114,12 @@ class LspSymbolRenameCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if not session:
             return
-        params = text_document_position_params(self.view, position)
-        params["newName"] = new_name
+        position_params = text_document_position_params(self.view, position)
+        params = {
+            "textDocument": position_params["textDocument"],
+            "position": position_params["position"],
+            "newName": new_name,
+        }
         request = Request("textDocument/rename", params, self.view, progress=True)
         session.send_request(request, functools.partial(self._on_rename_result_async, session))
 

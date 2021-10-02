@@ -74,12 +74,8 @@ class DottedDictTests(TestCase):
         d.set("foo.bar.c", "c")
         self.verify(d, "foo.bar", {"a": "a", "b": "b", "c": "c"})
         d.update({
-            "foo": {
-                "bar": {
-                    "a": "x",
-                    "b": "y"
-                }
-            }
+            "foo.bar.a": "x",
+            "foo.bar.b": "y"
         })
         self.verify(d, "foo.bar", {"a": "x", "b": "y", "c": "c"})
 
@@ -159,7 +155,7 @@ class DottedDictTests(TestCase):
             }
         )
 
-    def test_update(self) -> None:
+    def test_update_with_dicts(self) -> None:
         base = {
             "settings": {
                 "yaml.schemas": {}

@@ -74,12 +74,8 @@ class DottedDictTests(TestCase):
         d.set("foo.bar.c", "c")
         self.verify(d, "foo.bar", {"a": "a", "b": "b", "c": "c"})
         d.update({
-            "foo": {
-                "bar": {
-                    "a": "x",
-                    "b": "y"
-                }
-            }
+            "foo.bar.a": "x",
+            "foo.bar.b": "y"
         })
         self.verify(d, "foo.bar", {"a": "x", "b": "y", "c": "c"})
 
@@ -137,3 +133,45 @@ class DottedDictTests(TestCase):
         self.assertEqual(d.get(), {"a": {}})
         d.update({"a": {"b": {}}})
         self.assertEqual(d.get(), {"a": {"b": {}}})
+
+    def test_from_base_and_override(self) -> None:
+        base = DottedDict({
+            "yaml.schemas": {}
+        })
+        override = {
+            "yaml.schemas": {
+                "http://foo.com/bar.json": "**/*.json"
+            }
+        }
+        result = DottedDict.from_base_and_override(base, override)
+        self.assertEqual(
+            result.get(None),
+            {
+                "yaml": {
+                    "schemas": {
+                        "http://foo.com/bar.json": "**/*.json"
+                    }
+                }
+            }
+        )
+
+    def test_update_with_dicts(self) -> None:
+        base = {
+            "settings": {
+                "yaml.schemas": {}
+            }
+        }
+        overrides = {
+            "yaml.schemas": {
+                "http://foo.com/bar.json": "**/*.json"
+            }
+        }
+        settings = DottedDict(base.get("settings", {}))
+        settings.update(overrides)
+        self.assertEqual(settings.get(), {
+            "yaml": {
+                "schemas": {
+                    "http://foo.com/bar.json": "**/*.json"
+                }
+            }
+        })

@@ -1,5 +1,6 @@
 [
-    // To change the keybind of a command, copy its section, and edit the 'keys' part
+    // To enable or change an existing key binding, copy it to the right view and uncomment, if needed.
+    // To change the associated key press, edit the "keys" value.
     
     // Show a list of available LSP commands
     // {

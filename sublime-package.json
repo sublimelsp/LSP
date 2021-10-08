@@ -345,7 +345,7 @@
                 "info": "stippled",
                 "hint": "stippled"
               },
-              "markdownDescription": "Highlight style of code diagnostics.\nCan be a string, or a mapping of string->string for severity-based styling.\nValid string values are `\"box\"`, `\"underline\"`, `\"stippled\"`, `\"squiggly\"` or the empty string (`\"\"`).\nWhen set to a valid string value, all severities will use that style.\nWhen set to the empty string (`\"\"`), no document highlighting is requested.\nDiagnostics which span multiple lines are always drawn with the `box` style (See `\"show_multiline_diagnostics_highlights\"`)."
+              "markdownDescription": "Highlight style of code diagnostics.\nCan be a string, or a mapping of string->string for severity-based styling.\nValid string values are `\"box\"`, `\"underline\"`, `\"stippled\"`, `\"squiggly\"` or the empty string (`\"\"`).\nWhen set to a valid string value, all severities will use that style.\nWhen set to the empty string (`\"\"`), no diagnostics are drawn.\nDiagnostics which span multiple lines are always drawn with the `box` style (See `\"show_multiline_diagnostics_highlights\"`)."
             },
             "document_highlight_style": {
               "enum": [

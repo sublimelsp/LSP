@@ -277,13 +277,11 @@ class Settings:
             r("inhibit_word_completions", True)
 
         # correctness checking will happen inside diagnostics_highlight_style_flags method
-        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")
+        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")  # type: ignore
 
         # Backwards-compatible with "show_diagnostics_highlights"
-        if self.diagnostics_highlight_style is None:
-            show_diagnostics_highlights = s.get("show_diagnostics_highlights")
-            self.diagnostics_highlight_style = "default" if show_diagnostics_highlights else ""
-
+        if s.get("show_diagnostics_highlights") is False:
+            self.diagnostics_highlight_style = ""
 
         # Backwards-compatible with "code_action_on_save_timeout_ms"
         code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
@@ -298,7 +296,7 @@ class Settings:
         elif self.document_highlight_style == "stippled":
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> int:
@@ -308,13 +306,15 @@ class Settings:
         elif style_str == "box":
             return sublime.DRAW_NO_FILL
         elif style_str == "underline":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
         elif style_str == "stippled":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         elif style_str == "squiggly":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE
+            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
         else:
-            return 0  # default styling
+            # default style
+            # returning 0 enables a boolean check that defaults are to be used
+            return 0
 
     def diagnostics_highlight_style_flags(self) -> List[int]:
         """Returns flags for highlighting diagnostics on single lines per severity"""
@@ -326,11 +326,12 @@ class Settings:
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style
-                    flags.append(0)
+                    flags.append(0)  # default styling, see comment below
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
         else:
+            # Defaults are defined in DIAGNOSTIC_SEVERITY in plugin/core/views.py
             return [0] * 4  # default styling
 
 

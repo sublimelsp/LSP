@@ -135,10 +135,13 @@ class DottedDict:
         """
         Overwrite and/or add new key-value pairs to the collection.
 
-        :param      d:    The overriding dictionary. Keys must be in the new-style dotted format.
+        :param      d:    The overriding dictionary. Can contain nested dictionaries.
         """
         for key, value in d.items():
-            self.set(key, value)
+            if isinstance(value, dict):
+                self._update_recursive(value, key)
+            else:
+                self.set(key, value)
 
     def get_resolved(self, variables: Dict[str, str]) -> Dict[str, Any]:
         """
@@ -149,6 +152,16 @@ class DottedDict:
         :returns:   A copy of the underlying dictionary, but with the variables replaced
         """
         return sublime.expand_variables(self._d, variables)
+
+    def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
+        if not current:
+            return self.set(prefix, current)
+        for key, value in current.items():
+            path = "{}.{}".format(prefix, key)
+            if isinstance(value, dict):
+                self._update_recursive(value, path)
+            else:
+                self.set(path, value)
 
     def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._d))

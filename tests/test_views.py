@@ -10,7 +10,6 @@ from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import document_color_params
 from LSP.plugin.core.views import format_diagnostic_for_html
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
-from LSP.plugin.core.views import formatting_options
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import MissingUriError
@@ -123,8 +122,7 @@ class ViewsTest(DeferrableTestCase):
             "ensure_newline_at_eof_on_save": True,
             "lsp_uri": filename_to_uri(self.mock_file_name)
         })
-        options = formatting_options(self.view.settings())
-        self.assertEqual(text_document_formatting(self.view, options).params, {
+        self.assertEqual(text_document_formatting(self.view).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "options": {
                 "tabSize": 1234,
@@ -140,8 +138,7 @@ class ViewsTest(DeferrableTestCase):
             "tab_size": 4321,
             "lsp_uri": filename_to_uri(self.mock_file_name)
         })
-        options = formatting_options(self.view.settings())
-        self.assertEqual(text_document_range_formatting(self.view, options, sublime.Region(0, 2)).params, {
+        self.assertEqual(text_document_range_formatting(self.view, sublime.Region(0, 2)).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "options": {
                 "tabSize": 4321,

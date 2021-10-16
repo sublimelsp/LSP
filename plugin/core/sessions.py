@@ -672,7 +672,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return False
 
-    def on_session_buffer_changed(self, session_buffer: SessionBufferProtocol) -> None:
+    def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """
         Called when the context of the session buffer is changed or a new buffer is opened.
         """
@@ -1261,7 +1261,7 @@ class Session(TransportCallbacks):
 
     def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
         if self._plugin:
-            self._plugin.on_session_buffer_changed(session_buffer)
+            self._plugin.on_session_buffer_changed_async(session_buffer)
 
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
         if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):

@@ -674,7 +674,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """
-        Called when the context of the session buffer is changed or a new buffer is opened.
+        Called when the context of the session buffer has changed or a new buffer was opened.
         """
         pass
 

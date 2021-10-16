@@ -105,6 +105,7 @@ class SessionBuffer:
                 return
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
+            self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
@@ -238,6 +239,7 @@ class SessionBuffer:
             except MissingUriError:
                 pass  # we're closing
             self.pending_changes = None
+            self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         if self.should_notify_will_save():

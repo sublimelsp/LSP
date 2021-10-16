@@ -1,0 +1,12 @@
+=> 1.12.0
+
+# Features and Fixes
+
+- Add a comment to guide new users how to change the keybind of a command (#1866) (RUSshy)
+- Don't allow old nested dict style keys anymore (#1865) (Raoul Wols)
+  This fixes an issue for LSP-yaml where you couldn't create a mapping
+  from schema URIs to file patterns. It is now possible to use the
+  "yaml.schemas" setting.
+- [D] dls is not maintained anymore, serve-d took over (RUSshy)
+- Add a couple of types here and there (#1862) (Rafał Chłodnicki)
+- Support multiple patterns in file_watcher client configuration (#1859) (Rafał Chłodnicki)

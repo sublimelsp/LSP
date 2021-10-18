@@ -23,7 +23,7 @@ class SaveTask(metaclass=ABCMeta):
         self._on_done = on_done
         self._completed = False
         self._cancelled = False
-        self._status_key = 'lsp_save_task_timeout'
+        self._status_key = type(self).__name__
 
     def run_async(self) -> None:
         self._erase_view_status()

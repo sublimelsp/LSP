@@ -19,6 +19,13 @@ def open_file(
     window: sublime.Window, file_path: str, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously. It is only safe to call this function from the UI thread."""
+
+    # window.open_file brings the file to focus if it's already opened, which we don't want.
+    # So we first check if there's already a view for that file.
+    opened = window.find_open_file(file_path)
+    if opened:
+        return Promise.resolve(opened)
+
     view = window.open_file(file_path, flags, group)
     if not view.is_loading():
         # It's already loaded. Possibly already open in a tab.

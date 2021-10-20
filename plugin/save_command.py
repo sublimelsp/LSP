@@ -121,3 +121,16 @@ class LspSaveCommand(LspTextCommand):
     def _trigger_native_save(self) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
+
+
+class LspSaveAllCommand(sublime_plugin.WindowCommand):
+    def run(self) -> None:
+        done = set()
+        for view in self.window.views():
+            bid = view.buffer_id()
+            if bid in done:
+                continue
+            if view.is_dirty() and view.file_name():
+                done.add(bid)
+                view.run_command("lsp_save", None)
+

@@ -58,6 +58,7 @@ from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveCommand
+from .plugin.save_command import LspSaveAllCommand
 from .plugin.selection_range import LspExpandSelectionCommand
 from .plugin.symbols import LspDocumentSymbolsCommand
 from .plugin.symbols import LspSelectionAddCommand

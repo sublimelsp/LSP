@@ -496,14 +496,27 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
 
+### terraform-ls
+
     ```json
     {
         "clients": {
             "terraform": {
                 "enabled": true,
-                // For terraform-ls
                 "command": ["terraform-ls", "serve"],
-                // For terraform-lsp
+                "selector": "source.terraform"
+            }
+        }
+    }
+    ```
+
+### terraform-lsp
+
+    ```json
+    {
+        "clients": {
+            "terraform": {
+                "enabled": true,
                 "command": ["terraform-lsp"],
                 "selector": "source.terraform"
             }

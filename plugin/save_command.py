@@ -127,10 +127,11 @@ class LspSaveAllCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         done = set()
         for view in self.window.views():
-            bid = view.buffer_id()
-            if bid in done:
+            buffer_id = view.buffer_id()
+            if buffer_id in done:
                 continue
-            if view.is_dirty() and view.file_name():
-                done.add(bid)
+            if not view.is_dirty():
+                continue
+            if vview.file_name() or self.window.active_view() == view:
+                done.add(buffer_id)
                 view.run_command("lsp_save", None)
-

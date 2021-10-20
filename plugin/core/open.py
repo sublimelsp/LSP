@@ -22,9 +22,9 @@ def open_file(
 
     # window.open_file brings the file to focus if it's already opened, which we don't want.
     # So we first check if there's already a view for that file.
-    opened = window.find_open_file(file_path)
-    if opened:
-        return Promise.resolve(opened)
+    view = window.find_open_file(file_path)
+    if view:
+        return Promise.resolve(view)
 
     view = window.open_file(file_path, flags, group)
     if not view.is_loading():

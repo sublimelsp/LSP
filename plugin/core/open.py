@@ -53,6 +53,7 @@ def open_file(
 def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
     selection = range_to_region(Range.from_lsp(r), v)
     v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
+    v.window().focus_view(v)
     v.show_at_center(selection)
     return v
 

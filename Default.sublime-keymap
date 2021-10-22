@@ -25,6 +25,20 @@
             }
         ]
     },
+    // Save all open files with lsp_save
+    // {
+    //     "command": "lsp_save_all",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "textDocumentSync.willSave | textDocumentSync.willSaveWaitUntil | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"
+    //         }
+    //     ]
+    // },
     // Run Code Action
     // {
     //     "command": "lsp_code_actions",

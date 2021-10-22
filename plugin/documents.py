@@ -479,7 +479,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # when a language server inserts a snippet completion.
         pos = self._stored_region.a
         if pos == -1:
-            return
+            return None
         return self.session_async("signatureHelpProvider", pos)
 
     def _on_signature_help(self, response: Optional[SignatureHelp], point: int) -> None:

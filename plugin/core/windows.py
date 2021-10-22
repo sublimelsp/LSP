@@ -131,6 +131,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def navigate_signature_help(self, forward: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def on_post_move_window_async(self) -> None:
         raise NotImplementedError()
 

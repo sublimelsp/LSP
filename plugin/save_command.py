@@ -132,6 +132,5 @@ class LspSaveAllCommand(sublime_plugin.WindowCommand):
                 continue
             if not view.is_dirty():
                 continue
-            if vview.file_name() or self.window.active_view() == view:
-                done.add(buffer_id)
-                view.run_command("lsp_save", None)
+            done.add(buffer_id)
+            view.run_command("lsp_save", None)

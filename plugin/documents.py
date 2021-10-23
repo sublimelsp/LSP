@@ -508,7 +508,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             location=point,
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)
-        self._visible = True
 
     def navigate_signature_help(self, forward: bool) -> None:
         if self._sighelp:
@@ -519,7 +518,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         update_lsp_popup(self.view, content)
 
     def _on_sighelp_hide(self) -> None:
-        self._visible = False
+        self._sighelp = None
 
     def _on_sighelp_navigate(self, href: str) -> None:
         webbrowser.open_new_tab(href)

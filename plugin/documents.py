@@ -400,7 +400,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
         self._clear_session_views_async()
 
-    def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
+    def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> Optional[bool]:
         # You can filter key bindings by the precense of a provider,
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
             capabilities = [s.strip() for s in operand.split("|")]
@@ -425,7 +425,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self._sighelp.select_signature(operand)
                 self._update_sighelp_popup(self._sighelp.render(self.view))
                 return True  # We handled this keybinding.
-        return False
+            return False
+        return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():

@@ -416,8 +416,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return bool(self._session_views)
         # Signature Help handling
         elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.OP_EQUAL:
-            return operand == bool(self._sighelp and self._sighelp.has_multiple_signatures() \
-                and self.view.is_popup_visible() and not self.view.is_auto_complete_visible())
+            return operand == bool(
+                self._sighelp and self._sighelp.has_multiple_signatures() and
+                self.view.is_popup_visible() and not self.view.is_auto_complete_visible()
+            )
         elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
         return False

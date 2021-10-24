@@ -55,7 +55,7 @@ class DiagnosticsManager(OrderedDict):
 
 
 def has_severity(severity: int) -> Callable[[Diagnostic], bool]:
-    def has_severity(diagnostic):
+    def has_severity(diagnostic: Diagnostic) -> bool:
         return diagnostic_severity(diagnostic) == severity
 
     return has_severity

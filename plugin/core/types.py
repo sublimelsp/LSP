@@ -321,7 +321,7 @@ class Settings:
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
         elif isinstance(self.diagnostics_highlight_style, dict):
-            flags = []
+            flags = []  # type: List[Optional[int]]
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style

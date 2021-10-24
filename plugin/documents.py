@@ -401,17 +401,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         elif key in ("lsp.sessions", "setting.lsp_active"):
             return bool(self._session_views)
         # Signature Help handling
-        elif key == "lsp.signature_help":
-            if not self.view.is_popup_visible():
-                if operand == 0:
-                    sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
-                    return True
-            elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
-                # We use the "operand" for the number -1 or +1. See the key bindings.
-                self._sighelp.select_signature(operand)
-                self._update_sighelp_popup(self._sighelp.render(self.view))
-                return True  # We handled this keybinding.
-            return False
+        elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.OP_EQUAL:
+            return operand == bool(
+                self._sighelp and self._sighelp.has_multiple_signatures() and
+                self.view.is_popup_visible() and not self.view.is_auto_complete_visible()
+            )
+        elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
+            return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
@@ -441,14 +437,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
     def do_signature_help_async(self, manual: bool) -> None:
-        # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
-        # when a language server inserts a snippet completion.
-        pos = self._stored_region.a
-        if pos == -1:
-            return
-        session = self.session_async("signatureHelpProvider", pos)
+        session = self._get_signature_help_session()
         if not session:
             return
+        pos = self._stored_region.a
         triggers = []  # type: List[str]
         if not manual:
             for sb in self.session_buffers_async():
@@ -469,6 +461,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # reality there is only one popup per view.
             self.view.hide_popup()
             self._sighelp = None
+
+    def _get_signature_help_session(self) -> Optional[Session]:
+        # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
+        # when a language server inserts a snippet completion.
+        pos = self._stored_region.a
+        if pos == -1:
+            return None
+        return self.session_async("signatureHelpProvider", pos)
 
     def _on_signature_help(self, response: Optional[SignatureHelp], point: int) -> None:
         self._sighelp = SigHelp.from_lsp(response)
@@ -494,13 +494,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             location=point,
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)
-        self._visible = True
+
+    def navigate_signature_help(self, forward: bool) -> None:
+        if self._sighelp:
+            self._sighelp.select_signature(forward)
+            self._update_sighelp_popup(self._sighelp.render(self.view))
 
     def _update_sighelp_popup(self, content: str) -> None:
         update_lsp_popup(self.view, content)
 
     def _on_sighelp_hide(self) -> None:
-        self._visible = False
+        self._sighelp = None
 
     def _on_sighelp_navigate(self, href: str) -> None:
         webbrowser.open_new_tab(href)

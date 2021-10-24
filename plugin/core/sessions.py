@@ -1344,7 +1344,7 @@ class Session(TransportCallbacks):
         reason = mgr.should_present_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
-        self.diagnostics_manager.add_diagnostics(uri, params["diagnostics"])
+        self.diagnostics_manager.add_diagnostics_async(uri, params["diagnostics"])
         mgr.update_diagnostics_panel_async()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:

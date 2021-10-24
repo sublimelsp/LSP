@@ -16,7 +16,7 @@ class DiagnosticsManager(OrderedDict):
     #
     # https://microsoft.github.io/language-server-protocol/specification#textDocument_publishDiagnostics
 
-    def add_diagnostics(self, uri: str, diagnostics: List[Diagnostic]) -> None:
+    def add_diagnostics_async(self, uri: str, diagnostics: List[Diagnostic]) -> None:
         if not diagnostics:
             # received "clear diagnostics" message for this uri
             self.pop(uri, None)
@@ -38,13 +38,13 @@ class DiagnosticsManager(OrderedDict):
         )
         self.move_to_end(uri)  # maintain incoming order
 
-    def diagnostics_panel_contributions(
+    def diagnostics_panel_contributions_async(
         self,
     ) -> Iterator[Tuple[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]]:
         for uri, (contributions, _, _) in self.items():
             yield uri, contributions
 
-    def sum_total_errors_and_warnings(self) -> Tuple[int, int]:
+    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         return (
             sum(errors for _, errors, _ in self.values()),
             sum(warnings for _, _, warnings in self.values()),

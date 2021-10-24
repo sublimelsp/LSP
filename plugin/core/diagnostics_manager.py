@@ -41,8 +41,9 @@ class DiagnosticsManager(OrderedDict):
     def diagnostics_panel_contributions_async(
         self,
     ) -> Iterator[Tuple[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]]:
-        for uri, (contributions, _, _) in self.items():
-            yield uri, contributions
+        for uri, (contribution, _, _) in self.items():
+            if contribution:
+                yield uri, contribution
 
     def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         return (

@@ -37,7 +37,6 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
-import os
 import sublime
 import threading
 import urllib.parse
@@ -500,7 +499,6 @@ class WindowManager(Manager):
 
     def update_diagnostics_panel_async(self) -> None:
         to_render = []  # type: List[str]
-        base_dir = None
         self.total_error_count = 0
         self.total_warning_count = 0
         listeners = list(self._listeners)
@@ -528,8 +526,7 @@ class WindowManager(Manager):
             characters = _NO_DIAGNOSTICS_PLACEHOLDER
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, characters, prephantoms))
 
-    def _update_panel_main_thread(self, characters: str,
-                                  prephantoms: List[Tuple[int, int, str, str]]) -> None:
+    def _update_panel_main_thread(self, characters: str, prephantoms: List[Tuple[int, int, str, str]]) -> None:
         panel = ensure_diagnostics_panel(self._window)
         if not panel or not panel.is_valid():
             return

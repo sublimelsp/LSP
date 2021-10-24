@@ -17,14 +17,11 @@ class DiagnosticsManager(OrderedDict):
     # https://microsoft.github.io/language-server-protocol/specification#textDocument_publishDiagnostics
 
     def add_diagnostics(self, uri: str, diagnostics: List[Diagnostic]) -> None:
-
         if not diagnostics:
             # received "clear diagnostics" message for this uri
             self.pop(uri, None)
             return
-
         max_severity = userprefs().diagnostics_panel_include_severity_level
-
         self[uri] = (
             list(
                 filter(

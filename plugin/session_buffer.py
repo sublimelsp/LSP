@@ -17,7 +17,6 @@ from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
-from .core.views import format_diagnostic_for_panel
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import will_save

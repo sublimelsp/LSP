@@ -299,24 +299,23 @@ class Settings:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
-    def _style_str_to_flag(style_str: str) -> int:
+    def _style_str_to_flag(style_str: str) -> Optional[int]:
         # This method could be a dict or lru_cache
         if style_str == "":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         elif style_str == "box":
-            return sublime.DRAW_NO_FILL
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL
         elif style_str == "underline":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
         elif style_str == "stippled":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         elif style_str == "squiggly":
-            return sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
         else:
             # default style
-            # returning 0 enables a boolean check that defaults are to be used
-            return 0
+            return None
 
-    def diagnostics_highlight_style_flags(self) -> List[int]:
+    def diagnostics_highlight_style_flags(self) -> List[Optional[int]]:
         """Returns flags for highlighting diagnostics on single lines per severity"""
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
@@ -326,13 +325,13 @@ class Settings:
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style
-                    flags.append(0)  # default styling, see comment below
+                    flags.append(None)  # default styling, see comment below
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
         else:
             # Defaults are defined in DIAGNOSTIC_SEVERITY in plugin/core/views.py
-            return [0] * 4  # default styling
+            return [None] * 4  # default styling
 
 
 class ClientStates:

@@ -35,6 +35,8 @@ from .plugin.core.sessions import Session
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
+from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
+from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.types import ClientConfig
 from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple

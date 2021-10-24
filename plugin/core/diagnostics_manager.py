@@ -20,7 +20,7 @@ class DiagnosticsManager(OrderedDict):
 
         if not diagnostics:
             # received "clear diagnostics" message for this uri
-            del self[uri]
+            self.pop(uri, None)
             return
 
         max_severity = userprefs().diagnostics_panel_include_severity_level

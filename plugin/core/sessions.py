@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .diagnostics_manager import DiagnosticsManager
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .file_watcher import DEFAULT_KIND
@@ -52,7 +53,6 @@ from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
-from .views import formatting_options
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SEMANTIC_TOKENS_MAP
@@ -676,17 +676,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def additional_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
-        """
-        Called when a language server is about to perform a document or range formatting. The returned formatting
-        options will be merged with the default options.
-
-        :param view: The view on which formatting is about to be performed.
-
-        :returns: An object with formatting options.
-        """
-        return {}
-
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
@@ -699,6 +688,12 @@ class AbstractPlugin(metaclass=ABCMeta):
         - The third argument is the syntax to apply for the new view
         """
         return False
+
+    def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
+        """
+        Called when the context of the session buffer has changed or a new buffer was opened.
+        """
+        pass
 
     def on_session_end_async(self) -> None:
         """
@@ -908,6 +903,7 @@ class Session(TransportCallbacks):
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
+        self.diagnostics_manager = DiagnosticsManager()
         self.semantic_tokens_map = SEMANTIC_TOKENS_MAP  # type: Dict[str, str]
         if config.semantic_tokens is not None:
             self.semantic_tokens_map.update(config.semantic_tokens)
@@ -1232,12 +1228,6 @@ class Session(TransportCallbacks):
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
-    def get_formatting_options(self, view: sublime.View) -> Dict[str, Any]:
-        options = formatting_options(view.settings())
-        if self._plugin:
-            options.update(self._plugin.additional_formatting_options(view))
-        return options
-
     def open_uri_async(
         self,
         uri: DocumentUri,
@@ -1289,6 +1279,10 @@ class Session(TransportCallbacks):
                             group: int = -1) -> Promise[bool]:
         uri, r = get_uri_and_range_from_location(location)
         return self.open_uri_async(uri, r, flags, group)
+
+    def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
+        if self._plugin:
+            self._plugin.on_session_buffer_changed_async(session_buffer)
 
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
         if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
@@ -1382,6 +1376,8 @@ class Session(TransportCallbacks):
         reason = mgr.should_present_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+        self.diagnostics_manager.add_diagnostics_async(uri, params["diagnostics"])
+        mgr.update_diagnostics_panel_async()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))

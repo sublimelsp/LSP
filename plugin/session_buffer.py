@@ -18,7 +18,6 @@ from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
-from .core.views import format_diagnostic_for_panel
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
@@ -46,13 +45,12 @@ class PendingChanges:
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'panel_contribution', 'scope', 'icon')
+    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
 
     def __init__(self, severity: int) -> None:
         self.regions = []  # type: List[sublime.Region]
         self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
         self.annotations = []  # type: List[str]
-        self.panel_contribution = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
@@ -135,6 +133,7 @@ class SessionBuffer:
                 return
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
+            self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
@@ -268,6 +267,7 @@ class SessionBuffer:
             except MissingUriError:
                 pass  # we're closing
             self.pending_changes = None
+            self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         if self.should_notify_will_save():
@@ -328,8 +328,6 @@ class SessionBuffer:
                     total_errors += 1
                 elif severity == DiagnosticSeverity.Warning:
                     total_warnings += 1
-                if severity <= userprefs().diagnostics_panel_include_severity_level:
-                    data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
                 if severity <= userprefs().show_diagnostics_panel_on_save:
                     should_show_diagnostics_panel = True
             self._publish_diagnostics_to_session_views(
@@ -402,9 +400,6 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = should_show_diagnostics_panel
         for sv in self.session_views:
             sv.present_diagnostics_async()
-        mgr = self.session.manager()
-        if mgr:
-            mgr.update_diagnostics_panel_async()
 
     def do_semantic_tokens_async(self) -> None:
         if not userprefs().semantic_highlighting:

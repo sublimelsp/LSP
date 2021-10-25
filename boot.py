@@ -35,6 +35,8 @@ from .plugin.core.sessions import Session
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
+from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
+from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.types import ClientConfig
 from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
@@ -55,6 +57,7 @@ from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
+from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
 from .plugin.semantic_highlighting import LspShowScopeNameCommand

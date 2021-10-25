@@ -60,18 +60,22 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
 ## D
 
-1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"dls"` client configuration to the `"clients"`:
+1. Install the [D Language Server](https://github.com/Pure-D/serve-d#installation).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"serve-d"` client configuration to the `"clients"`:
 
     ```json
     {
-        "clients": {
-            "dls": {
-                "enabled": true,
-                "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
-                "selector": "source.d"
-            }
-        }
+    	"clients": {
+    		"serve-d": {
+    			"enabled": true,
+    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+    			"selector": "source.d",
+    			"settings": {
+    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+    			}
+    		}
+    	}
     }
     ```
 
@@ -223,51 +227,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## Julia
 
-1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
-2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
-
-        import Pkg;
-        Pkg.add("LanguageServer")
-        Pkg.add("SymbolServer")
-
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"julials"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "julials": {
-                "enabled": true,
-                "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-              // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
-                "selector": "source.julia",
-                "settings": {
-                    // Default values from VS Code:
-                    "julia.format.calls": true,      // Format function calls
-                    "julia.format.comments": true,   // Format comments
-                    "julia.format.curly": true,      // Format braces
-                    "julia.format.docs": true,       // Format inline documentation
-                    "julia.format.indent": 4,        // Indent size for formatting
-                    "julia.format.indents": true,    // Format file indents
-                    "julia.format.iterOps": true,    // Format loop iterators
-                    "julia.format.kw": true,         // Remove spaces around = in function keywords
-                    "julia.format.lineends": false,  // [undocumented]
-                    "julia.format.ops": true,        // Format whitespace around operators
-                    "julia.format.tuples": true,     // Format tuples
-                    "julia.lint.call": false,        // Check calls against existing methods (experimental)
-                    "julia.lint.constif": true,      // Check for constant conditionals of if statements
-                    "julia.lint.datadecl": false,    // [undocumented]
-                    "julia.lint.iter": true,         // Check iterator syntax of loops
-                    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
-                    "julia.lint.modname": true,      // Check for invalid submodule names
-                    "julia.lint.nothingcomp": false, // [undocumented]
-                    "julia.lint.pirates": true,      // Check for type piracy
-                    "julia.lint.run": true,          // run the linter on active files
-                    "julia.lint.typeparam": true     // Check for unused DataType parameters
-                }
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LSP-julia).
 
 ## Kotlin
 
@@ -533,8 +493,24 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 ## Terraform
 
 1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
+2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
+
+    For `terraform-ls`:
+
+    ```json
+    {
+        "clients": {
+            "terraform": {
+                "enabled": true,
+                "command": ["terraform-ls", "serve"],
+                "selector": "source.terraform"
+            }
+        }
+    }
+    ```
+
+    For `terraform-lsp`:
 
     ```json
     {

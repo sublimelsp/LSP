@@ -25,6 +25,13 @@
             }
         ]
     },
+    // Save all open files with lsp_save
+    // {
+    //     "command": "lsp_save_all",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ]
+    // },
     // Run Code Action
     // {
     //     "command": "lsp_code_actions",

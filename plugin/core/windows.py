@@ -508,9 +508,8 @@ class WindowManager(Manager):
             local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
-            for uri, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
-                scheme, path = parse_uri(uri)
-                to_render.append("{}:".format(path if scheme == "file" else uri))
+            for path, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
+                to_render.append("{}:".format(path))
                 row += 1
                 for content, offset, code, href in contribution:
                     to_render.append(content)

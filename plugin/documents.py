@@ -24,7 +24,6 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import document_color_params
 from .core.views import first_selection_region
@@ -237,20 +236,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
-
-    def diagnostics_panel_contribution_async(self) -> List[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
-        result = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
-        # Sort by severity
-        for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
-            for sb in self.session_buffers_async():
-                data = sb.data_per_severity.get((severity, False))
-                if data:
-                    result.extend(data.panel_contribution)
-                data = sb.data_per_severity.get((severity, True))
-                if data:
-                    result.extend(data.panel_contribution)
-        # sort the result by asc line number
-        return sorted(result)
 
     def diagnostics_async(
         self
@@ -738,14 +723,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def trigger_on_pre_save_async(self) -> None:
         for sv in self.session_views_async():
             sv.on_pre_save_async()
-
-    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
-        errors = 0
-        warnings = 0
-        for sb in self.session_buffers_async():
-            errors += sb.total_errors
-            warnings += sb.total_warnings
-        return errors, warnings
 
     def revert_async(self) -> None:
         if self.view.is_primary():

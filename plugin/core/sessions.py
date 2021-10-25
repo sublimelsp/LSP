@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .diagnostics_manager import DiagnosticsManager
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .file_watcher import DEFAULT_KIND
@@ -874,6 +875,7 @@ class Session(TransportCallbacks):
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
+        self.diagnostics_manager = DiagnosticsManager()
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1324,6 +1326,8 @@ class Session(TransportCallbacks):
         reason = mgr.should_present_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+        self.diagnostics_manager.add_diagnostics_async(uri, params["diagnostics"])
+        mgr.update_diagnostics_panel_async()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))

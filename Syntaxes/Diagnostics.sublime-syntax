@@ -14,8 +14,8 @@ contexts:
 
   file:
     - match: ^(\S.*)(:)$
+      scope: meta.diagnostic.preamble.lsp
       captures:
-        0: meta.diagnostic.preamble.lsp
         1: entity.name.filename.lsp
         2: punctuation.separator.lsp
 

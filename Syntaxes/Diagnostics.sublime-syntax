@@ -13,14 +13,14 @@ contexts:
     - include: line
 
   file:
-    - match: ^(?!\s*\d+:\d+)(.*)(:)$
+    - match: ^(\S.*)(:)$
+      scope: meta.diagnostic.preamble.lsp
       captures:
-        0: meta.diagnostic.preamble.lsp
         1: entity.name.filename.lsp
         2: punctuation.separator.lsp
 
   line:
-    - match: ^\s*(?=\d)
+    - match: ^\s+(?=\d)
       push:
         - ensure-diag-meta-scope
         - expect-source-and-code

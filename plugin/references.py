@@ -14,7 +14,7 @@ from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
-from .locationpicker import LocationPicker
+from .locationpicker import SimpleLocationPicker as LocationPicker
 import functools
 import linecache
 import os

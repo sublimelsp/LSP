@@ -82,6 +82,14 @@
         "command": "lsp_symbol_declaration",
     },
     {
+        "caption": "LSP: Goto Diagnostic",
+        "command": "lsp_goto_diagnostic"
+    },
+    {
+        "caption": "LSP: Goto Diagnostic in Project",
+        "command": "lsp_goto_diagnostic_in_project"
+    },
+    {
         "caption": "LSP: Toggle Log Panel",
         "command": "lsp_toggle_server_panel",
     },

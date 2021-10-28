@@ -6,7 +6,7 @@ from .core.registry import LspTextCommand
 from .core.sessions import Session, method_to_capability
 from .core.typing import List, Optional, Union
 from .core.views import text_document_position_params
-from .locationpicker import LocationPicker
+from .locationpicker import SimpleLocationPicker as LocationPicker
 from .locationpicker import open_location_async
 import functools
 import sublime

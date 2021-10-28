@@ -17,10 +17,10 @@ import weakref
 GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL = DiagnosticSeverity.Hint
 GOTO_DIAGNOSTIC_MAX_DETAILS_LINES = 2
 DIAGNOSTIC_KIND_TUPLE = {
-    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_BLUISH, "e", ""),
+    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", ""),
     DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", ""),
-    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_GREENISH, "i", ""),
-    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_GREENISH, "h", ""),
+    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", ""),
+    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", ""),
 }
 
 GotoDiagnosticItem = Tuple[Tuple[weakref.ReferenceType, Union[Location, LocationLink]], sublime.QuickPanelItem]

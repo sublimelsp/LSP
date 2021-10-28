@@ -5,7 +5,7 @@ from .core.sessions import Session
 from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import MissingUriError, diagnostic_severity, diagnostic_source, uri_from_view
-from .locationpicker import LocationPicker, OnModifierKeysAcitonMap
+from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
 from pathlib import Path
 import functools
 import html
@@ -34,7 +34,11 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
         wm = windows.lookup(self.window)
         if wm is not None:
             locations, items = tuple(zip(*tuple(self._diagnostic_items())))  # transpose
-            LocationPicker(view, locations, items, side_by_side=False, on_modifier_keys=self._get_on_modifier_keys())
+            EnhancedLocationPicker(view,
+                                   locations,
+                                   items,
+                                   side_by_side=False,
+                                   on_modifier_keys=self._get_on_modifier_keys())
 
     def is_enabled(self) -> bool:
         for session in self._get_sessions():
@@ -55,8 +59,7 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
         scheme, path = parsed_uri
         if scheme == "file":
             path = str(simple_project_path(map(Path, self.window.folders()), Path(path))) or path
-        item = sublime.QuickPanelItem(self._make_trigger(path, diagnostic),
-                                      self._make_details(max_details, diagnostic),
+        item = sublime.QuickPanelItem(self._make_trigger(path, diagnostic), self._make_details(max_details, diagnostic),
                                       "#{}".format(diagnostic_source(diagnostic)),
                                       DIAGNOSTIC_KIND_TUPLE[diagnostic_severity(diagnostic)])
         return diagnostic_location(parsed_uri, diagnostic), item

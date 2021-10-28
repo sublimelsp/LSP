@@ -36,7 +36,7 @@ def open_basic_file(
     session.window.open_file(to_encoded_filename(filename, position), flags=flags, group=group)
 
 
-def SimpleLocationPicker(
+def LocationPicker(
     view: sublime.View,
     session: Session,
     locations: Union[List[Location], List[LocationLink]],
@@ -45,7 +45,7 @@ def SimpleLocationPicker(
     manager = session.manager()
     base_dir = manager.get_project_path(view.file_name() or "") if manager else None
     weaksession = weakref.ref(session)
-    LocationPicker(
+    EnhancedLocationPicker(
         view,
         [(weaksession, location) for location in locations],
         [location_to_human_readable(session.config, base_dir, location) for location in locations],
@@ -60,7 +60,7 @@ OnModifierKeysAcitonMap = Dict[
 ]
 
 
-class LocationPicker:
+class EnhancedLocationPicker:
 
     def __init__(
         self,

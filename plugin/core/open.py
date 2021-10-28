@@ -23,15 +23,14 @@ def open_file(
     It is only safe to call this function from the UI thread.
     The provided uri MUST be a file URI
     """
-    file_path = parse_uri(uri)[1]
-    view = window.open_file(file, flags, group)
+    file = parse_uri(uri)[1]
     # window.open_file brings the file to focus if it's already opened, which we don't want.
     # So we first check if there's already a view for that file.
-    view = window.find_open_file(file_path)
+    view = window.find_open_file(file)
     if view:
         return Promise.resolve(view)
 
-    view = window.open_file(file_path, flags, group)
+    view = window.open_file(file, flags, group)
     if not view.is_loading():
         # It's already loaded. Possibly already open in a tab.
         return Promise.resolve(view)

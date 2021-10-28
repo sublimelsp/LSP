@@ -5,6 +5,9 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 !!! Mac
     If you using macOS, replace <kbd>ctrl</kbd> with <kbd>command</kbd>.
 
+!!! Note
+    If <kbd>F4</kbd> / <kbd>shift</kbd> <kbd>F4</kbd> stop working, double-click a diagnostic in the Diagnostics Panel. It should work again afterwards.
+
 | Feature | Shortcut | Command |
 | ------- | -------- | ------- |
 | Auto Complete | <kbd>ctrl</kbd> <kbd>space</kbd> (also on macOS) | `auto_complete`

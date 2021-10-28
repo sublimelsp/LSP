@@ -86,7 +86,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             for reference in references:
                 references_count += 1
                 point, line = reference
-                to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
+                to_render.append(" {:>4}:{:<4} {}".format(point.row + 1, point.col + 1, line))
             to_render.append("")  # add spacing between filenames
         characters = "\n".join(to_render)
         panel.settings().set("result_base_dir", base_dir)

@@ -23,8 +23,15 @@ def open_file(
     It is only safe to call this function from the UI thread.
     The provided uri MUST be a file URI
     """
-    file = parse_uri(uri)[1]
+    file_path = parse_uri(uri)[1]
     view = window.open_file(file, flags, group)
+    # window.open_file brings the file to focus if it's already opened, which we don't want.
+    # So we first check if there's already a view for that file.
+    view = window.find_open_file(file_path)
+    if view:
+        return Promise.resolve(view)
+
+    view = window.open_file(file_path, flags, group)
     if not view.is_loading():
         # It's already loaded. Possibly already open in a tab.
         return Promise.resolve(view)
@@ -51,6 +58,9 @@ def open_file(
 def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
     selection = range_to_region(Range.from_lsp(r), v)
     v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
+    window = v.window()
+    if window:
+        window.focus_view(v)
     v.show_at_center(selection)
     return v
 

@@ -2,12 +2,36 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureHelpContext
 from .protocol import SignatureInformation
+from .registry import LspTextCommand
 from .typing import Optional, List
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import minihtml
+import functools
 import html
 import sublime
+
+
+class LspSignatureHelpNavigateCommand(LspTextCommand):
+
+    def want_event(self) -> bool:
+        return False
+
+    def run(self, _: sublime.Edit, forward: bool) -> None:
+        listener = self.get_listener()
+        if listener:
+            listener.navigate_signature_help(forward)
+
+
+class LspSignatureHelpShowCommand(LspTextCommand):
+
+    def want_event(self) -> bool:
+        return False
+
+    def run(self, _: sublime.Edit) -> None:
+        listener = self.get_listener()
+        if listener:
+            sublime.set_timeout_async(functools.partial(listener.do_signature_help_async, manual=True))
 
 
 class SigHelp:
@@ -61,9 +85,9 @@ class SigHelp:
         """Does the current signature help state contain more than one overload?"""
         return len(self._signatures) > 1
 
-    def select_signature(self, direction: int) -> None:
+    def select_signature(self, forward: bool) -> None:
         """Increment or decrement the active overload; purely chosen by the end-user."""
-        new_index = self._active_signature_index + direction
+        new_index = self._active_signature_index + (1 if forward else -1)
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
     def active_signature(self) -> SignatureInformation:

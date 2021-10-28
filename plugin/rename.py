@@ -192,7 +192,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     line_content = get_line(window, file, start[0])
                 else:
                     line_content = '<no preview available>'
-                to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
+                to_render.append(" {:>4}:{:<4} {}".format(start[0] + 1, start[1] + 1, line_content))
             to_render.append("")  # this adds a spacing between filenames
         characters = "\n".join(to_render)
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")

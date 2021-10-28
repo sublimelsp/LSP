@@ -37,7 +37,6 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
-import os
 import sublime
 import threading
 import urllib.parse
@@ -103,14 +102,6 @@ class AbstractViewListener(metaclass=ABCMeta):
             return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
-    def diagnostics_panel_contribution_async(self) -> Sequence[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
-        raise NotImplementedError()
-
-    @abstractmethod
     def on_diagnostics_updated_async(self) -> None:
         raise NotImplementedError()
 
@@ -128,6 +119,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def do_signature_help_async(self, manual: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def navigate_signature_help(self, forward: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -172,7 +167,7 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
-        sublime.set_timeout(functools.partial(self._update_panel_main_thread, None, _NO_DIAGNOSTICS_PLACEHOLDER, []))
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
@@ -504,47 +499,36 @@ class WindowManager(Manager):
 
     def update_diagnostics_panel_async(self) -> None:
         to_render = []  # type: List[str]
-        base_dir = None
         self.total_error_count = 0
         self.total_warning_count = 0
         listeners = list(self._listeners)
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
-        for listener in listeners:
-            local_errors, local_warnings = listener.sum_total_errors_and_warnings_async()
+        for session in self._sessions:
+            local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
-            contribution = listener.diagnostics_panel_contribution_async()
-            if not contribution:
-                continue
-            file_path = listener.view.file_name() or ""
-            base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
-            file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-            to_render.append("{}:".format(file_path))
-            row += 1
-            for content, offset, code, href in contribution:
-                to_render.append(content)
-                if offset is not None and code is not None and href is not None:
-                    prephantoms.append((row, offset, code, href))
-                row += content.count("\n") + 1
-            to_render.append("")  # add spacing between filenames
-            row += 1
+            for path, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
+                to_render.append("{}:".format(path))
+                row += 1
+                for content, offset, code, href in contribution:
+                    to_render.append(content)
+                    if offset is not None and code is not None and href is not None:
+                        prephantoms.append((row, offset, code, href))
+                    row += content.count("\n") + 1
+                to_render.append("")  # add spacing between filenames
+                row += 1
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)
         if not characters:
             characters = _NO_DIAGNOSTICS_PLACEHOLDER
-        sublime.set_timeout(functools.partial(self._update_panel_main_thread, base_dir, characters, prephantoms))
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, characters, prephantoms))
 
-    def _update_panel_main_thread(self, base_dir: Optional[str], characters: str,
-                                  prephantoms: List[Tuple[int, int, str, str]]) -> None:
+    def _update_panel_main_thread(self, characters: str, prephantoms: List[Tuple[int, int, str, str]]) -> None:
         panel = ensure_diagnostics_panel(self._window)
         if not panel or not panel.is_valid():
             return
-        if isinstance(base_dir, str):
-            panel.settings().set("result_base_dir", base_dir)
-        else:
-            panel.settings().erase("result_base_dir")
         panel.run_command("lsp_update_panel", {"characters": characters})
         if self._panel_code_phantoms is None:
             self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")

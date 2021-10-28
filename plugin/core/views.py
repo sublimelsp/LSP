@@ -716,7 +716,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
             formatted.append(code)
     lines = diagnostic["message"].splitlines() or [""]
     # \u200B is the zero-width space
-    result = "{:>5}:{:<4}{:<8}{} \u200B{}".format(
+    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
         format_severity(diagnostic_severity(diagnostic)),
@@ -726,7 +726,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     if href:
         offset = len(result)
     for line in itertools.islice(lines, 1, None):
-        result += "\n" + 17 * " " + line
+        result += "\n" + 18 * " " + line
     return result, offset, code, href
 
 

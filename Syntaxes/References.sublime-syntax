@@ -5,24 +5,20 @@
 hidden: true
 scope: output.lsp.references
 
-variables:
-  start_of_reference_body: ^\s*(?=\s*\d+:\d+)
-  filename_and_colon: ^(?!\s*\d+:\d+)(.*)(:)$
-
 contexts:
   main:
     - include: references-preamble
     - include: references-body
 
   references-preamble:
-    - match: '{{filename_and_colon}}'
+    - match: ^(\S.*)(:)$
+      scope: meta.reference.preamble.lsp
       captures:
-        0: meta.reference.preamble.lsp
         1: entity.name.filename.lsp
         2: punctuation.separator.lsp
 
   references-body:
-    - match: '{{start_of_reference_body}}'
+    - match: ^\s+(?=\d+)
       push:
         - ensure-reference-meta-scope
         - code

@@ -1,7 +1,7 @@
 [
     // To enable or change an existing key binding, copy it to the right view and uncomment, if needed.
     // To change the associated key press, edit the "keys" value.
-    
+
     // Show a list of available LSP commands
     // {
     //     "keys": ["f1"],
@@ -25,6 +25,13 @@
             }
         ]
     },
+    // Save all open files with lsp_save
+    // {
+    //     "command": "lsp_save_all",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ]
+    // },
     // Run Code Action
     // {
     //     "command": "lsp_code_actions",
@@ -98,42 +105,48 @@
     // },
     // Trigger Signature Help
     {
-        "command": "noop",
+        "command": "lsp_signature_help_show",
         "keys": [
             "primary+alt+space"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_available",
                 "operator": "equal",
-                "operand": 0
+                "operand": true
             }
         ]
     },
     // Move Up/Down in Signature Help
     {
-        "command": "noop",
+        "command": "lsp_signature_help_navigate",
+        "args": {
+            "forward": false
+        },
         "keys": [
             "up"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_multiple_choices_available",
                 "operator": "equal",
-                "operand": -1
+                "operand": true
             }
         ]
     },
     {
-        "command": "noop",
+        "command": "lsp_signature_help_navigate",
+        "args": {
+            "forward": true
+        },
         "keys": [
             "down"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_multiple_choices_available",
                 "operator": "equal",
-                "operand": 1
+                "operand": true
             }
         ]
     },

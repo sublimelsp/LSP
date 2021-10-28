@@ -19,6 +19,13 @@ def open_file(
     window: sublime.Window, file_path: str, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously. It is only safe to call this function from the UI thread."""
+
+    # window.open_file brings the file to focus if it's already opened, which we don't want.
+    # So we first check if there's already a view for that file.
+    view = window.find_open_file(file_path)
+    if view:
+        return Promise.resolve(view)
+
     view = window.open_file(file_path, flags, group)
     if not view.is_loading():
         # It's already loaded. Possibly already open in a tab.
@@ -46,6 +53,9 @@ def open_file(
 def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
     selection = range_to_region(Range.from_lsp(r), v)
     v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
+    window = v.window()
+    if window:
+        window.focus_view(v)
     v.show_at_center(selection)
     return v
 

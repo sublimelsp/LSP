@@ -6,6 +6,7 @@ from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import MissingUriError, diagnostic_severity, diagnostic_source, uri_from_view
 from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
+from collections import OrderedDict
 from pathlib import Path
 import functools
 import html
@@ -47,12 +48,7 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
         return False
 
     def _get_sessions(self) -> Iterator[Session]:
-        wm = windows.lookup(self.window)
-        if wm is not None:
-            view = self.window.active_view()
-            if view is not None:
-                for session in wm.sessions(view):
-                    yield session
+        raise NotImplementedError
 
     def _make_item(self, max_details: Optional[int], parsed_uri: ParsedUri,
                    diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]:
@@ -79,6 +75,14 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
 
 
 class LspGotoDiagnosticForFileCommandBase(LspGotoDiagnosticCommandBase):
+    def _get_sessions(self) -> Iterator[Session]:
+        wm = windows.lookup(self.window)
+        if wm is not None:
+            view = self.window.active_view()
+            if view is not None:
+                for session in wm.sessions(view):
+                    yield session
+
     def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
         if self._parsed_uri is None:
             return
@@ -123,6 +127,12 @@ class LspGotoDiagnosticCommand(LspGotoDiagnosticForFileCommandBase):
 
 
 class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
+    def _get_sessions(self) -> Iterator[Session]:
+        wm = windows.lookup(self.window)
+        if wm is not None:
+            for session in wm._sessions:  # TODO: wm getter?
+                yield session
+
     def run(self) -> None:
         self._run()
 
@@ -132,9 +142,17 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
         max_details = GOTO_DIAGNOSTIC_MAX_DETAILS_LINES
         for session in self._get_sessions():
             weaksession = weakref.ref(session)
-            for _, (location, item) in session.diagnostics_manager.filter_map_diagnostics_flat_async(
+            items_per_path = OrderedDict(
+            )  # type: OrderedDict[ParsedUri, List[Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]]]
+            for path, location_item in session.diagnostics_manager.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), functools.partial(self._make_item, max_details)):
-                yield (weaksession, location), item
+                seen = path in items_per_path
+                items_per_path.setdefault(path, []).append(location_item)
+                if not seen:
+                    items_per_path.move_to_end(path)
+            for location_items in items_per_path.values():
+                for location, item in location_items:
+                    yield (weaksession, location), item
 
     def _make_trigger(self, path: str, diagnostic: Diagnostic) -> str:
         return "{}:{}:{} ".format(path, diagnostic["range"]["start"]["line"] + 1,

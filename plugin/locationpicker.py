@@ -29,11 +29,11 @@ def open_basic_file(
     position: Position,
     flags: int = 0,
     group: Optional[int] = None
-) -> None:
+) -> sublime.View:
     filename = session.config.map_server_uri_to_client_path(uri)
     if group is None:
         group = session.window.active_group()
-    session.window.open_file(to_encoded_filename(filename, position), flags=flags, group=group)
+    return session.window.open_file(to_encoded_filename(filename, position), flags=flags, group=group)
 
 
 def LocationPicker(
@@ -79,6 +79,7 @@ class EnhancedLocationPicker:
         self._side_by_side = side_by_side
         self._items = locations
         self._on_modifier_keys = on_modifier_keys
+        self._preview = None  # type: Optional[sublime.View]
         self._window.show_quick_panel(
             items=items,
             on_select=self._select_entry,
@@ -106,6 +107,8 @@ class EnhancedLocationPicker:
             else:
                 self._goto_location(session, location, uri, position)
         else:
+            if self._preview is not None and self._preview.sheet().is_transient():
+                self._preview.close()
             self._window.focus_view(self._view)
 
     def _goto_location(
@@ -130,7 +133,7 @@ class EnhancedLocationPicker:
         if not session:
             return
         if uri.startswith("file:"):
-            open_basic_file(session, uri, position, sublime.TRANSIENT | sublime.ENCODED_POSITION)
+            self._preview = open_basic_file(session, uri, position, sublime.TRANSIENT | sublime.ENCODED_POSITION)
         else:
             # TODO: Preview non-file uris?
             debug("no preview for", uri)

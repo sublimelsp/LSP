@@ -2,6 +2,7 @@ from .core.diagnostics_manager import ParsedUri, is_severity_included
 from .core.protocol import Diagnostic, DiagnosticSeverity, DocumentUri, Location, LocationLink, Position
 from .core.registry import windows
 from .core.sessions import Session
+from .core.settings import userprefs
 from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import MissingUriError, diagnostic_severity, diagnostic_source, uri_from_view
@@ -9,14 +10,10 @@ from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
-import html
 import sublime
 import sublime_plugin
 import weakref
 
-# TODO: should be user settings
-GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL = DiagnosticSeverity.Hint
-GOTO_DIAGNOSTIC_MAX_DETAILS_LINES = 0
 DIAGNOSTIC_KIND_TUPLE = {
     DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", ""),
     DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", ""),
@@ -90,13 +87,11 @@ class LspGotoDiagnosticForFileCommandBase(LspGotoDiagnosticCommandBase):
     def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
         if self._parsed_uri is None:
             return
-        # TODO: should be user settings
-        max_severity = GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL
-        max_details = GOTO_DIAGNOSTIC_MAX_DETAILS_LINES
+        max_severity = userprefs().diagnostics_panel_include_severity_level
         for session in self._get_sessions():
             weaksession = weakref.ref(session)
             for location, item in map(
-                    functools.partial(self._make_item, max_details, self._parsed_uri),
+                    functools.partial(self._make_item, 0, self._parsed_uri),
                     filter(is_severity_included(max_severity),
                            session.diagnostics_manager.diagnostics_by_parsed_uri(self._parsed_uri))):
                 yield (weaksession, location), item
@@ -105,9 +100,6 @@ class LspGotoDiagnosticForFileCommandBase(LspGotoDiagnosticCommandBase):
         lines = diagnostic["message"].splitlines()
         return "{}:{} {}".format(diagnostic["range"]["start"]["line"] + 1,
                                  diagnostic["range"]["start"]["character"] + 1, lines[0] if lines else "")
-
-    def _make_details(self, max_details: Optional[int], diagnostic: Diagnostic) -> Union[str, List[str]]:
-        return message_lines_truncated(max_details, diagnostic["message"].splitlines()[1:])
 
     _parsed_uri = None  # type: Optional[ParsedUri]
 
@@ -141,8 +133,7 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
         self._run()
 
     def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
-        # TODO: should be user settings
-        max_severity = GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL
+        max_severity = userprefs().diagnostics_panel_include_severity_level
         items_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[Tuple[Union[Location, LocationLink], int]]]
         for session in self._get_sessions():
             weaksession = weakref.ref(session)
@@ -153,7 +144,7 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
                 if not seen:
                     items_per_path.move_to_end(parsed_uri)
         for parsed_uri, location_items in items_per_path.items():
-            location = location_items[0][0]
+            location, _ = location_items[0]  # non-empty list
             counts = Counter(severity for _, severity in location_items)
             yield (weaksession, location), sublime.QuickPanelItem(
                 self._simple_project_path(parsed_uri),
@@ -162,7 +153,6 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
                                                      0)), DIAGNOSTIC_KIND_TUPLE[min(counts)])
 
     def _get_on_modifier_keys(self) -> OnModifierKeysAcitonMap:
-        # modifier key(s) from user settings?
         on_modifier_keys = super()._get_on_modifier_keys().copy()
         on_modifier_keys[frozenset({"shift"})] = self._run_goto_diagnostic_for_document_uri
         return on_modifier_keys
@@ -175,16 +165,6 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
 
 def _location_severity(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], int]:
     return diagnostic_location(parsed_uri, diagnostic), diagnostic_severity(diagnostic)
-
-
-def message_lines_truncated(max_details: Optional[int], lines: List[str]) -> List[str]:
-    if max_details == 0:
-        return []
-    if max_details is not None and len(lines) > max_details:
-        lines, rest = lines[:max_details], lines[max_details:]
-        if rest:
-            lines.append("...")
-    return [html.escape(line) for line in lines] if list(filter(None, lines)) else []
 
 
 def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Union[Location, LocationLink]:

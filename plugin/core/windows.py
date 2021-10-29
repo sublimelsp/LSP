@@ -30,6 +30,7 @@ from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from abc import ABCMeta
 from abc import abstractmethod
+from collections import OrderedDict
 from collections import deque
 from subprocess import CalledProcessError
 from time import time
@@ -504,20 +505,27 @@ class WindowManager(Manager):
         listeners = list(self._listeners)
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
+        contributions = OrderedDict(
+        )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
         for session in self._sessions:
             local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
             for path, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
-                to_render.append("{}:".format(path))
-                row += 1
-                for content, offset, code, href in contribution:
-                    to_render.append(content)
-                    if offset is not None and code is not None and href is not None:
-                        prephantoms.append((row, offset, code, href))
-                    row += content.count("\n") + 1
-                to_render.append("")  # add spacing between filenames
-                row += 1
+                seen = path in contributions
+                contributions.setdefault(path, []).extend(contribution)
+                if not seen:
+                    contributions.move_to_end(path)
+        for path, contribution in contributions.items():
+            to_render.append("{}:".format(path))
+            row += 1
+            for content, offset, code, href in contribution:
+                to_render.append(content)
+                if offset is not None and code is not None and href is not None:
+                    prephantoms.append((row, offset, code, href))
+                row += content.count("\n") + 1
+            to_render.append("")  # add spacing between filenames
+            row += 1
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)

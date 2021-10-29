@@ -61,11 +61,11 @@
         "command": "lsp_symbol_implementation"
       },
       {
-        "caption": "LSP: Goto Diagnostic",
+        "caption": "LSP: Goto Diagnostic…",
         "command": "lsp_goto_diagnostic"
       },
       {
-        "caption": "LSP: Goto Diagnostic in Project",
+        "caption": "LSP: Goto Diagnostic in Project…",
         "command": "lsp_goto_diagnostic_in_project"
       },
       {

@@ -6,7 +6,7 @@ from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import MissingUriError, diagnostic_severity, diagnostic_source, uri_from_view
 from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
 import html
@@ -16,7 +16,7 @@ import weakref
 
 # TODO: should be user settings
 GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL = DiagnosticSeverity.Hint
-GOTO_DIAGNOSTIC_MAX_DETAILS_LINES = 2
+GOTO_DIAGNOSTIC_MAX_DETAILS_LINES = 0
 DIAGNOSTIC_KIND_TUPLE = {
     DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", ""),
     DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", ""),
@@ -52,13 +52,17 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
 
     def _make_item(self, max_details: Optional[int], parsed_uri: ParsedUri,
                    diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]:
+        item = sublime.QuickPanelItem(self._make_trigger(self._simple_project_path(parsed_uri), diagnostic),
+                                      self._make_details(max_details,
+                                                         diagnostic), "#{}".format(diagnostic_source(diagnostic)),
+                                      DIAGNOSTIC_KIND_TUPLE[diagnostic_severity(diagnostic)])
+        return diagnostic_location(parsed_uri, diagnostic), item
+
+    def _simple_project_path(self, parsed_uri: ParsedUri) -> str:
         scheme, path = parsed_uri
         if scheme == "file":
             path = str(simple_project_path(map(Path, self.window.folders()), Path(path))) or path
-        item = sublime.QuickPanelItem(self._make_trigger(path, diagnostic), self._make_details(max_details, diagnostic),
-                                      "#{}".format(diagnostic_source(diagnostic)),
-                                      DIAGNOSTIC_KIND_TUPLE[diagnostic_severity(diagnostic)])
-        return diagnostic_location(parsed_uri, diagnostic), item
+        return path
 
     def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
         raise NotImplementedError
@@ -139,32 +143,28 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
     def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
         # TODO: should be user settings
         max_severity = GOTO_DIAGNOSTIC_SEVERITY_MAX_LEVEL
-        max_details = GOTO_DIAGNOSTIC_MAX_DETAILS_LINES
+        items_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[Tuple[Union[Location, LocationLink], int]]]
         for session in self._get_sessions():
             weaksession = weakref.ref(session)
-            items_per_path = OrderedDict(
-            )  # type: OrderedDict[ParsedUri, List[Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]]]
-            for path, location_item in session.diagnostics_manager.filter_map_diagnostics_flat_async(
-                    is_severity_included(max_severity), functools.partial(self._make_item, max_details)):
-                seen = path in items_per_path
-                items_per_path.setdefault(path, []).append(location_item)
+            for parsed_uri, location_item in session.diagnostics_manager.filter_map_diagnostics_flat_async(
+                    is_severity_included(max_severity), _location_severity):
+                seen = parsed_uri in items_per_path
+                items_per_path.setdefault(parsed_uri, []).append(location_item)
                 if not seen:
-                    items_per_path.move_to_end(path)
-            for location_items in items_per_path.values():
-                for location, item in location_items:
-                    yield (weaksession, location), item
-
-    def _make_trigger(self, path: str, diagnostic: Diagnostic) -> str:
-        return "{}:{}:{} ".format(path, diagnostic["range"]["start"]["line"] + 1,
-                                  diagnostic["range"]["start"]["character"] + 1)
-
-    def _make_details(self, max_details: Optional[int], diagnostic: Diagnostic) -> Union[str, List[str]]:
-        return message_lines_truncated(max_details, diagnostic["message"].splitlines())
+                    items_per_path.move_to_end(parsed_uri)
+        for parsed_uri, location_items in items_per_path.items():
+            location = location_items[0][0]
+            counts = Counter(severity for _, severity in location_items)
+            yield (weaksession, location), sublime.QuickPanelItem(
+                self._simple_project_path(parsed_uri),
+                "", "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
+                                          counts.get(DiagnosticSeverity.Warning,
+                                                     0)), DIAGNOSTIC_KIND_TUPLE[min(counts)])
 
     def _get_on_modifier_keys(self) -> OnModifierKeysAcitonMap:
         # modifier key(s) from user settings?
         on_modifier_keys = super()._get_on_modifier_keys().copy()
-        on_modifier_keys[frozenset({"alt"})] = self._run_goto_diagnostic_for_document_uri
+        on_modifier_keys[frozenset({"shift"})] = self._run_goto_diagnostic_for_document_uri
         return on_modifier_keys
 
     def _run_goto_diagnostic_for_document_uri(self, view: sublime.View, session: Session, location: Union[Location,
@@ -173,7 +173,13 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
         self.window.run_command("lsp_goto_diagnostic_for_document_uri", dict(document_uri=uri))
 
 
+def _location_severity(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], int]:
+    return diagnostic_location(parsed_uri, diagnostic), diagnostic_severity(diagnostic)
+
+
 def message_lines_truncated(max_details: Optional[int], lines: List[str]) -> List[str]:
+    if max_details == 0:
+        return []
     if max_details is not None and len(lines) > max_details:
         lines, rest = lines[:max_details], lines[max_details:]
         if rest:

@@ -42,9 +42,6 @@ from .plugin.core.types import ClientConfig
 from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
-from .plugin.diagnostics_quick_panel import LspGotoDiagnosticCommand
-from .plugin.diagnostics_quick_panel import LspGotoDiagnosticForDocumentUriCommand
-from .plugin.diagnostics_quick_panel import LspGotoDiagnosticInProjectCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
@@ -55,6 +52,9 @@ from .plugin.goto import LspSymbolDeclarationCommand
 from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
+from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
+from .plugin.goto_diagnostic import LspGotoDiagnosticForDocumentUriCommand
+from .plugin.goto_diagnostic import LspGotoDiagnosticInProjectCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand

@@ -647,8 +647,28 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
                 When the last three elemenst are not optional, show an inline phantom
                 using the information given.
     """
+    formatted, code, href = diagnostic_source_and_code(diagnostic)
+    lines = diagnostic["message"].splitlines() or [""]
+    # \u200B is the zero-width space
+    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
+        diagnostic["range"]["start"]["line"] + 1,
+        diagnostic["range"]["start"]["character"] + 1,
+        format_severity(diagnostic_severity(diagnostic)),
+        lines[0],
+        formatted
+    )
+    offset = len(result) if href else None
+    for line in itertools.islice(lines, 1, None):
+        result += "\n" + 18 * " " + line
+    return result, offset, code, href
+
+
+def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
+    return diagnostic_source_and_code(diagnostic)[0]
+
+
+def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
     formatted = [diagnostic_source(diagnostic)]
-    offset = None
     href = None
     code = diagnostic.get("code")
     if code is not None:
@@ -659,20 +679,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
             href = code_description["href"]
         else:
             formatted.append(code)
-    lines = diagnostic["message"].splitlines() or [""]
-    # \u200B is the zero-width space
-    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
-        diagnostic["range"]["start"]["line"] + 1,
-        diagnostic["range"]["start"]["character"] + 1,
-        format_severity(diagnostic_severity(diagnostic)),
-        lines[0],
-        "".join(formatted)
-    )
-    if href:
-        offset = len(result)
-    for line in itertools.islice(lines, 1, None):
-        result += "\n" + 18 * " " + line
-    return result, offset, code, href
+    return "".join(formatted), code, href
 
 
 def location_to_human_readable(

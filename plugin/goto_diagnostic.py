@@ -5,7 +5,8 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
-from .core.views import MissingUriError, diagnostic_severity, diagnostic_source, format_severity, uri_from_view
+from .core.views import MissingUriError
+from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity, uri_from_view
 from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
 from collections import Counter, OrderedDict
 from pathlib import Path
@@ -15,10 +16,10 @@ import sublime_plugin
 import weakref
 
 DIAGNOSTIC_KIND_TUPLE = {
-    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", ""),
-    DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", ""),
-    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", ""),
-    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", ""),
+    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", "Error"),
+    DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", "Warning"),
+    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", "Information"),
+    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint"),
 }
 
 GotoDiagnosticItem = Tuple[Tuple[weakref.ReferenceType, Union[Location, LocationLink]], sublime.QuickPanelItem]
@@ -50,7 +51,8 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
     def _make_item(self, max_details: Optional[int], parsed_uri: ParsedUri,
                    diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]:
         item = sublime.QuickPanelItem(self._make_trigger(self._simple_project_path(parsed_uri), diagnostic),
-                                      self._make_details(max_details, diagnostic), diagnostic_source(diagnostic),
+                                      self._make_details(max_details, diagnostic),
+                                      format_diagnostic_source_and_code(diagnostic),
                                       DIAGNOSTIC_KIND_TUPLE[diagnostic_severity(diagnostic)])
         return diagnostic_location(parsed_uri, diagnostic), item
 
@@ -97,9 +99,7 @@ class LspGotoDiagnosticForFileCommandBase(LspGotoDiagnosticCommandBase):
 
     def _make_trigger(self, path: str, diagnostic: Diagnostic) -> str:
         lines = diagnostic["message"].splitlines()
-        return "{}:{}:{} {}".format(diagnostic["range"]["start"]["line"] + 1,
-                                    diagnostic["range"]["start"]["character"] + 1,
-                                    format_severity(diagnostic_severity(diagnostic)), lines[0] if lines else "")
+        return "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), lines[0] if lines else "")
 
     _parsed_uri = None  # type: Optional[ParsedUri]
 
@@ -148,7 +148,7 @@ class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
             weaksession, location, _ = location_items[0]  # non-empty list
             counts = Counter(severity for _, _, severity in location_items)
             yield (weaksession, location), sublime.QuickPanelItem(
-                "{}:{}".format(self._simple_project_path(parsed_uri), format_severity(min(counts))),
+                "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri)),
                 "", "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
                                           counts.get(DiagnosticSeverity.Warning,
                                                      0)), DIAGNOSTIC_KIND_TUPLE[min(counts)])

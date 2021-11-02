@@ -306,13 +306,13 @@ class SessionView:
             return
         if self._code_lenses.is_empty():
             return
-        promises = []  # type: List[Promise[None]]
-        for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
-            callback = functools.partial(code_lens.resolve, self.view)
-            promise = self.session.send_request_task(
-                Request("codeLens/resolve", code_lens.data, self.view)
-            ).then(callback)
-            promises.append(promise)
+        promises = [Promise.resolve(None)]  # type: List[Promise[None]]
+        if self.session.get_capability('codeLensProvider.resolveProvider'):
+            for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
+                request = Request("codeLens/resolve", code_lens.data, self.view)
+                callback = functools.partial(code_lens.resolve, self.view)
+                promise = self.session.send_request_task(request).then(callback)
+                promises.append(promise)
         mode = userprefs().show_code_lens
         render = functools.partial(self._code_lenses.render, mode)
         Promise.all(promises).then(lambda _: sublime.set_timeout(render))

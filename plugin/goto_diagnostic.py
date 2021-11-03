@@ -1,60 +1,153 @@
 from .core.diagnostics_manager import ParsedUri, is_severity_included
-from .core.protocol import Diagnostic, DiagnosticSeverity, DocumentUri, Location, LocationLink, Position
+from .core.protocol import Diagnostic, DocumentUri, DiagnosticSeverity, Location
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Iterable, Iterator, List, Optional, Tuple, Union
+from .core.types import ClientConfig
+from .core.typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
-from .core.views import MissingUriError
-from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity, uri_from_view
-from .locationpicker import EnhancedLocationPicker, OnModifierKeysAcitonMap
+from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
+from .core.views import format_diagnostic_for_html
+from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
 import sublime
 import sublime_plugin
-import weakref
 
-DIAGNOSTIC_KIND_TUPLE = {
+DIAGNOSTIC_KIND = {
     DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", "Error"),
     DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", "Warning"),
     DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", "Information"),
     DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint"),
 }
+BACKNAV_KIND = (sublime.KIND_ID_NAVIGATION, "\u232B", "Back to Project")  # U+232B backspace symbol
+PREVIEW_PANE_CSS = """
+    .diagnostics {padding: 0.5em}
+    .diagnostics.error {background-color: color(var(--redish) alpha(0.25))}
+    .diagnostics.warning {background-color: color(var(--yellowish) alpha(0.25))}
+    .diagnostics.info {background-color: color(var(--bluish) alpha(0.25))}
+    .diagnostics.hint {background-color: color(var(--bluish) alpha(0.25))}
+    """
 
-GotoDiagnosticItem = Tuple[Tuple[weakref.ReferenceType, Union[Location, LocationLink]], sublime.QuickPanelItem]
+
+def get_sessions(window: sublime.Window) -> Iterator[Session]:
+    wm = windows.lookup(window)
+    if wm is not None:
+        for session in wm._sessions:
+            yield session
 
 
-class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
-    def _run(self) -> None:
+class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
+    def run(self, uri: Optional[DocumentUri], diagnostic: Optional[dict]) -> None:  # type: ignore
+        pass
+
+    def is_enabled(self, uri: Optional[DocumentUri] = None, diagnostic: Optional[dict] = None) -> bool:  # type: ignore
         view = self.window.active_view()
         if view is None:
-            return
-        wm = windows.lookup(self.window)
-        if wm is not None:
-            locations, items = tuple(zip(*tuple(self._diagnostic_items())))  # transpose
-            EnhancedLocationPicker(view,
-                                   locations,
-                                   items,
-                                   side_by_side=False,
-                                   on_modifier_keys=self._get_on_modifier_keys())
+            return False
+        if uri == "$view_uri":
+            try:
+                uri = uri_from_view(view)
+            except MissingUriError:
+                return False
+        if uri:
+            parsed_uri = parse_uri(uri)
+            return any(parsed_uri in session.diagnostics_manager for session in get_sessions(self.window))
+        return any(bool(session.diagnostics_manager) for session in get_sessions(self.window))
 
-    def is_enabled(self) -> bool:
-        for session in self._get_sessions():
-            if session.diagnostics_manager:
-                return True
-        return False
+    def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+        uri, diagnostic = args.get("uri"), args.get("diagnostic")
+        view = self.window.active_view()
+        if view is None:
+            return None
+        if not uri:
+            return DiagnosticUriInputHandler(self.window, view)
+        if uri == "$view_uri":
+            try:
+                uri = uri_from_view(view)
+            except MissingUriError:
+                return None
+        if not diagnostic:
+            return DiagnosticInputHandler(self.window, view, uri)
+        return None
 
-    def _get_sessions(self) -> Iterator[Session]:
-        raise NotImplementedError
+    def input_description(self) -> str:
+        return "Goto Diagnostic"
 
-    def _make_item(self, max_details: Optional[int], parsed_uri: ParsedUri,
-                   diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], sublime.QuickPanelItem]:
-        item = sublime.QuickPanelItem(self._make_trigger(self._simple_project_path(parsed_uri), diagnostic),
-                                      self._make_details(max_details, diagnostic),
-                                      format_diagnostic_source_and_code(diagnostic),
-                                      DIAGNOSTIC_KIND_TUPLE[diagnostic_severity(diagnostic)])
-        return diagnostic_location(parsed_uri, diagnostic), item
+
+class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
+    _preview = None  # type: Optional[sublime.View]
+    uri = None  # Optional[DocumentUri]
+
+    def __init__(self, window: sublime.Window, view: sublime.View) -> None:
+        self.window = window
+        self.view = view
+
+    def name(self) -> str:
+        return "uri"
+
+    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+        max_severity = userprefs().diagnostics_panel_include_severity_level
+        # collect severities and location of first diagnostic per uri
+        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[int]]
+        self.first_locations = dict()  # type: Dict[ParsedUri, Tuple[Session, Location]]
+        for session in get_sessions(self.window):
+            for parsed_uri, severity in session.diagnostics_manager.filter_map_diagnostics_flat_async(
+                    is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
+                severities_per_path.setdefault(parsed_uri, []).append(severity)
+                if parsed_uri not in self.first_locations:
+                    severities_per_path.move_to_end(parsed_uri)
+                    diagnostics = session.diagnostics_manager.diagnostics_by_parsed_uri(parsed_uri)
+                    if diagnostics:
+                        self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
+        # build items
+        list_items = list()
+        selected = 0
+        for i, (parsed_uri, severities) in enumerate(severities_per_path.items()):
+            counts = Counter(severities)
+            text = "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri))
+            annotation = "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
+                                               counts.get(DiagnosticSeverity.Warning, 0))
+            kind = DIAGNOSTIC_KIND[min(counts)]
+            uri = unparse_uri(parsed_uri)
+            if uri == self.uri:
+                selected = i  # restore selection after coming back from diagnostics list
+            list_items.append(sublime.ListInputItem(text, uri, annotation=annotation, kind=kind))
+        return list_items, selected
+
+    def placeholder(self) -> str:
+        return "Select file"
+
+    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+        uri, diagnostic = args.get("uri"), args.get("diagnostic")
+        if uri is None:
+            return None
+        if diagnostic is None:
+            self._preview = None
+            return DiagnosticInputHandler(self.window, self.view, uri, back=True)
+        return sublime_plugin.BackInputHandler()  # type: ignore
+
+    def confirm(self, value: Optional[DocumentUri]) -> None:
+        self.uri = value
+
+    def description(self, value: DocumentUri, text: str) -> str:
+        return self._simple_project_path(parse_uri(value))
+
+    def cancel(self) -> None:
+        if self._preview is not None and self._preview.sheet().is_transient():
+            self._preview.close()
+        self.window.focus_view(self.view)
+
+    def preview(self, value: Optional[DocumentUri]) -> str:
+        if not value:
+            return ""
+        parsed_uri = parse_uri(value)
+        session, location = self.first_locations[parsed_uri]
+        scheme, _ = parsed_uri
+        if scheme == "file":
+            self._preview = open_location(session, location, flags=sublime.TRANSIENT)
+        return ""
 
     def _simple_project_path(self, parsed_uri: ParsedUri) -> str:
         scheme, path = parsed_uri
@@ -62,114 +155,97 @@ class LspGotoDiagnosticCommandBase(sublime_plugin.WindowCommand):
             path = str(simple_project_path(map(Path, self.window.folders()), Path(path))) or path
         return path
 
-    def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
-        raise NotImplementedError
 
-    def _make_trigger(self, path: str, diagnostic: Diagnostic) -> str:
-        raise NotImplementedError
+class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
+    _preview = None  # type: Optional[sublime.View]
 
-    def _make_details(self, max_details: Optional[int], diagnostic: Diagnostic) -> Union[str, List[str]]:
-        return ""
+    def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri, back: bool = False) -> None:
+        self.window = window
+        self.view = view
+        self.sessions = list(get_sessions(window))
+        self.parsed_uri = parse_uri(uri)
+        self.back = back
 
-    def _get_on_modifier_keys(self) -> OnModifierKeysAcitonMap:
-        # TODO: add {"primary"} to launch code actions
-        return {}
+    def name(self) -> str:
+        return "diagnostic"
 
-
-class LspGotoDiagnosticForFileCommandBase(LspGotoDiagnosticCommandBase):
-    def _get_sessions(self) -> Iterator[Session]:
-        wm = windows.lookup(self.window)
-        if wm is not None:
-            view = self.window.active_view()
-            if view is not None:
-                for session in wm.sessions(view):
-                    yield session
-
-    def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
-        if self._parsed_uri is None:
-            return
+    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+        list_items = [sublime.ListInputItem("back", None, kind=BACKNAV_KIND)] if self.back else []
         max_severity = userprefs().diagnostics_panel_include_severity_level
-        for session in self._get_sessions():
-            weaksession = weakref.ref(session)
-            for location, item in map(
-                    functools.partial(self._make_item, 0, self._parsed_uri),
-                    filter(is_severity_included(max_severity),
-                           session.diagnostics_manager.diagnostics_by_parsed_uri(self._parsed_uri))):
-                yield (weaksession, location), item
+        for i, session in enumerate(self.sessions):
+            for diagnostic in filter(is_severity_included(max_severity),
+                                     session.diagnostics_manager.diagnostics_by_parsed_uri(self.parsed_uri)):
+                lines = diagnostic["message"].splitlines()
+                text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), lines[0] if lines else "")
+                annotation = format_diagnostic_source_and_code(diagnostic)
+                kind = DIAGNOSTIC_KIND[diagnostic_severity(diagnostic)]
+                list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
+        return list_items, int(self.back)  # preselect first diagnostic
 
-    def _make_trigger(self, path: str, diagnostic: Diagnostic) -> str:
-        lines = diagnostic["message"].splitlines()
-        return "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), lines[0] if lines else "")
+    def placeholder(self) -> str:
+        return "Select diagnostic"
 
-    _parsed_uri = None  # type: Optional[ParsedUri]
+    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+        return None if args.get("diagnostic") else sublime_plugin.BackInputHandler()  # type: ignore
 
-
-class LspGotoDiagnosticForDocumentUriCommand(LspGotoDiagnosticForFileCommandBase):
-    def run(self, document_uri: DocumentUri) -> None:  # type: ignore
-        self._parsed_uri = parse_uri(document_uri)
-        self._run()
-
-
-class LspGotoDiagnosticCommand(LspGotoDiagnosticForFileCommandBase):
-    def run(self) -> None:
-        view = self.window.active_view()
-        if view is None:
+    def confirm(self, value: Optional[Tuple[int, Diagnostic]]) -> None:
+        if not value:
             return
-        try:
-            self._parsed_uri = parse_uri(uri_from_view(view))
-        except MissingUriError:
-            return
-        self._run()
+        i, diagnostic = value
+        session = self.sessions[i]
+        location = self._get_location(diagnostic)
+        scheme, _ = self.parsed_uri
+        if scheme == "file":
+            open_location(session, self._get_location(diagnostic))
+        else:
+            sublime.set_timeout_async(functools.partial(session.open_location_async, location))
+
+    def cancel(self) -> None:
+        if self._preview is not None and self._preview.sheet().is_transient():
+            self._preview.close()
+        self.window.focus_view(self.view)
+
+    def preview(self, value: Optional[Tuple[int, Diagnostic]]) -> Union[str, sublime.Html]:
+        if not value:
+            return ""
+        i, diagnostic = value
+        session = self.sessions[i]
+        base_dir = None
+        scheme, path = self.parsed_uri
+        if scheme == "file":
+            self._preview = open_location(session, self._get_location(diagnostic), flags=sublime.TRANSIENT)
+            base_dir = project_base_dir(map(Path, self.window.folders()), Path(path))
+        return diagnostic_html(self.view, session.config, truncate_message(diagnostic), base_dir)
+
+    def _get_location(self, diagnostic: Diagnostic) -> Location:
+        return diagnostic_location(self.parsed_uri, diagnostic)
 
 
-class LspGotoDiagnosticInProjectCommand(LspGotoDiagnosticCommandBase):
-    def _get_sessions(self) -> Iterator[Session]:
-        wm = windows.lookup(self.window)
-        if wm is not None:
-            for session in wm._sessions:  # TODO: wm getter?
-                yield session
-
-    def run(self) -> None:
-        self._run()
-
-    def _diagnostic_items(self) -> Iterator[GotoDiagnosticItem]:
-        max_severity = userprefs().diagnostics_panel_include_severity_level
-        items_per_path = OrderedDict(
-        )  # type: OrderedDict[ParsedUri, List[Tuple[weakref.ref[Session] ,Union[Location, LocationLink], int]]]
-        for session in self._get_sessions():
-            weaksession = weakref.ref(session)
-            for parsed_uri, (location, item) in session.diagnostics_manager.filter_map_diagnostics_flat_async(
-                    is_severity_included(max_severity), _location_severity):
-                seen = parsed_uri in items_per_path
-                items_per_path.setdefault(parsed_uri, []).append((weaksession, location, item))
-                if not seen:
-                    items_per_path.move_to_end(parsed_uri)
-        for parsed_uri, location_items in items_per_path.items():
-            weaksession, location, _ = location_items[0]  # non-empty list
-            counts = Counter(severity for _, _, severity in location_items)
-            yield (weaksession, location), sublime.QuickPanelItem(
-                "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri)),
-                "", "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
-                                          counts.get(DiagnosticSeverity.Warning,
-                                                     0)), DIAGNOSTIC_KIND_TUPLE[min(counts)])
-
-    def _get_on_modifier_keys(self) -> OnModifierKeysAcitonMap:
-        on_modifier_keys = super()._get_on_modifier_keys().copy()
-        on_modifier_keys[frozenset({"shift"})] = self._run_goto_diagnostic_for_document_uri
-        return on_modifier_keys
-
-    def _run_goto_diagnostic_for_document_uri(self, view: sublime.View, session: Session, location: Union[Location,
-                                                                                                          LocationLink],
-                                              uri: DocumentUri, position: Position) -> None:
-        self.window.run_command("lsp_goto_diagnostic_for_document_uri", dict(document_uri=uri))
-
-
-def _location_severity(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Tuple[Union[Location, LocationLink], int]:
-    return diagnostic_location(parsed_uri, diagnostic), diagnostic_severity(diagnostic)
-
-
-def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Union[Location, LocationLink]:
+def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Location:
     return dict(uri=unparse_uri(parsed_uri), range=diagnostic["range"])
+
+
+def open_location(session: Session, location: Location, flags: int = 0, group: int = -1) -> sublime.View:
+    uri, position = get_uri_and_position_from_location(location)
+    file_name = to_encoded_filename(session.config.map_server_uri_to_client_path(uri), position)
+    return session.window.open_file(file_name, flags=flags | sublime.ENCODED_POSITION, group=group)
+
+
+def diagnostic_html(view: sublime.View, config: ClientConfig, diagnostic: Diagnostic,
+                    base_dir: Optional[Path]) -> sublime.Html:
+    content = format_diagnostic_for_html(view, config, truncate_message(diagnostic),
+                                         None if base_dir is None else str(base_dir))
+    return sublime.Html('<style>{}</style><div class="diagnostics {}">{}</div>'.format(
+        PREVIEW_PANE_CSS, format_severity(diagnostic_severity(diagnostic)), content))
+
+
+def truncate_message(diagnostic: Diagnostic, max_lines: int = 6) -> Diagnostic:
+    lines = diagnostic["message"].splitlines()
+    if len(lines) <= max_lines:
+        return diagnostic
+    diagnostic = diagnostic.copy()
+    diagnostic["message"] = "\n".join(lines[:max_lines - 1]) + " ...\n"
+    return diagnostic
 
 
 def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
@@ -193,6 +269,17 @@ def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path
         if folder.name == folder_name:
             return folder / Path(*parts[1:])
     return None
+
+
+def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+    """
+    The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`.
+    """
+    folder_path = split_project_path(project_folders, file_path)
+    if folder_path is None:
+        return None
+    folder, _ = folder_path
+    return folder.parent
 
 
 def split_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Tuple[Path, Path]]:

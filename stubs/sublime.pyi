@@ -1046,3 +1046,23 @@ class QuickPanelItem:
         kind: Tuple[int, str, str] = KIND_AMBIGUOUS
     ) -> None:
         ...
+
+
+class ListInputItem:
+    def __init__(
+        self,
+        text: str,
+        value: Any,
+        details: Union[str, List[str]] = "",
+        annotation: str = "",
+        kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...
+
+
+class Html:
+    def __init__(
+        self,
+        text: str,
+    ) -> None:
+        ...

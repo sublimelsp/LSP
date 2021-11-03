@@ -62,11 +62,12 @@
       },
       {
         "caption": "LSP: Goto Diagnostic…",
-        "command": "lsp_goto_diagnostic"
+        "command": "lsp_goto_diagnostic",
+        "args": {"uri": "$view_uri"}
       },
       {
         "caption": "LSP: Goto Diagnostic in Project…",
-        "command": "lsp_goto_diagnostic_in_project"
+        "command": "lsp_goto_diagnostic"
       },
       {
         "caption": "LSP: Find References",

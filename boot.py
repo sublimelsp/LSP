@@ -53,8 +53,6 @@ from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
-from .plugin.goto_diagnostic import LspGotoDiagnosticForDocumentUriCommand
-from .plugin.goto_diagnostic import LspGotoDiagnosticInProjectCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand

@@ -78,6 +78,9 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
 
+    def _is_listener_alive(self) -> bool:
+        return bool(self.listener())
+
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
         triggers = settings.get(self.AC_TRIGGERS_KEY)
@@ -295,7 +298,7 @@ class SessionView:
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
-        if not isinstance(response, list):
+        if not self._is_listener_alive() or not isinstance(response, list):
             return
         self._code_lenses.handle_response(self.session.config.name, response)
         self.resolve_visible_code_lenses_async()
@@ -314,8 +317,11 @@ class SessionView:
                 promise = self.session.send_request_task(request).then(callback)
                 promises.append(promise)
         mode = userprefs().show_code_lens
-        render = functools.partial(self._code_lenses.render, mode)
-        Promise.all(promises).then(lambda _: sublime.set_timeout(render))
+        Promise.all(promises).then(lambda _: self._on_code_lenses_resolved_async(mode))
+
+    def _on_code_lenses_resolved_async(self, mode: str) -> None:
+        if self._is_listener_alive():
+            sublime.set_timeout(lambda: self._code_lenses.render(mode))
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

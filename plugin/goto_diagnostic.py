@@ -21,7 +21,6 @@ DIAGNOSTIC_KIND = {
     DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", "Information"),
     DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint"),
 }
-BACKNAV_KIND = (sublime.KIND_ID_NAVIGATION, "\u232B", "Back to Project")  # U+232B backspace symbol
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
     .diagnostics a {color: var(--bluish)}

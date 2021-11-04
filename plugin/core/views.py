@@ -664,7 +664,10 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
 
 
 def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
-    return diagnostic_source_and_code(diagnostic)[0]
+    formatted, code, href = diagnostic_source_and_code(diagnostic)
+    if href is None or code is None:
+        return formatted
+    return formatted + code
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:

@@ -24,6 +24,7 @@ DIAGNOSTIC_KIND = {
 BACKNAV_KIND = (sublime.KIND_ID_NAVIGATION, "\u232B", "Back to Project")  # U+232B backspace symbol
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
+    .diagnostics a {color: var(--bluish)}
     .diagnostics.error {background-color: color(var(--redish) alpha(0.25))}
     .diagnostics.warning {background-color: color(var(--yellowish) alpha(0.25))}
     .diagnostics.info {background-color: color(var(--bluish) alpha(0.25))}
@@ -125,14 +126,14 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
             return None
         if diagnostic is None:
             self._preview = None
-            return DiagnosticInputHandler(self.window, self.view, uri, back=True)
+            return DiagnosticInputHandler(self.window, self.view, uri)
         return sublime_plugin.BackInputHandler()  # type: ignore
 
     def confirm(self, value: Optional[DocumentUri]) -> None:
         self.uri = value
 
     def description(self, value: DocumentUri, text: str) -> str:
-        return self._simple_project_path(parse_uri(value))
+        return self._project_path(parse_uri(value))
 
     def cancel(self) -> None:
         if self._preview is not None and self._preview.sheet().is_transient():
@@ -155,32 +156,40 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
             path = str(simple_project_path(map(Path, self.window.folders()), Path(path))) or path
         return path
 
+    def _project_path(self, parsed_uri: ParsedUri) -> str:
+        scheme, path = parsed_uri
+        if scheme == "file":
+            path = str(project_path(map(Path, self.window.folders()), Path(path))) or path
+        return path
+
 
 class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     _preview = None  # type: Optional[sublime.View]
 
-    def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri, back: bool = False) -> None:
+    def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri) -> None:
         self.window = window
         self.view = view
         self.sessions = list(get_sessions(window))
         self.parsed_uri = parse_uri(uri)
-        self.back = back
 
     def name(self) -> str:
         return "diagnostic"
 
-    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
-        list_items = [sublime.ListInputItem("back", None, kind=BACKNAV_KIND)] if self.back else []
+    def list_items(self) -> List[sublime.ListInputItem]:
+        list_items = []
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),
                                      session.diagnostics_manager.diagnostics_by_parsed_uri(self.parsed_uri)):
                 lines = diagnostic["message"].splitlines()
-                text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), lines[0] if lines else "")
+                first_line = lines[0] if lines else ""
+                if len(lines) > 1:
+                    first_line += " …"
+                text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
                 annotation = format_diagnostic_source_and_code(diagnostic)
                 kind = DIAGNOSTIC_KIND[diagnostic_severity(diagnostic)]
                 list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
-        return list_items, int(self.back)  # preselect first diagnostic
+        return list_items
 
     def placeholder(self) -> str:
         return "Select diagnostic"
@@ -244,8 +253,19 @@ def truncate_message(diagnostic: Diagnostic, max_lines: int = 6) -> Diagnostic:
     if len(lines) <= max_lines:
         return diagnostic
     diagnostic = diagnostic.copy()
-    diagnostic["message"] = "\n".join(lines[:max_lines - 1]) + " ...\n"
+    diagnostic["message"] = "\n".join(lines[:max_lines - 1]) + " …\n"
     return diagnostic
+
+
+def project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+    """
+    The project path of `/path/to/project/file` in the project `/path/to/project` is `file`.
+    """
+    folder_path = split_project_path(project_folders, file_path)
+    if folder_path is None:
+        return None
+    _, file = folder_path
+    return file
 
 
 def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:

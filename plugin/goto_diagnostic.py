@@ -34,8 +34,7 @@ PREVIEW_PANE_CSS = """
 def get_sessions(window: sublime.Window) -> Iterator[Session]:
     wm = windows.lookup(window)
     if wm is not None:
-        for session in wm._sessions:
-            yield session
+        yield from wm._sessions
 
 
 class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):

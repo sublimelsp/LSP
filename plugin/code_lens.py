@@ -1,5 +1,5 @@
-from .core.protocol import CodeLens, Range
-from .core.typing import List, Tuple, Dict, Iterable, Generator
+from .core.protocol import CodeLens, Error, Range
+from .core.typing import List, Tuple, Dict, Iterable, Generator, Union
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.views import make_command_link
@@ -15,6 +15,7 @@ class CodeLensData:
         'region',
         'session_name',
         'annotation',
+        'is_resolve_error',
     )
 
     def __init__(self, data: CodeLens, view: sublime.View, session_name: str) -> None:
@@ -23,13 +24,14 @@ class CodeLensData:
         self.session_name = session_name
         self.annotation = '...'
         self.resolve_annotation()
+        self.is_resolve_error = False
 
     def __repr__(self) -> str:
         return 'CodeLensData(resolved={0}, region={1!r})'.format(self.is_resolved(), self.region)
 
     def is_resolved(self) -> bool:
         """A code lens is considered resolved if the inner data contains the 'command' key."""
-        return 'command' in self.data
+        return 'command' in self.data or self.is_resolve_error
 
     def to_lsp(self) -> CodeLens:
         copy = self.data.copy()
@@ -55,9 +57,13 @@ class CodeLensData:
         else:
             self.annotation = '...'
 
-    def resolve(self, view: sublime.View, code_lens: CodeLens) -> None:
-        self.data = code_lens
-        self.region = range_to_region(Range.from_lsp(code_lens['range']), view)
+    def resolve(self, view: sublime.View, code_lens_or_error: Union[CodeLens, Error]) -> None:
+        if isinstance(code_lens_or_error, Error):
+            self.is_resolve_error = True
+            self.annotation = html_escape(str(code_lens_or_error))
+            return
+        self.data = code_lens_or_error
+        self.region = range_to_region(Range.from_lsp(code_lens_or_error['range']), view)
         self.resolve_annotation()
 
 

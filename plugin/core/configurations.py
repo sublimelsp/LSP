@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import Generator, List, Set, Dict
+from .typing import Generator, List, Optional, Set, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
 import urllib.parse
@@ -18,10 +18,10 @@ class ConfigManager(object):
         self._managers[window.id()] = window_configs
         return window_configs
 
-    def update(self) -> None:
+    def update(self, config_name: Optional[str] = None) -> None:
         for window in sublime.windows():
             if window.id() in self._managers:
-                self._managers[window.id()].update()
+                self._managers[window.id()].update(config_name)
 
 
 class WindowConfigManager(object):
@@ -53,10 +53,13 @@ class WindowConfigManager(object):
         except (IndexError, RuntimeError):
             pass
 
-    def update(self) -> None:
+    def update(self, config_name: Optional[str] = None) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        self.all.clear()
+        if config_name is None:
+            self.all.clear()
         for name, config in self._global_configs.items():
+            if config_name and config_name != name:
+                continue
             overrides = project_settings.pop(name, None)
             if isinstance(overrides, dict):
                 debug("applying .sublime-project override for", name)
@@ -66,21 +69,23 @@ class WindowConfigManager(object):
                 overrides["enabled"] = False
             self.all[name] = ClientConfig.from_config(config, overrides)
         for name, c in project_settings.items():
+            if config_name and config_name != name:
+                continue
             debug("loading project-only configuration", name)
             self.all[name] = ClientConfig.from_dict(name, c)
-        self._window.run_command("lsp_recheck_sessions")
+        self._window.run_command("lsp_recheck_sessions", {'config_name': config_name})
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):
             enable_in_project(self._window, config_name)
-        self.update()
+        self.update(config_name)
 
     def disable_config(self, config_name: str, only_for_session: bool = False) -> None:
         if only_for_session:
             self._disable_for_session(config_name)
         else:
             disable_in_project(self._window, config_name)
-        self.update()
+        self.update(config_name)
 
     def _disable_for_session(self, config_name: str) -> None:
         self._disabled_for_session.add(config_name)

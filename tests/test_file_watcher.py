@@ -121,7 +121,7 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
         )
 
     def test_initialize_params_includes_capability(self) -> None:
-        self.assertIn('didChangeWatchedFiles', self.initialize_params['capabilities']['textDocument'])
+        self.assertIn('didChangeWatchedFiles', self.initialize_params['capabilities']['workspace'])
 
     def test_creates_static_watcher(self) -> None:
         # Starting a session should have created a watcher.

@@ -25,11 +25,11 @@ class ClientConfigs:
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
         self.all[config.name] = config
-        self._notify_listener(config.name)
+        self._notify_listener()
 
     def remove_for_testing(self, config: ClientConfig) -> None:
         self.all.pop(config.name)
-        self._notify_listener(config.name)
+        self._notify_listener()
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str, notify_listener: bool) -> bool:
         if name in self.external:

@@ -261,11 +261,6 @@
     //     "keys": [
     //         "f8"
     //     ],
-    //     "context": [
-    //         {
-    //             "key": "setting.lsp_active"
-    //         }
-    //     ]
     // },
     // Goto Diagnostic in Project
     // {
@@ -273,11 +268,6 @@
     //     "keys": [
     //         "shift+f8"
     //     ],
-    //     "context": [
-    //         {
-    //             "key": "setting.lsp_active"
-    //         }
-    //     ]
     // },
     // Rename
     // {

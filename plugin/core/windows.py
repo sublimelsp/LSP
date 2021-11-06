@@ -414,22 +414,17 @@ class WindowManager(Manager):
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
-    def restart_sessions_async(self) -> None:
-        self._end_sessions_async()
+    def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
+        self._end_sessions_async(config_name)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self) -> None:
-        for session in self._sessions:
-            session.end_async()
-        self._sessions.clear()
-
-    def end_config_sessions_async(self, config_name: str) -> None:
+    def _end_sessions_async(self, config_name: Optional[str] = None) -> None:
         sessions = list(self._sessions)
         for session in sessions:
-            if session.config.name == config_name:
+            if config_name is None or config_name == session.config.name:
                 session.end_async()
                 self._sessions.discard(session)
 

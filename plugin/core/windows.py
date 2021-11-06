@@ -2,6 +2,7 @@ from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import ensure_diagnostics_panel
+from .diagnostics_manager import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
@@ -25,6 +26,7 @@ from .types import matches_pattern
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
 from .url import parse_uri
 from .views import extract_variables
+from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
@@ -500,13 +502,15 @@ class WindowManager(Manager):
         listeners = list(self._listeners)
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
+        max_severity = userprefs().diagnostics_panel_include_severity_level
         contributions = OrderedDict(
         )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
         for session in self._sessions:
             local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
-            for path, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
+            for (_, path), contribution in session.diagnostics_manager.filter_map_diagnostics_async(
+                    is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
                 seen = path in contributions
                 contributions.setdefault(path, []).extend(contribution)
                 if not seen:

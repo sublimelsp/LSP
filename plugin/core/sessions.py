@@ -323,7 +323,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
     if get_file_watcher_implementation():
-        text_document_capabilities["didChangeWatchedFiles"] = {"dynamicRegistration": True}
+        workspace_capabilites["didChangeWatchedFiles"] = {"dynamicRegistration": True}
     return {
         "processId": os.getpid(),
         "clientInfo": {

@@ -76,6 +76,16 @@ LAYOUT_BLOCK = ...  # type: int
 KIND_ID_AMBIGUOUS = ...  # type: int
 KIND_ID_KEYWORD = ...  # type: int
 KIND_ID_TYPE = ...  # type: int
+KIND_ID_COLOR_DARK = ... # type: int
+KIND_ID_COLOR_LIGHT = ... # type: int
+KIND_ID_COLOR_BLUISH = ... # type: int
+KIND_ID_COLOR_CYANISH = ... # type: int
+KIND_ID_COLOR_GREENISH = ... # type: int
+KIND_ID_COLOR_ORANGISH = ... # type: int
+KIND_ID_COLOR_PINKISH = ... # type: int
+KIND_ID_COLOR_PURPLISH = ... # type: int
+KIND_ID_COLOR_REDISH = ... # type: int
+KIND_ID_COLOR_YELLOWISH = ... # type: int
 KIND_ID_FUNCTION = ...  # type: int
 KIND_ID_NAMESPACE = ...  # type: int
 KIND_ID_NAVIGATION = ...  # type: int
@@ -93,6 +103,7 @@ KIND_VARIABLE = ...  # type: Tuple[int, str, str]
 KIND_SNIPPET = ...  # type: Tuple[int, str, str]
 COMPLETION_FORMAT_TEXT = ...  # type: int
 COMPLETION_FORMAT_SNIPPET = ...  # type: int
+WANT_EVENT = ...  # type: int
 
 
 class Settings:
@@ -1036,5 +1047,25 @@ class QuickPanelItem:
         details: Union[str, List[str]] = "",
         annotation: str = "",
         kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...
+
+
+class ListInputItem:
+    def __init__(
+        self,
+        text: str,
+        value: Any,
+        details: Union[str, List[str]] = "",
+        annotation: str = "",
+        kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...
+
+
+class Html:
+    def __init__(
+        self,
+        text: str,
     ) -> None:
         ...

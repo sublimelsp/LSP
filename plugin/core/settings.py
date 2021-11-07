@@ -16,11 +16,11 @@ class ClientConfigs:
     def __init__(self) -> None:
         self.all = {}  # type: Dict[str, ClientConfig]
         self.external = {}  # type: Dict[str, ClientConfig]
-        self._listener = None  # type: Optional[Callable[[], None]]
+        self._listener = None  # type: Optional[Callable[[Optional[str]], None]]
 
-    def _notify_listener(self) -> None:
+    def _notify_listener(self, config_name: Optional[str] = None) -> None:
         if callable(self._listener):
-            self._listener()
+            self._listener(config_name)
 
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
@@ -50,13 +50,13 @@ class ClientConfigs:
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
             # operation. To ensure that this dance is done only once, we delay notifying the ConfigManager until all
             # plugins have done their `register_plugin` call.
-            debounced(self._notify_listener, 200, lambda: len(self.external) == size)
+            debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
         return True
 
     def remove_external_config(self, name: str) -> None:
         self.external.pop(name, None)
         if self.all.pop(name, None):
-            self._notify_listener()
+            self._notify_listener(name)
 
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
         try:
@@ -67,7 +67,7 @@ class ClientConfigs:
             return
         self.external[name] = config
         self.all[name] = config
-        self._notify_listener()
+        self._notify_listener(name)
 
     def update_configs(self) -> None:
         global _settings_obj
@@ -97,7 +97,7 @@ class ClientConfigs:
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listener(self, recipient: Callable[[], None]) -> None:
+    def set_listener(self, recipient: Callable[[Optional[str]], None]) -> None:
         self._listener = recipient
 
 

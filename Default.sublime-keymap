@@ -252,6 +252,23 @@
     //         }
     //     ]
     // },
+    // Goto Diagnostic
+    // {
+    //     "command": "lsp_goto_diagnostic",
+    //     "args": {
+    //         "uri": "$view_uri"
+    //     },
+    //     "keys": [
+    //         "f8"
+    //     ],
+    // },
+    // Goto Diagnostic in Project
+    // {
+    //     "command": "lsp_goto_diagnostic",
+    //     "keys": [
+    //         "shift+f8"
+    //     ],
+    // },
     // Rename
     // {
     //     "command": "lsp_symbol_rename",

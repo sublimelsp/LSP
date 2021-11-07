@@ -552,6 +552,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     {
         "clients": {
             "vala-language-server": {
+                "enabled": true,
                 "command": [
                     "/path/to/vala-language-server"
                 ],
@@ -561,8 +562,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     }
     ```
 
-4. Enable the Vala Langauge Server for the project by going to `Tools > LSP > Enable Language Server In Project...`
-5. For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
+**Note:** For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
 
 ## XML
 

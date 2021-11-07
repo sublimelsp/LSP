@@ -562,8 +562,6 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     }
     ```
 
-**Note:** For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
-
 ## XML
 
 Follow installation instructions on [LSP-lemminx](https://github.com/sublimelsp/LSP-lemminx).

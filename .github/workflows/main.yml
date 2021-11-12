@@ -14,9 +14,6 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
 
-env:
-  CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-
 jobs:
   Unittesting:
     name: Unittesting (${{ matrix.os }})
@@ -31,7 +28,6 @@ jobs:
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
         with:
           coverage: true
-          codecov-upload: true
 
   Lint:
     runs-on: ubuntu-latest

@@ -368,6 +368,20 @@
               "default": "dot",
               "markdownDescription": "Gutter marker for code diagnostics."
             },
+            "diagnostics_sort_order": {
+              "enum": [
+                "none",
+                "location",
+                "severity"
+              ],
+              "enumDescriptions": [
+                "Preserve order as reported from the server.",
+                "Sort by line number.",
+                "Sort by severity (and by line number for diagnostics of the same severity)."
+              ],
+              "default": "none",
+              "markdownDescription": "Sort order for diagnostics in the diagnostics panel and for the Goto Diagnostic command."
+            },
             "show_code_actions": {
               "enum": [
                 "annotation",

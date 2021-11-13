@@ -189,6 +189,7 @@ class Settings:
     diagnostics_gutter_marker = None  # type: str
     diagnostics_highlight_style = None  # type: Union[str, Dict[str, str]]
     diagnostics_panel_include_severity_level = None  # type: int
+    diagnostics_sort_order = None  # type: str
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
     inhibit_snippet_completions = None  # type: bool
@@ -227,6 +228,7 @@ class Settings:
         r("diagnostics_delay_ms", 0)
         r("diagnostics_gutter_marker", "dot")
         r("diagnostics_panel_include_severity_level", 4)
+        r("diagnostics_sort_order", "none")
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
         r("log_debug", False)

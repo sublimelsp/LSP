@@ -101,9 +101,19 @@
     "hint": "stippled"
   },
 
+  // Show diagnostics spanning multiple lines in the view (as outlines).
+  // See also: "diagnostics_highlight_style".
+  "show_multiline_diagnostics_highlights": true,
+
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
+
+  // Sort order for diagnostics in the diagnostics panel and for the Goto Diagnostic command:
+  // "none" - preserve order as reported from the server.
+  // "location" - sort by line number
+  // "severity" - sort by severity (and by line number for diagnostics of the same severity)
+  "diagnostics_sort_order": "none",
 
   // Show code actions:
   // "annotation" - show an annotation on the right when code actions are available.
@@ -120,10 +130,6 @@
 
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
-
-  // Show diagnostics spanning multiple lines in the view (as outlines).
-  // See also: "diagnostics_highlight_style".
-  "show_multiline_diagnostics_highlights": true,
 
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,

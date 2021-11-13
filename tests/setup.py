@@ -145,15 +145,7 @@ class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def ensure_document_listener_created(cls) -> bool:
         assert cls.view
-        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
-        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
-        # opening file (manager missing in DocumentSyncListener)
-        # Revisit this once we're on ST4.
-        for listener in view_event_listeners[cls.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout_async(listener.on_activated_async)
-                return True
-        return False
+        return True
 
     @classmethod
     def await_message(cls, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':

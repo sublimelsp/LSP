@@ -250,7 +250,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         region: sublime.Region
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
-        print(region)
         covering = sublime.Region(region.begin(), region.end())
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():

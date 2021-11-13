@@ -25,9 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: SublimeText/UnitTesting/actions/setup@v1
+        with:
+          unittesting-version: master
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
         with:
           coverage: true
+          codecov-upload: true
 
   Lint:
     runs-on: ubuntu-latest

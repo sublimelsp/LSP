@@ -144,7 +144,7 @@ SEMANTIC_TOKENS_WITH_MODIFIERS_MAP = [
     ("struct",    "declaration",    "entity.name.struct.lsp"),
     ("struct",    "definition",     "entity.name.struct.lsp"),
     ("struct",    "defaultLibrary", "support.struct.lsp"),
-    ("variable",  "readonly",       "constant.other.lsp"),
+    ("variable",  "readonly",       "variable.other.constant.lsp"),
     ("function",  "declaration",    "entity.name.function.lsp"),
     ("function",  "definition",     "entity.name.function.lsp"),
     ("function",  "defaultLibrary", "support.function.builtin.lsp"),

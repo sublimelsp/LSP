@@ -3,8 +3,9 @@
     "verbosity": 2,
     "capture_console": true,
     "failfast": false,
-    "reload_package_on_testing": false,
+    "reload_package_on_testing": true,
     "start_coverage_after_reload": false,
+    "start_coverage_on_worker_thread": true,
     "show_reload_progress": false,
     "output": null,
     "generate_html_report": true

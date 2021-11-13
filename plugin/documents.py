@@ -24,7 +24,7 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import diagnostic_severity, region_to_range
+from .core.views import diagnostic_severity
 from .core.views import document_color_params
 from .core.views import first_selection_region
 from .core.views import format_completion
@@ -252,13 +252,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.a, region.b)
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
-        requested_range = region_to_range(self.view, region)
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
-                # Perform intersection checks on Range since it's inclusive unlike Region which is exclusive.
-                diagnostic_range = region_to_range(self.view, candidate)
-                if requested_range.intersects(diagnostic_range):
+                # Checking against points is inclusive unline checking against regions which
+                # are exclusive at the end and we want an inclusive behavior in this case.
+                if region.intersects(candidate.a) or region.intersects(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:

@@ -562,6 +562,8 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     }
     ```
 
+!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details." 
+
 ## XML
 
 Follow installation instructions on [LSP-lemminx](https://github.com/sublimelsp/LSP-lemminx).

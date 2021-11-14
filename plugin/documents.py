@@ -418,6 +418,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self.view.run_command("lsp_hover", {"point": point})
 
+    def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
+        if command_name == "show_scope_name" and userprefs().semantic_highlighting:
+            session = self.session_async("semanticTokensProvider")
+            if session:
+                return ("lsp_show_scope_name", {})
+        return None
+
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))

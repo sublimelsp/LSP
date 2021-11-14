@@ -22,11 +22,9 @@ from .core.views import did_save
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
-from .core.views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .semantic_highlighting import SemanticToken
-from functools import lru_cache
 from weakref import WeakSet
 import sublime
 import time
@@ -60,21 +58,10 @@ class DiagnosticSeverityData:
 
 class SemanticTokensData:
 
-    __slots__ = (
-        'data',
-        'types_legend',
-        'modifiers_legend',
-        'pending_response',
-        'result_id',
-        'active_scopes',
-        'tokens',
-        'view_change_count'
-    )
+    __slots__ = ('data', 'pending_response', 'result_id', 'active_scopes', 'tokens', 'view_change_count')
 
     def __init__(self) -> None:
         self.data = []  # type: List[int]
-        self.types_legend = None  # type: Optional[List[str]]
-        self.modifiers_legend = None  # type: Optional[List[str]]
         self.pending_response = False
         self.result_id = None  # type: Optional[str]
         self.active_scopes = {}  # type: Dict[str, int]
@@ -410,11 +397,9 @@ class SessionBuffer:
             return
         if not self.session.has_capability("semanticTokensProvider"):
             return
-        self.semantic_tokens.types_legend = self.session.get_capability('semanticTokensProvider.legend.tokenTypes')
-        if self.semantic_tokens.types_legend is None:
+        if self.session.get_capability('semanticTokensProvider.legend.tokenTypes') is None:
             return
-        self.semantic_tokens.modifiers_legend = self.session.get_capability('semanticTokensProvider.legend.tokenModifiers')  # noqa: E501
-        if self.semantic_tokens.modifiers_legend is None:
+        if self.session.get_capability('semanticTokensProvider.legend.tokenModifiers') is None:
             return
         view = self.some_view()
         if view is None:
@@ -471,30 +456,6 @@ class SessionBuffer:
         self.semantic_tokens.pending_response = False
         debug(error["message"])
 
-    @lru_cache(maxsize=128)
-    def _decode_semantic_token(
-            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        """
-        This function converts the token type and token modifiers from encoded numbers into names, based on the legend
-        from the server. It also returns the corresponding scope name, which will be used for the highlighting color, if
-        the token type is one of the types defined in the LSP specs, or if a scope for it was added in the client
-        configuration. In case there is no such scope defined, but a particular rule in the color scheme for this token
-        type exists, then a generic scope name matching this rule will be used.
-        """
-        token_type = self.semantic_tokens.types_legend[token_type_encoded]  # type: ignore
-        token_modifiers = [self.semantic_tokens.modifiers_legend[idx]  # type: ignore
-                           for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
-        scope = None
-        if token_type in self.session.semantic_tokens_map:
-            scope = self.session.semantic_tokens_map[token_type]
-            for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-                # TODO there must be a better way than to iterate through all entries
-                if entry[0] == token_type and entry[1] in token_modifiers:
-                    scope = entry[2]
-                    break  # first match wins (in case of multiple modifiers)
-            scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
-        return token_type, token_modifiers, scope
-
     def _draw_semantic_tokens_async(self) -> None:
         view = self.some_view()
         if view is None:
@@ -519,7 +480,7 @@ class SessionBuffer:
             r = sublime.Region(a, b)
             prev_line = line
             prev_col_utf16 = col_utf16
-            token_type, token_modifiers, scope = self._decode_semantic_token(
+            token_type, token_modifiers, scope = self.session.decode_semantic_token(
                 token_type_encoded, token_modifiers_encoded)
             if scope is None:
                 # We can still use the meta scope and draw highlighting regions for custom token types if there is a

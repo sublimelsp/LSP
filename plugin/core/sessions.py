@@ -56,6 +56,7 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SEMANTIC_TOKENS_MAP
+from .views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
 from .workspace import is_subpath_of
@@ -1319,6 +1320,31 @@ class Session(TransportCallbacks):
         return Promise.on_main_thread(None) \
             .then(lambda _: apply_workspace_edit(self.window, changes)) \
             .then(lambda _: Promise.on_async_thread(None))
+
+    def decode_semantic_token(
+            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
+        """
+        This function converts the token type and token modifiers from encoded numbers into names, based on the legend
+        from the server. It also returns the corresponding scope name, which will be used for the highlighting color, if
+        the token type is one of the types defined in the LSP specs, or if a scope for it was added in the client
+        configuration.
+        """
+        token_types_legend = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        token_modifiers_legend = self.get_capability('semanticTokensProvider.legend.tokenModifiers')
+
+        token_type = token_types_legend[token_type_encoded]  # type: ignore
+        token_modifiers = [token_modifiers_legend[idx]  # type: ignore
+                           for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+        scope = None
+        if token_type in self.semantic_tokens_map:
+            scope = self.semantic_tokens_map[token_type]
+            for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
+                # TODO there must be a better way than to iterate through all entries
+                if entry[0] == token_type and entry[1] in token_modifiers:
+                    scope = entry[2]
+                    break  # first match wins (in case of multiple modifiers)
+            scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
+        return token_type, token_modifiers, scope
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

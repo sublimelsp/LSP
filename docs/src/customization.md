@@ -80,7 +80,8 @@ The following tables give an overview about the scope names used by LSP.
     Language servers which support semantic highlighting are for example *clangd* and *rust-analyzer*.
 
 In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
-To add such a rule to your color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
+LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
+If you use a custom color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
 
 ```json
 {

@@ -250,12 +250,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         region: sublime.Region
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
-        covering = sublime.Region(region.a, region.b)
+        covering = sublime.Region(region.begin(), region.end())
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
-                if region.intersects(candidate):
+                # Checking against points is inclusive unlike checking whether region intersects another
+                # region which is exclusive (at region end) and we want an inclusive behavior in this case.
+                if region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:

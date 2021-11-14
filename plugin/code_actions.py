@@ -97,7 +97,12 @@ class CodeActionsManager:
         """
         Requests code actions on save.
         """
-        self._request_async(view, entire_content_region(view), [], False, actions_handler, on_save_actions)
+        listener = windows.listener_for_view(view)
+        if not listener:
+            return
+        region = entire_content_region(view)
+        session_buffer_diagnostics, _ = listener.diagnostics_intersecting_region_async(region)
+        self._request_async(view, region, session_buffer_diagnostics, False, actions_handler, on_save_actions)
 
     def _request_async(
         self,
@@ -108,6 +113,7 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> None:
+        location_cache_key = None
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(
@@ -125,26 +131,26 @@ class CodeActionsManager:
             listener = windows.listener_for_view(view)
             if listener:
                 for session in listener.sessions_async('codeActionProvider'):
+                    diagnostics = []  # type: Sequence[Diagnostic]
+                    for sb, diags in session_buffer_diagnostics:
+                        if sb.session == session:
+                            diagnostics = diags
+                            break
                     if on_save_actions:
                         supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
-                            params = text_document_code_action_params(view, region, [], matching_kinds)
+                            params = text_document_code_action_params(view, region, diagnostics, matching_kinds)
                             request = Request.codeAction(params, view)
                             session.send_request_async(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
-                        diagnostics = []  # type: Sequence[Diagnostic]
-                        for sb, diags in session_buffer_diagnostics:
-                            if sb.session == session:
-                                diagnostics = diags
-                                break
                         if only_with_diagnostics and not diagnostics:
                             continue
                         params = text_document_code_action_params(view, region, diagnostics)
                         request = Request.codeAction(params, view)
                         session.send_request_async(request, collector.create_collector(session.config.name))
-        if use_cache:
+        if location_cache_key:
             self._response_cache = (location_cache_key, collector)
 
 

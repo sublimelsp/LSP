@@ -72,6 +72,11 @@ TextDocumentPositionParams = TypedDict('TextDocumentPositionParams', {
     'position': Position,
 }, total=True)
 
+TextDocumentRangeParams = TypedDict('TextDocumentRangeParams', {
+    'textDocument': TextDocumentIdentifier,
+    'range': RangeLsp,
+}, total=True)
+
 CodeDescription = TypedDict('CodeDescription', {
     'href': str
 }, total=True)

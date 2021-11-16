@@ -58,11 +58,10 @@ class DiagnosticSeverityData:
 
 class SemanticTokensData:
 
-    __slots__ = ('data', 'pending_response', 'result_id', 'active_scopes', 'tokens', 'view_change_count')
+    __slots__ = ('data', 'result_id', 'active_scopes', 'tokens', 'view_change_count')
 
     def __init__(self) -> None:
         self.data = []  # type: List[int]
-        self.pending_response = False
         self.result_id = None  # type: Optional[str]
         self.active_scopes = {}  # type: Dict[str, int]
         self.tokens = []  # type: List[SemanticToken]
@@ -393,8 +392,6 @@ class SessionBuffer:
     def do_semantic_tokens_async(self) -> None:
         if not userprefs().semantic_highlighting:
             return
-        if self.semantic_tokens.pending_response:
-            return
         if not self.session.has_capability("semanticTokensProvider"):
             return
         if self.session.get_capability('semanticTokensProvider.legend.tokenTypes') is None:
@@ -415,27 +412,22 @@ class SessionBuffer:
         if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens_delta, self._on_semantic_tokens_error)
-            self.semantic_tokens.pending_response = True
+            self.session.send_request_async(request, self._on_semantic_tokens_delta)
         elif self.session.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens, self._on_semantic_tokens_error)
-            self.semantic_tokens.pending_response = True
+            self.session.send_request_async(request, self._on_semantic_tokens)
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region()).to_lsp()
             request = Request.semanticTokensRange(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens, self._on_semantic_tokens_error)
-            self.semantic_tokens.pending_response = True
+            self.session.send_request_async(request, self._on_semantic_tokens)
 
     def _on_semantic_tokens(self, response: Optional[Dict]) -> None:
-        self.semantic_tokens.pending_response = False
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
     def _on_semantic_tokens_delta(self, response: Optional[Dict]) -> None:
-        self.semantic_tokens.pending_response = False
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
@@ -451,10 +443,6 @@ class SessionBuffer:
             else:
                 return
             self._draw_semantic_tokens_async()
-
-    def _on_semantic_tokens_error(self, error: dict) -> None:
-        self.semantic_tokens.pending_response = False
-        debug(error["message"])
 
     def _draw_semantic_tokens_async(self) -> None:
         view = self.some_view()

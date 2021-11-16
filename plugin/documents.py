@@ -25,10 +25,8 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
-from .core.views import document_color_params
 from .core.views import first_selection_region
 from .core.views import format_completion
-from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -176,7 +174,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
-        self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SigHelp]
         self._registered = False
 
@@ -186,7 +183,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_region = sublime.Region(-1, -1)
-        self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
@@ -224,7 +220,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
-            self._do_color_boxes_async()
             self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
@@ -322,8 +317,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
-        self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
-                                                  after_ms=self.color_boxes_debounce_time)
         self.do_signature_help_async(manual=False)
         self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                   after_ms=self.code_lenses_debounce_time)
@@ -542,18 +535,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(self.CODE_ACTIONS_KEY)
-
-    # --- textDocument/documentColor -----------------------------------------------------------------------------------
-
-    def _do_color_boxes_async(self) -> None:
-        session = self.session_async("colorProvider")
-        if session:
-            session.send_request_async(
-                Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
-
-    def _on_color_boxes(self, response: Any) -> None:
-        color_infos = response if response else []
-        self._color_phantoms.update([lsp_color_to_phantom(self.view, color_info) for color_info in color_infos])
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

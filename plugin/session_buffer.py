@@ -273,7 +273,7 @@ class SessionBuffer:
             return sv.view
         return None
 
-    def _if_view_version_stable(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
+    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
         """
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
@@ -290,7 +290,7 @@ class SessionBuffer:
         if self.session.has_capability("colorProvider"):
             self.session.send_request_async(
                 Request.documentColor(document_color_params(view), view),
-                self._if_view_version_stable(self._on_color_boxes_async, version)
+                self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
     def _on_color_boxes_async(self, view: sublime.View, response: Any) -> None:

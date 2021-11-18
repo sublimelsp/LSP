@@ -138,7 +138,7 @@ class LspHoverCommand(LspTextCommand):
                     else:
                         document_position = text_document_position_params(self.view, point_or_region)
             else:
-                document_position = text_document_range_params(self.view, PointOrRegion)
+                document_position = text_document_range_params(self.view, point_or_region)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

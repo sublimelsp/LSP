@@ -20,7 +20,6 @@ from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
-from .core.views import hide_lsp_popup
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import text_document_range_params
@@ -231,13 +230,14 @@ class LspHoverCommand(LspTextCommand):
         if contents:
             # The previous popup could be in a different location from the next one
             if self.view.is_popup_visible():
-                hide_lsp_popup(self.view)
-            show_lsp_popup(
-                self.view,
-                contents,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                on_navigate=lambda href: self._on_navigate(href, point))
+                update_lsp_popup(self.view, contents)
+            else:
+                show_lsp_popup(
+                    self.view,
+                    contents,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    on_navigate=lambda href: self._on_navigate(href, point))
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):

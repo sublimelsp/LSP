@@ -406,9 +406,6 @@ def text_document_code_action_params(
 # Workaround for a limited margin-collapsing capabilities of the minihtml.
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
-def hide_lsp_popup(view: sublime.View) -> None:
-    mdpopups.hide_popup(view)
-
 def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
                    css: Optional[str] = None, wrapper_class: Optional[str] = None,
                    on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:

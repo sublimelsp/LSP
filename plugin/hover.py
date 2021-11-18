@@ -89,10 +89,8 @@ class LspHoverCommand(LspTextCommand):
             region = first_selection_region(self.view)
             if region is not None:
                 point_or_region = region
-
         if point_or_region is None:
             return
-
         window = self.view.window()
         if not window:
             return
@@ -130,17 +128,17 @@ class LspHoverCommand(LspTextCommand):
     def request_symbol_hover_async(self, listener: AbstractViewListener, point_or_region: PointOrRegion) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
-
         for session in listener.sessions_async('hoverProvider'):
-            capability = session.get_capability('experimental.rangeHoverProvider')
-            range_hover_provider = False
-            if isinstance(capability, bool):
-                range_hover_provider = capability
-
-            if isinstance(point_or_region, sublime.Region) and range_hover_provider:
-                document_position = text_document_range_params(self.view, point_or_region)
+            range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
+            if range_hover_provider and isinstance(point_or_region, int):
+                for region in self.view.sel():
+                    if region.contains(point):
+                        # when hovering selection send it as range
+                        document_position = text_document_range_params(self.view, region)
+                    else:
+                        document_position = text_document_position_params(self.view, point_or_region)
             else:
-                document_position = text_document_position_params(self.view, point_or_region)
+                document_position = text_document_range_params(self.view, PointOrRegion)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

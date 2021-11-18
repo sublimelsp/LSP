@@ -111,9 +111,13 @@ class LspHoverCommand(LspTextCommand):
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, point_or_region)
             if isinstance(point_or_region, int):
-                hover_point = point_or_region
                 self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
-                    hover_point, userprefs().show_diagnostics_severity_level)
+                    point_or_region, userprefs().show_diagnostics_severity_level)
+            else:
+                self._diagnostics_by_config, covering = listener.diagnostics_intersecting_region_async(
+                    point_or_region)
+            if isinstance(point_or_region, int):
+                hover_point = point_or_region
                 if self._diagnostics_by_config:
                     self.show_hover(listener, hover_point, only_diagnostics)
                 if not only_diagnostics and userprefs().show_code_actions_in_hover:
@@ -137,7 +141,6 @@ class LspHoverCommand(LspTextCommand):
                 document_position = text_document_range_params(self.view, point_or_region)
             else:
                 document_position = text_document_position_params(self.view, point_or_region)
-
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

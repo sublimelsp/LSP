@@ -130,15 +130,18 @@ class LspHoverCommand(LspTextCommand):
         point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
         for session in listener.sessions_async('hoverProvider'):
             range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
-            if range_hover_provider and isinstance(point_or_region, int):
-                for region in self.view.sel():
-                    if region.contains(point):
-                        # when hovering selection send it as range
-                        document_position = text_document_range_params(self.view, region)
-                    else:
-                        document_position = text_document_position_params(self.view, point_or_region)
+            if range_hover_provider:
+                if isinstance(point_or_region, int):
+                    for region in self.view.sel():
+                        if region.contains(point):
+                            # when hovering selection send it as range
+                            document_position = text_document_range_params(self.view, region)
+                        else:
+                            document_position = text_document_position_params(self.view, point_or_region)
+                else:
+                    document_position = text_document_range_params(self.view, point_or_region)
             else:
-                document_position = text_document_range_params(self.view, point_or_region)
+                document_position = text_document_position_params(self.view, point)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

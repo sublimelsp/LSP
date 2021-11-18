@@ -20,8 +20,10 @@ from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
+from .core.views import hide_lsp_popup
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
+from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
@@ -35,7 +37,7 @@ import webbrowser
 SUBLIME_WORD_MASK = 515
 SessionName = str
 ResolvedHover = Union[Hover, Error]
-
+PointOrRegion = Union[int, sublime.Region]
 
 _test_contents = []  # type: List[str]
 
@@ -71,6 +73,8 @@ link_kinds = [
 
 class LspHoverCommand(LspTextCommand):
 
+    range_hover_capability = 'experimental.rangeHoverProvider'
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
@@ -82,17 +86,28 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
-        temp_point = point
-        if temp_point is None:
+        range_hover_provider = False
+        session = self.best_session(self.range_hover_capability)
+        if session:
+            capability = session.get_capability(self.range_hover_capability)
+            if isinstance(capability, bool):
+                range_hover_provider = capability
+
+        # ignore selection if there a point is hovered
+        point_or_region = point # type: Optional[PointOrRegion]
+        if point_or_region is None:
             region = first_selection_region(self.view)
-            if region is not None:
-                temp_point = region.begin()
-        if temp_point is None:
+            if region is not None and not range_hover_provider:
+                point_or_region = region.begin()
+            elif region is not None and range_hover_provider and not region.empty():
+                point_or_region = region
+
+        if point_or_region is None:
             return
+
         window = self.view.window()
         if not window:
             return
-        hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Hover]
@@ -106,21 +121,29 @@ class LspHoverCommand(LspTextCommand):
             if not listener:
                 return
             if not only_diagnostics:
-                self.request_symbol_hover_async(listener, hover_point)
-            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
-                hover_point, userprefs().show_diagnostics_severity_level)
-            if self._diagnostics_by_config:
-                self.show_hover(listener, hover_point, only_diagnostics)
-            if not only_diagnostics and userprefs().show_code_actions_in_hover:
-                actions_manager.request_for_region_async(
-                    self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point))
+                self.request_symbol_hover_async(listener, point_or_region)
+            if isinstance(point_or_region, int):
+                hover_point = point_or_region
+                self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
+                    hover_point, userprefs().show_diagnostics_severity_level)
+                if self._diagnostics_by_config:
+                    self.show_hover(listener, hover_point, only_diagnostics)
+                if not only_diagnostics and userprefs().show_code_actions_in_hover:
+                    actions_manager.request_for_region_async(
+                        self.view, covering, self._diagnostics_by_config,
+                        functools.partial(self.handle_code_actions, listener, hover_point))
 
         sublime.set_timeout_async(run_async)
 
-    def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
+    def request_symbol_hover_async(self, listener: AbstractViewListener, point_or_region: PointOrRegion) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        document_position = text_document_position_params(self.view, point)
+        if isinstance(point_or_region, int):
+            document_position = text_document_position_params(self.view, point_or_region)
+            point = point_or_region
+        else:
+            document_position = text_document_range_params(self.view, point_or_region)
+            point = point_or_region.begin()
+
         for session in listener.sessions_async('hoverProvider'):
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
@@ -209,15 +232,15 @@ class LspHoverCommand(LspTextCommand):
         _test_contents.append(contents)  # for testing only
 
         if contents:
+            # The previous popup could be in a different location from the next one
             if self.view.is_popup_visible():
-                update_lsp_popup(self.view, contents)
-            else:
-                show_lsp_popup(
-                    self.view,
-                    contents,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                    location=point,
-                    on_navigate=lambda href: self._on_navigate(href, point))
+                hide_lsp_popup(self.view)
+            show_lsp_popup(
+                self.view,
+                contents,
+                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                location=point,
+                on_navigate=lambda href: self._on_navigate(href, point))
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):

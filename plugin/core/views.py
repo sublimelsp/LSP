@@ -270,6 +270,8 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
 
+def text_document_range_params(view: sublime.View, region: sublime.Region) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view), "range": region_to_range(view, region).to_lsp()}
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
     return {"textDocument": text_document_item(view, language_id)}
@@ -404,6 +406,8 @@ def text_document_code_action_params(
 # Workaround for a limited margin-collapsing capabilities of the minihtml.
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
+def hide_lsp_popup(view: sublime.View) -> None:
+    mdpopups.hide_popup(view)
 
 def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
                    css: Optional[str] = None, wrapper_class: Optional[str] = None,

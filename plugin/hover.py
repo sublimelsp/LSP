@@ -73,8 +73,6 @@ link_kinds = [
 
 class LspHoverCommand(LspTextCommand):
 
-    range_hover_capability = 'experimental.rangeHoverProvider'
-
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
@@ -86,20 +84,10 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
-        range_hover_provider = False
-        session = self.best_session(self.range_hover_capability)
-        if session:
-            capability = session.get_capability(self.range_hover_capability)
-            if isinstance(capability, bool):
-                range_hover_provider = capability
-
-        # ignore selection if there a point is hovered
         point_or_region = point # type: Optional[PointOrRegion]
         if point_or_region is None:
             region = first_selection_region(self.view)
-            if region is not None and not range_hover_provider:
-                point_or_region = region.begin()
-            elif region is not None and range_hover_provider and not region.empty():
+            if region is not None:
                 point_or_region = region
 
         if point_or_region is None:
@@ -137,14 +125,19 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point_or_region: PointOrRegion) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        if isinstance(point_or_region, int):
-            document_position = text_document_position_params(self.view, point_or_region)
-            point = point_or_region
-        else:
-            document_position = text_document_range_params(self.view, point_or_region)
-            point = point_or_region.begin()
+        point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
 
         for session in listener.sessions_async('hoverProvider'):
+            capability = session.get_capability('experimental.rangeHoverProvider')
+            range_hover_provider = False
+            if isinstance(capability, bool):
+                range_hover_provider = capability
+
+            if isinstance(point_or_region, sublime.Region) and range_hover_provider:
+                document_position = text_document_range_params(self.view, point_or_region)
+            else:
+                document_position = text_document_position_params(self.view, point_or_region)
+
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

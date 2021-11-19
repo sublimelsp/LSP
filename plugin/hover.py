@@ -107,20 +107,15 @@ class LspHoverCommand(LspTextCommand):
                 return
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, point_or_region)
-            if isinstance(point_or_region, int):
-                self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
-                    point_or_region, userprefs().show_diagnostics_severity_level)
-            else:
-                self._diagnostics_by_config, covering = listener.diagnostics_intersecting_region_async(
-                    point_or_region)
-            if isinstance(point_or_region, int):
-                hover_point = point_or_region
-                if self._diagnostics_by_config:
-                    self.show_hover(listener, hover_point, only_diagnostics)
-                if not only_diagnostics and userprefs().show_code_actions_in_hover:
-                    actions_manager.request_for_region_async(
-                        self.view, covering, self._diagnostics_by_config,
-                        functools.partial(self.handle_code_actions, listener, hover_point))
+            point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
+            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
+                point, userprefs().show_diagnostics_severity_level)
+            if self._diagnostics_by_config:
+                self.show_hover(listener, point, only_diagnostics)
+            if not only_diagnostics and userprefs().show_code_actions_in_hover:
+                actions_manager.request_for_region_async(
+                    self.view, covering, self._diagnostics_by_config,
+                    functools.partial(self.handle_code_actions, listener, point))
 
         sublime.set_timeout_async(run_async)
 
@@ -132,7 +127,7 @@ class LspHoverCommand(LspTextCommand):
             if range_hover_provider:
                 if isinstance(point_or_region, int):
                     for region in self.view.sel():
-                        if region.contains(point):
+                        if region.contains(point_or_region):
                             # when hovering selection send it as range
                             document_position = text_document_range_params(self.view, region)
                         else:

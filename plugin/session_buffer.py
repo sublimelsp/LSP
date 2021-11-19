@@ -1,4 +1,3 @@
-from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
@@ -126,6 +125,7 @@ class SessionBuffer:
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
+            self.do_semantic_tokens_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -262,6 +262,7 @@ class SessionBuffer:
             finally:
                 self.pending_changes = None
             self._do_color_boxes_async(view, version)
+            self.do_semantic_tokens_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -422,7 +423,10 @@ class SessionBuffer:
         for sv in self.session_views:
             sv.present_diagnostics_async()
 
-    def do_semantic_tokens_async(self) -> None:
+    # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
+
+    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+        # time.sleep(0.2)  # for testing with clangd
         if not userprefs().semantic_highlighting:
             return
         if not self.session.has_capability("semanticTokensProvider"):
@@ -431,17 +435,11 @@ class SessionBuffer:
             return
         if self.session.get_capability('semanticTokensProvider.legend.tokenModifiers') is None:
             return
-        view = self.some_view()
-        if view is None:
-            return
         # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
         if "background" not in view.style_for_scope("meta.semantic-token"):
             return
-
         self.semantic_tokens.view_change_count = view.change_count()
-
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
-
         if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
@@ -481,13 +479,10 @@ class SessionBuffer:
         view = self.some_view()
         if view is None:
             return
-
         self.semantic_tokens.tokens.clear()
-
         scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
         prev_line = 0
         prev_col_utf16 = 0
-
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -517,18 +512,15 @@ class SessionBuffer:
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)
-
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
-
         for scope in self.semantic_tokens.active_scopes.keys():
             if scope not in scope_regions.keys():
                 del self.semantic_tokens.active_scopes[scope]
                 key = "lsp_{}".format(scope)
                 for sv in self.session_views:
                     sv.view.erase_regions(key)
-
         for scope, regions in scope_regions.items():
             regions_hash = hash(tuple(hash((r.a, r.b)) for r in regions))
             if scope not in self.semantic_tokens.active_scopes or \

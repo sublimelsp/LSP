@@ -1391,7 +1391,7 @@ class Session(TransportCallbacks):
         session_view = self.session_view_for_view_async(active_view)
         if not session_view:
             return
-        session_view.session_buffer.do_semantic_tokens_async()
+        session_view.session_buffer.do_semantic_tokens_async(active_view)
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

@@ -135,7 +135,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
-    semantic_tokens_debounce_time = FEATURES_TIMEOUT
 
     _uri = None  # type: str
 
@@ -222,7 +221,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             added = True
         if added:
             self._do_code_lenses_async()
-            self._do_semantic_tokens_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
@@ -322,8 +320,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.do_signature_help_async(manual=False)
         self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                   after_ms=self.code_lenses_debounce_time)
-        self._when_selection_remains_stable_async(self._do_semantic_tokens_async, current_region,
-                                                  after_ms=self.semantic_tokens_debounce_time)
 
     def get_uri(self) -> str:
         return self._uri
@@ -618,17 +614,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
-
-    # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
-
-    def _do_semantic_tokens_async(self) -> None:
-        session = self.session_async("semanticTokensProvider")
-        if not session:
-            return
-        session_view = session.session_view_for_view_async(self.view)
-        if not session_view:
-            return
-        session_view.session_buffer.do_semantic_tokens_async()
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 

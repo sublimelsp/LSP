@@ -160,6 +160,9 @@ class SessionBuffer:
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
 
+    def remove_session_view(self, sv: SessionViewProtocol) -> None:
+        self.session_views.remove(sv)
+
     def register_capability_async(
         self,
         registration_id: str,

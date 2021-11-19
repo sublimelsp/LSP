@@ -225,6 +225,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
         if removed_session:
+            removed_session.on_before_destroy()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False

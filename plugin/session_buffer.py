@@ -161,6 +161,9 @@ class SessionBuffer:
         self.session_views.add(sv)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
+        for scope in self.semantic_tokens.active_scopes.keys():
+            key = "lsp_{}".format(scope)
+            sv.view.erase_regions(key)
         self.session_views.remove(sv)
 
     def register_capability_async(

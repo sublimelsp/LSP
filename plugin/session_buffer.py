@@ -434,10 +434,6 @@ class SessionBuffer:
             return
         if not self.session.has_capability("semanticTokensProvider"):
             return
-        if self.session.get_capability('semanticTokensProvider.legend.tokenTypes') is None:
-            return
-        if self.session.get_capability('semanticTokensProvider.legend.tokenModifiers') is None:
-            return
         # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
         if "background" not in view.style_for_scope("meta.semantic-token"):
             return
@@ -446,22 +442,22 @@ class SessionBuffer:
         if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens_delta)
+            self.session.send_request_async(request, self._on_semantic_tokens_delta_async)
         elif self.session.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens)
+            self.session.send_request_async(request, self._on_semantic_tokens_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region()).to_lsp()
             request = Request.semanticTokensRange(params, view)
-            self.session.send_request_async(request, self._on_semantic_tokens)
+            self.session.send_request_async(request, self._on_semantic_tokens_async)
 
-    def _on_semantic_tokens(self, response: Optional[Dict]) -> None:
+    def _on_semantic_tokens_async(self, response: Optional[Dict]) -> None:
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_delta(self, response: Optional[Dict]) -> None:
+    def _on_semantic_tokens_delta_async(self, response: Optional[Dict]) -> None:
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta

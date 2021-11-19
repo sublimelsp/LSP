@@ -128,11 +128,11 @@ class LspHoverCommand(LspTextCommand):
             if range_hover_provider:
                 region = first_selection_region(self.view)
                 if region is not None:
-                    if region.contains(point): # when hovering selection send the selection as range
+                    if region.contains(point):  # when hovering selection send the selection as range
                         document_position = text_document_range_params(self.view, region)
-                    else: # there is selection but ignored
+                    else:  # there is selection but ignored
                         document_position = text_document_range_params(self.view, region)
-                else: # nothing selected
+                else:  # nothing selected
                     document_position = text_document_position_params(self.view, point)
             else:
                 document_position = text_document_position_params(self.view, point)

@@ -4,12 +4,15 @@ from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import Error
+from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import RangeLsp
 from .core.protocol import Request
+from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
@@ -20,9 +23,9 @@ from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
-from .core.views import region_to_range
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
+from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
@@ -119,18 +122,19 @@ class LspHoverCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
+    def _create_hover_request(
+        self, session: Session, point: int
+    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
+        if session.get_capability('experimental.rangeHoverProvider'):
+            region = first_selection_region(self.view)
+            if region is not None and region.contains(point):
+                return text_document_range_params(self.view, region)
+        return text_document_position_params(self.view, point)
+
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         for session in listener.sessions_async('hoverProvider'):
-            document_position = text_document_position_params(self.view, point)
-            range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
-            if range_hover_provider:
-                region = first_selection_region(self.view)
-                if region is not None:
-                    if region.contains(point):
-                        # hovering selection or only text was selected
-                        document_position.pop('position', None)
-                        document_position['range'] = region_to_range(self.view, region).to_lsp()
+            document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

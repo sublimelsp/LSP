@@ -20,9 +20,9 @@ from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
+from .core.views import region_to_range
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
-from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
@@ -129,7 +129,8 @@ class LspHoverCommand(LspTextCommand):
                 if region is not None:
                     if region.contains(point):
                         # hovering selection or only text was selected
-                        document_position = text_document_range_params(self.view, region)
+                        document_position.pop('position', None)
+                        document_position['range'] = region_to_range(self.view, region).to_lsp()
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

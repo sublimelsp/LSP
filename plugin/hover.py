@@ -121,19 +121,15 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
+        document_position = text_document_position_params(self.view, point)
         for session in listener.sessions_async('hoverProvider'):
             range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
             if range_hover_provider:
                 region = first_selection_region(self.view)
                 if region is not None:
-                    if region.contains(point):  # when hovering selection send the selection as range
+                    if region.contains(point):
+                        # hovering selection or only text was selected
                         document_position = text_document_range_params(self.view, region)
-                    else:  # there is selection but ignored
-                        document_position = text_document_range_params(self.view, region)
-                else:  # nothing selected
-                    document_position = text_document_position_params(self.view, point)
-            else:
-                document_position = text_document_position_params(self.view, point)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))

@@ -122,15 +122,6 @@ class LspHoverCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
-    def _create_hover_request(
-        self, session: Session, point: int
-    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
-        if session.get_capability('experimental.rangeHoverProvider'):
-            region = first_selection_region(self.view)
-            if region is not None and region.contains(point):
-                return text_document_range_params(self.view, region)
-        return text_document_position_params(self.view, point)
-
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         for session in listener.sessions_async('hoverProvider'):
@@ -140,6 +131,15 @@ class LspHoverCommand(LspTextCommand):
             ))
 
         Promise.all(hover_promises).then(lambda responses: self._on_all_settled(responses, listener, point))
+
+    def _create_hover_request(
+        self, session: Session, point: int
+    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
+        if session.get_capability('experimental.rangeHoverProvider'):
+            region = first_selection_region(self.view)
+            if region is not None and region.contains(point):
+                return text_document_range_params(self.view, region)
+        return text_document_position_params(self.view, point)
 
     def _on_all_settled(self, responses: List[ResolvedHover], listener: AbstractViewListener, point: int) -> None:
         hovers = []  # type: List[Hover]

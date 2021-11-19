@@ -93,9 +93,6 @@ class LspHoverCommand(LspTextCommand):
         if not window:
             return
         hover_point = temp_point
-        window = self.view.window()
-        if not window:
-            return
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Hover]

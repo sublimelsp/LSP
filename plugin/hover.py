@@ -121,8 +121,8 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        document_position = text_document_position_params(self.view, point)
         for session in listener.sessions_async('hoverProvider'):
+            document_position = text_document_position_params(self.view, point)
             range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
             if range_hover_provider:
                 region = first_selection_region(self.view)

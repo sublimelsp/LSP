@@ -36,7 +36,6 @@ import webbrowser
 SUBLIME_WORD_MASK = 515
 SessionName = str
 ResolvedHover = Union[Hover, Error]
-PointOrRegion = Union[int, sublime.Region]
 
 _test_contents = []  # type: List[str]
 
@@ -83,13 +82,17 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
-        point_or_region = point # type: Optional[PointOrRegion]
-        if point_or_region is None:
+        temp_point = point
+        if temp_point is None:
             region = first_selection_region(self.view)
             if region is not None:
-                point_or_region = region
-        if point_or_region is None:
+                temp_point = region.begin()
+        if temp_point is None:
             return
+        window = self.view.window()
+        if not window:
+            return
+        hover_point = temp_point
         window = self.view.window()
         if not window:
             return
@@ -106,34 +109,31 @@ class LspHoverCommand(LspTextCommand):
             if not listener:
                 return
             if not only_diagnostics:
-                self.request_symbol_hover_async(listener, point_or_region)
-            point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
+                self.request_symbol_hover_async(listener, hover_point)
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
-                point, userprefs().show_diagnostics_severity_level)
+                hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
-                self.show_hover(listener, point, only_diagnostics)
+                self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, point))
+                    functools.partial(self.handle_code_actions, listener, hover_point))
 
         sublime.set_timeout_async(run_async)
 
-    def request_symbol_hover_async(self, listener: AbstractViewListener, point_or_region: PointOrRegion) -> None:
+    def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        point = point_or_region if isinstance(point_or_region, int) else point_or_region.begin()
         for session in listener.sessions_async('hoverProvider'):
             range_hover_provider = session.get_capability('experimental.rangeHoverProvider')
             if range_hover_provider:
-                if isinstance(point_or_region, int):
-                    for region in self.view.sel():
-                        if region.contains(point_or_region):
-                            # when hovering selection send it as range
-                            document_position = text_document_range_params(self.view, region)
-                        else:
-                            document_position = text_document_position_params(self.view, point_or_region)
-                else:
-                    document_position = text_document_range_params(self.view, point_or_region)
+                region = first_selection_region(self.view)
+                if region is not None:
+                    if region.contains(point): # when hovering selection send the selection as range
+                        document_position = text_document_range_params(self.view, region)
+                    else: # there is selection but ignored
+                        document_position = text_document_range_params(self.view, region)
+                else: # nothing selected
+                    document_position = text_document_position_params(self.view, point)
             else:
                 document_position = text_document_position_params(self.view, point)
             hover_promises.append(session.send_request_task(

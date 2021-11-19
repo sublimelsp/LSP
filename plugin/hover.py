@@ -220,7 +220,6 @@ class LspHoverCommand(LspTextCommand):
         _test_contents.append(contents)  # for testing only
 
         if contents:
-            # The previous popup could be in a different location from the next one
             if self.view.is_popup_visible():
                 update_lsp_popup(self.view, contents)
             else:

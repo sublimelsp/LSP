@@ -37,6 +37,7 @@ SUBLIME_WORD_MASK = 515
 SessionName = str
 ResolvedHover = Union[Hover, Error]
 
+
 _test_contents = []  # type: List[str]
 
 

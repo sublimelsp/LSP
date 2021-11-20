@@ -161,9 +161,7 @@ class SessionBuffer:
         self.session_views.add(sv)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
-        for scope in self.semantic_tokens.active_scopes.keys():
-            key = "lsp_{}".format(scope)
-            sv.view.erase_regions(key)
+        self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
 
     def register_capability_async(
@@ -531,6 +529,10 @@ class SessionBuffer:
                 key = "lsp_{}".format(scope)
                 for sv in self.session_views:
                     sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+
+    def _clear_semantic_token_regions(self, view: sublime.View) -> None:
+        for scope in self.semantic_tokens.active_scopes.keys():
+            view.erase_regions("lsp_{}".format(scope))
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

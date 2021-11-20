@@ -225,7 +225,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
         if removed_session:
-            removed_session.on_before_destroy()
+            removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False
@@ -774,7 +774,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views
         for session_view in session_views.values():
-            session_view.on_before_destroy()
+            session_view.on_before_remove()
 
         def clear_async() -> None:
             nonlocal session_views

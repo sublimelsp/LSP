@@ -152,7 +152,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if this is not None:
                 this._on_settings_object_changed()
 
-        self._current_syntax = None
+        self._current_syntax = self.view.settings().get("syntax")
         existing_uri = view.settings().get("lsp_uri")
         if isinstance(existing_uri, str):
             self._uri = existing_uri

@@ -773,11 +773,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views
-        for session_view in session_views.values():
-            session_view.on_before_remove()
 
         def clear_async() -> None:
             nonlocal session_views
+            for session_view in session_views.values():
+                session_view.on_before_remove()
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)

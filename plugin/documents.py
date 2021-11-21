@@ -152,7 +152,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if this is not None:
                 this._on_settings_object_changed()
 
-        self._current_syntax = None
+        self._current_syntax = self.view.settings().get("syntax")
         existing_uri = view.settings().get("lsp_uri")
         if isinstance(existing_uri, str):
             self._uri = existing_uri
@@ -225,6 +225,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
         if removed_session:
+            removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False
@@ -775,6 +776,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         def clear_async() -> None:
             nonlocal session_views
+            for session_view in session_views.values():
+                session_view.on_before_remove()
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)

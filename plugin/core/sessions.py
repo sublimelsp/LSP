@@ -73,6 +73,44 @@ import weakref
 InitCallback = Callable[['Session', bool], None]
 
 
+def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
+    tokens_scope_map = SEMANTIC_TOKENS_MAP.copy()
+    if custom_tokens_map is not None:
+        tokens_scope_map.update(custom_tokens_map)
+    return tuple(sorted(tokens_scope_map.items()))  # make map hashable
+
+@functools.lru_cache(maxsize=128)
+def decode_semantic_token(
+        types_legend: Tuple[str],
+        modifiers_legend: Tuple[str],
+        tokens_scope_map: Tuple[Tuple[str, str], ...],
+        token_type_encoded: int,
+        token_modifiers_encoded: int
+    ) -> Tuple[str, List[str], Optional[str]]:
+    """
+    This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
+    the server. It also returns the corresponding scope name, which will be used for the highlighting color, either
+    derived from a predefined scope map if the token type is one of the types defined in the LSP specs, or from a scope
+    for custom token types if it was added in the client configuration (will be `None` if no scope has been defined for
+    the custom token type).
+    """
+
+    token_type = types_legend[token_type_encoded]
+    token_modifiers = [modifiers_legend[idx]
+                       for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+    scope = None
+    tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
+    if token_type in tokens_scope_map_dict:
+        scope = tokens_scope_map_dict[token_type]
+        for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
+            # TODO there must be a better way than to iterate through all entries
+            if entry[0] == token_type and entry[1] in token_modifiers:
+                scope = entry[2]
+                break  # first match wins (in case of multiple modifiers)
+        scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
+    return token_type, token_modifiers, scope
+
+
 class Manager(metaclass=ABCMeta):
     """
     A Manager is a container of Sessions.
@@ -905,9 +943,7 @@ class Session(TransportCallbacks):
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
-        self.semantic_tokens_map = SEMANTIC_TOKENS_MAP  # type: Dict[str, str]
-        if config.semantic_tokens is not None:
-            self.semantic_tokens_map.update(config.semantic_tokens)
+        self.semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)  # type: Tuple[Tuple[str, str], ...]
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1323,28 +1359,10 @@ class Session(TransportCallbacks):
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        """
-        This function converts the token type and token modifiers from encoded numbers into names, based on the legend
-        from the server. It also returns the corresponding scope name, which will be used for the highlighting color, if
-        the token type is one of the types defined in the LSP specs, or if a scope for it was added in the client
-        configuration.
-        """
-        token_types_legend = self.get_capability('semanticTokensProvider.legend.tokenTypes')
-        token_modifiers_legend = self.get_capability('semanticTokensProvider.legend.tokenModifiers')
-
-        token_type = token_types_legend[token_type_encoded]  # type: ignore
-        token_modifiers = [token_modifiers_legend[idx]  # type: ignore
-                           for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
-        scope = None
-        if token_type in self.semantic_tokens_map:
-            scope = self.semantic_tokens_map[token_type]
-            for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-                # TODO there must be a better way than to iterate through all entries
-                if entry[0] == token_type and entry[1] in token_modifiers:
-                    scope = entry[2]
-                    break  # first match wins (in case of multiple modifiers)
-            scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
-        return token_type, token_modifiers, scope
+        types_legend = tuple(self.get_capability('semanticTokensProvider.legend.tokenTypes'))  # type: ignore
+        modifiers_legend = tuple(self.get_capability('semanticTokensProvider.legend.tokenModifiers'))  # type: ignore
+        return decode_semantic_token(
+            types_legend, modifiers_legend, self.semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

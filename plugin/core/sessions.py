@@ -79,14 +79,15 @@ def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tupl
         tokens_scope_map.update(custom_tokens_map)
     return tuple(sorted(tokens_scope_map.items()))  # make map hashable
 
+
 @functools.lru_cache(maxsize=128)
 def decode_semantic_token(
-        types_legend: Tuple[str],
-        modifiers_legend: Tuple[str],
-        tokens_scope_map: Tuple[Tuple[str, str], ...],
-        token_type_encoded: int,
-        token_modifiers_encoded: int
-    ) -> Tuple[str, List[str], Optional[str]]:
+    types_legend: Tuple[str],
+    modifiers_legend: Tuple[str],
+    tokens_scope_map: Tuple[Tuple[str, str], ...],
+    token_type_encoded: int,
+    token_modifiers_encoded: int
+) -> Tuple[str, List[str], Optional[str]]:
     """
     This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
     the server. It also returns the corresponding scope name, which will be used for the highlighting color, either

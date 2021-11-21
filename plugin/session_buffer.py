@@ -515,20 +515,21 @@ class SessionBuffer:
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
+        removed_scopes = []
         for scope in self.semantic_tokens.active_scopes.keys():
             if scope not in scope_regions.keys():
-                del self.semantic_tokens.active_scopes[scope]
-                key = "lsp_{}".format(scope)
+                removed_scopes.append(scope)
                 for sv in self.session_views:
-                    sv.view.erase_regions(key)
+                    sv.view.erase_regions("lsp_{}".format(scope))
+        for scope in removed_scopes:
+            del self.semantic_tokens.active_scopes[scope]
         for scope, regions in scope_regions.items():
             regions_hash = hash(tuple(hash((r.a, r.b)) for r in regions))
             if scope not in self.semantic_tokens.active_scopes or \
                     self.semantic_tokens.active_scopes[scope] != regions_hash:
                 self.semantic_tokens.active_scopes[scope] = regions_hash
-                key = "lsp_{}".format(scope)
                 for sv in self.session_views:
-                    sv.view.add_regions(key, regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+                    sv.view.add_regions("lsp_{}".format(scope), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
         for scope in self.semantic_tokens.active_scopes.keys():

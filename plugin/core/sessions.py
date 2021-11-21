@@ -82,8 +82,8 @@ def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tupl
 
 @functools.lru_cache(maxsize=128)
 def decode_semantic_token(
-    types_legend: Tuple[str],
-    modifiers_legend: Tuple[str],
+    types_legend: Tuple[str, ...],
+    modifiers_legend: Tuple[str, ...],
     tokens_scope_map: Tuple[Tuple[str, str], ...],
     token_type_encoded: int,
     token_modifiers_encoded: int
@@ -104,7 +104,6 @@ def decode_semantic_token(
     if token_type in tokens_scope_map_dict:
         scope = tokens_scope_map_dict[token_type]
         for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-            # TODO there must be a better way than to iterate through all entries
             if entry[0] == token_type and entry[1] in token_modifiers:
                 scope = entry[2]
                 break  # first match wins (in case of multiple modifiers)
@@ -1169,11 +1168,11 @@ class Session(TransportCallbacks):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
-        semantic_token_types = self.get_capability('semanticTokensProvider.legend.tokenTypes')
-        if semantic_token_types is not None:
+        semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
+        if semantic_token_types:
             debug('{}: Supported semantic token types: {}'.format(self.config.name, semantic_token_types))
-        semantic_token_modifiers = self.get_capability('semanticTokensProvider.legend.tokenModifiers')
-        if semantic_token_modifiers is not None:
+        semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
+        if semantic_token_modifiers:
             debug('{}: Supported semantic token modifiers: {}'.format(self.config.name, semantic_token_modifiers))
         if self._watcher_impl:
             config = self.config.file_watcher
@@ -1360,8 +1359,8 @@ class Session(TransportCallbacks):
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        types_legend = tuple(self.get_capability('semanticTokensProvider.legend.tokenTypes'))  # type: ignore
-        modifiers_legend = tuple(self.get_capability('semanticTokensProvider.legend.tokenModifiers'))  # type: ignore
+        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         return decode_semantic_token(
             types_legend, modifiers_legend, self.semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
@@ -1402,7 +1401,6 @@ class Session(TransportCallbacks):
     def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
-        debug("server requested a refresh of semantic tokens")
         # TODO should we send a request only for the active view, or also for all other SessionBuffers of the Session?
         active_view = sublime.active_window().active_view()
         if not active_view:

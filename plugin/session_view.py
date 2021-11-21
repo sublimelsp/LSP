@@ -226,9 +226,6 @@ class SessionView:
         if listener:
             listener.on_session_shutdown_async(self.session)
 
-    def on_before_destroy(self) -> None:
-        self.session_buffer.remove_session_view(self)
-
     def diagnostics_key(self, severity: int, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 

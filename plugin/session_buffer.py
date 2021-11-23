@@ -59,7 +59,7 @@ class DiagnosticSeverityData:
 
 class SemanticTokensData:
 
-    __slots__ = ('data', 'result_id', 'active_scopes', 'tokens', 'view_change_count')
+    __slots__ = ('data', 'result_id', 'active_scopes', 'tokens', 'view_change_count', 'needs_refresh')
 
     def __init__(self) -> None:
         self.data = []  # type: List[int]
@@ -67,6 +67,7 @@ class SemanticTokensData:
         self.active_scopes = {}  # type: Dict[str, int]
         self.tokens = []  # type: List[SemanticToken]
         self.view_change_count = 0
+        self.needs_refresh = False
 
 
 class SessionBuffer:

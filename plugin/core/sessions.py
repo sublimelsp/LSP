@@ -1401,14 +1401,18 @@ class Session(TransportCallbacks):
     def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
-        # TODO should we send a request only for the active view, or also for all other SessionBuffers of the Session?
-        active_view = sublime.active_window().active_view()
-        if not active_view:
-            return
-        session_view = self.session_view_for_view_async(active_view)
-        if not session_view:
-            return
-        session_view.session_buffer.do_semantic_tokens_async(active_view)
+        selected_sheets = self.window.selected_sheets()
+        for sheet in self.window.sheets():
+            view = sheet.view()
+            if not view:
+                continue
+            sv = self.session_view_for_view_async(view)
+            if not sv:
+                continue
+            if sheet in selected_sheets:
+                sv.session_buffer.do_semantic_tokens_async(view)
+            else:
+                sv.session_buffer.semantic_tokens.needs_refresh = True
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

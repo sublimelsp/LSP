@@ -339,8 +339,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
-            self._register_async()
+        if not self.view.is_loading() and is_regular_view(self.view):
+            if not self._registered:
+                self._register_async()
+            for sb in self.session_buffers_async():
+                if sb.semantic_tokens.needs_refresh:
+                    sb.semantic_tokens.needs_refresh = False
+                    sb.do_semantic_tokens_async(self.view)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()

@@ -61,23 +61,23 @@ class SessionView:
         self._setup_auto_complete_triggers(settings)
 
     def on_before_remove(self) -> None:
-        settings = self._view.settings()  # type: sublime.Settings
+        settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         self._code_lenses.clear_view()
-        if self._session.has_capability(self.HOVER_PROVIDER_KEY):
+        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
-        if not self._session.exiting:
+        if not self.session.exiting:
             for request_id, request in self.active_requests.items():
-                if request.view and request.view.id() == self._view.id():
-                    self._session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            self._session.unregister_session_view_async(self)
-        self._session.config.erase_view_status(self._view)
+                if request.view and request.view.id() == self.view.id():
+                    self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            self.session.unregister_session_view_async(self)
+        self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._view.erase_regions(self.diagnostics_key(severity, False))
-            self._view.erase_regions(self.diagnostics_key(severity, True))
-        self._session_buffer.remove_session_view(self)
+            self.view.erase_regions(self.diagnostics_key(severity, False))
+            self.view.erase_regions(self.diagnostics_key(severity, True))
+        self.session_buffer.remove_session_view(self)
 
     @property
     def session(self) -> Session:

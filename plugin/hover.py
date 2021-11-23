@@ -138,7 +138,7 @@ class LspHoverCommand(LspTextCommand):
         if session.get_capability('experimental.rangeHoverProvider'):
             region = first_selection_region(self.view)
             if region is not None and region.contains(point):
-                return text_document_range_params(self.view, region)
+                return text_document_range_params(self.view, point, region)
         return text_document_position_params(self.view, point)
 
     def _on_all_settled(self, responses: List[ResolvedHover], listener: AbstractViewListener, point: int) -> None:

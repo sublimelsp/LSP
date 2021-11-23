@@ -74,6 +74,7 @@ TextDocumentPositionParams = TypedDict('TextDocumentPositionParams', {
 
 ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangeParams', {
     'textDocument': TextDocumentIdentifier,
+    'position': Position,
     'range': RangeLsp,
 }, total=True)
 

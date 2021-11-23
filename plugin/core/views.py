@@ -272,8 +272,13 @@ def text_document_position_params(view: sublime.View, location: int) -> TextDocu
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
 
 
-def text_document_range_params(view: sublime.View, region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
-    return {"textDocument": text_document_identifier(view), "range": region_to_range(view, region).to_lsp()}
+def text_document_range_params(view: sublime.View, location: int,
+                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
+    return {
+        "textDocument": text_document_identifier(view),
+        "position": position(view, location),
+        "range": region_to_range(view, region).to_lsp()
+    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:

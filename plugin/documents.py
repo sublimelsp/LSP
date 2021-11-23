@@ -136,8 +136,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
-    _uri = None  # type: str
-
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
@@ -152,6 +150,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if this is not None:
                 this._on_settings_object_changed()
 
+        self._uri = ''  # assumed to never be falsey
         self._current_syntax = self.view.settings().get("syntax")
         existing_uri = view.settings().get("lsp_uri")
         if isinstance(existing_uri, str):

@@ -37,14 +37,14 @@ class SessionView:
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
-        self.view = listener.view
-        self.session = session
+        self._view = listener.view
+        self._session = session
         self.active_requests = {}  # type: Dict[int, Request]
-        self.listener = ref(listener)
+        self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
-        self._code_lenses = CodeLensView(self.view)
-        settings = self.view.settings()
-        buffer_id = self.view.buffer_id()
+        self._code_lenses = CodeLensView(self._view)
+        settings = self._view.settings()
+        buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
@@ -52,32 +52,48 @@ class SessionView:
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
-        self.session_buffer = session_buffer
+        self._session_buffer = session_buffer
         session.register_session_view_async(self)
-        session.config.set_view_status(self.view, "")
-        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+        session.config.set_view_status(self._view, "")
+        if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
 
     def on_before_remove(self) -> None:
-        settings = self.view.settings()  # type: sublime.Settings
+        settings = self._view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         self._code_lenses.clear_view()
-        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+        if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
-        if not self.session.exiting:
+        if not self._session.exiting:
             for request_id, request in self.active_requests.items():
-                if request.view and request.view.id() == self.view.id():
-                    self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            self.session.unregister_session_view_async(self)
-        self.session.config.erase_view_status(self.view)
+                if request.view and request.view.id() == self._view.id():
+                    self._session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            self._session.unregister_session_view_async(self)
+        self._session.config.erase_view_status(self._view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions(self.diagnostics_key(severity, False))
-            self.view.erase_regions(self.diagnostics_key(severity, True))
-        self.session_buffer.remove_session_view(self)
+            self._view.erase_regions(self.diagnostics_key(severity, False))
+            self._view.erase_regions(self.diagnostics_key(severity, True))
+        self._session_buffer.remove_session_view(self)
+
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    @property
+    def view(self) -> sublime.View:
+        return self._view
+
+    @property
+    def listener(self) -> ref[AbstractViewListener]:
+        return self._listener
+
+    @property
+    def session_buffer(self) -> SessionBuffer:
+        return self._session_buffer
 
     def _is_listener_alive(self) -> bool:
         return bool(self.listener())

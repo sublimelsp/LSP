@@ -55,9 +55,11 @@ from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
+from .windows import AbstractViewListener
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
+from weakref import ref
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -340,10 +342,21 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
 
 class SessionViewProtocol(Protocol):
 
-    session = None  # type: Session
-    view = None  # type: sublime.View
-    listener = None  # type: Any
-    session_buffer = None  # type: Any
+    @property
+    def session(self) -> 'Session':
+        ...
+
+    @property
+    def view(self) -> sublime.View:
+        ...
+
+    @property
+    def listener(self) -> ref[AbstractViewListener]:
+        ...
+
+    @property
+    def session_buffer(self) -> 'SessionBufferProtocol':
+        ...
 
     def get_uri(self) -> Optional[str]:
         ...
@@ -384,8 +397,13 @@ class SessionViewProtocol(Protocol):
 
 class SessionBufferProtocol(Protocol):
 
-    session = None  # type: Session
-    session_views = None  # type: WeakSet[SessionViewProtocol]
+    @property
+    def session(self) -> 'Session':
+        ...
+
+    @property
+    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        ...
 
     def get_uri(self) -> Optional[str]:
         ...

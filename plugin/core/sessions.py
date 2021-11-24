@@ -59,7 +59,6 @@ from .views import to_encoded_filename
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
-from weakref import ref
 from weakref import WeakSet
 import functools
 import mdpopups

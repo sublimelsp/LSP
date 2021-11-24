@@ -8,8 +8,6 @@ from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
 from .promise import Promise
-from .protocol import Diagnostic
-from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
@@ -18,13 +16,11 @@ from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
-from .sessions import SessionBufferProtocol
-from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel

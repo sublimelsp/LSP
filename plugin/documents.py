@@ -14,6 +14,7 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import windows
+from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
@@ -32,7 +33,6 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
 from .session_buffer import SessionBuffer
 from .session_view import SessionView

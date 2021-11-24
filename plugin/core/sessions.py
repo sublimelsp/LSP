@@ -19,6 +19,7 @@ from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLi
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
+from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentUri
@@ -45,7 +46,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Sequence, Mapping, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -55,7 +56,6 @@ from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
-from .windows import AbstractViewListener
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
@@ -340,6 +340,93 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     }
 
 
+class AbstractViewListener(metaclass=ABCMeta):
+
+    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
+
+    view = None  # type: sublime.View
+
+    @abstractmethod
+    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def sessions_async(self, capability_path: Optional[str] = None) -> Generator['Session', None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Iterable['SessionViewProtocol']:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_session_initialized_async(self, session: 'Session') -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_session_shutdown_async(self, session: 'Session') -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_async(
+        self
+    ) -> Iterable[Tuple['SessionBufferProtocol', Sequence[Tuple[Diagnostic, sublime.Region]]]]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_intersecting_region_async(
+        self,
+        region: sublime.Region
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_touching_point_async(
+        self,
+        pt: int,
+        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    def diagnostics_intersecting_async(
+        self,
+        region_or_point: Union[sublime.Region, int]
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        if isinstance(region_or_point, int):
+            return self.diagnostics_touching_point_async(region_or_point)
+        elif region_or_point.empty():
+            return self.diagnostics_touching_point_async(region_or_point.a)
+        else:
+            return self.diagnostics_intersecting_region_async(region_or_point)
+
+    @abstractmethod
+    def on_diagnostics_updated_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_code_lens_capability_registered_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_language_id(self) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_uri(self) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def do_signature_help_async(self, manual: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def navigate_signature_help(self, forward: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
+
+
 class SessionViewProtocol(Protocol):
 
     @property
@@ -351,7 +438,7 @@ class SessionViewProtocol(Protocol):
         ...
 
     @property
-    def listener(self) -> ref[AbstractViewListener]:
+    def listener(self) -> 'weakref.ref[AbstractViewListener]':
         ...
 
     @property

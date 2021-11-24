@@ -10,6 +10,7 @@ from .core.protocol import RangeLsp
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
@@ -24,7 +25,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .core.windows import AbstractViewListener
 from urllib.parse import unquote, urlparse
 import functools
 import re

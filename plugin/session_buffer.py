@@ -106,7 +106,7 @@ class SessionBuffer:
         return self._session
 
     @property
-    def session_views(self) -> WeakSet[SessionViewProtocol]:
+    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
         return self._session_views
 
     def _check_did_open(self, view: sublime.View) -> None:

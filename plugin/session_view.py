@@ -6,13 +6,13 @@ from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request
+from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
-from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -88,7 +88,7 @@ class SessionView:
         return self._view
 
     @property
-    def listener(self) -> ref[AbstractViewListener]:
+    def listener(self) -> 'ref[AbstractViewListener]':
         return self._listener
 
     @property

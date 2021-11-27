@@ -56,7 +56,7 @@ class ClientConfigs:
     def remove_external_config(self, name: str) -> None:
         self.external.pop(name, None)
         if self.all.pop(name, None):
-            self._notify_listener(name)
+            self._notify_listener()
 
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
         try:

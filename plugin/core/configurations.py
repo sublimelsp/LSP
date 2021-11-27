@@ -53,12 +53,12 @@ class WindowConfigManager(object):
         except (IndexError, RuntimeError):
             pass
 
-    def update(self, config_name: Optional[str] = None) -> None:
+    def update(self, updated_config: Optional[str] = None) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        if config_name is None:
+        if updated_config is None:
             self.all.clear()
         for name, config in self._global_configs.items():
-            if config_name and config_name != name:
+            if updated_config and updated_config != name:
                 continue
             overrides = project_settings.pop(name, None)
             if isinstance(overrides, dict):
@@ -69,11 +69,11 @@ class WindowConfigManager(object):
                 overrides["enabled"] = False
             self.all[name] = ClientConfig.from_config(config, overrides)
         for name, c in project_settings.items():
-            if config_name and config_name != name:
+            if updated_config and updated_config != name:
                 continue
             debug("loading project-only configuration", name)
             self.all[name] = ClientConfig.from_dict(name, c)
-        self._window.run_command("lsp_recheck_sessions", {'config_name': config_name})
+        self._window.run_command("lsp_recheck_sessions", {'config_name': updated_config})
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):

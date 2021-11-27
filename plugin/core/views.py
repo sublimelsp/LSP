@@ -5,6 +5,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
+from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -269,6 +270,15 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
+
+
+def text_document_range_params(view: sublime.View, location: int,
+                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
+    return {
+        "textDocument": text_document_identifier(view),
+        "position": position(view, location),
+        "range": region_to_range(view, region).to_lsp()
+    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:

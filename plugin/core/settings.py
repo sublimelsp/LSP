@@ -1,6 +1,6 @@
+import os
 from .collections import DottedDict
 from .logging import debug
-from .sessions import get_plugin
 from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
@@ -84,16 +84,16 @@ class ClientConfigs:
         self._notify_listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
-        settings = sublime.load_settings("LSP.sublime-settings")
-        clients = settings.get("clients")
-
+        from .sessions import get_plugin
         plugin = get_plugin(config_name)
         if plugin:
             plugin_settings, plugin_settings_name = plugin.configuration()
+            settings_basename = os.path.basename(plugin_settings_name)
             plugin_settings.set("enabled", is_enabled)
-            sublime.save_settings(plugin_settings_name)
+            sublime.save_settings(settings_basename)
             return
-
+        settings = sublime.load_settings("LSP.sublime-settings")
+        clients = settings.get("clients")
         if isinstance(clients, dict):
             config = clients.setdefault(config_name, {})
             config["enabled"] = is_enabled

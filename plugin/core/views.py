@@ -521,6 +521,9 @@ def minihtml(
     else:
         frontmatter = {
             "allow_code_wrap": True,
+            "language_map": {
+                "python": (("python", "py"), ("LSP/Syntaxes/Popups-Python",))
+            },
             "markdown_extensions": [
                 {
                     "pymdownx.escapeall": {

@@ -1,0 +1,29 @@
+%YAML 1.2
+---
+name: Python (for LSP)
+scope: source.python.lsp
+hidden: true
+
+extends: Packages/Python/Python.sublime-syntax
+
+contexts:
+  main:
+    - meta_include_prototype: false
+    - match: ''
+      push: [statements, lsp-type]
+
+  lsp-type:
+    - meta_include_prototype: false
+    - match: \(
+      scope: punctuation.section.parens.begin.python
+      set: lsp-type-body
+    - match: (?=\S)
+      pop: true
+
+  lsp-type-body:
+    - meta_scope: meta.parens.python
+    - meta_content_scope: storage.type.python
+    - match: \)
+      scope: punctuation.section.parens.end.python
+      pop: true
+

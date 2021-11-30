@@ -1,4 +1,5 @@
 from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
+from .settings import userprefs
 from .typing import Callable, Iterator, List, Tuple, TypeVar
 from .url import parse_uri
 from .views import diagnostic_severity
@@ -7,6 +8,19 @@ import functools
 
 ParsedUri = Tuple[str, str]
 T = TypeVar('T')
+
+
+def by_location(diagnostic: Diagnostic) -> Tuple[int, int]:
+    line = diagnostic.get("range", {})["start"]["line"]
+    column = diagnostic.get("range", {})["start"]["character"]
+    return line, column
+
+
+def by_severity(diagnostic: Diagnostic) -> Tuple[int, int, int]:
+    severity = diagnostic.get("severity", -1)
+    line = diagnostic.get("range", {})["start"]["line"]
+    column = diagnostic.get("range", {})["start"]["character"]
+    return severity, line, column
 
 
 class DiagnosticsManager(OrderedDict):
@@ -34,15 +48,29 @@ class DiagnosticsManager(OrderedDict):
         self[uri] = diagnostics
         self.move_to_end(uri)  # maintain incoming order
 
+    def sorted_diagnostics(self, uri: ParsedUri) -> List[Diagnostic]:
+        """
+        Sort diagnostics for a given URI ordered as specified by the `diagnostics_sort_order` setting.
+        """
+        sort_order = userprefs().diagnostics_sort_order
+        if sort_order == "location":
+            return sorted(self[uri], key=by_location)
+        elif sort_order == "severity":
+            return sorted(self[uri], key=by_severity)
+        else:  # "none"
+            return self[uri]
+
     def filter_map_diagnostics_async(self, pred: Callable[[Diagnostic], bool],
                                      f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[Tuple[ParsedUri, List[T]]]:
         """
         Yields `(uri, results)` items with `results` being a list of `f(diagnostic)` for each
         diagnostic for this `uri` with `pred(diagnostic) == True`, filtered by `bool(f(diagnostic))`.
         Only `uri`s with non-empty `results` are returned. Each `uri` is guaranteed to be yielded
-        not more than once. Items and results are ordered as they came in from the server.
+        not more than once. Items are ordered as they came in from the server and results per item are
+        ordered as specified by the `diagnostics_sort_order` setting.
         """
-        for uri, diagnostics in self.items():
+        for uri in self.keys():
+            diagnostics = self.sorted_diagnostics(uri)
             results = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))  # type: List[T]
             if results:
                 yield uri, results
@@ -77,8 +105,12 @@ class DiagnosticsManager(OrderedDict):
     def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> List[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `uri`.
+        Results are ordered as specified by the `diagnostics_sort_order` setting.
         """
-        return self.get(uri, [])
+        if uri not in self:
+            return []
+        else:
+            return self.sorted_diagnostics(uri)
 
 
 def severity_count(severity: int) -> Callable[[List[Diagnostic]], int]:

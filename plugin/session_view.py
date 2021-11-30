@@ -60,7 +60,7 @@ class SessionView:
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
 
-    def __del__(self) -> None:
+    def on_before_remove(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         self._code_lenses.clear_view()
@@ -77,6 +77,7 @@ class SessionView:
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
+        self.session_buffer.remove_session_view(self)
 
     def _is_listener_alive(self) -> bool:
         return bool(self.listener())

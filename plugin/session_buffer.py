@@ -2,6 +2,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
 from .core.protocol import Range
+from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
@@ -10,13 +11,15 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
+from .core.views import document_color_params
+from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import will_save
@@ -81,6 +84,7 @@ class SessionBuffer:
         self.total_warnings = 0
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
+        self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._check_did_open(view)
         self.session.register_session_buffer_async(self)
 
@@ -88,6 +92,7 @@ class SessionBuffer:
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()
+        self.color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
@@ -103,6 +108,7 @@ class SessionBuffer:
                 return
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
+            self._do_color_boxes_async(view, view.change_count())
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -136,6 +142,9 @@ class SessionBuffer:
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
+
+    def remove_session_view(self, sv: SessionViewProtocol) -> None:
+        self.session_views.remove(sv)
 
     def register_capability_async(
         self,
@@ -235,8 +244,10 @@ class SessionBuffer:
                 notification = did_change(view, version, changes)
                 self.session.send_notification(notification)
             except MissingUriError:
-                pass  # we're closing
-            self.pending_changes = None
+                return  # we're closing
+            finally:
+                self.pending_changes = None
+            self._do_color_boxes_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -264,6 +275,32 @@ class SessionBuffer:
         for sv in self.session_views:
             return sv.view
         return None
+
+    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
+        """
+        Ensures that the view is at the same version when we were called, before calling the `f` function.
+        """
+        def handler(*args: Any) -> None:
+            view = self.some_view()
+            if view and view.change_count() == version:
+                f(view, *args)
+
+        return handler
+
+    # --- textDocument/documentColor -----------------------------------------------------------------------------------
+
+    def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
+        if self.session.has_capability("colorProvider"):
+            self.session.send_request_async(
+                Request.documentColor(document_color_params(view), view),
+                self._if_view_unchanged(self._on_color_boxes_async, version)
+            )
+
+    def _on_color_boxes_async(self, view: sublime.View, response: Any) -> None:
+        color_infos = response if response else []
+        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in color_infos])
+
+    # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]

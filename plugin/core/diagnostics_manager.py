@@ -11,16 +11,14 @@ T = TypeVar('T')
 
 
 def by_location(diagnostic: Diagnostic) -> Tuple[int, int]:
-    line = diagnostic.get("range", {})["start"]["line"]
-    column = diagnostic.get("range", {})["start"]["character"]
-    return line, column
+    position = diagnostic.get("range", {})["start"]
+    return position["line"], position["character"]
 
 
 def by_severity(diagnostic: Diagnostic) -> Tuple[int, int, int]:
-    severity = diagnostic.get("severity", -1)
-    line = diagnostic.get("range", {})["start"]["line"]
-    column = diagnostic.get("range", {})["start"]["character"]
-    return severity, line, column
+    severity = diagnostic.get("severity", DiagnosticSeverity.Hint + 1)
+    position = diagnostic.get("range", {})["start"]
+    return severity, position["line"], position["character"]
 
 
 class DiagnosticsManager(OrderedDict):
@@ -50,7 +48,7 @@ class DiagnosticsManager(OrderedDict):
 
     def sorted_diagnostics(self, uri: ParsedUri) -> List[Diagnostic]:
         """
-        Sort diagnostics for a given URI ordered as specified by the `diagnostics_sort_order` setting.
+        Sort diagnostics for a given URI ordered as configured by the `diagnostics_sort_order` setting.
         """
         sort_order = userprefs().diagnostics_sort_order
         if sort_order == "location":
@@ -67,7 +65,7 @@ class DiagnosticsManager(OrderedDict):
         diagnostic for this `uri` with `pred(diagnostic) == True`, filtered by `bool(f(diagnostic))`.
         Only `uri`s with non-empty `results` are returned. Each `uri` is guaranteed to be yielded
         not more than once. Items are ordered as they came in from the server and results per item are
-        ordered as specified by the `diagnostics_sort_order` setting.
+        ordered as configured by the `diagnostics_sort_order` setting.
         """
         for uri in self.keys():
             diagnostics = self.sorted_diagnostics(uri)
@@ -105,12 +103,9 @@ class DiagnosticsManager(OrderedDict):
     def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> List[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `uri`.
-        Results are ordered as specified by the `diagnostics_sort_order` setting.
+        Results are ordered as configured by the `diagnostics_sort_order` setting.
         """
-        if uri not in self:
-            return []
-        else:
-            return self.sorted_diagnostics(uri)
+        return self.sorted_diagnostics(uri) if uri in self else []
 
 
 def severity_count(severity: int) -> Callable[[List[Diagnostic]], int]:

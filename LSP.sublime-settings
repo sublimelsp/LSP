@@ -111,8 +111,8 @@
 
   // Sort order for diagnostics in the diagnostics panel and for the Goto Diagnostic command:
   // "none" - preserve order as reported from the server.
-  // "location" - sort by line number
-  // "severity" - sort by severity (and by line number for diagnostics of the same severity)
+  // "location" - sort by line number.
+  // "severity" - sort by severity (and by line number for diagnostics of the same severity).
   "diagnostics_sort_order": "none",
 
   // Show code actions:

@@ -405,6 +405,9 @@ class Window:
     def sheets(self) -> 'List[Sheet]':
         ...
 
+    def selected_sheets(self) -> 'List[Sheet]':
+        ...
+
     def views(self) -> 'List[View]':
         ...
 

@@ -509,7 +509,10 @@ class SessionBuffer:
                 token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \
                         token_general_style["source_column"] != token_type_style["source_column"]:
-                    scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
+                    scope = ""
+                    for modifier in sorted(token_modifiers):
+                        scope += "meta.semantic-token-modifier.{}.lsp ".format(modifier.lower())
+                    scope += "meta.semantic-token.{}.lsp".format(token_type.lower())
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)

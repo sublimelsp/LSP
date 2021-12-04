@@ -107,6 +107,8 @@ def decode_semantic_token(
             if entry[0] == token_type and entry[1] in token_modifiers:
                 scope = entry[2]
                 break  # first match wins (in case of multiple modifiers)
+        for modifier in sorted(token_modifiers):
+            scope += " meta.semantic-token-modifier.{}.lsp".format(modifier.lower())
         scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
     return token_type, token_modifiers, scope
 

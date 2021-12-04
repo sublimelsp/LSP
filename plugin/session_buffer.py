@@ -64,7 +64,7 @@ class SemanticTokensData:
     def __init__(self) -> None:
         self.data = []  # type: List[int]
         self.result_id = None  # type: Optional[str]
-        self.active_scopes = {}  # type: Dict[str, int]
+        self.active_scopes = []  # type: List[str]
         self.tokens = []  # type: List[SemanticToken]
         self.view_change_count = 0
         self.needs_refresh = False
@@ -516,24 +516,19 @@ class SessionBuffer:
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
-        removed_scopes = []
-        for scope in self.semantic_tokens.active_scopes.keys():
+        for scope in self.semantic_tokens.active_scopes.copy():
             if scope not in scope_regions.keys():
-                removed_scopes.append(scope)
+                self.semantic_tokens.active_scopes.remove(scope)
                 for sv in self.session_views:
                     sv.view.erase_regions("lsp_{}".format(scope))
-        for scope in removed_scopes:
-            del self.semantic_tokens.active_scopes[scope]
         for scope, regions in scope_regions.items():
-            regions_hash = hash(tuple(hash((r.a, r.b)) for r in regions))
-            if scope not in self.semantic_tokens.active_scopes or \
-                    self.semantic_tokens.active_scopes[scope] != regions_hash:
-                self.semantic_tokens.active_scopes[scope] = regions_hash
-                for sv in self.session_views:
-                    sv.view.add_regions("lsp_{}".format(scope), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+            if scope not in self.semantic_tokens.active_scopes:
+                self.semantic_tokens.active_scopes.append(scope)
+            for sv in self.session_views:
+                sv.view.add_regions("lsp_{}".format(scope), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
-        for scope in self.semantic_tokens.active_scopes.keys():
+        for scope in self.semantic_tokens.active_scopes:
             view.erase_regions("lsp_{}".format(scope))
 
     def __str__(self) -> str:

@@ -1,15 +1,17 @@
-import sublime
-import webbrowser
-from .core.logging import debug
 from .core.edit import parse_text_edit
+from .core.logging import debug
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
 from .core.typing import List, Dict, Optional, Generator, Union
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
+from .core.views import MarkdownLangMap
+from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import update_lsp_popup
 import functools
+import sublime
+import webbrowser
 
 SessionName = str
 
@@ -25,23 +27,31 @@ class LspResolveDocsCommand(LspTextCommand):
             session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
                 request = Request.resolveCompletionItem(item, self.view)
-                session.send_request_async(request, self._handle_resolve_response_async)
+                language_map = session.markdown_language_id_to_st_syntax_map()
+                handler = functools.partial(self._handle_resolve_response_async, language_map)
+                session.send_request_async(request, handler)
             else:
-                self._handle_resolve_response_async(item)
+                self._handle_resolve_response_async(None, item)
 
         sublime.set_timeout_async(run_async)
 
-    def _format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
-        return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
+    def _format_documentation(
+        self,
+        content: Union[str, Dict[str, str]],
+        language_map: MarkdownLangMap
+    ) -> str:
+        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
-    def _handle_resolve_response_async(self, item: CompletionItem) -> None:
+    def _handle_resolve_response_async(self, language_map: MarkdownLangMap, item: CompletionItem) -> None:
         detail = ""
         documentation = ""
         if item:
-            detail = self._format_documentation(item.get('detail') or "")
-            documentation = self._format_documentation(item.get("documentation") or "")
+            detail = self._format_documentation(item.get('detail') or "", language_map)
+            documentation = self._format_documentation(item.get("documentation") or "", language_map)
         if not documentation:
-            documentation = self._format_documentation({"kind": "markdown", "value": "*No documentation available.*"})
+            markdown = {"kind": "markdown", "value": "*No documentation available.*"}
+            # No need for a language map here
+            documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
             minihtml_content += "<div class='highlight'>{}</div>".format(detail)

@@ -6,6 +6,7 @@ from .registry import LspTextCommand
 from .typing import Optional, List
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
+from .views import MarkdownLangMap
 from .views import minihtml
 import functools
 import html
@@ -40,18 +41,19 @@ class SigHelp:
     determined by what the end-user is doing.
     """
 
-    def __init__(self, state: SignatureHelp) -> None:
+    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap) -> None:
         self._state = state
+        self._language_map = language_map
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
         self._active_parameter_index = self._state.get("activeParameter") or 0
 
     @classmethod
-    def from_lsp(cls, sighelp: Optional[SignatureHelp]) -> "Optional[SigHelp]":
+    def from_lsp(cls, sighelp: Optional[SignatureHelp], language_map: MarkdownLangMap) -> "Optional[SigHelp]":
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
         if sighelp is None or not sighelp.get("signatures"):
             return None
-        return cls(sighelp)
+        return cls(sighelp, language_map)
 
     def render(self, view: sublime.View) -> str:
         """Render the signature help content as minihtml."""
@@ -144,7 +146,7 @@ class SigHelp:
         docs = self._parameter_documentation(view, signature)
         if docs:
             formatted.append(docs)
-        docs = _signature_documentation(view, signature)
+        docs = self._signature_documentation(view, signature)
         if docs:
             if formatted:
                 formatted.append("<hr/>")
@@ -163,7 +165,15 @@ class SigHelp:
             return None
         documentation = parameter.get("documentation")
         if documentation:
-            return minihtml(view, documentation, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
+            allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
+            return minihtml(view, documentation, allowed_formats, self._language_map)
+        return None
+
+    def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> Optional[str]:
+        documentation = signature.get("documentation")
+        if documentation:
+            allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
+            return minihtml(view, documentation, allowed_formats, self._language_map)
         return None
 
 
@@ -181,10 +191,3 @@ def _wrap_with_scope_style(view: sublime.View, content: str, scope: str, emphasi
         '; font-weight: bold; text-decoration: underline' if emphasize else '',
         html.escape(content, quote=False)
     )
-
-
-def _signature_documentation(view: sublime.View, signature: SignatureInformation) -> Optional[str]:
-    documentation = signature.get("documentation")
-    if documentation:
-        return minihtml(view, documentation, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
-    return None

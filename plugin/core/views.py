@@ -33,6 +33,8 @@ import sublime
 import sublime_plugin
 import tempfile
 
+MarkdownLangMap = Optional[Dict[str, Tuple[Sequence[str], Sequence[str]]]]
+
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 DIAGNOSTIC_SEVERITY = [
@@ -450,7 +452,8 @@ FORMAT_MARKUP_CONTENT = 0x4
 def minihtml(
     view: sublime.View,
     content: Union[MarkedString, MarkupContent, List[MarkedString]],
-    allowed_formats: int
+    allowed_formats: int,
+    language_id_map: MarkdownLangMap = None
 ) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
@@ -539,6 +542,8 @@ def minihtml(
                 }
             ]
         }
+        if isinstance(language_id_map, dict):
+            frontmatter["language_map"] = language_id_map
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
         result = re.sub('(\\S)  \n', '\\1\n\n', result)
         return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)

@@ -434,7 +434,12 @@ class WindowManager(Manager):
             icon = icons.get(message_type, '')
             message = params.get('message', '')
             placeholder = "{} {}".format(icon, message)
-            self._window.show_quick_panel(titles, send_user_choice, placeholder=placeholder)
+            self._window.show_quick_panel(
+                titles,
+                send_user_choice,
+                flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+                placeholder=placeholder
+            )
 
     def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
         self._end_sessions_async(config_name)

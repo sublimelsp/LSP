@@ -6,8 +6,6 @@ class CSS:
     def __init__(self) -> None:
         self.popups = sublime.load_resource("Packages/LSP/popups.css")
         self.popups_classname = "lsp_popup"
-        self.notification = sublime.load_resource("Packages/LSP/notification.css")
-        self.notification_classname = "notification"
         self.sheets = sublime.load_resource("Packages/LSP/sheets.css")
         self.sheets_classname = "lsp_sheet"
 

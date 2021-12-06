@@ -1,6 +1,6 @@
 import unittest
 from test_mocks import MockSession
-from LSP.plugin.core.message_request_handler import MessageRequestHandler
+from LSP.plugin.core.windows import WindowManager
 import sublime
 
 
@@ -17,6 +17,6 @@ class MessageRequestHandlerTest(unittest.TestCase):
                 {'title': "def"}
             ]
         }
-        handler = MessageRequestHandler(view, session, "1", params, 'lsp server')
-        handler.show()
-        self.assertTrue(view.is_popup_visible())
+        manager = WindowManager(window, None, None)
+        manager.handle_message_request(session, params, "1")
+        self.assertEquals(view.element(), "input:input")

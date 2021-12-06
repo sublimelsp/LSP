@@ -408,6 +408,9 @@ class Window:
     def selected_sheets(self) -> 'List[Sheet]':
         ...
 
+    def selected_sheets_in_group(self, group: int) -> 'List[Sheet]':
+        ...
+
     def views(self) -> 'List[View]':
         ...
 

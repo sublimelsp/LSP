@@ -1403,7 +1403,9 @@ class Session(TransportCallbacks):
     def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
-        selected_sheets = self.window.selected_sheets()  # only returns selected sheets of active group :(
+        selected_sheets = []
+        for group in range(self.window.num_groups()):
+            selected_sheets.extend(self.window.selected_sheets_in_group(group))
         for sheet in self.window.sheets():
             view = sheet.view()
             if not view:

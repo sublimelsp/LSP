@@ -423,7 +423,7 @@ class WindowManager(Manager):
 
         def send_user_choice(index: int) -> None:
             # when noop; nothing was selected e.g. the user pressed escape
-            result = {}
+            result = None
             if index != -1:
                 result = {"title": titles[index]}
             response = Response(request_id, result)

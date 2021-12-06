@@ -13,6 +13,7 @@ from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
+from .protocol import Response
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
@@ -412,9 +413,29 @@ class WindowManager(Manager):
             return router_logger
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
-        view = self._window.active_view()
-        if view:
-            MessageRequestHandler(view, session, request_id, params, session.config.name).show()
+        icons = {
+            1: '❗',
+            2: '⚠️',
+            3: 'ℹ️',
+            4: '📝'
+        }
+        actions = params.get("actions", [])
+        titles = list(action.get("title") for action in actions)
+
+        def send_user_choice(index: int) -> None:
+            # when noop; nothing was selected e.g. the user pressed escape
+            result = {}
+            if index != -1:
+                result = {"title": titles[index]}
+            response = Response(request_id, result)
+            session.send_response(response)
+
+        if actions:
+            message_type = params.get('type', 4)
+            icon = icons.get(message_type, '')
+            message = params.get('message', '')
+            placeholder = "{} {}".format(icon, message)
+            self._window.show_quick_panel(titles, send_user_choice, placeholder = placeholder)
 
     def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
         self._end_sessions_async(config_name)

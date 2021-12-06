@@ -5,7 +5,6 @@ from .diagnostics import ensure_diagnostics_panel
 from .diagnostics_manager import is_severity_included
 from .logging import debug
 from .logging import exception_log
-from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
 from .promise import Promise
 from .protocol import Diagnostic
@@ -435,7 +434,7 @@ class WindowManager(Manager):
             icon = icons.get(message_type, '')
             message = params.get('message', '')
             placeholder = "{} {}".format(icon, message)
-            self._window.show_quick_panel(titles, send_user_choice, placeholder = placeholder)
+            self._window.show_quick_panel(titles, send_user_choice, placeholder=placeholder)
 
     def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
         self._end_sessions_async(config_name)

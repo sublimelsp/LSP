@@ -11,8 +11,6 @@ from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
-from .core.views import SEMANTIC_TOKENS_MAP
-from .core.views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .core.views import text_document_identifier
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
@@ -94,10 +92,8 @@ class SessionView:
         document_highlight_style = userprefs().document_highlight_style
         document_highlight_kinds = ["text", "read", "write"]
         line_modes = ["m", "s"]
-        for token_type, scope in SEMANTIC_TOKENS_MAP.items():
-            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, token_type), r)
-        for token_type, _, scope in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, token_type), r)
+        for key, scope in self.session.semantic_tokens_map:
+            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, key), r)
         if document_highlight_style == "fill":
             for kind in document_highlight_kinds:
                 for mode in line_modes:

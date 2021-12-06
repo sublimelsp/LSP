@@ -56,7 +56,6 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SEMANTIC_TOKENS_MAP
-from .views import SEMANTIC_TOKENS_WITH_MODIFIERS_MAP
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
 from .workspace import is_subpath_of
@@ -102,14 +101,15 @@ def decode_semantic_token(
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
     if token_type in tokens_scope_map_dict:
-        scope = tokens_scope_map_dict[token_type]
-        for entry in SEMANTIC_TOKENS_WITH_MODIFIERS_MAP:
-            if entry[0] == token_type and entry[1] in token_modifiers:
-                scope = entry[2]
+        for token_modifier in token_modifiers:
+            # this approach is limited to consider at most one modifier for the scope lookup
+            key = "{}.{}".format(token_type, token_modifier)
+            if key in tokens_scope_map_dict:
+                scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
+                    token_type.lower(), token_modifier.lower())
                 break  # first match wins (in case of multiple modifiers)
-        for modifier in sorted(token_modifiers):
-            scope += " meta.semantic-token-modifier.{}.lsp".format(modifier.lower())
-        scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
+        else:
+            scope = tokens_scope_map_dict[token_type] + " meta.semantic-token.{}.lsp".format(token_type.lower())
     return token_type, token_modifiers, scope
 
 
@@ -1403,7 +1403,7 @@ class Session(TransportCallbacks):
     def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
-        selected_sheets = self.window.selected_sheets()
+        selected_sheets = self.window.selected_sheets()  # only returns selected sheets of active group :(
         for sheet in self.window.sheets():
             view = sheet.view()
             if not view:

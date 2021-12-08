@@ -290,10 +290,11 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
     def run(self) -> None:
         window = self.window
-        active_view = window.active_view()
-        if not active_view:
+        view = window.active_view()
+        if not view:
             sublime.message_dialog('Troubleshooting must be run with a file opened')
             return
+        active_view = view
         configs = windows.lookup(window).get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:

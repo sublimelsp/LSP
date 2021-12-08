@@ -500,8 +500,8 @@ class ServerTestRunner(TransportCallbacks):
                 if cannot_start_reason:
                     raise Exception('Plugin.can_start() prevented the start due to: {}'.format(cannot_start_reason))
                 cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
-            if not cwd and window.folders():
-                cwd = window.folders()[0]
+            if not cwd and workspace_folders:
+                cwd = workspace_folders[0].path
             transport_config = config.resolve_transport_config(variables)
             self._resolved_command = transport_config.command
             self._transport = create_transport(transport_config, cwd, self)

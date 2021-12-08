@@ -11,6 +11,8 @@ from .core.typing import Any, Callable, Dict, List, Optional, Tuple
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
+from .core.workspace import ProjectFolders
+from .core.workspace import sorted_workspace_folders
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
@@ -289,14 +291,16 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def run(self) -> None:
         window = self.window
         active_view = window.active_view()
+        if not active_view:
+            sublime.message_dialog('Troubleshooting must be run with a file opened')
+            return
         configs = windows.lookup(window).get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
                                     placeholder='Select server to troubleshoot')
 
-    def on_selected(self, selected_index: int, configs: List[ClientConfig],
-                    active_view: Optional[sublime.View]) -> None:
+    def on_selected(self, selected_index: int, configs: List[ClientConfig], active_view: sublime.View) -> None:
         if selected_index == -1:
             return
         config = configs[selected_index]
@@ -306,9 +310,9 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         sublime.set_timeout_async(lambda: self.test_run_server_async(config, self.window, active_view, output_sheet))
 
     def test_run_server_async(self, config: ClientConfig, window: sublime.Window,
-                              active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet) -> None:
+                              active_view: sublime.View, output_sheet: sublime.HtmlSheet) -> None:
         server = ServerTestRunner(
-            config, window,
+            config, window, active_view,
             lambda resolved_command, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
@@ -470,7 +474,11 @@ class ServerTestRunner(TransportCallbacks):
     CLOSE_TIMEOUT_SEC = 2
 
     def __init__(
-        self, config: ClientConfig, window: sublime.Window, on_close: Callable[[List[str], str, int], None]
+        self,
+        config: ClientConfig,
+        window: sublime.Window,
+        initiating_view: sublime.View,
+        on_close: Callable[[List[str], str, int], None]
     ) -> None:
         self._on_close = on_close
         self._transport = None  # type: Optional[Transport]
@@ -479,13 +487,21 @@ class ServerTestRunner(TransportCallbacks):
         try:
             variables = extract_variables(window)
             plugin_class = get_plugin(config.name)
+            workspace = ProjectFolders(window)
+            workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
+            cwd = None
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
                     plugin_class.install_or_update()
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-            cwd = window.folders()[0] if window.folders() else None
+                cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                if cannot_start_reason:
+                    raise Exception('Plugin.can_start() prevented the start due to: {}'.format(cannot_start_reason))
+                cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
+            if not cwd and window.folders():
+                cwd = window.folders()[0]
             transport_config = config.resolve_transport_config(variables)
             self._resolved_command = transport_config.command
             self._transport = create_transport(transport_config, cwd, self)

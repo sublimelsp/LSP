@@ -502,17 +502,17 @@ class SessionBuffer:
             if scope is None:
                 # We can still use the meta scope and draw highlighting regions for custom token types if there is a
                 # color scheme rule for this particular token type.
-                # This logic should not be cached (in the _decode_semantic_token method) because otherwise new user
+                # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
                 # customizations in the color scheme for the scopes of custom token types would require a restart of
                 # Sublime Text to take effect.
                 token_general_style = view.style_for_scope("meta.semantic-token")
                 token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \
                         token_general_style["source_column"] != token_type_style["source_column"]:
-                    scope = ""
-                    for modifier in sorted(token_modifiers):
-                        scope += "meta.semantic-token-modifier.{}.lsp ".format(modifier.lower())
-                    scope += "meta.semantic-token.{}.lsp".format(token_type.lower())
+                    if token_modifiers:
+                        scope = "meta.semantic-token.{}.{}.lsp".format(token_type.lower(), token_modifiers[0].lower())
+                    else:
+                        scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(scope, []).append(r)

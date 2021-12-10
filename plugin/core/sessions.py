@@ -301,7 +301,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "valueSet": symbol_tag_value_set
             }
         },
-        "configuration": True
+        "configuration": True,
+        "codeLens": {
+            "refreshSupport": True
+        }
     }
     window_capabilities = {
         "showDocument": {
@@ -1316,6 +1319,12 @@ class Session(TransportCallbacks):
         """handles the workspace/applyEdit request"""
         self._apply_workspace_edit_async(params.get('edit', {})).then(
             lambda _: self.send_response(Response(request_id, {"applied": True})))
+
+    def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
+        """handles the workspace/codeLens/refresh request"""
+        for sv in self.session_views_async():
+            sv.start_code_lenses_async()
+        self.send_response(Response(request_id, None))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

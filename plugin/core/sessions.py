@@ -384,6 +384,8 @@ class SessionViewProtocol(Protocol):
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         ...
 
+    def start_code_lenses_async(self) -> None:
+        ...
 
 class SessionBufferProtocol(Protocol):
 
@@ -1322,9 +1324,10 @@ class Session(TransportCallbacks):
 
     def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
-        for sv in self.session_views_async():
-            sv.start_code_lenses_async()
-        self.send_response(Response(request_id, None))
+        if self.uses_plugin():
+            for sv in self.session_views_async():
+                sv.start_code_lenses_async()
+            self.send_response(Response(request_id, None))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

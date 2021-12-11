@@ -387,6 +387,7 @@ class SessionViewProtocol(Protocol):
     def start_code_lenses_async(self) -> None:
         ...
 
+
 class SessionBufferProtocol(Protocol):
 
     session = None  # type: Session

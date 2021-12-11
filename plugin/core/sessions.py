@@ -1328,7 +1328,7 @@ class Session(TransportCallbacks):
         if self.uses_plugin():
             for sv in self.session_views_async():
                 sv.start_code_lenses_async()
-            self.send_response(Response(request_id, None))
+        self.send_response(Response(request_id, None))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

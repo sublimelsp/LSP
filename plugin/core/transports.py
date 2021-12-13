@@ -142,6 +142,8 @@ class ProcessTransport(Transport[T]):
                     continue
 
                 def invoke(p: T) -> None:
+                    if self._closed:
+                        return
                     callback_object = self._callback_object()
                     if callback_object:
                         callback_object.on_payload(p)

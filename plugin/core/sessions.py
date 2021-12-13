@@ -19,6 +19,7 @@ from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLi
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
+from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentUri
@@ -45,7 +46,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Sequence, Mapping, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -301,7 +302,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "valueSet": symbol_tag_value_set
             }
         },
-        "configuration": True
+        "configuration": True,
+        "codeLens": {
+            "refreshSupport": True
+        }
     }
     window_capabilities = {
         "showDocument": {
@@ -340,10 +344,21 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
 
 class SessionViewProtocol(Protocol):
 
-    session = None  # type: Session
-    view = None  # type: sublime.View
-    listener = None  # type: Any
-    session_buffer = None  # type: Any
+    @property
+    def session(self) -> 'Session':
+        ...
+
+    @property
+    def view(self) -> sublime.View:
+        ...
+
+    @property
+    def listener(self) -> 'weakref.ref[AbstractViewListener]':
+        ...
+
+    @property
+    def session_buffer(self) -> 'SessionBufferProtocol':
+        ...
 
     def get_uri(self) -> Optional[str]:
         ...
@@ -381,11 +396,19 @@ class SessionViewProtocol(Protocol):
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         ...
 
+    def start_code_lenses_async(self) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
-    session = None  # type: Session
-    session_views = None  # type: WeakSet[SessionViewProtocol]
+    @property
+    def session(self) -> 'Session':
+        ...
+
+    @property
+    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        ...
 
     def get_uri(self) -> Optional[str]:
         ...
@@ -415,6 +438,93 @@ class SessionBufferProtocol(Protocol):
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
+
+
+class AbstractViewListener(metaclass=ABCMeta):
+
+    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
+
+    view = None  # type: sublime.View
+
+    @abstractmethod
+    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def sessions_async(self, capability_path: Optional[str] = None) -> Generator['Session', None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Iterable['SessionViewProtocol']:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_session_initialized_async(self, session: 'Session') -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_session_shutdown_async(self, session: 'Session') -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_async(
+        self
+    ) -> Iterable[Tuple['SessionBufferProtocol', Sequence[Tuple[Diagnostic, sublime.Region]]]]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_intersecting_region_async(
+        self,
+        region: sublime.Region
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_touching_point_async(
+        self,
+        pt: int,
+        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    def diagnostics_intersecting_async(
+        self,
+        region_or_point: Union[sublime.Region, int]
+    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+        if isinstance(region_or_point, int):
+            return self.diagnostics_touching_point_async(region_or_point)
+        elif region_or_point.empty():
+            return self.diagnostics_touching_point_async(region_or_point.a)
+        else:
+            return self.diagnostics_intersecting_region_async(region_or_point)
+
+    @abstractmethod
+    def on_diagnostics_updated_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_code_lens_capability_registered_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_language_id(self) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_uri(self) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def do_signature_help_async(self, manual: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def navigate_signature_help(self, forward: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
 
 
 class AbstractPlugin(metaclass=ABCMeta):
@@ -1316,6 +1426,13 @@ class Session(TransportCallbacks):
         """handles the workspace/applyEdit request"""
         self._apply_workspace_edit_async(params.get('edit', {})).then(
             lambda _: self.send_response(Response(request_id, {"applied": True})))
+
+    def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
+        """handles the workspace/codeLens/refresh request"""
+        if self.uses_plugin():
+            for sv in self.session_views_async():
+                sv.start_code_lenses_async()
+        self.send_response(Response(request_id, None))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

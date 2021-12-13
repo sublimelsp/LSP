@@ -5,6 +5,7 @@ from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
+from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
@@ -68,9 +69,9 @@ class SessionBuffer:
         self.opened = False
         # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
         self.capabilities = Capabilities()
-        self.session = session_view.session
-        self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
-        self.session_views.add(session_view)
+        self._session = session_view.session
+        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
+        self._session_views.add(session_view)
         self.last_known_uri = uri
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
@@ -86,7 +87,7 @@ class SessionBuffer:
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._check_did_open(view)
-        self.session.register_session_buffer_async(self)
+        self._session.register_session_buffer_async(self)
 
     def __del__(self) -> None:
         mgr = self.session.manager()
@@ -99,6 +100,14 @@ class SessionBuffer:
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
             self._check_did_close()
             self.session.unregister_session_buffer_async(self)
+
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    @property
+    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        return self._session_views
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():

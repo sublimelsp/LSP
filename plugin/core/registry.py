@@ -1,8 +1,8 @@
 from .configurations import ConfigManager
+from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable
-from .windows import AbstractViewListener
 from .windows import WindowRegistry
 import sublime
 import sublime_plugin

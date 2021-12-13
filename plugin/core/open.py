@@ -60,7 +60,11 @@ def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
     window = v.window()
     if window:
         window.focus_view(v)
-    v.show_at_center(selection)
+    if int(sublime.version()) >= 4124:
+        v.show_at_center(selection, animate=False)
+    else:
+        # TODO: remove later when a stable build lands
+        v.show_at_center(selection)  # type: ignore
     return v
 
 

@@ -855,7 +855,7 @@ class View:
     def show(self, x: Union[Selection, Region, int], show_surrounds: bool = ...) -> None:
         ...
 
-    def show_at_center(self, x: Union[Selection, Region, int]) -> None:
+    def show_at_center(self, x: Union[Selection, Region, int], animate: bool = True) -> None:
         ...
 
     def viewport_position(self) -> Tuple[int, int]:

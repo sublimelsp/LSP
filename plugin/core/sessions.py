@@ -701,16 +701,8 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
-        """
-        Constructs a new instance. Your instance is constructed after a response to the initialize request.
-
-        :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
-                                  self.weaksession(), but don't hold on to that reference.
-        """
-        self.weaksession = weaksession
-
-    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
+    @classmethod
+    def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
         The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
@@ -720,6 +712,15 @@ class AbstractPlugin(metaclass=ABCMeta):
         :returns:   The markdown language map, or None
         """
         return None
+
+    def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
+        """
+        Constructs a new instance. Your instance is constructed after a response to the initialize request.
+
+        :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
+                                  self.weaksession(), but don't hold on to that reference.
+        """
+        self.weaksession = weaksession
 
     def on_settings_changed(self, settings: DottedDict) -> None:
         """

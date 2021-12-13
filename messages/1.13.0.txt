@@ -1,0 +1,43 @@
+=> 1.13.0
+
+# New Helper Packages
+
+- LSP-julia: https://packagecontrol.io/packages/LSP-julia
+- LSP-gopls: https://packagecontrol.io/packages/LSP-gopls
+
+# Features and Fixes
+
+- Allow customizing diagnostics styles (#1856) (Krut Patel)
+  This adds back the ability to change the style of in-view diagnostics.
+  See the new settings "diagnostics_highlight_style" and "show_multiline_diagnostics_highlights"
+  accessible via the command palette by running "Preferences: LSP Settings".
+
+- Panel output/regex fixes (#1883) (Hans-Thomas Mueller)
+
+- Document fix for F4 not working (sublimelsp/LSP#1721). (Hans-Thomas Mueller)
+
+- Add lsp_save_all function (#1876) (Fernando Serboncini)
+  This allows you to run "code actions on save" and "format on save" for all open
+  views. See the example key binding accessible via the command palette by
+  running "Preferences: LSP Key Bindings".
+
+- Move diagnostic panel contributions from SessionBuffer to Session (#1881) (Hans-Thomas Mueller)
+  This ensures diagnostics from files not open in Sublime are no longer discarded
+  in the diagnostics panel. So, for language servers like metals and haskell-language-server
+  this allows you to get an entire overview of the possible problems in the project.
+  The diagnostics panel is accessible via the command palette by running
+  "LSP: Toggle Diagnostics Panel".
+
+- Ensure timeout messages during code-action-on-save are visible (Rafal Chlodnicki)
+
+- Fix signature help keybindings after core changes (#1878) (Rafał Chłodnicki)
+
+- Fix on_query_context returning wrong value for unknown contexts (#1879) (Janos Wortmann)
+
+- Add documentation for terraform-ls (#1861) (Mike Conigliaro)
+
+- Add AbstractPlugin.on_session_buffer_changed API (#1873) (Rafał Chłodnicki)
+
+- Fix console exception with panel logger enabled (#1867) (Rafał Chłodnicki)
+
+- Update docs for Julia language server (Janos Wortmann)

@@ -1,0 +1,30 @@
+=> 1.14.0
+
+# Features and Fixes
+
+- Fix LSP status field missing randomly (#1901) (Rafał Chłodnicki)
+
+- Fix color boxes not updating in some cases (#1899) (Rafał Chłodnicki)
+
+- Simplify Vala Language Server instructions (#1895) (Colin Kiama)
+
+- Include diagnostics when triggering codeAction request on save (#1896) (Rafał Chłodnicki)
+
+- Use new UnitTesting github actions (#1897) (Rafał Chłodnicki)
+
+- Remove unused context in "goto definition" keybindings (Rafal Chlodnicki)
+
+- "Goto Diagnostic" quick panels (#1884) (Hans-Thomas Mueller)
+  You can now more comfortably browse through the diagnostics in the current
+  file by pressing F8. Pressing Shift+F8 will allow you to browse through the
+  diagnostics across the entire project.
+  This functionality replaces the old behavior of using Sublime's built-in
+  `next_result` command.
+  To modify the default key bindings, run "Preferences: LSP Key Bindings" from
+  the command palette.
+
+- Don't restart all servers on changing LSP-* plugin settings (#1893) (Rafał Chłodnicki)
+
+- report didChangeWatchedFiles capability in a correct place (#1892) (Rafał Chłodnicki)
+
+- Don't resolve code lenses if server doesn't support resolving (#1888) (Rafał Chłodnicki)

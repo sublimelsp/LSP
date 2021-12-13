@@ -1,9 +1,10 @@
 {
     "*": {
-        ">=3124": [
+        ">=4096": [
             "backrefs",
             "bracex",
             "mdpopups",
+            "pathlib",
             "pyyaml",
             "wcmatch"
         ]

@@ -14,64 +14,20 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
 
-env:
-  CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-  SUBLIME_TEXT_VERSION: "4"
-  SUBLIME_TEXT_ARCH: x64
-  PACKAGE: LSP
-  UNITTESTING_TAG: master
-
 jobs:
-  Windows:
-    runs-on: windows-latest
+  Unittesting:
+    name: Unittesting (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v2
+      - uses: SublimeText/UnitTesting/actions/setup@v1
+      - uses: SublimeText/UnitTesting/actions/run-tests@v1
         with:
-          python-version: '3.8'
-      - run: (new-object net.webclient).DownloadFile("https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.ps1","github.ps1")
-      - run: python tests/server.py --version
-      - run: python tests/adjust_unittesting_config_for_ci.py
-      - run: |
-          ./github.ps1 "bootstrap" -verbose
-          ./github.ps1 "install_package_control" -verbose
-          ./github.ps1 "run_tests" -coverage -verbose
-        name: Run UnitTesting tests
-
-  macOS:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v1
-      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: echo "$HOME/Library/Python/3.7/bin" >> $GITHUB_PATH
-      - run: python3 tests/server.py --version
-      - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
-      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
-      - run: |
-          sh github.sh bootstrap
-          sh github.sh install_package_control
-          sh github.sh run_tests
-        name: Run UnitTesting tests
-
-  Linux:
-    runs-on: ubuntu-latest
-    container:
-      image: sublimetext/unittesting
-      options: --cap-add=NET_ADMIN
-    steps:
-      - uses: actions/checkout@v1
-      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: sudo apt update
-      - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
-      - run: sh -e /etc/init.d/xvfb start
-      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
-      - run: python3 tests/server.py --version
-      - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
-      - run: |
-          sh github.sh bootstrap
-          sh github.sh install_package_control
-          sh github.sh run_tests
-        name: Run UnitTesting tests
+          coverage: true
 
   Lint:
     runs-on: ubuntu-latest
@@ -82,7 +38,7 @@ jobs:
           python-version: '3.8'
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils
-      - run: pip3 install mypy==0.790 flake8==3.8.3 yapf==0.30.0 --user
+      - run: pip3 install mypy==0.910 flake8==3.9.2 yapf==0.31.0 --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: mypy -p plugin
       - run: flake8 plugin tests

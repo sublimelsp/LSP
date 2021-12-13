@@ -14,6 +14,7 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import windows
+from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
@@ -25,16 +26,13 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
-from .core.views import document_color_params
 from .core.views import first_selection_region
 from .core.views import format_completion
-from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -138,8 +136,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
-    _uri = None  # type: str
-
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
@@ -154,7 +150,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if this is not None:
                 this._on_settings_object_changed()
 
-        self._current_syntax = None
+        self._uri = ''  # assumed to never be falsey
+        self._current_syntax = self.view.settings().get("syntax")
         existing_uri = view.settings().get("lsp_uri")
         if isinstance(existing_uri, str):
             self._uri = existing_uri
@@ -176,7 +173,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
-        self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SigHelp]
         self._registered = False
 
@@ -186,7 +182,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_region = sublime.Region(-1, -1)
-        self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
@@ -224,12 +219,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
-            self._do_color_boxes_async()
             self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
         if removed_session:
+            removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
                 self._registered = False
@@ -250,12 +245,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         region: sublime.Region
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
-        covering = sublime.Region(region.a, region.b)
+        covering = sublime.Region(region.begin(), region.end())
         result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
-                if region.intersects(candidate):
+                # Checking against points is inclusive unlike checking whether region intersects another
+                # region which is exclusive (at region end) and we want an inclusive behavior in this case.
+                if region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
@@ -320,8 +317,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
-        self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
-                                                  after_ms=self.color_boxes_debounce_time)
         self.do_signature_help_async(manual=False)
         self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                   after_ms=self.code_lenses_debounce_time)
@@ -540,18 +535,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(self.CODE_ACTIONS_KEY)
-
-    # --- textDocument/documentColor -----------------------------------------------------------------------------------
-
-    def _do_color_boxes_async(self) -> None:
-        session = self.session_async("colorProvider")
-        if session:
-            session.send_request_async(
-                Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
-
-    def _on_color_boxes(self, response: Any) -> None:
-        color_infos = response if response else []
-        self._color_phantoms.update([lsp_color_to_phantom(self.view, color_info) for color_info in color_infos])
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
@@ -792,6 +775,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         def clear_async() -> None:
             nonlocal session_views
+            for session_view in session_views.values():
+                session_view.on_before_remove()
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)

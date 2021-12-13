@@ -61,6 +61,14 @@ def parse_uri(uri: str) -> Tuple[str, str]:
     return parsed.scheme, uri
 
 
+def unparse_uri(parsed_uri: Tuple[str, str]) -> str:
+    """
+    Reverse of `parse_uri()`.
+    """
+    scheme, path = parsed_uri
+    return filename_to_uri(path) if scheme == "file" else path
+
+
 def _to_resource_uri(path: str, prefix: str) -> str:
     """
     Terrible hacks from ST core leak into packages as well.

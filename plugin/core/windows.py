@@ -2,34 +2,32 @@ from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import ensure_diagnostics_panel
+from .diagnostics_manager import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
 from .promise import Promise
-from .protocol import Diagnostic
-from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
+from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
-from .sessions import SessionBufferProtocol
-from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
 from .url import parse_uri
 from .views import extract_variables
+from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
-from abc import ABCMeta
-from abc import abstractmethod
+from collections import OrderedDict
 from collections import deque
 from subprocess import CalledProcessError
 from time import time
@@ -43,91 +41,6 @@ import urllib.parse
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
-
-
-class AbstractViewListener(metaclass=ABCMeta):
-
-    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
-
-    view = None  # type: sublime.View
-
-    @abstractmethod
-    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def sessions_async(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def session_views_async(self) -> Iterable[SessionViewProtocol]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_session_initialized_async(self, session: Session) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_session_shutdown_async(self, session: Session) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_async(self) -> Iterable[Tuple[SessionBufferProtocol, Sequence[Tuple[Diagnostic, sublime.Region]]]]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_intersecting_region_async(
-        self,
-        region: sublime.Region
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_touching_point_async(
-        self,
-        pt: int,
-        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        raise NotImplementedError()
-
-    def diagnostics_intersecting_async(
-        self,
-        region_or_point: Union[sublime.Region, int]
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        if isinstance(region_or_point, int):
-            return self.diagnostics_touching_point_async(region_or_point)
-        elif region_or_point.empty():
-            return self.diagnostics_touching_point_async(region_or_point.a)
-        else:
-            return self.diagnostics_intersecting_region_async(region_or_point)
-
-    @abstractmethod
-    def on_diagnostics_updated_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_code_lens_capability_registered_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_language_id(self) -> str:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_uri(self) -> str:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def do_signature_help_async(self, manual: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def navigate_signature_help(self, forward: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_post_move_window_async(self) -> None:
-        raise NotImplementedError()
 
 
 def extract_message(params: Any) -> str:
@@ -413,22 +326,17 @@ class WindowManager(Manager):
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
-    def restart_sessions_async(self) -> None:
-        self._end_sessions_async()
+    def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
+        self._end_sessions_async(config_name)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self) -> None:
-        for session in self._sessions:
-            session.end_async()
-        self._sessions.clear()
-
-    def end_config_sessions_async(self, config_name: str) -> None:
+    def _end_sessions_async(self, config_name: Optional[str] = None) -> None:
         sessions = list(self._sessions)
         for session in sessions:
-            if session.config.name == config_name:
+            if config_name is None or config_name == session.config.name:
                 session.end_async()
                 self._sessions.discard(session)
 
@@ -504,20 +412,29 @@ class WindowManager(Manager):
         listeners = list(self._listeners)
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
+        max_severity = userprefs().diagnostics_panel_include_severity_level
+        contributions = OrderedDict(
+        )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
         for session in self._sessions:
             local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
-            for path, contribution in session.diagnostics_manager.diagnostics_panel_contributions_async():
-                to_render.append("{}:".format(path))
-                row += 1
-                for content, offset, code, href in contribution:
-                    to_render.append(content)
-                    if offset is not None and code is not None and href is not None:
-                        prephantoms.append((row, offset, code, href))
-                    row += content.count("\n") + 1
-                to_render.append("")  # add spacing between filenames
-                row += 1
+            for (_, path), contribution in session.diagnostics_manager.filter_map_diagnostics_async(
+                    is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
+                seen = path in contributions
+                contributions.setdefault(path, []).extend(contribution)
+                if not seen:
+                    contributions.move_to_end(path)
+        for path, contribution in contributions.items():
+            to_render.append("{}:".format(path))
+            row += 1
+            for content, offset, code, href in contribution:
+                to_render.append(content)
+                if offset is not None and code is not None and href is not None:
+                    prephantoms.append((row, offset, code, href))
+                row += content.count("\n") + 1
+            to_render.append("")  # add spacing between filenames
+            row += 1
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)

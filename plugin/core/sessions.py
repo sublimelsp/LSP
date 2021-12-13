@@ -710,7 +710,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
-    def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap:
+    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
         The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
@@ -1161,7 +1161,7 @@ class Session(TransportCallbacks):
 
     # --- misc methods -------------------------------------------------------------------------------------------------
 
-    def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap:
+    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
         return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
 
     def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:

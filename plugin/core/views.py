@@ -33,7 +33,7 @@ import sublime
 import sublime_plugin
 import tempfile
 
-MarkdownLangMap = Optional[Dict[str, Tuple[Sequence[str], Sequence[str]]]]
+MarkdownLangMap = Dict[str, Tuple[Sequence[str], Sequence[str]]]
 
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
@@ -453,7 +453,7 @@ def minihtml(
     view: sublime.View,
     content: Union[MarkedString, MarkupContent, List[MarkedString]],
     allowed_formats: int,
-    language_id_map: MarkdownLangMap = None
+    language_id_map: Optional[MarkdownLangMap] = None
 ) -> str:
     """
     Formats provided input content into markup accepted by minihtml.

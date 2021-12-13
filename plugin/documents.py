@@ -470,7 +470,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         response: Optional[SignatureHelp],
         point: int,
-        language_map: MarkdownLangMap
+        language_map: Optional[MarkdownLangMap]
     ) -> None:
         self._sighelp = SigHelp.from_lsp(response, language_map)
         if self._sighelp:

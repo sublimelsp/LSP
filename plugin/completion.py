@@ -38,11 +38,11 @@ class LspResolveDocsCommand(LspTextCommand):
     def _format_documentation(
         self,
         content: Union[str, Dict[str, str]],
-        language_map: MarkdownLangMap
+        language_map: Optional[MarkdownLangMap]
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
-    def _handle_resolve_response_async(self, language_map: MarkdownLangMap, item: CompletionItem) -> None:
+    def _handle_resolve_response_async(self, language_map: Optional[MarkdownLangMap], item: CompletionItem) -> None:
         detail = ""
         documentation = ""
         if item:

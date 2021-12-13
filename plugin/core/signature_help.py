@@ -41,7 +41,7 @@ class SigHelp:
     determined by what the end-user is doing.
     """
 
-    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap) -> None:
+    def __init__(self, state: SignatureHelp, language_map: Optional[MarkdownLangMap]) -> None:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
@@ -49,7 +49,11 @@ class SigHelp:
         self._active_parameter_index = self._state.get("activeParameter") or 0
 
     @classmethod
-    def from_lsp(cls, sighelp: Optional[SignatureHelp], language_map: MarkdownLangMap) -> "Optional[SigHelp]":
+    def from_lsp(
+        cls,
+        sighelp: Optional[SignatureHelp],
+        language_map: Optional[MarkdownLangMap]
+    ) -> "Optional[SigHelp]":
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
         if sighelp is None or not sighelp.get("signatures"):
             return None

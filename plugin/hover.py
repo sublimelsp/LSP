@@ -102,7 +102,7 @@ class LspHoverCommand(LspTextCommand):
         hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
-        self._hover_responses = []  # type: List[Tuple[Hover, MarkdownLangMap]]
+        self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -127,7 +127,7 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        language_maps = []  # type: List[MarkdownLangMap]
+        language_maps = []  # type: List[Optional[MarkdownLangMap]]
         for session in listener.sessions_async('hoverProvider'):
             document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
@@ -151,10 +151,10 @@ class LspHoverCommand(LspTextCommand):
         self,
         listener: AbstractViewListener,
         point: int,
-        language_maps: List[MarkdownLangMap],
+        language_maps: List[Optional[MarkdownLangMap]],
         responses: List[ResolvedHover]
     ) -> None:
-        hovers = []  # type: List[Tuple[Hover, MarkdownLangMap]]
+        hovers = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         errors = []  # type: List[Error]
         for response, language_map in zip(responses, language_maps):
             if isinstance(response, Error):

@@ -546,6 +546,9 @@ class SessionBuffer:
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh
 
+    def get_semantic_tokens(self) -> List[SemanticToken]:
+        return self.semantic_tokens.tokens
+
     # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:

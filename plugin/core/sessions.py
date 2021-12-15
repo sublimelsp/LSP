@@ -518,6 +518,9 @@ class SessionBufferProtocol(Protocol):
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
+    def get_semantic_tokens(self) -> List[Any]:
+        ...
+
 
 class AbstractViewListener(metaclass=ABCMeta):
 

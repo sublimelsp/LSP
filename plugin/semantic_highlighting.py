@@ -58,7 +58,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         token_modifiers = '-'
 
         if session_buffer:
-            for token in session_buffer.semantic_tokens.tokens:
+            for token in session_buffer.get_semantic_tokens():
                 if token.region.contains(point) and point < token.region.end():
                     token_type = token.type
                     if token.modifiers:

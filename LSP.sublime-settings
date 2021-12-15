@@ -106,9 +106,8 @@
   "diagnostics_gutter_marker": "dot",
 
   // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).
-  // Note: Must be supported by the language server and also requires a special rule in the
-  // color scheme to work. If you use none of the built-in color schemes from Sublime Text,
-  // please see the documentation under
+  // Note: Must be supported by the language server and also requires a special rule
+  // in the color scheme to work. Please see the documentation under
   //   https://lsp.sublimetext.io/customization/#semantic-highlighting
   // for a description about how to configure your color scheme for semantic highlighting.
   "semantic_highlighting": false,

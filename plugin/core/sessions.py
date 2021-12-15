@@ -512,6 +512,12 @@ class SessionBufferProtocol(Protocol):
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
 
+    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+        ...
+
 
 class AbstractViewListener(metaclass=ABCMeta):
 
@@ -1537,7 +1543,7 @@ class Session(TransportCallbacks):
             if sheet in selected_sheets:
                 sv.session_buffer.do_semantic_tokens_async(view)
             else:
-                sv.session_buffer.semantic_tokens.needs_refresh = True
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

@@ -543,5 +543,10 @@ class SessionBuffer:
         for scope in self.semantic_tokens.active_scopes:
             view.erase_regions("lsp_{}".format(scope))
 
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.semantic_tokens.needs_refresh = needs_refresh
+
+    # ------------------------------------------------------------------------------------------------------------------
+
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

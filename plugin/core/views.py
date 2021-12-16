@@ -33,7 +33,7 @@ import sublime
 import sublime_plugin
 import tempfile
 
-MarkdownLangMap = Dict[str, Tuple[Sequence[str], Sequence[str]]]
+MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 

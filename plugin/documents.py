@@ -29,6 +29,7 @@ from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
+from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
@@ -459,8 +460,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if manual or last_char in triggers:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
-            session.send_request_async(
-                Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
+            language_map = session.markdown_language_id_to_st_syntax_map()
+            request = Request.signatureHelp(params, self.view)
+            session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
             # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
@@ -476,8 +478,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return None
         return self.session_async("signatureHelpProvider", pos)
 
-    def _on_signature_help(self, response: Optional[SignatureHelp], point: int) -> None:
-        self._sighelp = SigHelp.from_lsp(response)
+    def _on_signature_help(
+        self,
+        response: Optional[SignatureHelp],
+        point: int,
+        language_map: Optional[MarkdownLangMap]
+    ) -> None:
+        self._sighelp = SigHelp.from_lsp(response, language_map)
         if self._sighelp:
             content = self._sighelp.render(self.view)
 

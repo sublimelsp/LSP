@@ -20,10 +20,13 @@ from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html
-from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import FORMAT_MARKED_STRING
+from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
+from .core.views import MarkdownLangMap
+from .core.views import minihtml
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import text_document_range_params
@@ -99,7 +102,7 @@ class LspHoverCommand(LspTextCommand):
         hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
-        self._hover_responses = []  # type: List[Hover]
+        self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -124,13 +127,16 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
+        language_maps = []  # type: List[Optional[MarkdownLangMap]]
         for session in listener.sessions_async('hoverProvider'):
             document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))
+            language_maps.append(session.markdown_language_id_to_st_syntax_map())
 
-        Promise.all(hover_promises).then(lambda responses: self._on_all_settled(responses, listener, point))
+        continuation = functools.partial(self._on_all_settled, listener, point, language_maps)
+        Promise.all(hover_promises).then(continuation)
 
     def _create_hover_request(
         self, session: Session, point: int
@@ -141,15 +147,21 @@ class LspHoverCommand(LspTextCommand):
                 return text_document_range_params(self.view, point, region)
         return text_document_position_params(self.view, point)
 
-    def _on_all_settled(self, responses: List[ResolvedHover], listener: AbstractViewListener, point: int) -> None:
-        hovers = []  # type: List[Hover]
+    def _on_all_settled(
+        self,
+        listener: AbstractViewListener,
+        point: int,
+        language_maps: List[Optional[MarkdownLangMap]],
+        responses: List[ResolvedHover]
+    ) -> None:
+        hovers = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         errors = []  # type: List[Error]
-        for response in responses:
+        for response, language_map in zip(responses, language_maps):
             if isinstance(response, Error):
                 errors.append(response)
                 continue
             if response:
-                hovers.append(response)
+                hovers.append((response, language_map))
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
             sublime.status_message('Hover error: {}'.format(error_messages))
@@ -204,9 +216,10 @@ class LspHoverCommand(LspTextCommand):
 
     def hover_content(self) -> str:
         contents = []
-        for hover_response in self._hover_responses:
-            content = (hover_response.get('contents') or '') if isinstance(hover_response, dict) else ''
-            contents.append(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT))
+        for hover, language_map in self._hover_responses:
+            content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
+            allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+            contents.append(minihtml(self.view, content, allowed_formats, language_map))
         return '<hr>'.join(contents)
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:

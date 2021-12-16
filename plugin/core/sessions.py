@@ -54,6 +54,7 @@ from .views import COMPLETION_KINDS
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
+from .views import MarkdownLangMap
 from .views import SYMBOL_KINDS
 from .views import to_encoded_filename
 from .workspace import is_subpath_of
@@ -700,6 +701,18 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    @classmethod
+    def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
+        """
+        Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
+        The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
+
+        See: https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map
+
+        :returns:   The markdown language map, or None
+        """
+        return None
+
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
         Constructs a new instance. Your instance is constructed after a response to the initialize request.
@@ -1148,6 +1161,9 @@ class Session(TransportCallbacks):
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
     # --- misc methods -------------------------------------------------------------------------------------------------
+
+    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
+        return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
 
     def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():

@@ -1765,7 +1765,7 @@ class Session(TransportCallbacks):
             request: Request,
             on_result: Callable[[Any], None],
             on_error: Optional[Callable[[Any], None]] = None
-    ) -> None:
+    ) -> int:
         """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
         self.request_id += 1
         request_id = self.request_id
@@ -1777,6 +1777,7 @@ class Session(TransportCallbacks):
             self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
+        return request_id
 
     def send_request(
             self,
@@ -1792,6 +1793,12 @@ class Session(TransportCallbacks):
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
+
+    def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
+        self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+        if ignore_response and request_id in self._response_handlers:
+            request, _, _ = self._response_handlers[request_id]
+            self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification) -> None:
         if self._plugin:

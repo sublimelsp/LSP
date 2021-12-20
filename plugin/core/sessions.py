@@ -1081,7 +1081,7 @@ class Session(TransportCallbacks):
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
-        self.semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)  # type: Tuple[Tuple[str, str], ...]
+        self.semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
         """

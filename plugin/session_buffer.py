@@ -442,7 +442,6 @@ class SessionBuffer:
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
-        # time.sleep(0.2)  # for testing with clangd
         if not userprefs().semantic_highlighting:
             return
         if not self.session.has_capability("semanticTokensProvider"):
@@ -457,20 +456,17 @@ class SessionBuffer:
         if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
-            request_id = self.session.send_request_async(
+            self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
-            self.semantic_tokens.pending_response = request_id
         elif self.session.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(params, view)
-            request_id = self.session.send_request_async(
+            self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-            self.semantic_tokens.pending_response = request_id
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region()).to_lsp()
             request = Request.semanticTokensRange(params, view)
-            request_id = self.session.send_request_async(
+            self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-            self.semantic_tokens.pending_response = request_id
 
     def _on_semantic_tokens_async(self, response: Optional[Dict]) -> None:
         if response:
@@ -529,6 +525,7 @@ class SessionBuffer:
                 # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
                 # customizations in the color scheme for the scopes of custom token types would require a restart of
                 # Sublime Text to take effect.
+                # Note that the region keys for these scopes are not initialized in SessionView._initialize_region_keys.
                 token_general_style = view.style_for_scope("meta.semantic-token")
                 token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \

@@ -280,6 +280,11 @@
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",
             },
+            "confirm_global_rename": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Display a confirmation prompt before performing global rename operations that will modify more than one file."
+            },
             "show_diagnostics_in_view_status": {
               "type": "boolean",
               "default": true,

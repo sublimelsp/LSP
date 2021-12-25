@@ -8,6 +8,7 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.settings import userprefs
 from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
 from .core.views import first_selection_region, range_to_region, get_line
@@ -126,7 +127,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             if response:
                 changes = parse_workspace_edit(response)
                 file_count = len(changes.keys())
-                if file_count > 1:
+                if file_count > 1 and userprefs().confirm_global_rename:
                     total_changes = sum(map(len, changes.values()))
                     message = "Replace {} occurrences across {} files?".format(total_changes, file_count)
                     choice = sublime.yes_no_cancel_dialog(message, "Replace", "Dry Run")

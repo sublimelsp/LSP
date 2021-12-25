@@ -10,6 +10,10 @@
   // "settings" section of project files.
   "lsp_format_on_save": false,
 
+  // Display a confirmation prompt before performing global rename operations
+  // that will modify more than one file.
+  "confirm_global_rename": true,
+
   // A dictionary of code action identifiers that should be triggered on save.
   //
   // Code action identifiers are not officially standardized so refer to specific

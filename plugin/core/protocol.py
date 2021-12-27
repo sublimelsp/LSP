@@ -51,6 +51,44 @@ class InsertTextMode:
     AdjustIndentation = 2
 
 
+class SemanticTokenTypes:
+    Namespace = "namespace"
+    Type = "type"
+    Class = "class"
+    Enum = "enum"
+    Interface = "interface"
+    Struct = "struct"
+    TypeParameter = "typeParameter"
+    Parameter = "parameter"
+    Variable = "variable"
+    Property = "property"
+    EnumMember = "enumMember"
+    Event = "event"
+    Function = "function"
+    Method = "method"
+    Macro = "macro"
+    Keyword = "keyword"
+    Modifier = "modifier"
+    Comment = "comment"
+    String = "string"
+    Number = "number"
+    Regexp = "regexp"
+    Operator = "operator"
+
+
+class SemanticTokenModifiers:
+    Declaration = "declaration"
+    Definition = "definition"
+    Readonly = "readonly"
+    Static = "static"
+    Deprecated = "deprecated"
+    Abstract = "abstract"
+    Async = "async"
+    Modification = "modification"
+    Documentation = "documentation"
+    DefaultLibrary = "defaultLibrary"
+
+
 DocumentUri = str
 
 Position = TypedDict('Position', {
@@ -315,6 +353,18 @@ class Request:
     @classmethod
     def documentHighlight(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/documentHighlight", params, view)
+
+    @classmethod
+    def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full", params, view)
+
+    @classmethod
+    def semanticTokensFullDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full/delta", params, view)
+
+    @classmethod
+    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/range", params, view)
 
     @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':

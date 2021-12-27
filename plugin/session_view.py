@@ -39,6 +39,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
+        self._initialize_region_keys()
         self.active_requests = {}  # type: Dict[int, Request]
         self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
@@ -97,6 +98,31 @@ class SessionView:
 
     def _is_listener_alive(self) -> bool:
         return bool(self.listener())
+
+    def _initialize_region_keys(self) -> None:
+        """
+        Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
+        diagnostics, semantic tokens and document highlights, see https://github.com/sublimelsp/LSP/issues/1593.
+        """
+        r = [sublime.Region(0, 0)]
+        document_highlight_style = userprefs().document_highlight_style
+        document_highlight_kinds = ["text", "read", "write"]
+        line_modes = ["m", "s"]
+        for key, scope in self.session.semantic_tokens_map:
+            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, key), r)
+        if document_highlight_style == "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        for severity in range(1, 5):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+                for tag in range(1, 3):
+                    self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
+        if document_highlight_style != "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

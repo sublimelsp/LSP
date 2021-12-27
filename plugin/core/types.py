@@ -202,6 +202,7 @@ class Settings:
     only_show_lsp_completions = None  # type: bool
     popup_max_characters_height = None  # type: int
     popup_max_characters_width = None  # type: int
+    semantic_highlighting = None  # type: bool
     show_code_actions = None  # type: str
     show_code_lens = None  # type: str
     show_code_actions_in_hover = None  # type: bool
@@ -237,6 +238,7 @@ class Settings:
         r("only_show_lsp_completions", False)
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
+        r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
         r("show_code_actions_in_hover", True)
@@ -638,6 +640,7 @@ class ClientConfig:
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
+                 semantic_tokens: Optional[Dict[str, str]] = None,
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -662,6 +665,7 @@ class ClientConfig:
         self.file_watcher = file_watcher
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
+        self.semantic_tokens = semantic_tokens
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -672,6 +676,7 @@ class ClientConfig:
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
+        semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
@@ -692,6 +697,7 @@ class ClientConfig:
             experimental_capabilities=s.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
+            semantic_tokens=semantic_tokens,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -720,6 +726,7 @@ class ClientConfig:
             experimental_capabilities=d.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
+            semantic_tokens=d.get("semantic_tokens", dict()),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -748,6 +755,7 @@ class ClientConfig:
                 "experimental_capabilities", src_config.experimental_capabilities),
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
+            semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

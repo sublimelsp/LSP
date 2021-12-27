@@ -339,8 +339,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
-            self._register_async()
+        if not self.view.is_loading() and is_regular_view(self.view):
+            if not self._registered:
+                self._register_async()
+            for sb in self.session_buffers_async():
+                if sb.semantic_tokens.needs_refresh:
+                    sb.semantic_tokens.needs_refresh = False
+                    sb.do_semantic_tokens_async(self.view)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
@@ -409,6 +414,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
         self.view.run_command("lsp_hover", {"point": point})
+
+    def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
+        if command_name == "show_scope_name" and userprefs().semantic_highlighting:
+            session = self.session_async("semanticTokensProvider")
+            if session:
+                return ("lsp_show_scope_name", {})
+        return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:

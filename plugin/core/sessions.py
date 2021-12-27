@@ -33,6 +33,8 @@ from .protocol import Notification
 from .protocol import RangeLsp
 from .protocol import Request
 from .protocol import Response
+from .protocol import SemanticTokenModifiers
+from .protocol import SemanticTokenTypes
 from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
@@ -56,6 +58,8 @@ from .views import COMPLETION_KINDS
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
+from .views import MarkdownLangMap
+from .views import SEMANTIC_TOKENS_MAP
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
@@ -69,6 +73,51 @@ import weakref
 
 
 InitCallback = Callable[['Session', bool], None]
+
+
+def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
+    tokens_scope_map = SEMANTIC_TOKENS_MAP.copy()
+    if custom_tokens_map is not None:
+        tokens_scope_map.update(custom_tokens_map)
+    return tuple(sorted(tokens_scope_map.items()))  # make map hashable
+
+
+@functools.lru_cache(maxsize=128)
+def decode_semantic_token(
+    types_legend: Tuple[str, ...],
+    modifiers_legend: Tuple[str, ...],
+    tokens_scope_map: Tuple[Tuple[str, str], ...],
+    token_type_encoded: int,
+    token_modifiers_encoded: int
+) -> Tuple[str, List[str], Optional[str]]:
+    """
+    This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
+    the server. It also returns the corresponding scope name, which will be used for the highlighting color, either
+    derived from a predefined scope map if the token type is one of the types defined in the LSP specs, or from a scope
+    for custom token types if it was added in the client configuration (will be `None` if no scope has been defined for
+    the custom token type).
+    """
+
+    token_type = types_legend[token_type_encoded]
+    token_modifiers = [modifiers_legend[idx]
+                       for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+    scope = None
+    tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
+    if token_type in tokens_scope_map_dict:
+        for token_modifier in token_modifiers:
+            # this approach is limited to consider at most one modifier for the scope lookup
+            key = "{}.{}".format(token_type, token_modifier)
+            if key in tokens_scope_map_dict:
+                scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
+                    token_type.lower(), token_modifier.lower())
+                break  # first match wins (in case of multiple modifiers)
+        else:
+            scope = tokens_scope_map_dict[token_type]
+            if token_modifiers:
+                scope += " meta.semantic-token.{}.{}.lsp".format(token_type.lower(), token_modifiers[0].lower())
+            else:
+                scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
+    return token_type, token_modifiers, scope
 
 
 class Manager(metaclass=ABCMeta):
@@ -143,6 +192,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     diagnostic_tag_value_set = [v for k, v in DiagnosticTag.__dict__.items() if not k.startswith('_')]
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
+    semantic_token_types = [v for k, v in SemanticTokenTypes.__dict__.items() if not k.startswith('_')]
+    if config.semantic_tokens is not None:
+        for token_type in config.semantic_tokens.keys():
+            if token_type not in semantic_token_types:
+                semantic_token_types.append(token_type)
+    semantic_token_modifiers = [v for k, v in SemanticTokenModifiers.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -281,6 +336,22 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "codeLens": {
             "dynamicRegistration": True
+        },
+        "semanticTokens": {
+            "dynamicRegistration": True,
+            "requests": {
+                "range": True,
+                "full": {
+                    "delta": True
+                }
+            },
+            "tokenTypes": semantic_token_types,
+            "tokenModifiers": semantic_token_modifiers,
+            "formats": [
+                "relative"
+            ],
+            "overlappingTokenSupport": False,
+            "multilineTokenSupport": True
         }
     }
     workspace_capabilites = {
@@ -305,6 +376,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "configuration": True,
         "codeLens": {
+            "refreshSupport": True
+        },
+        "semanticTokens": {
             "refreshSupport": True
         }
     }
@@ -438,6 +512,15 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+        ...
+
+    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+        ...
+
+    def get_semantic_tokens(self) -> List[Any]:
         ...
 
 
@@ -700,6 +783,18 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      configuration:      The configuration
         """
         pass
+
+    @classmethod
+    def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
+        """
+        Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
+        The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
+
+        See: https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map
+
+        :returns:   The markdown language map, or None
+        """
+        return None
 
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
@@ -987,6 +1082,7 @@ class Session(TransportCallbacks):
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
+        self.semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1150,6 +1246,9 @@ class Session(TransportCallbacks):
 
     # --- misc methods -------------------------------------------------------------------------------------------------
 
+    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
+        return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
+
     def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():
             # A workspace-aware language server handles any path, both inside and outside the workspaces.
@@ -1211,6 +1310,12 @@ class Session(TransportCallbacks):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+        semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
+        if semantic_token_types:
+            debug('{}: Supported semantic token types: {}'.format(self.config.name, semantic_token_types))
+        semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
+        if semantic_token_modifiers:
+            debug('{}: Supported semantic token modifiers: {}'.format(self.config.name, semantic_token_modifiers))
         if self._watcher_impl:
             config = self.config.file_watcher
             patterns = config.get('patterns')
@@ -1421,6 +1526,13 @@ class Session(TransportCallbacks):
             promises.append(self.open_uri_async(uri).then(functools.partial(apply_edits, edits)))
         return Promise.all(promises).then(lambda _: None)
 
+    def decode_semantic_token(
+            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
+        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        return decode_semantic_token(
+            types_legend, modifiers_legend, self.semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
+
     # --- server request handlers --------------------------------------------------------------------------------------
 
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
@@ -1461,6 +1573,24 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 sv.start_code_lenses_async()
         self.send_response(Response(request_id, None))
+
+    def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
+        """handles the workspace/semanticTokens/refresh request"""
+        self.send_response(Response(request_id, None))
+        selected_sheets = []
+        for group in range(self.window.num_groups()):
+            selected_sheets.extend(self.window.selected_sheets_in_group(group))
+        for sheet in self.window.sheets():
+            view = sheet.view()
+            if not view:
+                continue
+            sv = self.session_view_for_view_async(view)
+            if not sv:
+                continue
+            if sheet in selected_sheets:
+                sv.session_buffer.do_semantic_tokens_async(view)
+            else:
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
@@ -1663,7 +1793,7 @@ class Session(TransportCallbacks):
             request: Request,
             on_result: Callable[[Any], None],
             on_error: Optional[Callable[[Any], None]] = None
-    ) -> None:
+    ) -> int:
         """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
         self.request_id += 1
         request_id = self.request_id
@@ -1675,6 +1805,7 @@ class Session(TransportCallbacks):
             self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
+        return request_id
 
     def send_request(
             self,
@@ -1690,6 +1821,12 @@ class Session(TransportCallbacks):
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
+
+    def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
+        self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+        if ignore_response and request_id in self._response_handlers:
+            request, _, _ = self._response_handlers[request_id]
+            self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification) -> None:
         if self._plugin:

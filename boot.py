@@ -61,6 +61,7 @@ from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
+from .plugin.semantic_highlighting import LspShowScopeNameCommand
 from .plugin.symbols import LspDocumentSymbolsCommand
 from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand

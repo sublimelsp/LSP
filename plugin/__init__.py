@@ -20,6 +20,7 @@ from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
+from .core.views import MarkdownLangMap
 
 # This is the public API for LSP-* packages
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'MarkdownLangMap',
     'matches_pattern',
     'Notification',
     'parse_uri',

@@ -74,6 +74,76 @@ There is an example in the [official ST documentation](https://www.sublimetext.c
 
 The following tables give an overview about the scope names used by LSP.
 
+### Semantic Highlighting
+
+!!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
+    Language servers which support semantic highlighting are for example *clangd* and *rust-analyzer*.
+
+In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
+LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
+If you use a custom color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
+
+```json
+{
+    "rules": [
+        {
+            "scope": "meta.semantic-token",
+            "background": "#00000101"
+        },
+    ]
+}
+```
+
+Furthermore it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
+
+| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenTypes) |
+| ----- | ------------------ |
+| `meta.semantic-token.namespace` | namespace |
+| `meta.semantic-token.type` | type |
+| `meta.semantic-token.class` | class |
+| `meta.semantic-token.enum` | enum |
+| `meta.semantic-token.interface` | interface |
+| `meta.semantic-token.struct` | struct |
+| `meta.semantic-token.typeparameter` | typeParameter |
+| `meta.semantic-token.parameter` | parameter |
+| `meta.semantic-token.variable` | variable |
+| `meta.semantic-token.property` | property |
+| `meta.semantic-token.enummember` | enumMember |
+| `meta.semantic-token.event` | event |
+| `meta.semantic-token.function` | function |
+| `meta.semantic-token.method` | method |
+| `meta.semantic-token.macro` | macro |
+| `meta.semantic-token.keyword` | keyword |
+| `meta.semantic-token.modifier` | modifier |
+| `meta.semantic-token.comment` | comment |
+| `meta.semantic-token.string` | string |
+| `meta.semantic-token.number` | number |
+| `meta.semantic-token.regexp` | regexp |
+| `meta.semantic-token.operator` | operator |
+
+By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the scopes specified above, the latter will take precedence.
+
+Language servers can also add their own custom token types, which are not defined in the protocol.
+A "LSP-*" helper package (or user) can provide a "semantic_tokens" mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
+Keys of this mapping should be the token types and values should be the corresponding scopes.
+Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenModifiers) can be addressed by apending the modifier after a dot.
+
+```json
+{
+    "semantic_tokens": {
+        "magicFunction": "support.function.builtin",
+        "selfParameter": "variable.language",
+        "type.defaultLibrary": "storage.type.builtin"
+    }
+}
+```
+
+The color for custom token types can also be adjusted via a color scheme rule for the scope `meta.semantic-token.<token-type>`, where `<token-type>` is the name of the custom token type, but with all letters lowercased (similar to the listed scopes in the table above).
+To target tokens with one modifier, use the scope `meta.semantic-token.<token-type>.<token-modifier>` (all lowercased).
+Currently, semantic tokens with more than one modifier cannot be styled reliably.
+
+If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via the regular syntax highlighting.
+
 ### Document Highlights
 
 !!! info "This feature is only available if the server has the *documentHighlightProvider* capability."

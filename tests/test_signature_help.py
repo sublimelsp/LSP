@@ -10,15 +10,15 @@ class SignatureHelpTest(unittest.TestCase):
         self.view = sublime.active_window().active_view()
 
     def test_no_signature(self) -> None:
-        help = SigHelp.from_lsp(None)
+        help = SigHelp.from_lsp(None, None)
         self.assertIsNone(help)
 
     def test_empty_signature_list(self) -> None:
-        help = SigHelp.from_lsp({"signatures": []})
+        help = SigHelp.from_lsp({"signatures": []}, None)
         self.assertIsNone(help)
 
     def assert_render(self, input: SignatureHelp, regex: str) -> None:
-        help = SigHelp(input)
+        help = SigHelp(input, None)
         assert self.view
         self.assertRegex(help.render(self.view), regex.replace("\n", "").replace("            ", ""))
 

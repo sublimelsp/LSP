@@ -29,6 +29,7 @@ from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
+from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
@@ -338,8 +339,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
-            self._register_async()
+        if not self.view.is_loading() and is_regular_view(self.view):
+            if not self._registered:
+                self._register_async()
+            for sb in self.session_buffers_async():
+                if sb.semantic_tokens.needs_refresh:
+                    sb.semantic_tokens.needs_refresh = False
+                    sb.do_semantic_tokens_async(self.view)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
@@ -409,6 +415,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self.view.run_command("lsp_hover", {"point": point})
 
+    def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
+        if command_name == "show_scope_name" and userprefs().semantic_highlighting:
+            session = self.session_async("semanticTokensProvider")
+            if session:
+                return ("lsp_show_scope_name", {})
+        return None
+
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
@@ -447,8 +460,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if manual or last_char in triggers:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
-            session.send_request_async(
-                Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
+            language_map = session.markdown_language_id_to_st_syntax_map()
+            request = Request.signatureHelp(params, self.view)
+            session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
             # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
@@ -464,8 +478,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return None
         return self.session_async("signatureHelpProvider", pos)
 
-    def _on_signature_help(self, response: Optional[SignatureHelp], point: int) -> None:
-        self._sighelp = SigHelp.from_lsp(response)
+    def _on_signature_help(
+        self,
+        response: Optional[SignatureHelp],
+        point: int,
+        language_map: Optional[MarkdownLangMap]
+    ) -> None:
+        self._sighelp = SigHelp.from_lsp(response, language_map)
         if self._sighelp:
             content = self._sighelp.render(self.view)
 

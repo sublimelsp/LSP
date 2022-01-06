@@ -199,13 +199,18 @@ class Listener(sublime_plugin.EventListener):
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
 
-    def on_post_move_async(self, view: sublime.View) -> None:
+    # Note: EventListener.on_post_move_async does not fire when a tab is moved out of the current window in such a way
+    # that a new window is created: https://github.com/sublimehq/sublime_text/issues/4630
+    # Hence, as a workaround we use on_pre_move, which still works in that case.
+    def on_pre_move(self, view: sublime.View) -> None:
         listeners = sublime_plugin.view_event_listeners.get(view.id())
         if not isinstance(listeners, list):
             return
         for listener in listeners:
             if isinstance(listener, DocumentSyncListener):
-                return listener.on_post_move_window_async()
+                # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
+                sublime.set_timeout_async(listener.on_post_move_window_async, timeout_ms=1)
+                return
 
     def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()

@@ -21,9 +21,6 @@ class LspShowScopeNameCommand(LspTextCommand):
 
     capability = 'semanticTokensProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        return True
-
     def run(self, edit: sublime.Edit) -> None:
         point = self.view.sel()[-1].b
 

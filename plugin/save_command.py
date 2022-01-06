@@ -1,6 +1,6 @@
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Callable, List, Optional, Type
+from .core.typing import Callable, List, Type
 from abc import ABCMeta, abstractmethod
 import sublime
 import sublime_plugin

@@ -1,5 +1,5 @@
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional
+from .core.typing import List
 import sublime
 
 

@@ -1,4 +1,5 @@
 from .code_actions import actions_manager
+from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
@@ -29,6 +30,7 @@ from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
+from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -40,6 +42,7 @@ from .session_view import SessionView
 from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
+import functools
 import itertools
 import sublime
 import sublime_plugin
@@ -175,6 +178,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
+        self._lightbulb_line = None
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -411,9 +415,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
-        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
+        if self.view.is_popup_visible():
             return
-        self.view.run_command("lsp_hover", {"point": point})
+        if hover_zone == sublime.HOVER_TEXT:
+            self.view.run_command("lsp_hover", {"point": point})
+        elif hover_zone == sublime.HOVER_GUTTER:
+            # Lightbulb must be visible and at the same line
+            if self._lightbulb_line != self.view.rowcol(point)[0]:
+                return
+            diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
+            actions_manager.request_for_region_async(
+                self.view, covering, diagnostics_by_config,
+                functools.partial(self._handle_code_actions_gutter_hover, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
         if command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -541,6 +554,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions == 'bulb':
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
+            self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
         else:  # 'annotation'
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
@@ -554,6 +568,54 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(self.CODE_ACTIONS_KEY)
+        self._lightbulb_line = None
+
+    def _handle_code_actions_gutter_hover(
+        self,
+        point: int,
+        responses: Dict[str, List[CodeActionOrCommand]]
+    ) -> None:
+        self._actions_by_config = responses
+        formatted = []
+        for config_name, actions in self._actions_by_config.items():
+            action_count = len(actions)
+            if action_count > 0:
+                href = "{}:{}".format('code-actions', config_name)
+                if action_count > 1:
+                    text = "choose code action ({} available)".format(action_count)
+                else:
+                    text = actions[0].get('title', 'code action')
+                formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
+                    config_name, make_link(href, text)))
+        content = "".join(formatted)
+        if content:
+            show_lsp_popup(
+                self.view,
+                content,
+                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                location=point,
+                on_navigate=lambda href: self._on_navigate(href, point))
+
+    def _on_navigate(self, href: str, point: int) -> None:
+        if href.startswith('code-actions:'):
+            _, config_name = href.split(":")
+            titles = [command["title"] for command in self._actions_by_config[config_name]]
+            self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
+            if len(titles) > 1:
+                window = self.view.window()
+                if window:
+                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
+                                            placeholder="Code actions")
+            else:
+                self.handle_code_action_select(config_name, 0)
+
+    def handle_code_action_select(self, config_name: str, index: int) -> None:
+        if index > -1:
+            def run_async() -> None:
+                session = self.session_by_name(config_name)
+                if session:
+                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
+            sublime.set_timeout_async(run_async)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

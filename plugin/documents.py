@@ -178,7 +178,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
-        self._lightbulb_line = None
+        self._lightbulb_line = None  # type: Optional[int]
         self._registered = False
 
     def _cleanup(self) -> None:

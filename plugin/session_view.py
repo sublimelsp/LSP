@@ -33,6 +33,7 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
+    CODE_ACTIONS_KEY = "lsp_code_action"
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
@@ -114,6 +115,7 @@ class SessionView:
             for kind in document_highlight_kinds:
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        self.view.add_regions(self.CODE_ACTIONS_KEY, r)
         for severity in range(1, 5):
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)

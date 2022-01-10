@@ -130,7 +130,6 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
-    CODE_ACTIONS_KEY = "lsp_code_action"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
@@ -550,10 +549,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
-        self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
+        self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def _clear_code_actions_annotation(self) -> None:
-        self.view.erase_regions(self.CODE_ACTIONS_KEY)
+        self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

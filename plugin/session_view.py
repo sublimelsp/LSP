@@ -103,19 +103,23 @@ class SessionView:
     def _initialize_region_keys(self) -> None:
         """
         Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
-        diagnostics, semantic tokens and document highlights, see https://github.com/sublimelsp/LSP/issues/1593.
+        diagnostics, semantic tokens, document highlights, and gutter icons. The draw order seems to follow the
+        following rules:
+          - inline decorations (underline & background) from region keys which were initialized _last_ are drawn on top
+          - gutter icons from region keys which were initialized _first_ are drawn
+        For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         document_highlight_kinds = ["text", "read", "write"]
         line_modes = ["m", "s"]
+        self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
         for key, scope in self.session.semantic_tokens_map:
             self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, key), r)
         if document_highlight_style == "fill":
             for kind in document_highlight_kinds:
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
-        self.view.add_regions(self.CODE_ACTIONS_KEY, r)
         for severity in range(1, 5):
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)

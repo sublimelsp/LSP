@@ -350,7 +350,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "relative"
             ],
             "overlappingTokenSupport": False,
-            "multilineTokenSupport": True
+            "multilineTokenSupport": True,
+            "augmentsSyntaxTokens": True
         }
     }
     workspace_capabilites = {

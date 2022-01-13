@@ -495,6 +495,7 @@ class SessionBuffer:
 
     def _on_semantic_tokens_error_async(self, error: dict) -> None:
         self.semantic_tokens.pending_response = None
+        self.semantic_tokens.result_id = None
 
     def _draw_semantic_tokens_async(self) -> None:
         view = self.some_view()

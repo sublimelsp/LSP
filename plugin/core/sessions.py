@@ -1,7 +1,8 @@
 from .collections import DottedDict
 from .diagnostics_manager import DiagnosticsManager
-from .edit import apply_workspace_edit
+from .edit import apply_edits
 from .edit import parse_workspace_edit
+from .edit import TextEditTuple
 from .file_watcher import DEFAULT_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -12,10 +13,11 @@ from .logging import debug
 from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
+from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink, Position
+from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -59,7 +61,6 @@ from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
 from .views import SEMANTIC_TOKENS_MAP
 from .views import SYMBOL_KINDS
-from .views import to_encoded_filename
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
@@ -350,7 +351,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "relative"
             ],
             "overlappingTokenSupport": False,
-            "multilineTokenSupport": True
+            "multilineTokenSupport": True,
+            "augmentsSyntaxTokens": True
         }
     }
     workspace_capabilites = {
@@ -1409,16 +1411,12 @@ class Session(TransportCallbacks):
     def open_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[RangeLsp],
+        r: Optional[RangeLsp] = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[bool]:
+    ) -> Promise[Optional[sublime.View]]:
         if uri.startswith("file:"):
-            # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
-            path = self.config.map_server_uri_to_client_path(uri)
-            pos = r["start"] if r else {"line": 0, "character": 0}  # type: Position
-            self.window.open_file(to_encoded_filename(path, pos), flags | sublime.ENCODED_POSITION, group)
-            return Promise.resolve(True)
+            return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
@@ -1426,35 +1424,63 @@ class Session(TransportCallbacks):
             self.window.focus_view(view)
             if r:
                 center_selection(view, r)
-            return Promise.resolve(True)
+            return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
-            # I cannot type-hint an unpacked tuple
-            pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
-            # It'd be nice to have automatic tuple unpacking continuations
-            callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
-            if self._plugin.on_open_uri_async(uri, callback):
-                result = Promise.packaged_task()  # type: PackagedTask[bool]
+            return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+        return Promise.resolve(None)
 
-                def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
-                    v = self.window.new_file(syntax=syntax, flags=flags)
-                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                    # settings object here at our leisure.
-                    v.settings().set("lsp_uri", uri)
-                    v.set_scratch(True)
-                    v.set_name(title)
-                    v.run_command("append", {"characters": content})
-                    v.set_read_only(True)
-                    if r:
-                        center_selection(v, r)
-                    sublime.set_timeout_async(lambda: result[1](True))
+    def _open_file_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Optional[RangeLsp] = None,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[Optional[sublime.View]]:
+        result = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
 
-                pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
-                return result[0]
-        return Promise.resolve(False)
+        def handle_continuation(view: Optional[sublime.View]) -> None:
+            if view and r:
+                center_selection(view, r)
+            sublime.set_timeout_async(lambda: result[1](view))
+
+        sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))
+        return result[0]
+
+    def _open_uri_with_plugin_async(
+        self,
+        plugin: AbstractPlugin,
+        uri: DocumentUri,
+        r: Optional[RangeLsp],
+        flags: int,
+        group: int,
+    ) -> Promise[Optional[sublime.View]]:
+        # I cannot type-hint an unpacked tuple
+        pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
+        # It'd be nice to have automatic tuple unpacking continuations
+        callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
+        if plugin.on_open_uri_async(uri, callback):
+            result = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
+
+            def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
+                v = self.window.new_file(syntax=syntax, flags=flags)
+                # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+                # settings object here at our leisure.
+                v.settings().set("lsp_uri", uri)
+                v.set_scratch(True)
+                v.set_name(title)
+                v.run_command("append", {"characters": content})
+                v.set_read_only(True)
+                if r:
+                    center_selection(v, r)
+                sublime.set_timeout_async(lambda: result[1](v))
+
+            pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
+            return result[0]
+        return Promise.resolve(None)
 
     def open_location_async(self, location: Union[Location, LocationLink], flags: int = 0,
-                            group: int = -1) -> Promise[bool]:
+                            group: int = -1) -> Promise[Optional[sublime.View]]:
         uri, r = get_uri_and_range_from_location(location)
         return self.open_uri_async(uri, r, flags, group)
 
@@ -1478,7 +1504,7 @@ class Session(TransportCallbacks):
             self.window.status_message("Failed to apply code action: {}".format(code_action))
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
+        promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if isinstance(command, dict):
             execute_command = {
@@ -1488,15 +1514,18 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, False))
         return promise
 
-    def _apply_workspace_edit_async(self, edit: Any) -> Promise[None]:
+    def apply_workspace_edit_async(self, edit: Dict[str, Any]) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
-        changes = parse_workspace_edit(edit)
-        return Promise.on_main_thread(None) \
-            .then(lambda _: apply_workspace_edit(self.window, changes)) \
-            .then(lambda _: Promise.on_async_thread(None))
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
+
+    def apply_parsed_workspace_edits(self, changes: Dict[str, List[TextEditTuple]]) -> Promise[None]:
+        promises = []  # type: List[Promise[None]]
+        for uri, edits in changes.items():
+            promises.append(self.open_uri_async(uri).then(functools.partial(apply_edits, edits)))
+        return Promise.all(promises).then(lambda _: None)
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
@@ -1536,7 +1565,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self._apply_workspace_edit_async(params.get('edit', {})).then(
+        self.apply_workspace_edit_async(params.get('edit', {})).then(
             lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:

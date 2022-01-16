@@ -17,7 +17,8 @@ from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
 from .core.types import matches_pattern
 from .core.url import filename_to_uri
-from .core.url import uri_to_filename
+from .core.url import parse_uri
+from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
 from .core.views import MarkdownLangMap
 
@@ -36,6 +37,7 @@ __all__ = [
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',
+    'parse_uri',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',
@@ -43,6 +45,6 @@ __all__ = [
     'Session',
     'SessionBufferProtocol',
     'unregister_plugin',
-    'uri_to_filename',
+    'uri_to_filename',  # deprecated
     'WorkspaceFolder',
 ]

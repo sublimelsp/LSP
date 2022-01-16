@@ -5,7 +5,7 @@ from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from .typing import cast
 from .url import filename_to_uri
-from .url import uri_to_filename
+from .url import parse_uri
 from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -817,7 +817,9 @@ class ClientConfig:
         return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
-        path = uri_to_filename(uri)
+        scheme, path = parse_uri(uri)
+        if scheme != "file":
+            raise ValueError("{}: {} URI scheme is unsupported".format(uri, scheme))
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_remote_to_local(path)

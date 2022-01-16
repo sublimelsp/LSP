@@ -1,4 +1,5 @@
-from LSP.plugin.core.edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
+from LSP.plugin.core.edit import parse_workspace_edit, parse_text_edit
+from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.edit import temporary_setting
 from test_protocol import LSP_RANGE
@@ -176,34 +177,34 @@ class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_CHANGES)
-        self.assertIn(FILENAME, edit)
+        self.assertIn(URI, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[FILENAME]), 1)
+        self.assertEqual(len(edit[URI]), 1)
 
     def test_parse_document_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
-        self.assertIn(FILENAME, edit)
+        self.assertIn(URI, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[FILENAME]), 1)
+        self.assertEqual(len(edit[URI]), 1)
 
     def test_protocol_violation(self):
         # This should ignore the None in 'changes'
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
-        self.assertIn(FILENAME, edit)
+        self.assertIn(URI, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[FILENAME]), 1)
+        self.assertEqual(len(edit[URI]), 1)
 
     def test_no_clobbering_of_previous_edits(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
-        self.assertIn(FILENAME, edit)
+        self.assertIn(URI, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[FILENAME]), 5)
+        self.assertEqual(len(edit[URI]), 5)
 
     def test_prefers_document_edits_over_changes(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_4)
-        self.assertIn(FILENAME, edit)
+        self.assertIn(URI, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[FILENAME]), 1)  # not 3
+        self.assertEqual(len(edit[URI]), 1)  # not 3
 
 
 class SortByApplicationOrderTests(unittest.TestCase):
@@ -225,7 +226,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
     def test_sorts_in_application_order2(self):
         edits = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
-        sorted_edits = list(reversed(sort_by_application_order(edits[FILENAME])))
+        sorted_edits = list(reversed(sort_by_application_order(edits[URI])))
         self.assertEqual(sorted_edits[0][0], (39, 26))
         self.assertEqual(sorted_edits[0][1], (39, 30))
         self.assertEqual(sorted_edits[1][0], (27, 28))

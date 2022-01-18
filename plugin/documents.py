@@ -1,4 +1,5 @@
 from .code_actions import actions_manager
+from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
@@ -35,6 +36,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -174,6 +176,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
+        self._lightbulb_line = None  # type: Optional[int]
+        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -410,9 +414,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
-        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
+        if self.view.is_popup_visible():
             return
-        self.view.run_command("lsp_hover", {"point": point})
+        if hover_zone == sublime.HOVER_TEXT:
+            self.view.run_command("lsp_hover", {"point": point})
+        elif hover_zone == sublime.HOVER_GUTTER:
+            # Lightbulb must be visible and at the same line
+            if self._lightbulb_line != self.view.rowcol(point)[0]:
+                return
+            content = code_actions_content(self._actions_by_config)
+            if content:
+                show_lsp_popup(
+                    self.view,
+                    content,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
         if command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -540,6 +557,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions == 'bulb':
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
+            self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
+            self._actions_by_config = responses
         else:  # 'annotation'
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
@@ -553,6 +572,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
+        self._lightbulb_line = None
+
+    def _on_navigate(self, href: str, point: int) -> None:
+        if href.startswith('code-actions:'):
+            _, config_name = href.split(":")
+            titles = [command["title"] for command in self._actions_by_config[config_name]]
+            if len(titles) > 1:
+                window = self.view.window()
+                if window:
+                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
+                                            placeholder="Code actions")
+            else:
+                self.handle_code_action_select(config_name, 0)
+
+    def handle_code_action_select(self, config_name: str, index: int) -> None:
+        if index > -1:
+            def run_async() -> None:
+                session = self.session_by_name(config_name)
+                if session:
+                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
+            sublime.set_timeout_async(run_async)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

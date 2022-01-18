@@ -76,6 +76,21 @@ link_kinds = [
 ]
 
 
+def code_actions_content(actions_by_config: Dict[str, List[CodeActionOrCommand]]) -> str:
+    formatted = []
+    for config_name, actions in actions_by_config.items():
+        action_count = len(actions)
+        if action_count > 0:
+            href = "{}:{}".format('code-actions', config_name)
+            if action_count > 1:
+                text = "choose code action ({} available)".format(action_count)
+            else:
+                text = actions[0].get('title', 'code action')
+            formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
+                config_name, make_link(href, text)))
+    return "".join(formatted)
+
+
 class LspHoverCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
@@ -200,20 +215,6 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
         return "".join(formatted)
 
-    def code_actions_content(self) -> str:
-        formatted = []
-        for config_name, actions in self._actions_by_config.items():
-            action_count = len(actions)
-            if action_count > 0:
-                href = "{}:{}".format('code-actions', config_name)
-                if action_count > 1:
-                    text = "choose code action ({} available)".format(action_count)
-                else:
-                    text = actions[0].get('title', 'code action')
-                formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                    config_name, make_link(href, text)))
-        return "".join(formatted)
-
     def hover_content(self) -> str:
         contents = []
         for hover, language_map in self._hover_responses:
@@ -227,7 +228,7 @@ class LspHoverCommand(LspTextCommand):
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
-        contents = self.diagnostics_content() + hover_content + self.code_actions_content()
+        contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
         if contents and not only_diagnostics and hover_content:
             contents += self.symbol_actions_content(listener, point)
 

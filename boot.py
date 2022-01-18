@@ -93,65 +93,6 @@ def _register_all_plugins() -> None:
         except NotImplementedError:
             continue
         register_plugin(plugin_class, notify_listener=False)
-    # TODO: Anything below here should be removed about a month after ST4 is released.
-    language_handler_classes = []  # type: List[Type[LanguageHandler]]
-    _get_final_subclasses(LanguageHandler.__subclasses__(), language_handler_classes)
-    for language_handler_class in language_handler_classes:
-        # Create an ephemeral plugin that stores an instance of the LanguageHandler as a class instance. Custom requests
-        # and notifications will work.
-        class LanguageHandlerTransition(AbstractPlugin):
-
-            handler = language_handler_class()
-
-            @classmethod
-            def name(cls) -> str:
-                return cls.handler.name  # type: ignore
-
-            @classmethod
-            def configuration(cls) -> Tuple[sublime.Settings, str]:
-                file_base_name = cls.name()
-                if file_base_name.startswith("lsp-"):
-                    file_base_name = "LSP-" + file_base_name[len("lsp-"):]
-                settings = sublime.load_settings("{}.sublime-settings".format(file_base_name))
-                cfg = cls.handler.config  # type: ignore
-                settings.set("command", cfg.command)
-                settings.set("settings", cfg.settings.get(None))
-                if isinstance(cfg.init_options, DottedDict):
-                    init_options = cfg.init_options.get()
-                elif isinstance(cfg.init_options, dict):
-                    init_options = cfg.init_options
-                else:
-                    init_options = {}
-                settings.set("initializationOptions", init_options)
-                settings.set("selector", cfg.selector)
-                settings.set("priority_selector", cfg.priority_selector)
-                return settings, "Packages/{0}/{0}.sublime-settings".format(file_base_name)
-
-            @classmethod
-            def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                          workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
-                if hasattr(cls.handler, 'on_start'):
-                    if not cls.handler.on_start(window):  # type: ignore
-                        return "{} cannot start".format(cls.name())
-                return None
-
-            def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
-                super().__init__(weaksession)
-                if hasattr(self.handler, 'on_initialized'):
-                    self.handler.on_initialized(self)  # type: ignore
-
-            def on_notification(self, method: str, handler: Callable) -> None:
-                setattr(self, method2attr(method), handler)
-
-            def on_request(self, method: str, handler: Callable) -> None:
-                setattr(self, method2attr(method), handler)
-
-            def send_response(self, response: Response) -> None:
-                session = self.weaksession()
-                if session:
-                    session.send_response(response)
-
-        register_plugin(LanguageHandlerTransition, notify_listener=False)
 
 
 def _unregister_all_plugins() -> None:

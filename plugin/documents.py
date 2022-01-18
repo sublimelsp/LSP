@@ -578,7 +578,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]
-            self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
             if len(titles) > 1:
                 window = self.view.window()
                 if window:

@@ -30,19 +30,18 @@ from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
-from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
-import functools
 import itertools
 import sublime
 import sublime_plugin
@@ -178,6 +177,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
+        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -422,10 +422,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # Lightbulb must be visible and at the same line
             if self._lightbulb_line != self.view.rowcol(point)[0]:
                 return
-            diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-            actions_manager.request_for_region_async(
-                self.view, covering, diagnostics_by_config,
-                functools.partial(self._handle_code_actions_gutter_hover, point))
+            content = code_actions_content(self._actions_by_config)
+            if content:
+                show_lsp_popup(
+                    self.view,
+                    content,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
         if command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -554,6 +558,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
+            self._actions_by_config = responses
         else:  # 'annotation'
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
@@ -568,32 +573,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
         self._lightbulb_line = None
-
-    def _handle_code_actions_gutter_hover(
-        self,
-        point: int,
-        responses: Dict[str, List[CodeActionOrCommand]]
-    ) -> None:
-        self._actions_by_config = responses
-        formatted = []
-        for config_name, actions in self._actions_by_config.items():
-            action_count = len(actions)
-            if action_count > 0:
-                href = "{}:{}".format('code-actions', config_name)
-                if action_count > 1:
-                    text = "choose code action ({} available)".format(action_count)
-                else:
-                    text = actions[0].get('title', 'code action')
-                formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                    config_name, make_link(href, text)))
-        content = "".join(formatted)
-        if content:
-            show_lsp_popup(
-                self.view,
-                content,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                on_navigate=lambda href: self._on_navigate(href, point))
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):

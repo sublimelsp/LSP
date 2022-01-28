@@ -5,6 +5,7 @@ from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
+from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
@@ -22,7 +23,10 @@ from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
+from .core.views import region_to_range
+from .core.views import text_document_identifier
 from .core.views import will_save
+from .semantic_highlighting import SemanticToken
 from weakref import WeakSet
 import sublime
 import time
@@ -54,6 +58,21 @@ class DiagnosticSeverityData:
             self.icon = userprefs().diagnostics_gutter_marker
 
 
+class SemanticTokensData:
+
+    __slots__ = (
+        'data', 'result_id', 'active_scopes', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
+
+    def __init__(self) -> None:
+        self.data = []  # type: List[int]
+        self.result_id = None  # type: Optional[str]
+        self.active_scopes = []  # type: List[str]
+        self.tokens = []  # type: List[SemanticToken]
+        self.view_change_count = 0
+        self.needs_refresh = False
+        self.pending_response = None  # type: Optional[int]
+
+
 class SessionBuffer:
     """
     Holds state per session per buffer.
@@ -68,9 +87,9 @@ class SessionBuffer:
         self.opened = False
         # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
         self.capabilities = Capabilities()
-        self.session = session_view.session
-        self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
-        self.session_views.add(session_view)
+        self._session = session_view.session
+        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
+        self._session_views.add(session_view)
         self.last_known_uri = uri
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
@@ -85,8 +104,9 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
+        self.semantic_tokens = SemanticTokensData()
         self._check_did_open(view)
-        self.session.register_session_buffer_async(self)
+        self._session.register_session_buffer_async(self)
 
     def __del__(self) -> None:
         mgr = self.session.manager()
@@ -100,6 +120,14 @@ class SessionBuffer:
             self._check_did_close()
             self.session.unregister_session_buffer_async(self)
 
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    @property
+    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        return self._session_views
+
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
             language_id = self.get_language_id()
@@ -109,6 +137,7 @@ class SessionBuffer:
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
+            self.do_semantic_tokens_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -144,6 +173,7 @@ class SessionBuffer:
         self.session_views.add(sv)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
+        self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
 
     def register_capability_async(
@@ -248,6 +278,7 @@ class SessionBuffer:
             finally:
                 self.pending_changes = None
             self._do_color_boxes_async(view, version)
+            self.do_semantic_tokens_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -407,6 +438,131 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = should_show_diagnostics_panel
         for sv in self.session_views:
             sv.present_diagnostics_async()
+
+    # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
+
+    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+        if not userprefs().semantic_highlighting:
+            return
+        if not self.session.has_capability("semanticTokensProvider"):
+            return
+        # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
+        if "background" not in view.style_for_scope("meta.semantic-token"):
+            return
+        if self.semantic_tokens.pending_response:
+            self.session.cancel_request(self.semantic_tokens.pending_response)
+        self.semantic_tokens.view_change_count = view.change_count()
+        params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
+        if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+            params["previousResultId"] = self.semantic_tokens.result_id
+            request = Request.semanticTokensFullDelta(params, view)
+            self.semantic_tokens.pending_response = self.session.send_request_async(
+                request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
+        elif self.session.has_capability("semanticTokensProvider.full"):
+            request = Request.semanticTokensFull(params, view)
+            self.semantic_tokens.pending_response = self.session.send_request_async(
+                request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
+        elif self.session.has_capability("semanticTokensProvider.range"):
+            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            request = Request.semanticTokensRange(params, view)
+            self.semantic_tokens.pending_response = self.session.send_request_async(
+                request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
+
+    def _on_semantic_tokens_async(self, response: Optional[Dict]) -> None:
+        if response:
+            self.semantic_tokens.pending_response = None
+            self.semantic_tokens.result_id = response.get("resultId")
+            self.semantic_tokens.data = response["data"]
+            self._draw_semantic_tokens_async()
+
+    def _on_semantic_tokens_delta_async(self, response: Optional[Dict]) -> None:
+        if response:
+            self.semantic_tokens.pending_response = None
+            self.semantic_tokens.result_id = response.get("resultId")
+            if "edits" in response:  # response is of type SemanticTokensDelta
+                for semantic_tokens_edit in response["edits"]:
+                    start = semantic_tokens_edit["start"]
+                    end = start + semantic_tokens_edit["deleteCount"]
+                    del self.semantic_tokens.data[start:end]
+                    data = semantic_tokens_edit.get("data")
+                    if data:
+                        self.semantic_tokens.data[start:start] = data
+            elif "data" in response:  # response is of type SemanticTokens
+                self.semantic_tokens.data = response["data"]
+            else:
+                return
+            self._draw_semantic_tokens_async()
+
+    def _on_semantic_tokens_error_async(self, error: dict) -> None:
+        self.semantic_tokens.pending_response = None
+        self.semantic_tokens.result_id = None
+
+    def _draw_semantic_tokens_async(self) -> None:
+        view = self.some_view()
+        if view is None:
+            return
+        self.semantic_tokens.tokens.clear()
+        scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
+        prev_line = 0
+        prev_col_utf16 = 0
+        for idx in range(0, len(self.semantic_tokens.data), 5):
+            delta_line = self.semantic_tokens.data[idx]
+            delta_start_utf16 = self.semantic_tokens.data[idx + 1]
+            length_utf16 = self.semantic_tokens.data[idx + 2]
+            token_type_encoded = self.semantic_tokens.data[idx + 3]
+            token_modifiers_encoded = self.semantic_tokens.data[idx + 4]
+            line = prev_line + delta_line
+            col_utf16 = prev_col_utf16 + delta_start_utf16 if delta_line == 0 else delta_start_utf16
+            a = view.text_point_utf16(line, col_utf16, clamp_column=False)
+            b = view.text_point_utf16(line, col_utf16 + length_utf16, clamp_column=False)
+            r = sublime.Region(a, b)
+            prev_line = line
+            prev_col_utf16 = col_utf16
+            token_type, token_modifiers, scope = self.session.decode_semantic_token(
+                token_type_encoded, token_modifiers_encoded)
+            if scope is None:
+                # We can still use the meta scope and draw highlighting regions for custom token types if there is a
+                # color scheme rule for this particular token type.
+                # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
+                # customizations in the color scheme for the scopes of custom token types would require a restart of
+                # Sublime Text to take effect.
+                # Note that the region keys for these scopes are not initialized in SessionView._initialize_region_keys.
+                token_general_style = view.style_for_scope("meta.semantic-token")
+                token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
+                if token_general_style["source_line"] != token_type_style["source_line"] or \
+                        token_general_style["source_column"] != token_type_style["source_column"]:
+                    if token_modifiers:
+                        scope = "meta.semantic-token.{}.{}.lsp".format(token_type.lower(), token_modifiers[0].lower())
+                    else:
+                        scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
+            self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
+            if scope:
+                scope_regions.setdefault(scope, []).append(r)
+        # don't update regions if there were additional changes to the buffer in the meantime
+        if self.semantic_tokens.view_change_count != view.change_count():
+            return
+        for scope in self.semantic_tokens.active_scopes.copy():
+            if scope not in scope_regions.keys():
+                self.semantic_tokens.active_scopes.remove(scope)
+                for sv in self.session_views:
+                    sv.view.erase_regions("lsp_{}".format(scope))
+        for scope, regions in scope_regions.items():
+            if scope not in self.semantic_tokens.active_scopes:
+                self.semantic_tokens.active_scopes.append(scope)
+            for sv in self.session_views:
+                sv.view.add_regions("lsp_{}".format(scope), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+
+    def _clear_semantic_token_regions(self, view: sublime.View) -> None:
+        for scope in self.semantic_tokens.active_scopes:
+            view.erase_regions("lsp_{}".format(scope))
+
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.semantic_tokens.needs_refresh = needs_refresh
+
+    def get_semantic_tokens(self) -> List[SemanticToken]:
+        return self.semantic_tokens.tokens
+
+    # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

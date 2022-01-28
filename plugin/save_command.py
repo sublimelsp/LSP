@@ -1,6 +1,6 @@
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Callable, List, Optional, Type
+from .core.typing import Callable, List, Type
 from abc import ABCMeta, abstractmethod
 import sublime
 import sublime_plugin
@@ -89,15 +89,6 @@ class LspSaveCommand(LspTextCommand):
             sublime.set_timeout_async(self._run_next_task_async)
         else:
             self._trigger_native_save()
-
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        # Workaround to ensure that the command will run, even if a view was dragged out to a new window,
-        # see https://github.com/sublimelsp/LSP/issues/1791.
-        # The check to determine whether the keybinding for lsp_save is applicable already happens in
-        # DocumentSyncListener.on_query_context and should not be required here, if lsp_save is only used for the
-        # keybinding. A proper fix should ensure that LspTextCommand.is_enabled returns the correct value even for
-        # dragged out views and that LSP keeps working as expected.
-        return True
 
     def _trigger_on_pre_save_async(self) -> None:
         # Supermassive hack that will go away later.

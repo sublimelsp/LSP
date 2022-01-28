@@ -5,6 +5,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentUri
+from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -31,6 +32,8 @@ import re
 import sublime
 import sublime_plugin
 import tempfile
+
+MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
@@ -101,6 +104,57 @@ COMPLETION_KINDS = [
     (sublime.KIND_ID_KEYWORD,    "o", "Operator"),
     (sublime.KIND_ID_TYPE,       "t", "Type Parameter"),
 ]
+
+SEMANTIC_TOKENS_MAP = {
+    "namespace": "variable.other.namespace.lsp",
+    "namespace.declaration": "entity.name.namespace.lsp",
+    "namespace.definition": "entity.name.namespace.lsp",
+    "type": "storage.type.lsp",
+    "type.declaration": "entity.name.type.lsp",
+    "type.defaultLibrary": "support.type.lsp",
+    "type.definition": "entity.name.type.lsp",
+    "class": "storage.type.class.lsp",
+    "class.declaration": "entity.name.class.lsp",
+    "class.defaultLibrary": "support.class.lsp",
+    "class.definition": "entity.name.class.lsp",
+    "enum": "variable.other.enum.lsp",
+    "enum.declaration": "entity.name.enum.lsp",
+    "enum.definition": "entity.name.enum.lsp",
+    "interface": "entity.other.inherited-class.lsp",
+    "interface.declaration": "entity.name.interface.lsp",
+    "interface.definition": "entity.name.interface.lsp",
+    "struct": "storage.type.struct.lsp",
+    "struct.declaration": "entity.name.struct.lsp",
+    "struct.defaultLibrary": "support.struct.lsp",
+    "struct.definition": "entity.name.struct.lsp",
+    "typeParameter": "variable.parameter.generic.lsp",
+    "parameter": "variable.parameter.lsp",
+    "variable": "variable.other.lsp",
+    "variable.readonly": "variable.other.constant.lsp",
+    "property": "variable.other.property.lsp",
+    "enumMember": "constant.other.enum.lsp",
+    "event": "entity.name.function.lsp",
+    "function": "variable.function.lsp",
+    "function.declaration": "entity.name.function.lsp",
+    "function.defaultLibrary": "support.function.builtin.lsp",
+    "function.definition": "entity.name.function.lsp",
+    "method": "variable.function.lsp",
+    "method.declaration": "entity.name.function.lsp",
+    "method.defaultLibrary": "support.function.builtin.lsp",
+    "method.definition": "entity.name.function.lsp",
+    "macro": "variable.macro.lsp",
+    "macro.declaration": "entity.name.macro.lsp",
+    "macro.defaultLibrary": "support.macro.lsp",
+    "macro.definition": "entity.name.macro.lsp",
+    "keyword": "keyword.lsp",
+    "modifier": "storage.modifier.lsp",
+    "comment": "comment.lsp",
+    "comment.documentation": "comment.block.documentation.lsp",
+    "string": "string.lsp",
+    "number": "constant.numeric.lsp",
+    "regexp": "string.regexp.lsp",
+    "operator": "keyword.operator.lsp"
+}
 
 
 class InvalidUriSchemeException(Exception):
@@ -269,6 +323,15 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
+
+
+def text_document_range_params(view: sublime.View, location: int,
+                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
+    return {
+        "textDocument": text_document_identifier(view),
+        "position": position(view, location),
+        "range": region_to_range(view, region).to_lsp()
+    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
@@ -440,7 +503,8 @@ FORMAT_MARKUP_CONTENT = 0x4
 def minihtml(
     view: sublime.View,
     content: Union[MarkedString, MarkupContent, List[MarkedString]],
-    allowed_formats: int
+    allowed_formats: int,
+    language_id_map: Optional[MarkdownLangMap] = None
 ) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
@@ -529,6 +593,8 @@ def minihtml(
                 }
             ]
         }
+        if isinstance(language_id_map, dict):
+            frontmatter["language_map"] = language_id_map
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
         result = re.sub('(\\S)  \n', '\\1\n\n', result)
         return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)

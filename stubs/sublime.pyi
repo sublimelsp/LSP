@@ -405,6 +405,12 @@ class Window:
     def sheets(self) -> 'List[Sheet]':
         ...
 
+    def selected_sheets(self) -> 'List[Sheet]':
+        ...
+
+    def selected_sheets_in_group(self, group: int) -> 'List[Sheet]':
+        ...
+
     def views(self) -> 'List[View]':
         ...
 
@@ -793,6 +799,9 @@ class View:
     def scope_name(self, pt: int) -> str:
         ...
 
+    def context_backtrace(self, pt: int) -> List[str]:
+        ...
+
     def match_selector(self, pt: int, selector: str) -> bool:
         ...
 
@@ -855,7 +864,7 @@ class View:
     def show(self, x: Union[Selection, Region, int], show_surrounds: bool = ...) -> None:
         ...
 
-    def show_at_center(self, x: Union[Selection, Region, int]) -> None:
+    def show_at_center(self, x: Union[Selection, Region, int], animate: bool = True) -> None:
         ...
 
     def viewport_position(self) -> Tuple[int, int]:

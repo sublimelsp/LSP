@@ -105,12 +105,18 @@
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
 
+  // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).
+  // Note: Must be supported by the language server and also requires a special rule in the
+  // color scheme to work. If you use none of the built-in color schemes from Sublime Text,
+  // please see the documentation under
+  //   https://lsp.sublimetext.io/customization/#semantic-highlighting
+  // for a description about how to configure your color scheme for semantic highlighting.
+  "semantic_highlighting": false,
+
   // Show code actions:
   // "annotation" - show an annotation on the right when code actions are available.
   // "bulb" - show a bulb in the gutter when code actions are available.
   // "" - don't show code actions.
-  // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only be triggered
-  // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 
   // Show code lens:

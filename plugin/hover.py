@@ -4,27 +4,34 @@ from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import Error
+from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import RangeLsp
 from .core.protocol import Request
+from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.sessions import AbstractViewListener
+from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html
-from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import FORMAT_MARKED_STRING
+from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
+from .core.views import MarkdownLangMap
+from .core.views import minihtml
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
+from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .core.windows import AbstractViewListener
 from urllib.parse import unquote, urlparse
 import functools
 import re
@@ -69,6 +76,21 @@ link_kinds = [
 ]
 
 
+def code_actions_content(actions_by_config: Dict[str, List[CodeActionOrCommand]]) -> str:
+    formatted = []
+    for config_name, actions in actions_by_config.items():
+        action_count = len(actions)
+        if action_count > 0:
+            href = "{}:{}".format('code-actions', config_name)
+            if action_count > 1:
+                text = "choose code action ({} available)".format(action_count)
+            else:
+                text = actions[0].get('title', 'code action')
+            formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
+                config_name, make_link(href, text)))
+    return "".join(formatted)
+
+
 class LspHoverCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
@@ -95,7 +117,7 @@ class LspHoverCommand(LspTextCommand):
         hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
-        self._hover_responses = []  # type: List[Hover]
+        self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -120,23 +142,41 @@ class LspHoverCommand(LspTextCommand):
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         hover_promises = []  # type: List[Promise[ResolvedHover]]
-        document_position = text_document_position_params(self.view, point)
+        language_maps = []  # type: List[Optional[MarkdownLangMap]]
         for session in listener.sessions_async('hoverProvider'):
+            document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", document_position, self.view)
             ))
+            language_maps.append(session.markdown_language_id_to_st_syntax_map())
 
-        Promise.all(hover_promises).then(lambda responses: self._on_all_settled(responses, listener, point))
+        continuation = functools.partial(self._on_all_settled, listener, point, language_maps)
+        Promise.all(hover_promises).then(continuation)
 
-    def _on_all_settled(self, responses: List[ResolvedHover], listener: AbstractViewListener, point: int) -> None:
-        hovers = []  # type: List[Hover]
+    def _create_hover_request(
+        self, session: Session, point: int
+    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
+        if session.get_capability('experimental.rangeHoverProvider'):
+            region = first_selection_region(self.view)
+            if region is not None and region.contains(point):
+                return text_document_range_params(self.view, point, region)
+        return text_document_position_params(self.view, point)
+
+    def _on_all_settled(
+        self,
+        listener: AbstractViewListener,
+        point: int,
+        language_maps: List[Optional[MarkdownLangMap]],
+        responses: List[ResolvedHover]
+    ) -> None:
+        hovers = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         errors = []  # type: List[Error]
-        for response in responses:
+        for response, language_map in zip(responses, language_maps):
             if isinstance(response, Error):
                 errors.append(response)
                 continue
             if response:
-                hovers.append(response)
+                hovers.append((response, language_map))
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
             sublime.status_message('Hover error: {}'.format(error_messages))
@@ -175,25 +215,12 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
         return "".join(formatted)
 
-    def code_actions_content(self) -> str:
-        formatted = []
-        for config_name, actions in self._actions_by_config.items():
-            action_count = len(actions)
-            if action_count > 0:
-                href = "{}:{}".format('code-actions', config_name)
-                if action_count > 1:
-                    text = "choose code action ({} available)".format(action_count)
-                else:
-                    text = actions[0].get('title', 'code action')
-                formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                    config_name, make_link(href, text)))
-        return "".join(formatted)
-
     def hover_content(self) -> str:
         contents = []
-        for hover_response in self._hover_responses:
-            content = (hover_response.get('contents') or '') if isinstance(hover_response, dict) else ''
-            contents.append(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT))
+        for hover, language_map in self._hover_responses:
+            content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
+            allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+            contents.append(minihtml(self.view, content, allowed_formats, language_map))
         return '<hr>'.join(contents)
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
@@ -201,7 +228,7 @@ class LspHoverCommand(LspTextCommand):
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
-        contents = self.diagnostics_content() + hover_content + self.code_actions_content()
+        contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
         if contents and not only_diagnostics and hover_content:
             contents += self.symbol_actions_content(listener, point)
 

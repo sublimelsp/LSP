@@ -6,13 +6,13 @@ from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request
+from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
-from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -33,18 +33,20 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
+    CODE_ACTIONS_KEY = "lsp_code_action"
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
-        self.view = listener.view
-        self.session = session
+        self._view = listener.view
+        self._session = session
+        self._initialize_region_keys()
         self.active_requests = {}  # type: Dict[int, Request]
-        self.listener = ref(listener)
+        self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
-        self._code_lenses = CodeLensView(self.view)
-        settings = self.view.settings()
-        buffer_id = self.view.buffer_id()
+        self._code_lenses = CodeLensView(self._view)
+        settings = self._view.settings()
+        buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
@@ -52,10 +54,10 @@ class SessionView:
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
-        self.session_buffer = session_buffer
+        self._session_buffer = session_buffer
         session.register_session_view_async(self)
-        session.config.set_view_status(self.view, "")
-        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+        session.config.set_view_status(self._view, "")
+        if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
@@ -79,8 +81,54 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, True))
         self.session_buffer.remove_session_view(self)
 
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    @property
+    def view(self) -> sublime.View:
+        return self._view
+
+    @property
+    def listener(self) -> 'ref[AbstractViewListener]':
+        return self._listener
+
+    @property
+    def session_buffer(self) -> SessionBuffer:
+        return self._session_buffer
+
     def _is_listener_alive(self) -> bool:
         return bool(self.listener())
+
+    def _initialize_region_keys(self) -> None:
+        """
+        Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
+        diagnostics, semantic tokens, document highlights, and gutter icons. The draw order seems to follow the
+        following rules:
+          - inline decorations (underline & background) from region keys which were initialized _last_ are drawn on top
+          - gutter icons from region keys which were initialized _first_ are drawn
+        For more context, see https://github.com/sublimelsp/LSP/issues/1593.
+        """
+        r = [sublime.Region(0, 0)]
+        document_highlight_style = userprefs().document_highlight_style
+        document_highlight_kinds = ["text", "read", "write"]
+        line_modes = ["m", "s"]
+        self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
+        for key, scope in self.session.semantic_tokens_map:
+            self.view.add_regions("lsp_{} meta.semantic-token.{}.lsp".format(scope, key.lower()), r)
+        if document_highlight_style == "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        for severity in range(1, 5):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+                for tag in range(1, 3):
+                    self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
+        if document_highlight_style != "fill":
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

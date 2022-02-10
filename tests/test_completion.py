@@ -612,7 +612,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "deprecated": True
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
-        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('!', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
     def test_show_deprecated_tag(self) -> None:
@@ -622,7 +622,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
-        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('!', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':

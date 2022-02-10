@@ -876,7 +876,7 @@ def format_completion(
         kind = sublime.KIND_AMBIGUOUS
 
     if _is_completion_item_deprecated(item):
-        kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
+        kind = (kind[0], '!', "⚠ {} - Deprecated".format(kind[2]))
 
     lsp_label = item["label"]
     lsp_label_details = item.get("labelDetails")

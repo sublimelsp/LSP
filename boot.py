@@ -1,7 +1,6 @@
 import os
 import sublime
 import sublime_plugin
-import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
@@ -12,24 +11,18 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
-from .plugin.core.handlers import LanguageHandler
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
-from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Location
-from .plugin.core.protocol import Response
-from .plugin.core.protocol import WorkspaceFolder
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
-from .plugin.core.sessions import method2attr
 from .plugin.core.sessions import register_plugin
 from .plugin.core.sessions import Session
 from .plugin.core.settings import client_configs
@@ -38,12 +31,10 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.types import ClientConfig
-from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
+from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.documents import DocumentSyncListener
-from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.formatting import LspFormatDocumentCommand

@@ -14,7 +14,6 @@ from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
-from .plugin.core.handlers import LanguageHandler
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels

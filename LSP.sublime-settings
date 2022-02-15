@@ -231,8 +231,12 @@
   //     // Sent once to server in initialize request
   //     "initializationOptions": { },
   //
-  //     // Disable providers if so desired
-  //     "disabled_capabilities": { },
+  //     // Disable providers if so desired - https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
+  //     "disabled_capabilities": {
+  //       // "hoverProvider": true,
+  //       // "completionProvider": true,
+  //       // "codeLensProvider": true,
+  //     },
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },

@@ -28,7 +28,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Run Code Action | unbound | `lsp_code_actions`
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
 | Run Code Lens | unbound | `lsp_code_lens`
-| Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | -
+| Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Hover Popup | unbound | `lsp_hover`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

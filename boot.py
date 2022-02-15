@@ -1,7 +1,6 @@
 import os
 import sublime
 import sublime_plugin
-import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
@@ -20,25 +19,19 @@ from .plugin.core.panels import destroy_output_panels
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
-from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Location
-from .plugin.core.protocol import Response
-from .plugin.core.protocol import WorkspaceFolder
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
-from .plugin.core.sessions import method2attr
 from .plugin.core.sessions import register_plugin
-from .plugin.core.sessions import Session
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.types import ClientConfig
-from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
+from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.documents import DocumentSyncListener

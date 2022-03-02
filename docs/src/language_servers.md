@@ -231,6 +231,23 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 
 Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
 
+### quick-lint-js
+
+1. Install the [quick-lint-js LSP server](https://quick-lint-js.com/install/cli/) for JavaScript.
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"quick-lint-js"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "quick-lint-js": {
+                "command": ["quick-lint-js", "--lsp-server"],
+                "enabled": true,
+                "selector": "source.js"
+            }
+        }
+    }
+    ```
+
 ### TypeScript
 
 Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).

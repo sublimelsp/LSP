@@ -112,10 +112,6 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
     }
     ```
 
-## ESLint
-
-Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
-
 ## F\#
 
 1. Install the [F#](https://packagecontrol.io/packages/F%23) package from Package Control for syntax highlighting.
@@ -142,10 +138,6 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
         }
     }
     ```
-
-## Flow
-
-Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
 
 ## Fortran
 
@@ -220,6 +212,28 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
 ## Java
 
 Follow installation instructions on [LSP-jdtls](https://github.com/sublimelsp/LSP-jdtls).
+
+## JavaScript/TypeScript
+
+See also [Vue](#vue).
+
+There are multiple options:
+
+### Deno
+
+Follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
+
+### ESLint
+
+Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
+
+### Flow
+
+Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
+
+### TypeScript
+
+Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
 
 ## JSON
 
@@ -523,12 +537,6 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
         }
     }
     ```
-
-## TypeScript / JavaScript
-
-Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
-
-For development using the Deno framework follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
 
 ## Vue
 

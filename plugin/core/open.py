@@ -24,11 +24,15 @@ def open_file(
     The provided uri MUST be a file URI
     """
     file = parse_uri(uri)[1]
-    # window.open_file brings the file to focus if it's already opened, which we don't want.
-    # So we first check if there's already a view for that file.
+    # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
+    # to open as a separate view).
     view = window.find_open_file(file)
     if view:
-        return Promise.resolve(view)
+        opens_in_current_group = group == -1 or window.active_group() == group
+        opens_as_new_selection = (flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)) != 0
+        return_existing_view = opens_in_current_group and not opens_as_new_selection
+        if return_existing_view:
+            return Promise.resolve(view)
 
     view = window.open_file(file, flags, group)
     if not view.is_loading():

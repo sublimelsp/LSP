@@ -1,6 +1,5 @@
 from .core.edit import TextEditTuple
 from .core.logging import debug
-from .core.protocol import UINT_MAX
 from .core.typing import List, Optional, Any, Generator, Iterable
 from contextlib import contextmanager
 import operator
@@ -36,8 +35,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                     debug('ignoring edit due to non-matching document version')
                     continue
                 region = sublime.Region(
-                    self.view.text_point_utf16(start[0], min(UINT_MAX, start[1]), clamp_column=True),
-                    self.view.text_point_utf16(end[0], min(UINT_MAX, end[1]), clamp_column=True)
+                    self.view.text_point_utf16(*start, clamp_column=True),
+                    self.view.text_point_utf16(*end, clamp_column=True)
                 )
                 if start[0] > last_row and replacement[0] != '\n':
                     # Handle when a language server (eg gopls) inserts at a row beyond the document

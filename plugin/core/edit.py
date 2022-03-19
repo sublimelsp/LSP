@@ -1,7 +1,7 @@
 from .logging import debug
 from .open import open_file
 from .promise import Promise
-from .protocol import TextEdit as LspTextEdit, Position
+from .protocol import UINT_MAX, TextEdit as LspTextEdit, Position
 from .typing import List, Dict, Any, Optional, Tuple
 from functools import partial
 import sublime
@@ -34,7 +34,7 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
 
 
 def parse_range(range: Position) -> Tuple[int, int]:
-    return range['line'], range['character']
+    return range['line'], min(UINT_MAX, range['character'])
 
 
 def parse_text_edit(text_edit: LspTextEdit, version: int = None) -> TextEditTuple:

@@ -4,7 +4,7 @@ import os
 import sublime
 
 INT_MAX = 2**31 - 1
-UINT_MAX = 2**32 - 1
+UINT_MAX = INT_MAX
 
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1

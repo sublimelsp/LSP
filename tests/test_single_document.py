@@ -8,6 +8,8 @@ from setup import TIMEOUT_TIME
 from setup import YieldPromise
 import os
 import sublime
+import sys
+
 
 try:
     from typing import Generator, Optional, Iterable, Tuple, List
@@ -321,7 +323,12 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                             'newText': 'bar'
                         },
                         {
-                            'range': {'start': {'character': 0, 'line': 2}, 'end': {'character': 3, 'line': 2}},
+                            'range':
+                            {
+                                'start': {'character': 0, 'line': 2},
+                                # Check that lsp_apply_document_edit guards for overflow by using sys.maxsize + 1
+                                'end': {'character': sys.maxsize + 1, 'line': 2}
+                            },
                             'newText': 'bar'
                         }
                     ]

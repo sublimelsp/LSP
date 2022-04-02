@@ -285,15 +285,9 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 
 ## LaTeX
 
-There are multiple options:
-
-### TexLab
-
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
 
-### LTeX
-
-Follow installation instructions on [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
+Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## Lisp
 
@@ -319,6 +313,10 @@ Follow installation instructions on [LSP-leo](https://github.com/sublimelsp/LSP-
 ## Lua
 
 Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-lua).
+
+## Markdown
+
+Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## OCaml/Reason
 

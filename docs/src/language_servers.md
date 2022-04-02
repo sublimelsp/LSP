@@ -162,23 +162,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## Go
 
-1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/README.md#installation).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"gopls"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "gopls": {
-                "enabled": true,
-                "command": ["gopls"],
-                "selector": "source.go",
-                "initializationOptions": {
-                    "experimentalWorkspaceModule": false
-                }
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LSP-gopls).
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.

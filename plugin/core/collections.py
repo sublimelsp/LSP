@@ -154,7 +154,7 @@ class DottedDict:
         return sublime.expand_variables(self._d, variables)
 
     def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
-        if not current:
+        if not current or any(filter(lambda key: isinstance(key, str) and (":" in key or "/" in key), current.keys())):
             return self.set(prefix, current)
         for key, value in current.items():
             path = "{}.{}".format(prefix, key)

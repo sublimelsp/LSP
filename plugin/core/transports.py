@@ -206,7 +206,7 @@ class ProcessTransport(Transport[T]):
                     return
                 message = self._stderr.readline().decode('utf-8', 'replace')
                 if message == '':
-                    break
+                    continue
                 callback_object = self._callback_object()
                 if callback_object:
                     callback_object.on_stderr_message(message.rstrip())

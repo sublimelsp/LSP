@@ -1,5 +1,5 @@
 from .core.registry import LspTextCommand
-from .core.typing import List, Tuple, cast
+from .core.typing import Any, List, Tuple, cast
 import sublime
 import os
 
@@ -34,7 +34,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         scope_list = scope.replace(' ', '<br>')
         stack = self.view.context_backtrace(point)
         token_type, token_modifiers = self._get_semantic_info(point)
-        if isinstance(stack, list) and len(stack) > 0 and isinstance(stack[0], sublime.ContextStackFrame):
+        if isinstance(stack, list) and len(stack) > 0 and not isinstance(stack[0], str):
             self._render_with_fancy_stackframes(
                 scope,
                 scope_list,
@@ -137,7 +137,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         self,
         scope: str,
         scope_list: str,
-        stack: List[sublime.ContextStackFrame],
+        stack: List[Any],
         token_type: str,
         token_modifiers: str
     ) -> None:

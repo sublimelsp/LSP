@@ -666,6 +666,12 @@ class HtmlSheet:
         ...
 
 
+class ContextStackFrame:
+    context_name = ... # type: str
+    source_file = ... # type: str
+    source_location = ... # type: Tuple[int, int]
+
+
 class View:
     view_id = ...  # type: Any
     selection = ...  # type: Any
@@ -801,7 +807,7 @@ class View:
     def scope_name(self, pt: int) -> str:
         ...
 
-    def context_backtrace(self, pt: int) -> List[str]:
+    def context_backtrace(self, pt: int) -> Union[List[ContextStackFrame], List[str]]:
         ...
 
     def match_selector(self, pt: int, selector: str) -> bool:

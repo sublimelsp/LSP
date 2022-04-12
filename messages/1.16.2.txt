@@ -1,0 +1,12 @@
+=> 1.16.2
+
+# Features and Fixes
+
+- Fix LspShowScopeNameCommand for the new ContextStackFrame type (#1961) (Raoul Wols)
+- Skip empty stderr messages, don't break on them (Shane Moore)
+- Guard for overflow of the column offset when applying edits (#1952) (Raoul Wols)
+- Fix "side by side go-to" if file is already open (#1950) (Rafał Chłodnicki)
+- doc: Update Go instructions (Lucas Alber)
+- doc: Update documentation for LSP-ltex-ls (Lucas Alber)
+- doc: Add documentation for quick-lint-js language server (Matthew "strager" Glazar)
+- doc: Reorganize documentation for JavaScript/TypeScript (Matthew "strager" Glazar)

@@ -49,12 +49,13 @@ def parse_uri(uri: str) -> Tuple[str, str]:
     parsed = urlparse(uri)
     if parsed.scheme == "file":
         path = url2pathname(parsed.path)
+        netloc = url2pathname(parsed.netloc)
         if os.name == 'nt':
             path = path.lstrip("\\")
             path = re.sub(r"^([a-z]):", _uppercase_driveletter, path)
-            if parsed.netloc:
+            if netloc:
                 # Convert to UNC path
-                return parsed.scheme, "\\\\{}\\{}".format(parsed.netloc, path)
+                return parsed.scheme, "\\\\{}\\{}".format(netloc, path)
             else:
                 return parsed.scheme, path
         return parsed.scheme, path

@@ -35,6 +35,11 @@ class WindowsTests(unittest.TestCase):
         self.assertEqual(scheme, "file")
         self.assertEqual(path, R'\\192.168.80.2\D$\www\File.php')
 
+    def test_wsl_path(self):
+        scheme, path = parse_uri('file://wsl%24/Ubuntu-20.04/File.php')
+        self.assertEqual(scheme, "file")
+        self.assertEqual(path, R'\\wsl$\Ubuntu-20.04\File.php')
+
 
 @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
 class NixTests(unittest.TestCase):

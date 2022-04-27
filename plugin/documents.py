@@ -5,6 +5,7 @@ from .completion import LspResolveDocsCommand
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import CompletionItem
+from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
@@ -702,6 +703,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
+        include_snippets = self.view.settings().get("auto_complete_include_snippets")
         for response, session_name in responses:
             if isinstance(response, Error):
                 errors.append(response)
@@ -721,7 +723,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             items.extend(
                 format_completion(response_item, index, can_resolve_completion_items, session.config.name)
-                for index, response_item in enumerate(response_items))
+                for index, response_item in enumerate(response_items)
+                if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
             flags |= sublime.INHIBIT_REORDER
         if errors:

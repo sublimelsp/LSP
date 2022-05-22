@@ -1083,7 +1083,7 @@ class Session(TransportCallbacks):
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
-        self.semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
+        self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1532,7 +1532,7 @@ class Session(TransportCallbacks):
         types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
         modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         return decode_semantic_token(
-            types_legend, modifiers_legend, self.semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
+            types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

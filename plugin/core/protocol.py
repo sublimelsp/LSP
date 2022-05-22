@@ -479,7 +479,7 @@ class Notification:
 
     __slots__ = ('method', 'params')
 
-    def __init__(self, method: str, params: Optional[Mapping[str, Any]] = None) -> None:
+    def __init__(self, method: str, params: Any = None) -> None:
         self.method = method
         self.params = params
 

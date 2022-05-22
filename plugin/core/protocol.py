@@ -343,7 +343,7 @@ class Request:
     def __init__(
         self,
         method: str,
-        params: Optional[Mapping[str, Any]] = None,
+        params: Any = None,
         view: Optional[sublime.View] = None,
         progress: bool = False
     ) -> None:

@@ -12,7 +12,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -66,7 +66,7 @@ class SemanticTokensData:
     def __init__(self) -> None:
         self.data = []  # type: List[int]
         self.result_id = None  # type: Optional[str]
-        self.active_region_keys = []  # type: List[int]
+        self.active_region_keys = set()  # type: Set[int]
         self.tokens = []  # type: List[SemanticToken]
         self.view_change_count = 0
         self.needs_refresh = False
@@ -549,7 +549,7 @@ class SessionBuffer:
                     sv.view.erase_regions("lsp_semantic_{}".format(region_key))
         for region_key, (scope, regions) in scope_regions.items():
             if region_key not in self.semantic_tokens.active_region_keys:
-                self.semantic_tokens.active_region_keys.append(region_key)
+                self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
                 sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 

@@ -528,7 +528,6 @@ class SessionBuffer:
                 # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
                 # customizations in the color scheme for the scopes of custom token types would require a restart of
                 # Sublime Text to take effect.
-                # Note that the region keys for these scopes are not initialized in SessionView._initialize_region_keys.
                 token_general_style = view.style_for_scope("meta.semantic-token")
                 token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \

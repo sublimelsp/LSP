@@ -12,7 +12,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -61,12 +61,12 @@ class DiagnosticSeverityData:
 class SemanticTokensData:
 
     __slots__ = (
-        'data', 'result_id', 'active_scopes', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
+        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
 
     def __init__(self) -> None:
         self.data = []  # type: List[int]
         self.result_id = None  # type: Optional[str]
-        self.active_scopes = []  # type: List[str]
+        self.active_region_keys = set()  # type: Set[int]
         self.tokens = []  # type: List[SemanticToken]
         self.view_change_count = 0
         self.needs_refresh = False
@@ -105,6 +105,8 @@ class SessionBuffer:
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.semantic_tokens = SemanticTokensData()
+        self._semantic_region_keys = {}  # type: Dict[str, int]
+        self._last_semantic_region_key = 0
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
@@ -502,7 +504,7 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions = dict()  # type: Dict[str, List[sublime.Region]]
+        scope_regions = dict()  # type: Dict[int, Tuple[str, List[sublime.Region]]]
         prev_line = 0
         prev_col_utf16 = 0
         for idx in range(0, len(self.semantic_tokens.data), 5):
@@ -526,7 +528,6 @@ class SessionBuffer:
                 # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
                 # customizations in the color scheme for the scopes of custom token types would require a restart of
                 # Sublime Text to take effect.
-                # Note that the region keys for these scopes are not initialized in SessionView._initialize_region_keys.
                 token_general_style = view.style_for_scope("meta.semantic-token")
                 token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
                 if token_general_style["source_line"] != token_type_style["source_line"] or \
@@ -537,24 +538,30 @@ class SessionBuffer:
                         scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
-                scope_regions.setdefault(scope, []).append(r)
+                scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
-        for scope in self.semantic_tokens.active_scopes.copy():
-            if scope not in scope_regions.keys():
-                self.semantic_tokens.active_scopes.remove(scope)
+        for region_key in self.semantic_tokens.active_region_keys.copy():
+            if region_key not in scope_regions.keys():
+                self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
-                    sv.view.erase_regions("lsp_{}".format(scope))
-        for scope, regions in scope_regions.items():
-            if scope not in self.semantic_tokens.active_scopes:
-                self.semantic_tokens.active_scopes.append(scope)
+                    sv.view.erase_regions("lsp_semantic_{}".format(region_key))
+        for region_key, (scope, regions) in scope_regions.items():
+            if region_key not in self.semantic_tokens.active_region_keys:
+                self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions("lsp_{}".format(scope), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+
+    def _get_semantic_region_key_for_scope(self, scope: str) -> int:
+        if scope not in self._semantic_region_keys:
+            self._last_semantic_region_key += 1
+            self._semantic_region_keys[scope] = self._last_semantic_region_key
+        return self._semantic_region_keys[scope]
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
-        for scope in self.semantic_tokens.active_scopes:
-            view.erase_regions("lsp_{}".format(scope))
+        for region_key in self.semantic_tokens.active_region_keys:
+            view.erase_regions("lsp_semantic_{}".format(region_key))
 
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh

@@ -538,7 +538,7 @@ class SessionBuffer:
                         scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
-                scope_regions.setdefault(self._get_region_key_for_scope(scope), (scope, []))[1].append(r)
+                scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
@@ -553,7 +553,7 @@ class SessionBuffer:
             for sv in self.session_views:
                 sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
 
-    def _get_region_key_for_scope(self, scope: str) -> int:
+    def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:
             self._last_semantic_region_key += 1
             self._semantic_region_keys[scope] = self._last_semantic_region_key

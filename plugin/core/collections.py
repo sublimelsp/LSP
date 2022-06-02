@@ -113,7 +113,9 @@ class DottedDict:
         """
         return bool(self._d)
 
-    def __contains__(self, path: str) -> bool:
+    def __contains__(self, path: object) -> bool:
+        if not isinstance(path, str):
+            return False
         value = self.get(path)
         return value is not None and value is not False
 

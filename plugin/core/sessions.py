@@ -185,19 +185,27 @@ class Manager(metaclass=ABCMeta):
         pass
 
 
+def _sequence_to_lsp_indices(sequence: Sequence[Any]) -> List[int]:
+    return list(range(1, len(sequence) + 1))
+
+
+def _enum_like_class_to_list(c: Type[object]) -> List[str]:
+    return [v for k, v in c.__dict__.items() if not k.startswith('_')]
+
+
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
                           config: ClientConfig) -> dict:
-    completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
-    symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
-    diagnostic_tag_value_set = [v for k, v in DiagnosticTag.__dict__.items() if not k.startswith('_')]
-    completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
-    symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
-    semantic_token_types = [v for k, v in SemanticTokenTypes.__dict__.items() if not k.startswith('_')]
+    completion_kinds = _sequence_to_lsp_indices(COMPLETION_KINDS)
+    symbol_kinds = _sequence_to_lsp_indices(SYMBOL_KINDS)
+    diagnostic_tag_value_set = _enum_like_class_to_list(DiagnosticTag)
+    completion_tag_value_set = _enum_like_class_to_list(CompletionItemTag)
+    symbol_tag_value_set = _enum_like_class_to_list(SymbolTag)
+    semantic_token_types = _enum_like_class_to_list(SemanticTokenTypes)
     if config.semantic_tokens is not None:
         for token_type in config.semantic_tokens.keys():
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-    semantic_token_modifiers = [v for k, v in SemanticTokenModifiers.__dict__.items() if not k.startswith('_')]
+    semantic_token_modifiers = _enum_like_class_to_list(SemanticTokenModifiers)
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp

@@ -4,13 +4,15 @@ Module with additional collections.
 from .typing import Optional, Dict, Any, Generator
 from copy import deepcopy
 import sublime
+import sys
+import json
 
 
 class DottedDict:
 
     __slots__ = ('_d',)
 
-    def __init__(self, d: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, d: Optional[Dict[str, Any]] = None, process_dotted_keys_level: int = sys.maxsize) -> None:
         """
         Construct a DottedDict, optionally from an existing dictionary.
 
@@ -18,13 +20,13 @@ class DottedDict:
         """
         self._d = {}  # type: Dict[str, Any]
         if d is not None:
-            self.update(d)
+            self.update(d, process_dotted_keys_level)
 
     @classmethod
     def from_base_and_override(cls, base: "DottedDict", override: Optional[Dict[str, Any]]) -> "DottedDict":
-        result = DottedDict(base.copy())
+        result = DottedDict(base.copy(), process_dotted_keys_level=1)
         if override:
-            result.update(override)
+            result.update(override, process_dotted_keys_level=1)
         return result
 
     def get(self, path: Optional[str] = None) -> Any:
@@ -60,23 +62,27 @@ class DottedDict:
                 yield None
                 return
 
-    def set(self, path: str, value: Any) -> None:
+    def set(self, path: str, value: Any, obj: Dict[str, Any] = None, process_dotted_keys_level: int = sys.maxsize) -> Any:
         """
         Set a value in the dictionary.
 
         :param      path:   The path, e.g. foo.bar.baz
         :param      value:  The value
         """
-        current = self._d
-        keys = path.split('.')
+        current = self._d if obj is None else obj
+        keys = path.split('.') if process_dotted_keys_level > 0 else [path]
+        print('set keys: {}'.format(keys))
         for i in range(0, len(keys) - 1):
             key = keys[i]
+            print('set key: {}'.format(key))
             next_current = current.get(key)
             if not isinstance(next_current, dict):
                 next_current = {}
                 current[key] = next_current
             current = next_current
+        print('set key: {}'.format(keys[-1]))
         current[keys[-1]] = value
+        return value
 
     def remove(self, path: str) -> None:
         """
@@ -131,17 +137,22 @@ class DottedDict:
         """
         self._d = d
 
-    def update(self, d: Dict[str, Any]) -> None:
+    def update(self, d: Dict[str, Any], process_dotted_keys_level: int = sys.maxsize) -> None:
         """
         Overwrite and/or add new key-value pairs to the collection.
 
         :param      d:    The overriding dictionary. Can contain nested dictionaries.
         """
+        print('--input--', json.dumps(d, indent=2))
         for key, value in d.items():
+            print('key: {}, process_dotted_keys_level: {}'.format(key, process_dotted_keys_level))
             if isinstance(value, dict):
-                self._update_recursive(value, key)
+                print('update recursive...')
+                dst = self.set(key, {}, self._d, process_dotted_keys_level)
+                self._update_recursive(dst, value, key, process_dotted_keys_level - 1)
             else:
-                self.set(key, value)
+                self.set(key, value, self._d, process_dotted_keys_level)
+        print('--dotted--', json.dumps(self._d, indent=2))
 
     def get_resolved(self, variables: Dict[str, str]) -> Dict[str, Any]:
         """
@@ -153,15 +164,18 @@ class DottedDict:
         """
         return sublime.expand_variables(self._d, variables)
 
-    def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
+    def _update_recursive(
+        self, dest_value: Dict[str, Any], current: Dict[str, Any], prefix: str, process_dotted_keys_level: int
+    ) -> None:
         if not current:
-            return self.set(prefix, current)
+            return
         for key, value in current.items():
-            path = "{}.{}".format(prefix, key)
+            print('update recursive key: {}'.format(key))
             if isinstance(value, dict):
-                self._update_recursive(value, path)
+                dst = self.set(key, {}, dest_value, process_dotted_keys_level)
+                self._update_recursive(dst, value, key, process_dotted_keys_level - 1)
             else:
-                self.set(path, value)
+                self.set(key, value, dest_value, process_dotted_keys_level)
 
     def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._d))

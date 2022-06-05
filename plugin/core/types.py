@@ -670,10 +670,10 @@ class ClientConfig:
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
         base = sublime.decode_value(sublime.load_resource(file))
-        settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
-        settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
-        init_options = DottedDict(base.get("initializationOptions", {}))
-        init_options.update(read_dict_setting(s, "initializationOptions", {}))
+        settings = DottedDict(base.get("settings", {}), process_dotted_keys_level=1)  # defined by the plugin author
+        settings.update(read_dict_setting(s, "settings", {}), process_dotted_keys_level=1)  # overrides from the user
+        init_options = DottedDict(base.get("initializationOptions", {}), process_dotted_keys_level=1)
+        init_options.update(read_dict_setting(s, "initializationOptions", {}), process_dotted_keys_level=1)
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         semantic_tokens = read_dict_setting(s, "semantic_tokens", {})

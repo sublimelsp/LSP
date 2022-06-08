@@ -215,6 +215,23 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
         return "".join(formatted)
 
+    def document_link_content(self, listener: AbstractViewListener, point: int) -> str:
+        if userprefs().link_highlight_style in ("underline", "none"):
+            for sv in listener.session_views_async():
+                if sv.view == self.view and sv.has_capability_async("documentLinkProvider"):
+                    sb = sv.session_buffer
+                    for link in sb.get_document_links():
+                        if link.contains(point):
+                            title = link.tooltip or "Follow link"
+                            if link.target is not None:
+                                return '<div class="link"><a href="{}">{}</a></div>'.format(link.target, title)
+                            else:
+                                # TODO send documentLink/resolve request
+                                # TODO maybe figure out how "Promise" works and if it could help here
+                                return ""
+                    break
+        return ""
+
     def hover_content(self) -> str:
         contents = []
         for hover, language_map in self._hover_responses:
@@ -231,6 +248,7 @@ class LspHoverCommand(LspTextCommand):
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
         if contents and not only_diagnostics and hover_content:
             contents += self.symbol_actions_content(listener, point)
+        contents += self.document_link_content(listener, point)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only

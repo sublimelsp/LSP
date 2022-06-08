@@ -193,6 +193,7 @@ class Settings:
     document_highlight_style = None  # type: str
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
+    link_highlight_style = None  # type: str
     log_debug = None  # type: bool
     log_max_size = None  # type: int
     log_server = None  # type: List[str]
@@ -230,6 +231,7 @@ class Settings:
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
+        r("link_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})

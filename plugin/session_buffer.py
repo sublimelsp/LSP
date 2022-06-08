@@ -1,5 +1,6 @@
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import Range
 from .core.protocol import Request
@@ -20,6 +21,7 @@ from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
+from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -56,6 +58,21 @@ class DiagnosticSeverityData:
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
+
+
+class DocumentLinkData:
+
+    __slots__ = ('region', 'target', 'tooltip', 'data')
+
+    def __init__(
+            self, region: sublime.Region, target: Optional[DocumentUri], tooltip: Optional[str], data: Any) -> None:
+        self.region = region
+        self.target = target
+        self.tooltip = tooltip
+        self.data = data
+
+    def contains(self, point: int) -> bool:
+        return self.region.contains(point)
 
 
 class SemanticTokensData:
@@ -104,6 +121,7 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
+        self.document_links = []  # type: List[DocumentLinkData]
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
@@ -140,6 +158,8 @@ class SessionBuffer:
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
             self.do_semantic_tokens_async(view)
+            if userprefs().link_highlight_style in ("underline", "none"):
+                self._do_document_link_async(view, view.change_count())
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -281,6 +301,8 @@ class SessionBuffer:
                 self.pending_changes = None
             self._do_color_boxes_async(view, version)
             self.do_semantic_tokens_async(view)
+            if userprefs().link_highlight_style in ("underline", "none"):
+                self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -332,6 +354,34 @@ class SessionBuffer:
     def _on_color_boxes_async(self, view: sublime.View, response: Any) -> None:
         color_infos = response if response else []
         self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in color_infos])
+
+    # --- textDocument/documentLink ------------------------------------------------------------------------------------
+
+    def _do_document_link_async(self, view: sublime.View, version: int) -> None:
+        if self.session.has_capability("documentLinkProvider"):
+            self.session.send_request_async(
+                Request.documentLink({'textDocument': text_document_identifier(view)}, view),
+                self._if_view_unchanged(self._on_document_link_async, version)
+            )
+
+    def _on_document_link_async(self, view: sublime.View, response: Optional[List[DocumentLink]]) -> None:
+        self.document_links = \
+            [DocumentLinkData(
+                range_to_region(Range.from_lsp(link["range"]), view),
+                link.get("target"),
+                link.get("tooltip"),
+                link.get("data")) for link in response] if response else []
+        if self.document_links and userprefs().link_highlight_style == "underline":
+            view.add_regions(
+                "lsp_document_link",
+                [link.region for link in self.document_links],
+                scope="markup.underline.link.lsp",
+                flags=DOCUMENT_LINK_FLAGS)
+        else:
+            view.erase_regions("lsp_document_link")
+
+    def get_document_links(self) -> List[DocumentLinkData]:
+        return self.document_links
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

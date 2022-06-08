@@ -280,6 +280,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "valueSet": symbol_tag_value_set
             }
         },
+        "documentLink": {
+            "dynamicRegistration": True,
+            "tooltipSupport": True
+        },
         "formatting": {
             "dynamicRegistration": True  # exceptional
         },
@@ -521,6 +525,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+        ...
+
+    def get_document_links(self) -> List[Any]:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:

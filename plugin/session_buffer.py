@@ -60,21 +60,6 @@ class DiagnosticSeverityData:
             self.icon = userprefs().diagnostics_gutter_marker
 
 
-class DocumentLinkData:
-
-    __slots__ = ('region', 'target', 'tooltip', 'data')
-
-    def __init__(
-            self, region: sublime.Region, target: Optional[DocumentUri], tooltip: Optional[str], data: Any) -> None:
-        self.region = region
-        self.target = target
-        self.tooltip = tooltip
-        self.data = data
-
-    def contains(self, point: int) -> bool:
-        return self.region.contains(point)
-
-
 class SemanticTokensData:
 
     __slots__ = (
@@ -121,7 +106,7 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
-        self.document_links = []  # type: List[DocumentLinkData]
+        self.document_links = []  # type: List[DocumentLink]
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
@@ -365,23 +350,20 @@ class SessionBuffer:
             )
 
     def _on_document_link_async(self, view: sublime.View, response: Optional[List[DocumentLink]]) -> None:
-        self.document_links = \
-            [DocumentLinkData(
-                range_to_region(Range.from_lsp(link["range"]), view),
-                link.get("target"),
-                link.get("tooltip"),
-                link.get("data")) for link in response] if response else []
+        self.document_links = response or []
         if self.document_links and userprefs().link_highlight_style == "underline":
             view.add_regions(
                 "lsp_document_link",
-                [link.region for link in self.document_links],
+                [range_to_region(Range.from_lsp(link["range"]), view) for link in self.document_links],
                 scope="markup.underline.link.lsp",
                 flags=DOCUMENT_LINK_FLAGS)
         else:
             view.erase_regions("lsp_document_link")
 
-    def get_document_links(self) -> List[DocumentLinkData]:
-        return self.document_links
+    def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
+        for link in self.document_links:
+            if range_to_region(Range.from_lsp(link["range"]), view).contains(point):
+                return link
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

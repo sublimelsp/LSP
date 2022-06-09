@@ -24,6 +24,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
+from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
@@ -527,7 +528,7 @@ class SessionBufferProtocol(Protocol):
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
 
-    def get_document_links(self) -> List[Any]:
+    def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:

@@ -221,15 +221,16 @@ class LspHoverCommand(LspTextCommand):
         contents = []
         for sv in listener.session_views_async():
             if sv.has_capability_async("documentLinkProvider"):
-                for link in sv.session_buffer.get_document_links():
-                    if link.contains(point):
-                        title = link.tooltip or "Follow link"
-                        if link.target is not None:
-                            contents.append('<a href="{}">{}</a>'.format(link.target, title))
-                        else:
-                            # TODO send documentLink/resolve request
-                            # TODO maybe figure out how "Promise" works and if it could help here
-                            pass
+                link = sv.session_buffer.get_document_link_at_point(sv.view, point)
+                if link is not None:
+                    title = link.get("tooltip") or "Follow link"
+                    target = link.get("target")
+                    if target is not None:
+                        contents.append('<a href="{}">{}</a>'.format(target, title))
+                    else:
+                        # TODO send documentLink/resolve request
+                        # TODO maybe figure out how "Promise" works and if it could help here
+                        pass
         return '<div class="link">' + '<br>'.join(contents) + '</div>' if contents else ''
 
     def hover_content(self) -> str:

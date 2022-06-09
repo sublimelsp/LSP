@@ -109,10 +109,10 @@
   // or a web site. Link navigation is implemented via the popup on mouse hover.
   // Valid values are:
   // "underline"
-  // "none" - disables special highlighting, but still displays links in the hover popup
-  // "off" - disables special highlighting and the hover popup for links
-  // Note that depending on support in the syntax and color scheme, some internet URLs may
-  // still be underlined via regular syntax highlighting.
+  // "none" - disables special highlighting, but still allows to navigate links in the hover popup
+  // "disabled" - disables highlighting and the hover popup for links
+  // Note that depending on the syntax and color scheme, some internet URLs may still be
+  // underlined via regular syntax highlighting.
   "link_highlight_style": "underline",
 
   // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).

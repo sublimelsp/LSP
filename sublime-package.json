@@ -372,7 +372,7 @@
               "enum": [
                 "underline",
                 "none",
-                "off"
+                "disabled"
               ],
               "default": "underline",
               "markdownDescription": "Highlight style of links to internal or external resources, like another text document or a web site."

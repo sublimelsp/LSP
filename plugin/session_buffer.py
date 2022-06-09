@@ -364,6 +364,8 @@ class SessionBuffer:
         for link in self.document_links:
             if range_to_region(Range.from_lsp(link["range"]), view).contains(point):
                 return link
+        else:
+            return None
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

@@ -367,6 +367,15 @@ class SessionBuffer:
         else:
             return None
 
+    def update_document_link(self, new_link: DocumentLink) -> bool:
+        new_link_range = Range.from_lsp(new_link["range"])
+        for link in self.document_links:
+            if Range.from_lsp(link["range"]) == new_link_range:
+                self.document_links.remove(link)
+                self.document_links.append(new_link)
+                return True
+        return False
+
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:

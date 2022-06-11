@@ -3,6 +3,7 @@ from .code_actions import CodeActionOrCommand
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Diagnostic
+from .core.protocol import DocumentLink
 from .core.protocol import Error
 from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
@@ -223,15 +224,24 @@ class LspHoverCommand(LspTextCommand):
             if sv.has_capability_async("documentLinkProvider"):
                 link = sv.session_buffer.get_document_link_at_point(sv.view, point)
                 if link is not None:
-                    title = link.get("tooltip") or "Follow link"
                     target = link.get("target")
-                    if target is not None:
-                        contents.append('<a href="{}">{}</a>'.format(target, title))
-                    else:
-                        # TODO send documentLink/resolve request
-                        # TODO maybe figure out how "Promise" works and if it could help here
-                        pass
+                    if not target:
+                        if not sv.has_capability_async("documentLinkProvider.resolveProvider"):
+                            continue
+                        sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view)).then(
+                            lambda result: self._on_resolved_link(sv.session_buffer, result))
+                        link = sv.session_buffer.get_document_link_at_point(sv.view, point)  # resolved link ???
+                        if not link:
+                            continue
+                        target = link.get("target")
+                        if not target:
+                            continue
+                    title = link.get("tooltip") or "Follow link"
+                    contents.append('<a href="{}">{}</a>'.format(target, title))
         return '<div class="link">' + '<br>'.join(contents) + '</div>' if contents else ''
+
+    def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> None:
+        session_buffer.update_document_link(link)
 
     def hover_content(self) -> str:
         contents = []

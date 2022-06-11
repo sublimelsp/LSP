@@ -1,3 +1,5 @@
+from .core.logging import debug
+from .core.protocol import DocumentLink, Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.typing import Optional
@@ -9,6 +11,23 @@ import webbrowser
 
 class LspOpenLinkCommand(LspTextCommand):
     capability = 'documentLinkProvider'
+
+    def open_target(self, target: str) -> None:
+        if target.startswith("file:"):
+            window = self.view.window()
+            if window:
+                decoded = unquote(target)  # decode percent-encoded characters
+                parsed = urlparse(decoded)
+                filepath = parsed.path
+                if sublime.platform() == "windows":
+                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
+                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
+                window.open_file(fn, flags=sublime.ENCODED_POSITION)
+        else:
+            if not (target.lower().startswith("http://") or target.lower().startswith("https://")):
+                target = "http://" + target
+            if not webbrowser.open(target):
+                sublime.status_message("failed to open: " + target)
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if not super().is_enabled(event, point):
@@ -26,24 +45,6 @@ class LspOpenLinkCommand(LspTextCommand):
         return link is not None
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-
-        def open_target(target: str) -> None:
-            if target.startswith("file:"):
-                window = self.view.window()
-                if window:
-                    decoded = unquote(target)  # decode percent-encoded characters
-                    parsed = urlparse(decoded)
-                    filepath = parsed.path
-                    if sublime.platform() == "windows":
-                        filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
-                    fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
-                    window.open_file(fn, flags=sublime.ENCODED_POSITION)
-            else:
-                if not (target.lower().startswith("http://") or target.lower().startswith("https://")):
-                    target = "http://" + target
-                if not webbrowser.open(target):
-                    sublime.status_message("failed to open: " + target)
-
         point = get_position(self.view, event)
         if not point:
             return
@@ -59,7 +60,12 @@ class LspOpenLinkCommand(LspTextCommand):
         target = link.get("target")
 
         if target is not None:
-            open_target(target)
+            self.open_target(target)
         else:
-            # TODO send documentLink/resolve request
-            sublime.status_message("Links with unresolved target are currently not supported")
+            if not session.has_capability("documentLinkProvider.resolveProvider"):
+                debug("DocumentLink.target is missing, but the server doesn't support documentLink/resolve")
+                return
+            session.send_request_async(Request.resolveDocumentLink(link, self.view), self._on_resolved_async)
+
+    def _on_resolved_async(self, response: DocumentLink) -> None:
+        self.open_target(response["target"])

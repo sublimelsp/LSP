@@ -10,17 +10,19 @@ import webbrowser
 class LspOpenLinkCommand(LspTextCommand):
     capability = 'documentLinkProvider'
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        point = get_position(self.view, event)
-        if not point:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if not super().is_enabled(event, point):
             return False
-        session = self.best_session(self.capability, point)
+        position = get_position(self.view, event)
+        if not position:
+            return False
+        session = self.best_session(self.capability, position)
         if not session:
             return False
         sv = session.session_view_for_view_async(self.view)
         if not sv:
             return False
-        link = sv.session_buffer.get_document_link_at_point(self.view, point)
+        link = sv.session_buffer.get_document_link_at_point(self.view, position)
         return link is not None
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:

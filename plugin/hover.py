@@ -261,7 +261,7 @@ class LspHoverCommand(LspTextCommand):
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
         link_content, link_has_standard_tooltip = self.document_link_content(listener, point)
         if userprefs().show_symbol_action_links and contents and not only_diagnostics and hover_content:
-            symbol_actions_content =  self.symbol_actions_content(listener, point)
+            symbol_actions_content = self.symbol_actions_content(listener, point)
             if link_content and link_has_standard_tooltip:
                 symbol_actions_content += ' | ' + link_content
             elif link_content:

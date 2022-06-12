@@ -197,11 +197,8 @@ class LspHoverCommand(LspTextCommand):
         return bool(listener.session_async('{}Provider'.format(link.lsp_name)))
 
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
-        if userprefs().show_symbol_action_links:
-            actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
-            if actions:
-                return '<div class="actions">' + " | ".join(actions) + "</div>"
-        return ""
+        actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
+        return " | ".join(actions) if actions else ""
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -216,10 +213,11 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
         return "".join(formatted)
 
-    def document_link_content(self, listener: AbstractViewListener, point: int) -> str:
+    def document_link_content(self, listener: AbstractViewListener, point: int) -> Tuple[str, bool]:
         if userprefs().link_highlight_style not in ("underline", "none"):
-            return ""
+            return "", False
         contents = []
+        link_has_standard_tooltip = True
         for sv in listener.session_views_async():
             if sv.has_capability_async("documentLinkProvider"):
                 link = sv.session_buffer.get_document_link_at_point(sv.view, point)
@@ -237,8 +235,12 @@ class LspHoverCommand(LspTextCommand):
                         if not target:
                             continue
                     title = link.get("tooltip") or "Follow link"
+                    if title != "Follow link":
+                        link_has_standard_tooltip = False
                     contents.append('<a href="{}">{}</a>'.format(target, title))
-        return '<div class="link">' + '<br>'.join(contents) + '</div>' if contents else ''
+        if len(contents) > 1:
+            link_has_standard_tooltip = False
+        return '<br>'.join(contents) if contents else '', link_has_standard_tooltip
 
     def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> None:
         session_buffer.update_document_link(link)
@@ -257,9 +259,16 @@ class LspHoverCommand(LspTextCommand):
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
-        if contents and not only_diagnostics and hover_content:
-            contents += self.symbol_actions_content(listener, point)
-        contents += self.document_link_content(listener, point)
+        link_content, link_has_standard_tooltip = self.document_link_content(listener, point)
+        if userprefs().show_symbol_action_links and contents and not only_diagnostics and hover_content:
+            symbol_actions_content =  self.symbol_actions_content(listener, point)
+            if link_content and link_has_standard_tooltip:
+                symbol_actions_content += ' | ' + link_content
+            elif link_content:
+                contents += '<div class="link with-padding">' + link_content + '</div>'
+            contents += '<div class="actions">' + symbol_actions_content + '</div>'
+        elif link_content:
+            contents += '<div class="{}">{}</div>'.format('link with-padding' if contents else 'link', link_content)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only

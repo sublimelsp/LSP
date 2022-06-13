@@ -12,23 +12,6 @@ import webbrowser
 class LspOpenLinkCommand(LspTextCommand):
     capability = 'documentLinkProvider'
 
-    def open_target(self, target: str) -> None:
-        if target.startswith("file:"):
-            window = self.view.window()
-            if window:
-                decoded = unquote(target)  # decode percent-encoded characters
-                parsed = urlparse(decoded)
-                filepath = parsed.path
-                if sublime.platform() == "windows":
-                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
-                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
-                window.open_file(fn, flags=sublime.ENCODED_POSITION)
-        else:
-            if not (target.lower().startswith("http://") or target.lower().startswith("https://")):
-                target = "http://" + target
-            if not webbrowser.open(target):
-                sublime.status_message("failed to open: " + target)
-
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if not super().is_enabled(event, point):
             return False
@@ -69,3 +52,20 @@ class LspOpenLinkCommand(LspTextCommand):
 
     def _on_resolved_async(self, response: DocumentLink) -> None:
         self.open_target(response["target"])
+
+    def open_target(self, target: str) -> None:
+        if target.startswith("file:"):
+            window = self.view.window()
+            if window:
+                decoded = unquote(target)  # decode percent-encoded characters
+                parsed = urlparse(decoded)
+                filepath = parsed.path
+                if sublime.platform() == "windows":
+                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
+                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
+                window.open_file(fn, flags=sublime.ENCODED_POSITION)
+        else:
+            if not (target.lower().startswith("http://") or target.lower().startswith("https://")):
+                target = "http://" + target
+            if not webbrowser.open(target):
+                sublime.status_message("failed to open: " + target)

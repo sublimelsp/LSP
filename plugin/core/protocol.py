@@ -164,11 +164,17 @@ Command = TypedDict('Command', {
 }, total=True)
 
 
+CodeActionDisabledInformation = TypedDict('CodeActionDisabledInformation', {
+    'reason': str
+}, total=True)
+
+
 CodeAction = TypedDict('CodeAction', {
     'title': str,
     'kind': Optional[str],
     'diagnostics': Optional[List[Any]],
     'isPreferred': Optional[bool],
+    'disabled': Optional[CodeActionDisabledInformation],
     'edit': Optional[dict],
     'command': Optional[Command],
 }, total=True)

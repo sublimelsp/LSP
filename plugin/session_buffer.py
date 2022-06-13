@@ -373,6 +373,7 @@ class SessionBuffer:
             if Range.from_lsp(link["range"]) == new_link_range:
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
+                break
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

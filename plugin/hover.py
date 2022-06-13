@@ -197,8 +197,7 @@ class LspHoverCommand(LspTextCommand):
                 continue
             target = link.get("target")
             if target:
-                resolved_link = link
-                link_promises.append(Promise(lambda resolve: resolve(resolved_link)))
+                link_promises.append(Promise.resolve(link))
             elif sv.has_capability_async("documentLinkProvider.resolveProvider"):
                 link_promises.append(sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view)).then(
                     lambda link: self._on_resolved_link(sv.session_buffer, link)))

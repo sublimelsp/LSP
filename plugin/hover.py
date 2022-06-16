@@ -3,6 +3,7 @@ from .code_actions import CodeActionOrCommand
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import Diagnostic
+from .core.protocol import DocumentLink
 from .core.protocol import Error
 from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
@@ -118,6 +119,7 @@ class LspHoverCommand(LspTextCommand):
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
+        self._document_link_content = ('', False)
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -129,6 +131,8 @@ class LspHoverCommand(LspTextCommand):
                 return
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, hover_point)
+                if userprefs().link_highlight_style in ("underline", "none"):
+                    self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
@@ -183,6 +187,46 @@ class LspHoverCommand(LspTextCommand):
         self._hover_responses = hovers
         self.show_hover(listener, point, only_diagnostics=False)
 
+    def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
+        link_promises = []  # type: List[Promise[DocumentLink]]
+        for sv in listener.session_views_async():
+            if not sv.has_capability_async("documentLinkProvider"):
+                continue
+            link = sv.session_buffer.get_document_link_at_point(sv.view, point)
+            if link is None:
+                continue
+            target = link.get("target")
+            if target:
+                link_promises.append(Promise.resolve(link))
+            elif sv.has_capability_async("documentLinkProvider.resolveProvider"):
+                link_promises.append(sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view)).then(
+                    lambda link: self._on_resolved_link(sv.session_buffer, link)))
+        if link_promises:
+            continuation = functools.partial(self._on_all_document_links_resolved, listener, point)
+            Promise.all(link_promises).then(continuation)
+
+    def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> DocumentLink:
+        session_buffer.update_document_link(link)
+        return link
+
+    def _on_all_document_links_resolved(
+        self, listener: AbstractViewListener, point: int, links: List[DocumentLink]
+    ) -> None:
+        contents = []
+        link_has_standard_tooltip = True
+        for link in links:
+            target = link.get("target")
+            if not target:
+                continue
+            title = link.get("tooltip") or "Follow link"
+            if title != "Follow link":
+                link_has_standard_tooltip = False
+            contents.append('<a href="{}">{}</a>'.format(target, title))
+        if len(contents) > 1:
+            link_has_standard_tooltip = False
+        self._document_link_content = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip)
+        self.show_hover(listener, point, only_diagnostics=False)
+
     def handle_code_actions(
         self,
         listener: AbstractViewListener,
@@ -196,11 +240,8 @@ class LspHoverCommand(LspTextCommand):
         return bool(listener.session_async('{}Provider'.format(link.lsp_name)))
 
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
-        if userprefs().show_symbol_action_links:
-            actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
-            if actions:
-                return '<div class="actions">' + " | ".join(actions) + "</div>"
-        return ""
+        actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
+        return " | ".join(actions) if actions else ""
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -229,8 +270,16 @@ class LspHoverCommand(LspTextCommand):
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
-        if contents and not only_diagnostics and hover_content:
-            contents += self.symbol_actions_content(listener, point)
+        link_content, link_has_standard_tooltip = self._document_link_content
+        if userprefs().show_symbol_action_links and contents and not only_diagnostics and hover_content:
+            symbol_actions_content = self.symbol_actions_content(listener, point)
+            if link_content and link_has_standard_tooltip:
+                symbol_actions_content += ' | ' + link_content
+            elif link_content:
+                contents += '<div class="link with-padding">' + link_content + '</div>'
+            contents += '<div class="actions">' + symbol_actions_content + '</div>'
+        elif link_content:
+            contents += '<div class="{}">{}</div>'.format('link with-padding' if contents else 'link', link_content)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only

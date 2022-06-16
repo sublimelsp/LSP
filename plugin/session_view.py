@@ -79,6 +79,7 @@ class SessionView:
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
+        self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
 
     @property
@@ -124,6 +125,7 @@ class SessionView:
             for mode in line_modes:
                 for tag in range(1, 3):
                     self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
+        self.view.add_regions("lsp_document_link", r)
         for severity in range(1, 5):
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)

@@ -60,6 +60,9 @@
 .actions a.icon {
     text-decoration: none;
 }
+.link.with-padding {
+    padding: 0.5rem;
+}
 pre.related_info {
     border-top: 1px solid color(var(--background) alpha(0.25));
     margin-top: 0.7rem;

@@ -72,6 +72,10 @@
       {
         "caption": "LSP: Find References",
         "command": "lsp_symbol_references"
+      },
+      {
+        "caption": "LSP: Follow Link",
+        "command": "lsp_open_link"
       }
     ]
   },

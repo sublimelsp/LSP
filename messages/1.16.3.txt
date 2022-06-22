@@ -1,0 +1,13 @@
+=> 1.16.3
+
+# Features and Fixes
+
+- Add support for textDocument/documentLink request (#1974) (jwortmann)
+- Don't expose disabled code actions (Rafal Chlodnicki)
+- Check for : and / while updating nested dict structures in DottedDict (Raoul Wols)
+- docs: add info about enabling clangd server (Ilia)
+- Fix diagnostic regions being hidden by semantic regions (#1969) (Rafał Chłodnicki)
+- Initialize diagnostic tagged regions after non-tagged ones (Rafal Chlodnicki)
+- Follow global setting whether to show snippet completions (Janos Wortmann)
+- Fix academicmarkdown language id (Lucas Alber)
+- Fix WSL path URI decoding under Windows (#1962) (Jack Cherng)

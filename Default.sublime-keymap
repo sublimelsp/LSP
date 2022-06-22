@@ -353,6 +353,20 @@
     //         }
     //     ]
     // },
+    // Follow Link
+    // {
+    //     "command": "lsp_open_link",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "documentLinkProvider"
+    //         }
+    //     ]
+    // },
     // Expand Selection (a replacement for ST's "Expand Selection")
     // {
     //     "command": "lsp_expand_selection",

@@ -164,11 +164,17 @@ Command = TypedDict('Command', {
 }, total=True)
 
 
+CodeActionDisabledInformation = TypedDict('CodeActionDisabledInformation', {
+    'reason': str
+}, total=True)
+
+
 CodeAction = TypedDict('CodeAction', {
     'title': str,
     'kind': Optional[str],
     'diagnostics': Optional[List[Any]],
     'isPreferred': Optional[bool],
+    'disabled': Optional[CodeActionDisabledInformation],
     'edit': Optional[dict],
     'command': Optional[Command],
 }, total=True)
@@ -295,6 +301,13 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
+DocumentLink = TypedDict('DocumentLink', {
+    'range': RangeLsp,
+    'target': DocumentUri,
+    'tooltip': str,
+    'data': Any
+}, total=False)
+
 MarkedString = Union[str, Dict[str, str]]
 
 MarkupContent = Dict[str, str]
@@ -385,6 +398,10 @@ class Request:
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
+    def documentLink(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/documentLink", params, view)
+
+    @classmethod
     def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/full", params, view)
 
@@ -399,6 +416,10 @@ class Request:
     @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
+
+    @classmethod
+    def resolveDocumentLink(cls, params: DocumentLink, view: sublime.View) -> 'Request':
+        return Request("documentLink/resolve", params, view)
 
     @classmethod
     def shutdown(cls) -> 'Request':

@@ -108,6 +108,16 @@
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
 
+  // Highlight style of links to internal or external resources, like another text document
+  // or a web site. Link navigation is implemented via the popup on mouse hover.
+  // Valid values are:
+  // "underline"
+  // "none" - disables special highlighting, but still allows to navigate links in the hover popup
+  // "disabled" - disables highlighting and the hover popup for links
+  // Note that depending on the syntax and color scheme, some internet URLs may still be
+  // underlined via regular syntax highlighting.
+  "link_highlight_style": "underline",
+
   // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).
   // Note: Must be supported by the language server and also requires a special rule in the
   // color scheme to work. If you use none of the built-in color schemes from Sublime Text,

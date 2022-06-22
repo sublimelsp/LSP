@@ -24,6 +24,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
+from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
@@ -280,6 +281,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "valueSet": symbol_tag_value_set
             }
         },
+        "documentLink": {
+            "dynamicRegistration": True,
+            "tooltipSupport": True
+        },
         "formatting": {
             "dynamicRegistration": True  # exceptional
         },
@@ -317,6 +322,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 }
             },
             "dataSupport": True,
+            "disabledSupport": True,
             "resolveSupport": {
                 "properties": [
                     "edit"
@@ -521,6 +527,12 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+        ...
+
+    def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
+        ...
+
+    def update_document_link(self, link: DocumentLink) -> None:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:

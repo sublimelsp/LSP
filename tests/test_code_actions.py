@@ -59,6 +59,17 @@ def create_test_code_action2(command_name: str, command_args: Optional[List[Any]
     return action
 
 
+def create_disabled_code_action(view: sublime.View, version: int, edits: List[Tuple[str, Range]]) -> Dict[str, Any]:
+    action = {
+        "title": "Fix errors",
+        "edit": create_code_action_edit(view, version, edits),
+        "disabled": {
+            "reason": "Do not use"
+        },
+    }
+    return action
+
+
 def create_test_diagnostics(diagnostics: List[Tuple[str, Range]]) -> Dict:
     def diagnostic_to_lsp(diagnostic: Tuple[str, Range]) -> Dict:
         message, range = diagnostic
@@ -298,6 +309,22 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEquals(len(annotations_range), 1)
         self.assertEquals(annotations_range[0].a, 3)
         self.assertEquals(annotations_range[0].b, 0)
+
+    def test_excludes_disabled_code_actions(self) -> Generator:
+        initial_content = 'a\n'
+        self.insert_characters(initial_content)
+        yield from self.await_message("textDocument/didChange")
+        code_action = create_disabled_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', Range(Point(0, 0), Point(0, 1)))]
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a
+        yield 100
+        yield from self.await_message('textDocument/codeAction')
+        code_action_ranges = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
+        self.assertEquals(len(code_action_ranges), 0)
 
     def test_extends_range_to_include_diagnostics(self) -> Generator:
         self.insert_characters('x diagnostic')

@@ -382,6 +382,15 @@
               "default": "dot",
               "markdownDescription": "Gutter marker for code diagnostics."
             },
+            "link_highlight_style": {
+              "enum": [
+                "underline",
+                "none",
+                "disabled"
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlight style of links to internal or external resources, like another text document or a web site."
+            },
             "semantic_highlighting": {
               "type": "boolean",
               "default": false,

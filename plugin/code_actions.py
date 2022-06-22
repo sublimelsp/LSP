@@ -56,8 +56,11 @@ class CodeActionsCollector:
 
     def _collect_response(self, config_name: str, actions: CodeActionsResponse) -> None:
         self._response_count += 1
-        self._commands_by_config[config_name] = actions or []
+        self._commands_by_config[config_name] = self._get_enabled_actions(actions or [])
         self._notify_if_all_finished()
+
+    def _get_enabled_actions(self, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
+        return [action for action in actions if not action.get('disabled')]
 
     def _notify_if_all_finished(self) -> None:
         if self._all_requested and self._request_count == self._response_count:

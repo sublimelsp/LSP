@@ -649,6 +649,9 @@ class Sheet:
     def view(self) -> 'Optional[View]':
         ...
 
+    def is_semi_transient(self) -> bool:
+        ...
+
     def is_transient(self) -> bool:
         ...
 

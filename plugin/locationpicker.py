@@ -97,16 +97,12 @@ class LocationPicker:
         if uri.startswith("file:"):
             flags = sublime.ENCODED_POSITION | sublime.FORCE_GROUP
             if self._side_by_side:
-                if not self._highlighted_view:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                if self._highlighted_view and self._highlighted_view.is_valid():
+                    # Replacing the MRU is done relative to the current highlighted sheet
+                    self._window.focus_view(self._highlighted_view)
+                    flags |= sublime.REPLACE_MRU | sublime.SEMI_TRANSIENT
                 else:
-                    if self._highlighted_view.is_valid():
-                        # Replacing the MRU is done relative to the current highlighted sheet
-                        self._window.focus_view(self._highlighted_view)
-                        flags |= sublime.REPLACE_MRU | sublime.SEMI_TRANSIENT
-                    else:
-                        # highlighted_view is no longer valid
-                        flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
             else:
                 flags |= sublime.TRANSIENT
             self._highlighted_view = open_basic_file(session, uri, position, flags, self._window.active_group())

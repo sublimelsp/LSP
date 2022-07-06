@@ -65,7 +65,7 @@ class LspGotoCommand(LspTextCommand):
         else:
             self._handle_no_results(fallback, side_by_side)
 
-    def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False):
+    def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
         window = self.view.window()
 
         if not window:

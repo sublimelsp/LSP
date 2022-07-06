@@ -55,7 +55,7 @@ class LspGotoCommand(LspTextCommand):
             open_location_async(session, response, side_by_side)
         elif isinstance(response, list):
             if len(response) == 0:
-                self._handle_no_results(fallback=fallback, side_by_side=side_by_side)
+                self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 open_location_async(session, response[0], side_by_side)
@@ -63,7 +63,7 @@ class LspGotoCommand(LspTextCommand):
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side))
         else:
-            self._handle_no_results(fallback=fallback, side_by_side=side_by_side)
+            self._handle_no_results(fallback, side_by_side)
 
     def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False):
         window = self.view.window()

@@ -9,6 +9,8 @@ from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
 from .core.protocol import WorkspaceFolder
+from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import AbstractPlugin
 from .core.sessions import register_plugin
 from .core.sessions import Session
@@ -34,6 +36,8 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'LspTextCommand',
+    'LspWindowCommand',
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',

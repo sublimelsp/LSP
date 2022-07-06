@@ -56,7 +56,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return self.session() is not None
 
     def session(self) -> Optional[Session]:
-        for session in windows.lookup(self.window)._sessions:
+        for session in windows.lookup(self.window).get_sessions():
             if self.capability and not session.has_capability(self.capability):
                 continue
             if self.session_name and session.config.name != self.session_name:

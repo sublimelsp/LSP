@@ -85,6 +85,9 @@ class WindowManager(Manager):
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
 
+    def get_sessions(self) -> Generator[Session, None, None]:
+        yield from self._sessions
+
     def on_load_project_async(self) -> None:
         self.update_workspace_folders_async()
         self._configs.update()

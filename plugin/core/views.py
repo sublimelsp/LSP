@@ -578,6 +578,7 @@ def minihtml(
         frontmatter = {
             "allow_code_wrap": True,
             "markdown_extensions": [
+                "markdown.extensions.admonition",
                 {
                     "pymdownx.escapeall": {
                         "hardbreak": True,

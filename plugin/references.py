@@ -30,7 +30,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     capability = 'referencesProvider'
 
-    def run(self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+    def run(
+        self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None, side_by_side: bool = False
+    ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
         pos = get_position(self.view, event, point)
@@ -47,17 +49,22 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 functools.partial(
                     self._handle_response_async,
                     self.view.substr(self.view.word(pos)),
-                    session
+                    session,
+                    side_by_side
                 )
             )
 
-    def _handle_response_async(self, word: str, session: Session, response: Optional[List[Location]]) -> None:
-        sublime.set_timeout(lambda: self._handle_response(word, session, response))
+    def _handle_response_async(
+        self, word: str, session: Session, side_by_side: bool, response: Optional[List[Location]]
+    ) -> None:
+        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, response))
 
-    def _handle_response(self, word: str, session: Session, response: Optional[List[Location]]) -> None:
+    def _handle_response(
+        self, word: str, session: Session, side_by_side: bool, response: Optional[List[Location]]
+    ) -> None:
         if response:
             if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(session, response)
+                self._show_references_in_quick_panel(session, response, side_by_side)
             else:
                 self._show_references_in_output_panel(word, session, response)
         else:
@@ -65,9 +72,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
             if window:
                 window.status_message("No references found")
 
-    def _show_references_in_quick_panel(self, session: Session, locations: List[Location]) -> None:
+    def _show_references_in_quick_panel(self, session: Session, locations: List[Location], side_by_side: bool) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-        LocationPicker(self.view, session, locations, side_by_side=False)
+        LocationPicker(self.view, session, locations, side_by_side)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
         window = session.window

@@ -24,7 +24,7 @@ class LspGotoCommand(LspTextCommand):
         side_by_side: bool = False,
         fallback: bool = False
     ) -> bool:
-        return super().is_enabled(event, point)
+        return fallback or super().is_enabled(event, point)
 
     def run(
         self,
@@ -42,6 +42,8 @@ class LspGotoCommand(LspTextCommand):
             session.send_request(
                 request, functools.partial(self._handle_response_async, session, side_by_side, fallback)
             )
+        else:
+            self._handle_no_results(fallback, side_by_side)
 
     def _handle_response_async(
         self,

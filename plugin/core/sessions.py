@@ -65,6 +65,7 @@ from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
+from copy import deepcopy
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -872,6 +873,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         This API is triggered on async thread.
 
         :param    notification:  The notification object. The notification params can be modified by the plugin.
+        """
+        pass
+
+    def on_server_response(self, method: str, result: Any) -> None:
+        """
+        Notifies about a response message that has been received from the language server.
+        Only successful responses are passed to this method.
+
+        :param    method:  The method of the request.
+        :param    result:  The result to the request. It can be modified by the plugin, before it gets further handled
+                           by the LSP package.
         """
         pass
 
@@ -1898,10 +1910,11 @@ class Session(TransportCallbacks):
                 return res
         elif "id" in payload:
             response_id = int(payload["id"])
-            handler, result, is_error = self.response_handler(response_id, payload)
-            response_tuple = (handler, result, None, None, None)
-            self._logger.incoming_response(response_id, result, is_error)
-            return response_tuple
+            handler, method, result, is_error = self.response_handler(response_id, payload)
+            self._logger.incoming_response(response_id, deepcopy(result), is_error)
+            if self._plugin and not is_error:
+                self._plugin.on_server_response(method, result)  # type: ignore
+            return handler, result, None, None, None
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)
@@ -1925,21 +1938,25 @@ class Session(TransportCallbacks):
             except Exception as err:
                 exception_log("Error handling {}".format(typestr), err)
 
-    def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any, bool]:
+    def response_handler(
+        self,
+        response_id: int,
+        response: Dict[str, Any]
+    ) -> Tuple[Optional[Callable], Optional[str], Any, bool]:
         request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
-            return (print_to_status_bar, error, True)
+            return (print_to_status_bar, None, error, True)
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
-            return (handler, response["result"], False)
+            return (handler, request.method, response["result"], False)
         if not error_handler:
             error_handler = print_to_status_bar
         if "result" not in response and "error" in response:
             error = response["error"]
         else:
             error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
-        return (error_handler, error, True)
+        return (error_handler, request.method, error, True)
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)

@@ -876,14 +876,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_server_response(self, method: str, result: Any) -> None:
+    def on_server_response(self, method: str, response: Response) -> None:
         """
         Notifies about a response message that has been received from the language server.
         Only successful responses are passed to this method.
 
-        :param    method:  The method of the request.
-        :param    result:  The result to the request. It can be modified by the plugin, before it gets further handled
-                           by the LSP package.
+        :param    method:    The method of the request.
+        :param    response:  The response object to the request. The response.result field can be modified by the
+                             plugin, before it gets further handled by the LSP package.
         """
         pass
 
@@ -1912,9 +1912,10 @@ class Session(TransportCallbacks):
             response_id = int(payload["id"])
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, deepcopy(result), is_error)
+            response = Response(response_id, result)
             if self._plugin and not is_error:
-                self._plugin.on_server_response(method, result)  # type: ignore
-            return handler, result, None, None, None
+                self._plugin.on_server_response(method, response)  # type: ignore
+            return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)

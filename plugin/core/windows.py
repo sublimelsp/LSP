@@ -506,8 +506,7 @@ class PanelLogger(Logger):
 
         def run_on_async_worker_thread() -> None:
             nonlocal message
-            params_str = "'{}'".format(params.replace("\n", "\\n").replace("'", "\\'")) if isinstance(params, str) \
-                         else str(params)
+            params_str = repr(params) if isinstance(params, str) else str(params)
             if 0 < userprefs().log_max_size <= len(params_str):
                 params_str = '<params with {} characters>'.format(len(params_str))
             message = "{}: {}".format(message, params_str)

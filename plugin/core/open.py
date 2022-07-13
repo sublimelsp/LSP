@@ -29,9 +29,9 @@ def open_file(
     view = window.find_open_file(file)
     if view:
         view_group = window.get_view_index(view)[0]
-        opens_in_current_group = view_group == window.active_group() if group == -1 else view_group == group
+        opens_in_desired_group = view_group == window.active_group() if group == -1 else view_group == group
         opens_as_new_selection = (flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)) != 0
-        return_existing_view = opens_in_current_group and not opens_as_new_selection
+        return_existing_view = opens_in_desired_group and not opens_as_new_selection
         if return_existing_view:
             return Promise.resolve(view)
 

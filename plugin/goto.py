@@ -24,24 +24,27 @@ class LspGotoCommand(LspTextCommand):
         _: sublime.Edit,
         event: Optional[dict] = None,
         point: Optional[int] = None,
-        side_by_side: bool = False
+        side_by_side: bool = False,
+        force_group: bool = True
     ) -> None:
         session = self.best_session(self.capability)
         position = get_position(self.view, event, point)
         if session and position is not None:
             params = text_document_position_params(self.view, position)
             request = Request(self.method, params, self.view, progress=True)
-            session.send_request(request, functools.partial(self._handle_response_async, session, side_by_side))
+            session.send_request(
+                request, functools.partial(self._handle_response_async, session, side_by_side, force_group))
 
     def _handle_response_async(
         self,
         session: Session,
         side_by_side: bool,
+        force_group: bool,
         response: Union[None, Location, List[Location], List[LocationLink]]
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            open_location_async(session, response, side_by_side)
+            open_location_async(session, response, side_by_side, force_group)
         elif isinstance(response, list):
             if len(response) == 0:
                 window = self.view.window()
@@ -49,7 +52,7 @@ class LspGotoCommand(LspTextCommand):
                     window.status_message("No results found")
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                open_location_async(session, response[0], side_by_side)
+                open_location_async(session, response[0], side_by_side, force_group)
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side))

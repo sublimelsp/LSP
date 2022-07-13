@@ -65,7 +65,6 @@ from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
-from copy import deepcopy
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -1911,7 +1910,7 @@ class Session(TransportCallbacks):
         elif "id" in payload:
             response_id = int(payload["id"])
             handler, method, result, is_error = self.response_handler(response_id, payload)
-            self._logger.incoming_response(response_id, deepcopy(result), is_error)
+            self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
             if self._plugin and not is_error:
                 self._plugin.on_server_response(method, response)  # type: ignore

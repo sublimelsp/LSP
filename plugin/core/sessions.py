@@ -875,7 +875,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_server_response(self, method: str, response: Response) -> None:
+    def on_server_response_async(self, method: str, response: Response) -> None:
         """
         Notifies about a response message that has been received from the language server.
         Only successful responses are passed to this method.
@@ -1913,7 +1913,7 @@ class Session(TransportCallbacks):
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
             if self._plugin and not is_error:
-                self._plugin.on_server_response(method, response)  # type: ignore
+                self._plugin.on_server_response_async(method, response)  # type: ignore
             return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)

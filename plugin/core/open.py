@@ -28,9 +28,10 @@ def open_file(
     # to open as a separate view).
     view = window.find_open_file(file)
     if view:
-        opens_in_current_group = group == -1 or window.active_group() == group
-        opens_as_new_selection = (flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)) != 0
-        return_existing_view = opens_in_current_group and not opens_as_new_selection
+        opens_in_desired_group = not bool(flags & sublime.FORCE_GROUP) or \
+                                 window.get_view_index(view)[0] == window.active_group()
+        opens_in_side_by_side = bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU))
+        return_existing_view = opens_in_desired_group and not opens_in_side_by_side
         if return_existing_view:
             return Promise.resolve(view)
 

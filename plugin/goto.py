@@ -22,6 +22,7 @@ class LspGotoCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None,
         side_by_side: bool = False,
+        force_group: bool = True,
         fallback: bool = False
     ) -> bool:
         return fallback or super().is_enabled(event, point)
@@ -32,6 +33,7 @@ class LspGotoCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None,
         side_by_side: bool = False,
+        force_group: bool = True,
         fallback: bool = False
     ) -> None:
         session = self.best_session(self.capability)
@@ -40,8 +42,7 @@ class LspGotoCommand(LspTextCommand):
             params = text_document_position_params(self.view, position)
             request = Request(self.method, params, self.view, progress=True)
             session.send_request(
-                request, functools.partial(self._handle_response_async, session, side_by_side, fallback)
-            )
+                request, functools.partial(self._handle_response_async, session, side_by_side, force_group, fallback))
         else:
             self._handle_no_results(fallback, side_by_side)
 
@@ -49,18 +50,19 @@ class LspGotoCommand(LspTextCommand):
         self,
         session: Session,
         side_by_side: bool,
+        force_group: bool,
         fallback: bool,
         response: Union[None, Location, List[Location], List[LocationLink]]
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            open_location_async(session, response, side_by_side)
+            open_location_async(session, response, side_by_side, force_group)
         elif isinstance(response, list):
             if len(response) == 0:
                 self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                open_location_async(session, response[0], side_by_side)
+                open_location_async(session, response[0], side_by_side, force_group)
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side))

@@ -12,7 +12,7 @@ import weakref
 
 
 def open_location_async(session: Session, location: Union[Location, LocationLink], side_by_side: bool) -> None:
-    flags = sublime.ENCODED_POSITION
+    flags = sublime.ENCODED_POSITION | sublime.FORCE_GROUP
     if side_by_side:
         flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
 

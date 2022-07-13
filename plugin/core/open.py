@@ -28,7 +28,8 @@ def open_file(
     # to open as a separate view).
     view = window.find_open_file(file)
     if view:
-        opens_in_current_group = group == -1 or window.active_group() == group
+        view_group = window.get_view_index(view)[0]
+        opens_in_current_group = view_group == window.active_group() if group == -1 else view_group == group
         opens_as_new_selection = (flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)) != 0
         return_existing_view = opens_in_current_group and not opens_as_new_selection
         if return_existing_view:

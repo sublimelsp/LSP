@@ -11,8 +11,15 @@ import sublime
 import weakref
 
 
-def open_location_async(session: Session, location: Union[Location, LocationLink], side_by_side: bool) -> None:
+def open_location_async(
+    session: Session,
+    location: Union[Location, LocationLink],
+    side_by_side: bool,
+    force_group: bool
+) -> None:
     flags = sublime.ENCODED_POSITION
+    if force_group:
+        flags |= sublime.FORCE_GROUP
     if side_by_side:
         flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
 
@@ -80,7 +87,8 @@ class LocationPicker:
                 if not self._side_by_side:
                     open_basic_file(session, uri, position, flags)
             else:
-                sublime.set_timeout_async(functools.partial(open_location_async, session, location, self._side_by_side))
+                sublime.set_timeout_async(
+                    functools.partial(open_location_async, session, location, self._side_by_side, True))
         else:
             self._window.focus_view(self._view)
             # When in side-by-side mode close the current highlighted

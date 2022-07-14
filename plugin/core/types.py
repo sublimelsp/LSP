@@ -210,7 +210,7 @@ class Settings:
     show_diagnostics_count_in_view_status = None  # type: bool
     show_multiline_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
-    show_diagnostics_inline = None  # type: Literal["all", "at-cursor", "none"]
+    show_diagnostics_inline = None  # type: Literal["at-cursor", "none"]
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
     show_references_in_quick_panel = None  # type: bool

@@ -308,7 +308,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
     def _update_inline_diagnostic_async(self) -> None:
-        region_key = "lsp_d-ann"
+        region_key = "lsp_d-annotations"
         self.view.erase_regions(region_key)
         if userprefs().show_diagnostics_inline != 'at-cursor':
             return

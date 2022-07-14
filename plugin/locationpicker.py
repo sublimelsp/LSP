@@ -53,6 +53,7 @@ class LocationPicker:
         side_by_side: bool
     ) -> None:
         self._view = view
+        self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
         window = view.window()
         if not window:
             raise ValueError("missing window")
@@ -76,6 +77,9 @@ class LocationPicker:
         return self._weaksession(), location, uri, position
 
     def _select_entry(self, index: int) -> None:
+        if self._view.is_valid() and not self._side_by_side:
+            self._view.set_viewport_position(self._view_states[1])
+            self._view.run_command('lsp_selection_set', {'regions': self._view_states[0]})
         if index >= 0 and self._view.is_valid():
             session, location, uri, position = self._unpack(index)
             if not session:

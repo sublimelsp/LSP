@@ -312,13 +312,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.erase_regions(region_key)
         if userprefs().show_diagnostics_inline != 'at-cursor':
             return
-        r = first_selection_region(self.view)
-        if r is None:
-            return
         sorted_diagnostics = []  # type: List[Diagnostic]
-        session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
-        for _, diagnostics in session_buffer_diagnostics:
-            sorted_diagnostics.extend(diagnostics)
+        for r in self.view.sel():
+            session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
+            for _, diagnostics in session_buffer_diagnostics:
+                sorted_diagnostics.extend(diagnostics)
         if sorted_diagnostics:
             sorted_diagnostics = sorted(sorted_diagnostics, key=lambda d: d.get('severity', 1))
             first_diagnostic = sorted_diagnostics[0]

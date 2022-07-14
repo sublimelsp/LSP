@@ -283,7 +283,7 @@ class SessionView:
                     self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
+            self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags)
         else:
             self.view.erase_regions(key)
 

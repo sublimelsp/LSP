@@ -308,7 +308,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
     def _update_inline_diagnostic_async(self) -> None:
-        region_key = "lsp_d-a"
+        region_key = "lsp_d-ann"
         self.view.erase_regions(region_key)
         if userprefs().show_diagnostics_inline != 'at-cursor':
             return
@@ -583,9 +583,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         annotations = []
         annotation_color = ""
-        if userprefs().show_code_actions == 'bulb' or (
-            userprefs().show_code_actions == 'annotation' and userprefs().show_diagnostics_inline == 'at-cursor'
-        ):
+        if userprefs().show_code_actions == 'bulb':
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]

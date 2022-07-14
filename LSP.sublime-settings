@@ -48,7 +48,10 @@
   "show_diagnostics_in_view_status": true,
 
   // Show the diagnostics as inline annotations.
-  "show_diagnostics_inline": "off",
+  // When using the "at-cursor" value it's recommended to not use the "annotation"
+  // value for the "show_code_actions" option as then the code action annotations will
+  // show over the diagnostic annotations.
+  "show_diagnostics_inline": "none",
 
   // Show highlights and gutter markers in the file views for diagnostics
   // with level equal to or less than:

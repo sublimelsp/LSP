@@ -280,17 +280,9 @@ class SessionView:
                 tag_scope = self.diagnostics_tag_scope(tag)
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                 if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
-                    # annotations = [format_diagnostic_for_annotation(diag) for diag in data.tag_diagnostics]
-                    # annotation_color = self.view.style_for_scope(tag_scope)['foreground']
-                    # self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE,
-                    #                       annotations=annotations, annotation_color=annotation_color)
                     self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                 else:
                     non_tag_regions.extend(regions)
-            # annotations = [format_diagnostic_for_annotation(diag) for diag in data.region_diagnostics]
-            # annotation_color = self.view.style_for_scope(data.scope)['foreground']
-            # self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY,
-            #                       annotations, annotation_color)
             self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
         else:
             self.view.erase_regions(key)

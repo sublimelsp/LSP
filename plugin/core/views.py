@@ -155,7 +155,8 @@ SEMANTIC_TOKENS_MAP = {
     "string": "string.lsp",
     "number": "constant.numeric.lsp",
     "regexp": "string.regexp.lsp",
-    "operator": "keyword.operator.lsp"
+    "operator": "keyword.operator.lsp",
+    "decorator": "variable.annotation.lsp",
 }
 
 

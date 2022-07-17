@@ -104,6 +104,7 @@ class SemanticTokenTypes:
     Number = "number"
     Regexp = "regexp"
     Operator = "operator"
+    Decorator = "decorator"
 
 
 class SemanticTokenModifiers:

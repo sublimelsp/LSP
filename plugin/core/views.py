@@ -770,6 +770,9 @@ def location_to_human_readable(
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):
             pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+    elif scheme == "res":
+        fmt = "{}:{}"
+        pathname = uri
     else:
         # https://tools.ietf.org/html/rfc5147
         fmt = "{}#line={}"

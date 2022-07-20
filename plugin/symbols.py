@@ -4,6 +4,7 @@ from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
 from .core.views import range_to_region
+from .core.views import SYMBOL_KIND_SCOPES
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 from contextlib import contextmanager
@@ -15,29 +16,23 @@ import sublime_plugin
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
 
-def unpack_lsp_kind(kind: int) -> Tuple[int, str, str, str]:
-    if 1 <= kind <= len(SYMBOL_KINDS):
-        return SYMBOL_KINDS[kind - 1]
-    return sublime.KIND_ID_AMBIGUOUS, "?", "???", "comment"
+def unpack_lsp_kind(kind: int) -> Tuple[int, str, str]:
+    return SYMBOL_KINDS[kind] if kind in SYMBOL_KINDS else (sublime.KIND_ID_AMBIGUOUS, "?", "???")
 
 
 def format_symbol_kind(kind: int) -> str:
-    if 1 <= kind <= len(SYMBOL_KINDS):
-        return SYMBOL_KINDS[kind - 1][2]
-    return str(kind)
+    return SYMBOL_KINDS[kind][2] if kind in SYMBOL_KINDS else str(kind)
 
 
 def get_symbol_scope_from_lsp_kind(kind: int) -> str:
-    if 1 <= kind <= len(SYMBOL_KINDS):
-        return SYMBOL_KINDS[kind - 1][3]
-    return 'comment'
+    return SYMBOL_KIND_SCOPES[kind] if kind in SYMBOL_KIND_SCOPES else "comment"
 
 
 def symbol_information_to_quick_panel_item(
     item: SymbolInformation,
     show_file_name: bool = True
 ) -> sublime.QuickPanelItem:
-    st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(item['kind'])
+    st_kind, st_icon, st_display_type = unpack_lsp_kind(item['kind'])
     tags = item.get("tags") or []
     if SymbolTag.Deprecated in tags:
         st_display_type = "⚠ {} - Deprecated".format(st_display_type)
@@ -191,7 +186,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                              get_symbol_scope_from_lsp_kind(lsp_kind)))
         name = item['name']
         with _additional_name(names, name):
-            st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(lsp_kind)
+            st_kind, st_icon, st_display_type = unpack_lsp_kind(lsp_kind)
             formatted_names = " > ".join(names)
             st_details = item.get("detail") or ""
             if st_details:

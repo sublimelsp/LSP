@@ -1,4 +1,5 @@
 from .logging import debug
+from .logging import exception_log
 from .types import ClientConfig
 from .typing import Generator, List, Optional, Set, Dict
 from .workspace import enable_in_project, disable_in_project
@@ -72,7 +73,10 @@ class WindowConfigManager(object):
             if updated_config_name and updated_config_name != name:
                 continue
             debug("loading project-only configuration", name)
-            self.all[name] = ClientConfig.from_dict(name, c)
+            try:
+                self.all[name] = ClientConfig.from_dict(name, c)
+            except Exception as ex:
+                exception_log("failed to load project-only configuration {}".format(name), ex)
         self._window.run_command("lsp_recheck_sessions", {'config_name': updated_config_name})
 
     def enable_config(self, config_name: str) -> None:

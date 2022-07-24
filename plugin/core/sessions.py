@@ -186,7 +186,7 @@ class Manager(metaclass=ABCMeta):
         pass
 
 
-def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
+def _enum_like_class_to_list(c: Type[object]) -> Union[List[int], List[str]]:
     return [v for k, v in c.__dict__.items() if not k.startswith('_')]
 
 
@@ -197,7 +197,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     diagnostic_tag_value_set = _enum_like_class_to_list(DiagnosticTag)
     completion_tag_value_set = _enum_like_class_to_list(CompletionItemTag)
     symbol_tag_value_set = _enum_like_class_to_list(SymbolTag)
-    semantic_token_types = _enum_like_class_to_list(SemanticTokenTypes)
+    semantic_token_types = _enum_like_class_to_list(SemanticTokenTypes)  # type: List[str]
     if config.semantic_tokens is not None:
         for token_type in config.semantic_tokens.keys():
             if token_type not in semantic_token_types:

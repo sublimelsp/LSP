@@ -87,6 +87,8 @@ KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
 KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
 KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
+KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
+
 COMPLETION_KINDS = {
     CompletionItemKind.Text: KIND_TEXT,
     CompletionItemKind.Method: KIND_METHOD,
@@ -952,8 +954,7 @@ def format_completion(
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")
-    kind = COMPLETION_KINDS[item_kind] if isinstance(item_kind, int) and item_kind in COMPLETION_KINDS \
-        else (sublime.KIND_ID_AMBIGUOUS, "?", "???")
+    kind = COMPLETION_KINDS.get(item_kind, KIND_UNSPECIFIED) if item_kind else KIND_UNSPECIFIED
 
     if _is_completion_item_deprecated(item):
         kind = (kind[0], '!', "⚠ {} - Deprecated".format(kind[2]))

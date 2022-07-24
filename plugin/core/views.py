@@ -906,7 +906,7 @@ def format_completion(
             st_annotation = itemDetail.replace('\n', ' ')
     if lsp_filter_text and lsp_filter_text != lsp_label:
         details.append(_wrap_in_tags("p", lsp_label))
-    # Completion popup:
+    # Completion popup UI:
     # |---------------------------------|
     # | <kind> <trigger>   <annotation> |
     # | <kind> <trigger>   <annotation> |

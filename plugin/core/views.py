@@ -1,9 +1,11 @@
 from .css import css as lsp_css
 from .protocol import CompletionItem
+from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
 from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
@@ -16,6 +18,7 @@ from .protocol import Position
 from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import Request
+from .protocol import SymbolKind
 from .protocol import TextDocumentIdentifier
 from .protocol import TextDocumentPositionParams
 from .settings import userprefs
@@ -47,65 +50,142 @@ DIAGNOSTIC_SEVERITY = [
     ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
 ]  # type: List[Tuple[str, str, str, str, int, int]]
 
-# The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
-SYMBOL_KINDS = [
-    # ST Kind                    Icon  Display Name      ST Scope
-    (sublime.KIND_ID_NAVIGATION, "f", "File",           "string"),
-    (sublime.KIND_ID_NAMESPACE,  "m", "Module",         "entity.name.namespace"),
-    (sublime.KIND_ID_NAMESPACE,  "n", "Namespace",      "entity.name.namespace"),
-    (sublime.KIND_ID_NAMESPACE,  "p", "Package",        "entity.name.namespace"),
-    (sublime.KIND_ID_TYPE,       "c", "Class",          "entity.name.class"),
-    (sublime.KIND_ID_FUNCTION,   "m", "Method",         "entity.name.function"),
-    (sublime.KIND_ID_VARIABLE,   "p", "Property",       "variable.other.member"),
-    (sublime.KIND_ID_VARIABLE,   "f", "Field",          "variable.other.member"),
-    (sublime.KIND_ID_FUNCTION,   "c", "Constructor",    "entity.name.function.constructor"),
-    (sublime.KIND_ID_TYPE,       "e", "Enum",           "entity.name.enum"),
-    (sublime.KIND_ID_VARIABLE,   "i", "Interface",      "entity.name.interface"),
-    (sublime.KIND_ID_FUNCTION,   "f", "Function",       "entity.name.function"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Variable",       "variable.other.readwrite"),
-    (sublime.KIND_ID_VARIABLE,   "c", "Constant",       "variable.other.constant"),
-    (sublime.KIND_ID_MARKUP,     "s", "String",         "string"),
-    (sublime.KIND_ID_VARIABLE,   "n", "Number",         "constant.numeric"),
-    (sublime.KIND_ID_VARIABLE,   "b", "Boolean",        "constant.language"),
-    (sublime.KIND_ID_TYPE,       "a", "Array",          "meta.sequence"),  # [scope taken from JSON.sublime-syntax]
-    (sublime.KIND_ID_TYPE,       "o", "Object",         "meta.mapping"),  # [scope taken from JSON.sublime-syntax]
-    (sublime.KIND_ID_NAVIGATION, "k", "Key",            "meta.mapping.key string"),  # [from JSON.sublime-syntax]
-    (sublime.KIND_ID_VARIABLE,   "n", "Null",           "constant.language"),
-    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member",    "constant.other.enum"),  # Based on {Java,C#}.sublime-syntax
-    (sublime.KIND_ID_TYPE,       "s", "Struct",         "entity.name.struct"),
-    (sublime.KIND_ID_TYPE,       "e", "Event",          "storage.modifier"),   # [scope taken from C#.sublime-syntax]
-    (sublime.KIND_ID_FUNCTION,   "o", "Operator",       "keyword.operator"),
-    (sublime.KIND_ID_TYPE,       "t", "Type Parameter", "storage.type"),
-]
+# sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem
+# https://www.sublimetext.com/docs/api_reference.html#sublime.Kind
+KIND_ARRAY = (sublime.KIND_ID_TYPE, "a", "Array")
+KIND_BOOLEAN = (sublime.KIND_ID_VARIABLE, "b", "Boolean")
+KIND_CLASS = (sublime.KIND_ID_TYPE, "c", "Class")
+KIND_COLOR = (sublime.KIND_ID_MARKUP, "c", "Color")
+KIND_CONSTANT = (sublime.KIND_ID_VARIABLE, "c", "Constant")
+KIND_CONSTRUCTOR = (sublime.KIND_ID_FUNCTION, "c", "Constructor")
+KIND_ENUM = (sublime.KIND_ID_TYPE, "e", "Enum")
+KIND_ENUMMEMBER = (sublime.KIND_ID_VARIABLE, "e", "Enum Member")
+KIND_EVENT = (sublime.KIND_ID_FUNCTION, "e", "Event")
+KIND_FIELD = (sublime.KIND_ID_VARIABLE, "f", "Field")
+KIND_FILE = (sublime.KIND_ID_NAVIGATION, "f", "File")
+KIND_FOLDER = (sublime.KIND_ID_NAVIGATION, "f", "Folder")
+KIND_FUNCTION = (sublime.KIND_ID_FUNCTION, "f", "Function")
+KIND_INTERFACE = (sublime.KIND_ID_TYPE, "i", "Interface")
+KIND_KEY = (sublime.KIND_ID_NAVIGATION, "k", "Key")
+KIND_KEYWORD = (sublime.KIND_ID_KEYWORD, "k", "Keyword")
+KIND_METHOD = (sublime.KIND_ID_FUNCTION, "m", "Method")
+KIND_MODULE = (sublime.KIND_ID_NAMESPACE, "m", "Module")
+KIND_NAMESPACE = (sublime.KIND_ID_NAMESPACE, "n", "Namespace")
+KIND_NULL = (sublime.KIND_ID_VARIABLE, "n", "Null")
+KIND_NUMBER = (sublime.KIND_ID_VARIABLE, "n", "Number")
+KIND_OBJECT = (sublime.KIND_ID_TYPE, "o", "Object")
+KIND_OPERATOR = (sublime.KIND_ID_KEYWORD, "o", "Operator")
+KIND_PACKAGE = (sublime.KIND_ID_NAMESPACE, "p", "Package")
+KIND_PROPERTY = (sublime.KIND_ID_VARIABLE, "p", "Property")
+KIND_REFERENCE = (sublime.KIND_ID_NAVIGATION, "r", "Reference")
+KIND_SNIPPET = (sublime.KIND_ID_SNIPPET, "s", "Snippet")
+KIND_STRING = (sublime.KIND_ID_VARIABLE, "s", "String")
+KIND_STRUCT = (sublime.KIND_ID_TYPE, "s", "Struct")
+KIND_TEXT = (sublime.KIND_ID_MARKUP, "t", "Text")
+KIND_TYPEPARAMETER = (sublime.KIND_ID_TYPE, "t", "Type Parameter")
+KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
+KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
+KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
-COMPLETION_KINDS = [
-    # ST Kind                    Icon Display Name
-    (sublime.KIND_ID_MARKUP,     "t", "Text"),
-    (sublime.KIND_ID_FUNCTION,   "m", "Method"),
-    (sublime.KIND_ID_FUNCTION,   "f", "Function"),
-    (sublime.KIND_ID_FUNCTION,   "c", "Constructor"),
-    (sublime.KIND_ID_VARIABLE,   "f", "Field"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Variable"),
-    (sublime.KIND_ID_TYPE,       "c", "Class"),
-    (sublime.KIND_ID_TYPE,       "i", "Interface"),
-    (sublime.KIND_ID_NAMESPACE,  "m", "Module"),
-    (sublime.KIND_ID_VARIABLE,   "p", "Property"),
-    (sublime.KIND_ID_VARIABLE,   "u", "Unit"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Value"),
-    (sublime.KIND_ID_TYPE,       "e", "Enum"),
-    (sublime.KIND_ID_KEYWORD,    "k", "Keyword"),
-    (sublime.KIND_ID_SNIPPET,    "s", "Snippet"),
-    (sublime.KIND_ID_MARKUP,     "c", "Color"),
-    (sublime.KIND_ID_NAVIGATION, "f", "File"),
-    (sublime.KIND_ID_NAVIGATION, "r", "Reference"),
-    (sublime.KIND_ID_NAMESPACE,  "f", "Folder"),
-    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member"),
-    (sublime.KIND_ID_VARIABLE,   "c", "Constant"),
-    (sublime.KIND_ID_TYPE,       "s", "Struct"),
-    (sublime.KIND_ID_TYPE,       "e", "Event"),
-    (sublime.KIND_ID_KEYWORD,    "o", "Operator"),
-    (sublime.KIND_ID_TYPE,       "t", "Type Parameter"),
-]
+KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
+
+COMPLETION_KINDS = {
+    CompletionItemKind.Text: KIND_TEXT,
+    CompletionItemKind.Method: KIND_METHOD,
+    CompletionItemKind.Function: KIND_FUNCTION,
+    CompletionItemKind.Constructor: KIND_CONSTRUCTOR,
+    CompletionItemKind.Field: KIND_FIELD,
+    CompletionItemKind.Variable: KIND_VARIABLE,
+    CompletionItemKind.Class: KIND_CLASS,
+    CompletionItemKind.Interface: KIND_INTERFACE,
+    CompletionItemKind.Module: KIND_MODULE,
+    CompletionItemKind.Property: KIND_PROPERTY,
+    CompletionItemKind.Unit: KIND_UNIT,
+    CompletionItemKind.Value: KIND_VALUE,
+    CompletionItemKind.Enum: KIND_ENUM,
+    CompletionItemKind.Keyword: KIND_KEYWORD,
+    CompletionItemKind.Snippet: KIND_SNIPPET,
+    CompletionItemKind.Color: KIND_COLOR,
+    CompletionItemKind.File: KIND_FILE,
+    CompletionItemKind.Reference: KIND_REFERENCE,
+    CompletionItemKind.Folder: KIND_FOLDER,
+    CompletionItemKind.EnumMember: KIND_ENUMMEMBER,
+    CompletionItemKind.Constant: KIND_CONSTANT,
+    CompletionItemKind.Struct: KIND_STRUCT,
+    CompletionItemKind.Event: KIND_EVENT,
+    CompletionItemKind.Operator: KIND_OPERATOR,
+    CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+SYMBOL_KINDS = {
+    SymbolKind.File: KIND_FILE,
+    SymbolKind.Module: KIND_MODULE,
+    SymbolKind.Namespace: KIND_NAMESPACE,
+    SymbolKind.Package: KIND_PACKAGE,
+    SymbolKind.Class: KIND_CLASS,
+    SymbolKind.Method: KIND_METHOD,
+    SymbolKind.Property: KIND_PROPERTY,
+    SymbolKind.Field: KIND_FIELD,
+    SymbolKind.Constructor: KIND_CONSTRUCTOR,
+    SymbolKind.Enum: KIND_ENUM,
+    SymbolKind.Interface: KIND_INTERFACE,
+    SymbolKind.Function: KIND_FUNCTION,
+    SymbolKind.Variable: KIND_VARIABLE,
+    SymbolKind.Constant: KIND_CONSTANT,
+    SymbolKind.String: KIND_STRING,
+    SymbolKind.Number: KIND_NUMBER,
+    SymbolKind.Boolean: KIND_BOOLEAN,
+    SymbolKind.Array: KIND_ARRAY,
+    SymbolKind.Object: KIND_OBJECT,
+    SymbolKind.Key: KIND_KEY,
+    SymbolKind.Null: KIND_NULL,
+    SymbolKind.EnumMember: KIND_ENUMMEMBER,
+    SymbolKind.Struct: KIND_STRUCT,
+    SymbolKind.Event: KIND_EVENT,
+    SymbolKind.Operator: KIND_OPERATOR,
+    SymbolKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+SYMBOL_KIND_SCOPES = {
+    SymbolKind.File: "string",
+    SymbolKind.Module: "entity.name.namespace",
+    SymbolKind.Namespace: "entity.name.namespace",
+    SymbolKind.Package: "entity.name.namespace",
+    SymbolKind.Class: "entity.name.class",
+    SymbolKind.Method: "entity.name.function",
+    SymbolKind.Property: "variable.other.member",
+    SymbolKind.Field: "variable.other.member",
+    SymbolKind.Constructor: "entity.name.function.constructor",
+    SymbolKind.Enum: "entity.name.enum",
+    SymbolKind.Interface: "entity.name.interface",
+    SymbolKind.Function: "entity.name.function",
+    SymbolKind.Variable: "variable.other",
+    SymbolKind.Constant: "variable.other.constant",
+    SymbolKind.String: "string",
+    SymbolKind.Number: "constant.numeric",
+    SymbolKind.Boolean: "constant.language.boolean",
+    SymbolKind.Array: "meta.sequence",
+    SymbolKind.Object: "meta.mapping",
+    SymbolKind.Key: "meta.mapping.key string",
+    SymbolKind.Null: "constant.language.null",
+    SymbolKind.EnumMember: "constant.other.enum",
+    SymbolKind.Struct: "entity.name.struct",
+    SymbolKind.Event: "entity.name.function",
+    SymbolKind.Operator: "keyword.operator",
+    SymbolKind.TypeParameter: "variable.parameter.type"
+}
+
+DOCUMENT_HIGHLIGHT_KINDS = {
+    DocumentHighlightKind.Text: "text",
+    DocumentHighlightKind.Read: "read",
+    DocumentHighlightKind.Write: "write"
+}
+
+DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
+    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
+    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
+    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
+}
 
 SEMANTIC_TOKENS_MAP = {
     "namespace": "variable.other.namespace.lsp",
@@ -877,10 +957,7 @@ def format_completion(
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")
-    if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
-        kind = COMPLETION_KINDS[item_kind - 1]
-    else:
-        kind = sublime.KIND_AMBIGUOUS
+    kind = COMPLETION_KINDS.get(item_kind, KIND_UNSPECIFIED) if item_kind else KIND_UNSPECIFIED
 
     if _is_completion_item_deprecated(item):
         kind = (kind[0], '!', "⚠ {} - Deprecated".format(kind[2]))

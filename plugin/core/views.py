@@ -885,40 +885,37 @@ def format_completion(
     lsp_label = item["label"]
     lsp_label_details = item.get("labelDetails")
     lsp_filter_text = item.get("filterText")
-    st_annotation = (item.get("detail") or "").replace('\n', ' ')
-
-    st_details = ""
+    st_annotation = ''
+    details = []  # type: List[str]
     if can_resolve_completion_items or item.get("documentation"):
-        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
+        details.append(make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name}))
     if lsp_label_details:
-        if st_details:
-            st_details += " | "
         lsp_label_detail = lsp_label_details.get("detail")
         lsp_label_description = lsp_label_details.get("description")
-        st_details += "<p>"
-        # `label` should be rendered most prominent.
-        st_details += _wrap_in_tags("b", lsp_label)
+        label_detail = lsp_label
         if isinstance(lsp_label_detail, str):
             # `detail` should be rendered less prominent than `label`.
             # The string is appended directly after `label`, with no additional white space applied.
-            st_details += html.escape(lsp_label_detail)
+            label_detail += lsp_label_detail
+        # annotations.append(label_detail)
+        lsp_label = label_detail
         if isinstance(lsp_label_description, str):
             # `description` should be rendered less prominent than `detail`.
             # Additional separation is added.
-            st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
-        st_details += "</p>"
-    elif lsp_filter_text and lsp_filter_text != lsp_label:
-        if st_details:
-            st_details += " | "
-        st_details += _wrap_in_tags("p", lsp_label)
-
+            st_annotation = lsp_label_description.replace('\n', ' ')
+    else:
+        itemDetail = item.get("detail")
+        if itemDetail:
+            st_annotation = itemDetail.replace('\n', ' ')
+    if lsp_filter_text and lsp_filter_text != lsp_label:
+        details.append(_wrap_in_tags("p", lsp_label))
     completion = sublime.CompletionItem.command_completion(
         trigger=lsp_filter_text or lsp_label,
         command="lsp_select_completion_item",
         args={"item": item, "session_name": session_name},
         annotation=st_annotation,
         kind=kind,
-        details=st_details)
+        details=" | ".join(details))
     if item.get("textEdit"):
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion

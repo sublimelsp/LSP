@@ -186,7 +186,7 @@ class Manager(metaclass=ABCMeta):
         pass
 
 
-def _enum_like_class_to_list(c: Type[object]) -> Union[List[int], List[str]]:
+def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
     return [v for k, v in c.__dict__.items() if not k.startswith('_')]
 
 

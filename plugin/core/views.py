@@ -892,13 +892,10 @@ def format_completion(
     if lsp_label_details:
         lsp_label_detail = lsp_label_details.get("detail")
         lsp_label_description = lsp_label_details.get("description")
-        label_detail = lsp_label
         if isinstance(lsp_label_detail, str):
             # `detail` should be rendered less prominent than `label`.
             # The string is appended directly after `label`, with no additional white space applied.
-            label_detail += lsp_label_detail
-        # annotations.append(label_detail)
-        lsp_label = label_detail
+            lsp_label += lsp_label_detail
         if isinstance(lsp_label_description, str):
             # `description` should be rendered less prominent than `detail`.
             # Additional separation is added.

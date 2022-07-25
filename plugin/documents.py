@@ -28,6 +28,8 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
+from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
+from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
@@ -52,18 +54,6 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
-
-_kind2name = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
-_kind2scope = {
-    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
-    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
-    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
-}
 
 Flags = int
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
@@ -617,7 +607,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
     def _highlights_key(self, kind: int, multiline: bool) -> str:
-        return "lsp_highlight_{}{}".format(_kind2name[kind], "m" if multiline else "s")
+        return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
         for kind in range(1, 4):
@@ -663,7 +653,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 kind, multiline = tup
                 key = self._highlights_key(kind, multiline)
                 flags = flags_multi if multiline else flags_single
-                self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
+                self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
 

@@ -167,10 +167,11 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
     
-## Godot (GDScript)
+## GDScript (Godot Engine)
 
-1. Launch the Godot Editor on the project you are working on and leave it running.
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
+1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
+2. Launch the Godot Editor on the project you are working on and leave it running.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
 
     ```json
     {

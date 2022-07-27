@@ -948,10 +948,6 @@ def _is_completion_item_deprecated(item: CompletionItem) -> bool:
     return False
 
 
-def _wrap_in_tags(tag: str, item: str) -> str:
-    return "<{0}>{1}</{0}>".format(tag, html.escape(item))
-
-
 def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
@@ -963,12 +959,11 @@ def format_completion(
         kind = (kind[0], '!', "⚠ {} - Deprecated".format(kind[2]))
 
     lsp_label = item["label"]
-    lsp_label_details = item.get("labelDetails")
-    lsp_filter_text = item.get("filterText")
     st_annotation = ''
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get("documentation"):
         details.append(make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name}))
+    lsp_label_details = item.get("labelDetails")
     if lsp_label_details:
         lsp_label_detail = lsp_label_details.get("detail")
         lsp_label_description = lsp_label_details.get("description")
@@ -984,8 +979,10 @@ def format_completion(
         itemDetail = item.get("detail")
         if itemDetail:
             st_annotation = itemDetail.replace('\n', ' ')
+    lsp_filter_text = item.get("filterText")
     if lsp_filter_text and lsp_filter_text != lsp_label:
-        details.append(_wrap_in_tags("p", lsp_label))
+        # TODO: Don't think there is point in showing it but just for debugging right now.
+        details.append(html.escape(lsp_filter_text))
     # Completion popup UI:
     # |---------------------------------|
     # | <kind> <trigger>   <annotation> |
@@ -995,7 +992,7 @@ def format_completion(
     # | <details>                       |
     # |---------------------------------|
     completion = sublime.CompletionItem.command_completion(
-        trigger=lsp_filter_text or lsp_label,
+        trigger=lsp_label,
         command="lsp_select_completion_item",
         args={"item": item, "session_name": session_name},
         annotation=st_annotation,

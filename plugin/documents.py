@@ -14,6 +14,8 @@ from .core.protocol import Error
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
+from .core.protocol import SignatureHelpContext
+from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
@@ -466,7 +468,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         last_char = previous_non_whitespace_char(self.view, pos)
         if manual or last_char in triggers:
             self.purge_changes_async()
-            params = text_document_position_params(self.view, pos)
+            position_params = text_document_position_params(self.view, pos)
+            context_params = {}  # type: SignatureHelpContext
+            context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked if manual else \
+                SignatureHelpTriggerKind.TriggerCharacter
+            if not manual:
+                context_params["triggerCharacter"] = last_char
+            context_params["isRetrigger"] = self._sighelp is not None
+            if self._sighelp:
+                context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
+            params = {
+                "textDocument": position_params["textDocument"],
+                "position": position_params["position"],
+                "context": context_params
+            }
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
@@ -510,7 +525,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         show_lsp_popup(
             self.view,
             content,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY | sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             location=point,
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)

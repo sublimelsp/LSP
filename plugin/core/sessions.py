@@ -258,8 +258,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "documentationFormat": ["markdown", "plaintext"],
                 "parameterInformation": {
                     "labelOffsetSupport": True
-                }
-            }
+                },
+                "activeParameterSupport": True
+            },
+            "contextSupport": True
         },
         "references": {
             "dynamicRegistration": True

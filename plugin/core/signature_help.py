@@ -1,6 +1,5 @@
 from .logging import debug
 from .protocol import SignatureHelp
-from .protocol import SignatureHelpContext
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
 from .typing import Optional, List
@@ -45,8 +44,8 @@ class SigHelp:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
-        self._active_signature_index = self._state.get("activeSignature") or 0
-        self._active_parameter_index = self._state.get("activeParameter") or 0
+        self._active_signature_index = self._state.get("activeSignature", 0)
+        self._active_parameter_index = self._state.get("activeParameter", 0)
 
     @classmethod
     def from_lsp(
@@ -66,26 +65,18 @@ class SigHelp:
         except IndexError:
             return ""
         formatted = []  # type: List[str]
-        intro = self._render_intro()
-        if intro:
-            formatted.append(intro)
+        if self.has_multiple_signatures():
+            formatted.append(self._render_intro())
         formatted.extend(self._render_label(view, signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
 
-    def context(self, trigger_kind: int, trigger_character: str, is_retrigger: bool) -> SignatureHelpContext:
+    def active_signature_help(self) -> SignatureHelp:
         """
         Extract the state out of this state machine to send back to the language server.
-
-        XXX: Currently unused. Revisit this some time in the future.
         """
         self._state["activeSignature"] = self._active_signature_index
-        return {
-            "triggerKind": trigger_kind,
-            "triggerCharacter": trigger_character,
-            "isRetrigger": is_retrigger,
-            "activeSignatureHelp": self._state
-        }
+        return self._state
 
     def has_multiple_signatures(self) -> bool:
         """Does the current signature help state contain more than one overload?"""
@@ -99,15 +90,13 @@ class SigHelp:
     def active_signature(self) -> SignatureInformation:
         return self._signatures[self._active_signature_index]
 
-    def _render_intro(self) -> Optional[str]:
-        if len(self._signatures) > 1:
-            fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
-                  "(use ↑ ↓ to navigate, press Esc to hide):</div></p>"
-            return fmt.format(
-                self._active_signature_index + 1,
-                len(self._signatures),
-            )
-        return None
+    def _render_intro(self) -> str:
+        fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
+              "(use ↑ ↓ to navigate, press Esc to hide):</div></p>"
+        return fmt.format(
+            self._active_signature_index + 1,
+            len(self._signatures),
+        )
 
     def _render_label(self, view: sublime.View, signature: SignatureInformation) -> List[str]:
         formatted = []  # type: List[str]
@@ -118,6 +107,7 @@ class SigHelp:
         parameters = signature.get("parameters")
         if parameters:
             prev, start, end = 0, 0, 0
+            active_parameter_index = signature.get("activeParameter", self._active_parameter_index)
             for i, param in enumerate(parameters):
                 rawlabel = param["label"]
                 if isinstance(rawlabel, list):
@@ -136,7 +126,7 @@ class SigHelp:
                     end = start + len(rawlabel)
                 if prev < start:
                     formatted.append(_function(view, label[prev:start]))
-                formatted.append(_parameter(view, label[start:end], i == self._active_parameter_index))
+                formatted.append(_parameter(view, label[start:end], i == active_parameter_index))
                 prev = end
             if end < len(label):
                 formatted.append(_function(view, label[end:]))
@@ -164,7 +154,7 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            parameter = parameters[self._active_parameter_index]
+            parameter = parameters[signature.get("activeParameter", self._active_parameter_index)]
         except IndexError:
             return None
         documentation = parameter.get("documentation")
@@ -186,7 +176,8 @@ def _function(view: sublime.View, content: str) -> str:
 
 
 def _parameter(view: sublime.View, content: str, emphasize: bool) -> str:
-    return _wrap_with_scope_style(view, content, "variable.parameter.sighelp.lsp", emphasize)
+    scope = "variable.parameter.sighelp.active.lsp" if emphasize else "variable.parameter.sighelp.lsp"
+    return _wrap_with_scope_style(view, content, scope, emphasize)
 
 
 def _wrap_with_scope_style(view: sublime.View, content: str, scope: str, emphasize: bool) -> str:

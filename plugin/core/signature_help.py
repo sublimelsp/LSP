@@ -87,9 +87,6 @@ class SigHelp:
         new_index = self._active_signature_index + (1 if forward else -1)
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
-    def active_signature(self) -> SignatureInformation:
-        return self._signatures[self._active_signature_index]
-
     def _render_intro(self) -> str:
         fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
               "(use ↑ ↓ to navigate, press Esc to hide):</div></p>"

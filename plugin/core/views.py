@@ -945,7 +945,7 @@ def format_completion(
     # This is a hot function. Don't do heavy computations or IO in this function.
 
     lsp_label = item['label']
-    lsp_label_details = item.get('labelDetails', {}).get('detail', "")
+    lsp_label_detail = item.get('labelDetails', {}).get('detail', "")
     lsp_label_description = item.get('labelDetails', {}).get('description', "")
     lsp_filter_text = item.get('filterText', "")
     lsp_detail = item.get('detail', "").replace("\n", " ")
@@ -956,20 +956,20 @@ def format_completion(
     if can_resolve_completion_items or item.get('documentation'):
         details.append(make_command_link('lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}))
 
-    if lsp_label_details and (lsp_label + lsp_label_details).startswith(lsp_filter_text):
-        trigger = lsp_label + lsp_label_details
+    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
+        trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail
     elif lsp_label.startswith(lsp_filter_text):
         trigger = lsp_label
         annotation = lsp_detail
-        if lsp_label_details:
-            details.append(html.escape(lsp_label + lsp_label_details))
+        if lsp_label_detail:
+            details.append(html.escape(lsp_label + lsp_label_detail))
         if lsp_label_description:
             details.append(html.escape(lsp_label_description))
     else:
         trigger = lsp_filter_text
         annotation = lsp_detail
-        details.append(html.escape(lsp_label + lsp_label_details))
+        details.append(html.escape(lsp_label + lsp_label_detail))
         if lsp_label_description:
             details.append(html.escape(lsp_label_description))
 

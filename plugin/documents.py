@@ -470,9 +470,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
             context_params = {}  # type: SignatureHelpContext
-            context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked if manual else \
-                SignatureHelpTriggerKind.TriggerCharacter
-            if not manual:
+            if manual:
+                context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked
+            else:
+                context_params["triggerKind"] = SignatureHelpTriggerKind.TriggerCharacter
                 context_params["triggerCharacter"] = last_char
             context_params["isRetrigger"] = self._sighelp is not None
             if self._sighelp:

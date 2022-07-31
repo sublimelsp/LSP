@@ -142,7 +142,6 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 'sortText': '0006USERPROFILE',
                 'label': 'USERPROFILE',
                 'additionalTextEdits': None,
-                'detail': None,
                 'data': None,
                 'kind': 6,
                 'command': None,
@@ -178,7 +177,6 @@ class QueryCompletionsTests(CompletionsTestsBase):
                     }
                 },
                 'label': '$someParam',
-                'filterText': None,
                 'data': None,
                 'command': None,
                 'detail': 'null',
@@ -612,8 +610,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "deprecated": True
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
-        self.assertEqual('!', formatted_completion_item.kind[1])
-        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+        self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
         item_with_deprecated_tags = {
@@ -622,8 +619,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
-        self.assertEqual('!', formatted_completion_item.kind[1])
-        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+        self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
         yield from self.verify(
@@ -662,37 +658,37 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
         check(
             resolve_support=False,
-            expected_regex=r"^<p>f</p>$",
+            expected_regex=r"^f$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=False,
-            expected_regex=r"^<p><b>f</b>\(X&amp; x\)</p>$",
+            expected_regex=r"^f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=False,
-            expected_regex=r"^<p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",
+            expected_regex=r"^f\(X&amp; x\) \| does things$",
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p>f</p>$",
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)</p>$",
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
@@ -709,41 +705,23 @@ class QueryCompletionsTests(CompletionsTestsBase):
             if label_details is not None:
                 lsp["labelDetails"] = label_details
             native = format_completion(lsp, 0, resolve_support, "")
-            self.assertRegex(native.details, expected_regex)
+            self.assertRegex(native.trigger, expected_regex)
 
         check(
             resolve_support=False,
-            expected_regex=r"^$",
+            expected_regex=r"^f$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=False,
-            expected_regex=r"^<p><b>f</b>\(X&amp; x\)</p>$",
+            expected_regex=r"^f\(X& x\)$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=False,
-            expected_regex=r"^<p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",
-            label="f",
-            label_details={"detail": "(X& x)", "description": "does things"}
-        )
-        check(
-            resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a>$",
-            label="f",
-            label_details=None
-        )
-        check(
-            resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\)</p>$",
-            label="f",
-            label_details={"detail": "(X& x)"}
-        )
-        check(
-            resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| <p><b>f</b>\(X&amp; x\) - <i>does things</i></p>$",  # noqa: E501
+            expected_regex=r"^f\(X& x\)$",
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )

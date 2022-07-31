@@ -485,6 +485,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
+        elif self.view.match_selector(pos, "meta.function-call.arguments"):
+            # Don't force close the signature help popup while the user is typing the parameters.
+            # See also: https://github.com/sublimehq/sublime_text/issues/5518
+            pass
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
             # all using a popup. Most of these systems assume they have exclusive access to a popup, while in

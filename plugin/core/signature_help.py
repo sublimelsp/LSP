@@ -44,8 +44,8 @@ class SigHelp:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
-        self._active_signature_index = self._state.get("activeSignature", 0)
-        self._active_parameter_index = self._state.get("activeParameter", 0)
+        self._active_signature_index = self._state.get("activeSignature") or 0
+        self._active_parameter_index = self._state.get("activeParameter") or 0
 
     @classmethod
     def from_lsp(

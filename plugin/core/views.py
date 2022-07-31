@@ -945,10 +945,11 @@ def format_completion(
     # This is a hot function. Don't do heavy computations or IO in this function.
 
     lsp_label = item['label']
-    lsp_label_detail = item.get('labelDetails', {}).get('detail', "")
-    lsp_label_description = item.get('labelDetails', {}).get('description', "")
-    lsp_filter_text = item.get('filterText', "")
-    lsp_detail = item.get('detail', "").replace("\n", " ")
+    lsp_label_details = item.get('labelDetails') or {}
+    lsp_label_detail = lsp_label_details.get('detail') or ""
+    lsp_label_description = lsp_label_details.get('description') or ""
+    lsp_filter_text = item.get('filterText') or ""
+    lsp_detail = (item.get('detail') or "").replace("\n", " ")
 
     kind = COMPLETION_KINDS.get(item.get('kind', 0), KIND_UNSPECIFIED)
 

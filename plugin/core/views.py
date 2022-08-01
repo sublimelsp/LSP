@@ -951,7 +951,7 @@ def format_completion(
     lsp_filter_text = item.get('filterText') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
 
-    kind = COMPLETION_KINDS.get(item.get('kind', 0), KIND_UNSPECIFIED)
+    kind = COMPLETION_KINDS.get(item.get('kind', -1), KIND_UNSPECIFIED)
 
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):

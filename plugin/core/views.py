@@ -959,66 +959,51 @@ def format_diagnostic_for_html(
     return "".join(formatted)
 
 
-def _is_completion_item_deprecated(item: CompletionItem) -> bool:
-    if item.get("deprecated", False):
-        return True
-    tags = item.get("tags")
-    if isinstance(tags, list):
-        return CompletionItemTag.Deprecated in tags
-    return False
-
-
-def _wrap_in_tags(tag: str, item: str) -> str:
-    return "<{0}>{1}</{0}>".format(tag, html.escape(item))
-
-
 def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
-    item_kind = item.get("kind")
-    kind = COMPLETION_KINDS.get(item_kind, KIND_UNSPECIFIED) if item_kind else KIND_UNSPECIFIED
 
-    if _is_completion_item_deprecated(item):
-        kind = (kind[0], '!', "⚠ {} - Deprecated".format(kind[2]))
+    lsp_label = item['label']
+    lsp_label_details = item.get('labelDetails') or {}
+    lsp_label_detail = lsp_label_details.get('detail') or ""
+    lsp_label_description = lsp_label_details.get('description') or ""
+    lsp_filter_text = item.get('filterText') or ""
+    lsp_detail = (item.get('detail') or "").replace("\n", " ")
 
-    lsp_label = item["label"]
-    lsp_label_details = item.get("labelDetails")
-    lsp_filter_text = item.get("filterText")
-    st_annotation = (item.get("detail") or "").replace('\n', ' ')
+    kind = COMPLETION_KINDS.get(item.get('kind', -1), KIND_UNSPECIFIED)
 
-    st_details = ""
-    if can_resolve_completion_items or item.get("documentation"):
-        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
-    if lsp_label_details:
-        if st_details:
-            st_details += " | "
-        lsp_label_detail = lsp_label_details.get("detail")
-        lsp_label_description = lsp_label_details.get("description")
-        st_details += "<p>"
-        # `label` should be rendered most prominent.
-        st_details += _wrap_in_tags("b", lsp_label)
-        if isinstance(lsp_label_detail, str):
-            # `detail` should be rendered less prominent than `label`.
-            # The string is appended directly after `label`, with no additional white space applied.
-            st_details += html.escape(lsp_label_detail)
-        if isinstance(lsp_label_description, str):
-            # `description` should be rendered less prominent than `detail`.
-            # Additional separation is added.
-            st_details += " - {}".format(_wrap_in_tags("i", lsp_label_description))
-        st_details += "</p>"
-    elif lsp_filter_text and lsp_filter_text != lsp_label:
-        if st_details:
-            st_details += " | "
-        st_details += _wrap_in_tags("p", lsp_label)
+    details = []  # type: List[str]
+    if can_resolve_completion_items or item.get('documentation'):
+        details.append(make_command_link('lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}))
+
+    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
+        trigger = lsp_label + lsp_label_detail
+        annotation = lsp_label_description or lsp_detail
+    elif lsp_label.startswith(lsp_filter_text):
+        trigger = lsp_label
+        annotation = lsp_detail
+        if lsp_label_detail:
+            details.append(html.escape(lsp_label + lsp_label_detail))
+        if lsp_label_description:
+            details.append(html.escape(lsp_label_description))
+    else:
+        trigger = lsp_filter_text
+        annotation = lsp_detail
+        details.append(html.escape(lsp_label + lsp_label_detail))
+        if lsp_label_description:
+            details.append(html.escape(lsp_label_description))
+
+    if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
+        annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
 
     completion = sublime.CompletionItem.command_completion(
-        trigger=lsp_filter_text or lsp_label,
-        command="lsp_select_completion_item",
+        trigger=trigger,
+        command='lsp_select_completion_item',
         args={"item": item, "session_name": session_name},
-        annotation=st_annotation,
+        annotation=annotation,
         kind=kind,
-        details=st_details)
-    if item.get("textEdit"):
+        details=" | ".join(details))
+    if item.get('textEdit'):
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion

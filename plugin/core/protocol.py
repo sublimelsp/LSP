@@ -228,7 +228,8 @@ ParameterInformation = TypedDict('ParameterInformation', {
 SignatureInformation = TypedDict('SignatureInformation', {
     'label': str,
     'documentation': Union[str, Dict[str, str]],
-    'parameters': List[ParameterInformation]
+    'parameters': List[ParameterInformation],
+    'activeParameter': int
 }, total=False)
 
 

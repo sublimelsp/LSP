@@ -200,6 +200,7 @@ The color scheme rule only works if the "background" color is different from the
 | ----- | ----------- |
 | `entity.name.function.sighelp.lsp` | Function name in the signature help popup |
 | `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
+| `variable.parameter.sighelp.active.lsp` | Function argument which is currently highlighted in the signature help popup |
 
 ### Annotations
 

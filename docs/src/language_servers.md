@@ -129,7 +129,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         "clients": {
             "fsautocomplete": {
                 "enabled": true,
-                "command": ["dotnet", "fsautocomplete", "--background-service-enabled"],
+                "command": ["fsautocomplete", "--background-service-enabled"],
                 "selector": "source.fsharp",
                 "initializationOptions": {
                     "AutomaticWorkspaceInit": true
@@ -138,6 +138,9 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         }
     }
     ```
+
+!!! info "A note about .NET Tools and $PATH"
+    If the `fsautocomplete` executable isn't on your $PATH after installing it globally, ensure the .NET global tools location (by default `$HOME/.dotnet/tools`) is on your $PATH.
 
 ## Fortran
 

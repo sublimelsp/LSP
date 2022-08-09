@@ -14,7 +14,6 @@ import collections
 import contextlib
 import fnmatch
 import multiprocessing
-import multiprocessing.connection
 import os
 import posixpath
 import socket

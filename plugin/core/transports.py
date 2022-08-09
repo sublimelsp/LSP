@@ -237,14 +237,12 @@ class NodeIpcIO():
     _lines = 0
 
     def __init__(self, conn: multiprocessing.connection._ConnectionBase):
-        self._fd = conn.fileno()
-        self._read = conn._read  # type: ignore
-        self._write = conn._write  # type: ignore
+        self._conn = conn
 
     # https://github.com/python/cpython/blob/330f1d58282517bdf1f19577ab9317fa9810bf95/Lib/multiprocessing/connection.py#L378-L392
     def readline(self) -> bytearray:
         while self._lines == 0:
-            chunk = self._read(self._fd, 65536)  # type: bytes
+            chunk = self._conn._read(self._conn.fileno(), 65536)  # type: ignore
             self._buf += chunk
             self._lines += chunk.count(b'\n')
 
@@ -255,7 +253,7 @@ class NodeIpcIO():
     # https://github.com/python/cpython/blob/330f1d58282517bdf1f19577ab9317fa9810bf95/Lib/multiprocessing/connection.py#L369-L376
     def write(self, data: bytes) -> None:
         while len(data):
-            n = self._write(self._fd, data)  # type: int
+            n = self._conn._write(self._conn.fileno(), data)  # type: ignore
             data = data[n:]
 
 

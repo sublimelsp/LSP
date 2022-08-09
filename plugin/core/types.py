@@ -10,8 +10,11 @@ from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
+import collections
 import contextlib
 import fnmatch
+import multiprocessing
+import multiprocessing.connection
 import os
 import posixpath
 import socket
@@ -605,8 +608,11 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
+NodeIpc = collections.namedtuple('NodeIpc', 'parent_conn,child_conn')
+
+
 class TransportConfig:
-    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
+    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket", "node_ipc")
 
     def __init__(
         self,
@@ -614,15 +620,22 @@ class TransportConfig:
         command: List[str],
         tcp_port: Optional[int],
         env: Dict[str, str],
-        listener_socket: Optional[socket.socket]
+        listener_socket: Optional[socket.socket],
+        node_ipc: Optional[NodeIpc]
     ) -> None:
         if not command and not tcp_port:
             raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
+        if node_ipc and (tcp_port or listener_socket):
+            raise ValueError(
+                '"tcp_port" and "listener_socket" can\'t be provided in "--node-ipc" mode; ' +
+                'cannot start a language server'
+            )
         self.name = name
         self.command = command
         self.tcp_port = tcp_port
         self.env = env
         self.listener_socket = listener_socket
+        self.node_ipc = node_ipc
 
 
 class ClientConfig:
@@ -790,7 +803,11 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
             else:
                 env[key] = sublime.expand_variables(value, variables)
-        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
+        node_ipc = None
+        if '--node-ipc' in command:
+            node_ipc = NodeIpc(*multiprocessing.Pipe())
+            env["NODE_CHANNEL_FD"] = str(node_ipc.child_conn.fileno())
+        return TransportConfig(self.name, command, tcp_port, env, listener_socket, node_ipc)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):

@@ -49,10 +49,10 @@ class TransportCallbacks(Protocol[T_contra]):
 
 class AbstractProcessor(Generic[T]):
 
-    def write_data(self, writer: IO[bytes], data: T) -> None:
+    def write_data(self, writer: Any, data: T) -> None:
         raise NotImplementedError()
 
-    def read_data(self, reader: IO[bytes]) -> Optional[T]:
+    def read_data(self, reader: Any) -> Optional[T]:
         raise NotImplementedError()
 
 
@@ -242,6 +242,7 @@ class ProcessTransport(Transport[T]):
             exception_log('unexpected exception type in stderr loop', ex)
         self._send_queue.put_nowait(None)
 
+
 # Can be a singleton since it doesn't hold any state.
 standard_processor = StandardProcessor()
 node_ipc_processor = NodeIpcProcessor()
@@ -290,7 +291,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
                 raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
             reader = writer = sock.makefile('rwb')
         elif config.node_ipc:
-            reader = writer = config.node_ipc.parent_connection
+            reader = writer = config.node_ipc.parent_connection  # type: ignore
         else:
             if not process.stdout or not process.stdin:
                 raise RuntimeError(
@@ -300,7 +301,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             reader = process.stdout
             writer = process.stdin
     stderr_reader = process.stdout if config.node_ipc else process.stderr
-    processor =  node_ipc_processor if config.node_ipc else standard_processor
+    processor = node_ipc_processor if config.node_ipc else standard_processor
 
     if not reader or not writer:
         raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))

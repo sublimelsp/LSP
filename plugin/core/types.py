@@ -10,7 +10,6 @@ from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
-import collections
 import contextlib
 import fnmatch
 import multiprocessing

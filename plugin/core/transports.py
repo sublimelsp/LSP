@@ -49,10 +49,10 @@ class TransportCallbacks(Protocol[T_contra]):
 
 class AbstractProcessor(Generic[T]):
 
-    def write_data(self, data: T) -> None:
+    def write_data(self, writer: IO[bytes], data: T) -> None:
         raise NotImplementedError()
 
-    def read_data(self) -> Optional[T]:
+    def read_data(self, reader: IO[bytes]) -> Optional[T]:
         raise NotImplementedError()
 
 
@@ -74,20 +74,15 @@ def decode_payload(message: bytes) -> Optional[Dict[str, Any]]:
 
 
 class StandardProcessor(AbstractProcessor[Dict[str, Any]]):
-
-    def __init__(self, reader: IO[bytes], writer: IO[bytes]):
-        self._reader = reader
-        self._writer = writer
-
-    def write_data(self, data: Dict[str, Any]) -> None:
+    def write_data(self, writer: IO[bytes], data: Dict[str, Any]) -> None:
         body = encode_payload(data)
-        self._writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
-        self._writer.flush()
+        writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
+        writer.flush()
 
-    def read_data(self) -> Optional[Dict[str, Any]]:
-        headers = http.client.parse_headers(self._reader)  # type: ignore
+    def read_data(self, reader: IO[bytes]) -> Optional[Dict[str, Any]]:
+        headers = http.client.parse_headers(reader)  # type: ignore
         try:
-            body = self._reader.read(int(headers.get("Content-Length")))
+            body = reader.read(int(headers.get("Content-Length")))
         except TypeError:
             # Expected error on process stopping. Stop the read loop.
             raise StopLoopError()
@@ -98,18 +93,15 @@ class NodeIpcProcessor(AbstractProcessor[Dict[str, Any]]):
     _buf = bytearray()
     _lines = 0
 
-    def __init__(self, conn: multiprocessing.connection._ConnectionBase):
-        self._conn = conn
-
-    def write_data(self, data: Dict[str, Any]) -> None:
+    def write_data(self, connection: multiprocessing.connection._ConnectionBase, data: Dict[str, Any]) -> None:
         body = encode_payload(data) + b"\n"
         while len(body):
-            n = self._conn._write(self._conn.fileno(), body)  # type: ignore
+            n = connection._write(connection.fileno(), body)  # type: ignore
             body = body[n:]
 
-    def read_data(self) -> Optional[Dict[str, Any]]:
+    def read_data(self, connection: multiprocessing.connection._ConnectionBase) -> Optional[Dict[str, Any]]:
         while self._lines == 0:
-            chunk = self._conn._read(self._conn.fileno(), 65536)  # type: ignore
+            chunk = connection._read(connection.fileno(), 65536)  # type: ignore
             if len(chunk) == 0:
                 # EOF reached: https://docs.python.org/3/library/os.html#os.read
                 raise StopLoopError()
@@ -124,16 +116,14 @@ class NodeIpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
 class ProcessTransport(Transport[T]):
 
-    def __init__(self,
-                 name: str,
-                 process: subprocess.Popen,
-                 socket: Optional[socket.socket],
-                 stderr: Optional[IO[bytes]],
-                 processor: AbstractProcessor[T],
+    def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: Any,
+                 writer: Any, stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
                  callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
         self._socket = socket
+        self._reader = reader
+        self._writer = writer
         self._stderr = stderr
         self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
@@ -171,8 +161,8 @@ class ProcessTransport(Transport[T]):
 
     def _read_loop(self) -> None:
         try:
-            while True:
-                payload = self._processor.read_data()
+            while self._reader:
+                payload = self._processor.read_data(self._reader)
                 if payload is None:
                     continue
 
@@ -221,11 +211,11 @@ class ProcessTransport(Transport[T]):
     def _write_loop(self) -> None:
         exception = None  # type: Optional[Exception]
         try:
-            while True:
+            while self._writer:
                 d = self._send_queue.get()
                 if d is None:
                     break
-                self._processor.write_data(d)
+                self._processor.write_data(self._writer, d)
         except (BrokenPipeError, AttributeError):
             pass
         except Exception as ex:
@@ -252,6 +242,10 @@ class ProcessTransport(Transport[T]):
             exception_log('unexpected exception type in stderr loop', ex)
         self._send_queue.put_nowait(None)
 
+# Can be a singleton since it doesn't hold any state.
+standard_processor = StandardProcessor()
+node_ipc_processor = NodeIpcProcessor()
+
 
 def create_transport(config: TransportConfig, cwd: Optional[str],
                      callback_object: TransportCallbacks) -> Transport[Dict[str, Any]]:
@@ -264,14 +258,14 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         else:
             stdout = subprocess.DEVNULL
         stdin = subprocess.DEVNULL
-    elif not config.node_ipc:
-        stdout = subprocess.PIPE
-        stdin = subprocess.PIPE
-    else:
+    elif config.node_ipc:
         stdout = subprocess.PIPE
         stdin = subprocess.DEVNULL
         stderr = subprocess.STDOUT
-        pass_fds = (config.node_ipc.child_conn.fileno(),)
+        pass_fds = (config.node_ipc.child_connection.fileno(),)
+    else:
+        stdout = subprocess.PIPE
+        stdin = subprocess.PIPE
 
     startupinfo = _fixup_startup_args(config.command)
     sock = None  # type: Optional[socket.socket]
@@ -288,7 +282,6 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             config.listener_socket,
             start_subprocess
         )
-        processor = StandardProcessor(reader, writer)  # type: AbstractProcessor
     else:
         process = start_subprocess()
         if config.tcp_port:
@@ -296,19 +289,24 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             if sock is None:
                 raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
             reader = writer = sock.makefile('rwb')
-            processor = StandardProcessor(reader, writer)
-        elif not config.node_ipc:
+        elif config.node_ipc:
+            reader = writer = config.node_ipc.parent_connection
+        else:
             if not process.stdout or not process.stdin:
                 raise RuntimeError(
                     'Failed initializing transport: reader: {}, writer: {}'
                     .format(process.stdout, process.stdin)
                 )
-            processor = StandardProcessor(process.stdout, process.stdin)
-        else:
-            processor = NodeIpcProcessor(config.node_ipc.parent_conn)
-
+            reader = process.stdout
+            writer = process.stdin
     stderr_reader = process.stdout if config.node_ipc else process.stderr
-    return ProcessTransport(config.name, process, sock, stderr_reader, processor, callback_object)
+    processor =  node_ipc_processor if config.node_ipc else standard_processor
+
+    if not reader or not writer:
+        raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
+
+    return ProcessTransport(config.name, process, sock, reader, writer, stderr_reader, processor,
+                            callback_object)
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

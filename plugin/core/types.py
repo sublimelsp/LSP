@@ -607,7 +607,11 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-NodeIpcPipe = collections.namedtuple('NodeIpcPipe', 'parent_conn,child_conn')
+class NodeIpcPipe():
+    def __init__(self) -> None:
+        parent_connection, child_connection = multiprocessing.Pipe()
+        self.parent_connection = parent_connection
+        self.child_connection = child_connection
 
 
 class TransportConfig:
@@ -804,8 +808,8 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         node_ipc = None
         if self.use_node_ipc:
-            node_ipc = NodeIpcPipe(*multiprocessing.Pipe())
-            env["NODE_CHANNEL_FD"] = str(node_ipc.child_conn.fileno())
+            node_ipc = NodeIpcPipe()
+            env["NODE_CHANNEL_FD"] = str(node_ipc.child_connection.fileno())
         return TransportConfig(self.name, command, tcp_port, env, listener_socket, node_ipc)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:

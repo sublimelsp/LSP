@@ -75,6 +75,11 @@
               },
               "markdownDescription": "The command to start the language server."
             },
+            "ClientUseNodeIpc": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Communicate with the language server over Node.js IPC. This lets the server print to stdout without disrupting the LSP communication. It's non-standard, but is used by VSCode. The command must be adjusted accordingly, e.g. `--stdio` must be replaced with `--node-ipc` in case of vscode-eslint. `tcp_port` is ignored if this is enabled."
+            },
             "ClientEnabled": {
               "type": "boolean",
               "default": false,
@@ -155,6 +160,9 @@
               "properties": {
                 "command": {
                   "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+                },
+                "use_node_ipc": {
+                  "$ref": "sublime://settings/LSP#/definitions/ClientUseNodeIpc"
                 },
                 "enabled": {
                   "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
@@ -554,6 +562,9 @@
           "properties": {
             "command": {
               "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+            },
+            "use_node_ipc": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientUseNodeIpc"
             },
             "enabled": {
               "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"

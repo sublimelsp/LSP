@@ -5,7 +5,7 @@ from .typing import Dict, Any, Optional, IO, Protocol, Generic, List, Callable, 
 from contextlib import closing
 from functools import partial
 from queue import Queue
-import http
+import http.client
 import json
 import multiprocessing.connection
 import os
@@ -49,70 +49,97 @@ class TransportCallbacks(Protocol[T_contra]):
 
 class AbstractProcessor(Generic[T]):
 
-    def write_data(self, writer: IO[bytes], data: T, is_node_ipc: bool) -> None:
+    def write_data(self, data: T) -> None:
         raise NotImplementedError()
 
-    def read_data(self, reader: IO[bytes], is_node_ipc: bool) -> Optional[T]:
+    def read_data(self) -> Optional[T]:
         raise NotImplementedError()
 
 
-class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
+def encode_payload(data: Dict[str, Any]) -> bytes:
+    return json.dumps(
+        data,
+        ensure_ascii=False,
+        check_circular=False,
+        separators=(',', ':')
+    ).encode('utf-8')
 
-    def write_data(self, writer: IO[bytes], data: Dict[str, Any], is_node_ipc: bool) -> None:
-        body = self._encode(data)
-        if not is_node_ipc:
-            writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
-        else:
-            writer.write(body + b"\n")
 
-    def read_data(self, reader: IO[bytes], is_node_ipc: bool) -> Optional[Dict[str, Any]]:
-        if not is_node_ipc:
-            headers = http.client.parse_headers(reader)  # type: ignore
-            try:
-                body = reader.read(int(headers.get("Content-Length")))
-            except TypeError:
-                # Expected error on process stopping. Stop the read loop.
-                raise StopLoopError()
-        else:
-            body = reader.readline()
-
-        try:
-            return self._decode(body)
-        except Exception as ex:
-            exception_log("JSON decode error", ex)
-            return None
-
-    @staticmethod
-    def _encode(data: Dict[str, Any]) -> bytes:
-        return json.dumps(
-            data,
-            ensure_ascii=False,
-            check_circular=False,
-            separators=(',', ':')
-        ).encode('utf-8')
-
-    @staticmethod
-    def _decode(message: bytes) -> Dict[str, Any]:
+def decode_payload(message: bytes) -> Optional[Dict[str, Any]]:
+    try:
         return json.loads(message.decode('utf-8'))
+    except Exception as ex:
+        exception_log("JSON decode error", ex)
+        return None
+
+
+class StandardProcessor(AbstractProcessor[Dict[str, Any]]):
+
+    def __init__(self, reader: IO[bytes], writer: IO[bytes]):
+        self._reader = reader
+        self._writer = writer
+
+    def write_data(self, data: Dict[str, Any]) -> None:
+        body = encode_payload(data)
+        self._writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
+        self._writer.flush()
+
+    def read_data(self) -> Optional[Dict[str, Any]]:
+        headers = http.client.parse_headers(self._reader)  # type: ignore
+        try:
+            body = self._reader.read(int(headers.get("Content-Length")))
+        except TypeError:
+            # Expected error on process stopping. Stop the read loop.
+            raise StopLoopError()
+        return decode_payload(body)
+
+
+class NodeIpcProcessor(AbstractProcessor[Dict[str, Any]]):
+    _buf = bytearray()
+    _lines = 0
+
+    def __init__(self, conn: multiprocessing.connection._ConnectionBase):
+        self._conn = conn
+
+    def write_data(self, data: Dict[str, Any]) -> None:
+        body = encode_payload(data) + b"\n"
+        while len(body):
+            n = self._conn._write(self._conn.fileno(), body)  # type: ignore
+            body = body[n:]
+
+    def read_data(self) -> Optional[Dict[str, Any]]:
+        while self._lines == 0:
+            chunk = self._conn._read(self._conn.fileno(), 65536)  # type: ignore
+            if len(chunk) == 0:
+                # EOF reached: https://docs.python.org/3/library/os.html#os.read
+                raise StopLoopError()
+
+            self._buf += chunk
+            self._lines += chunk.count(b'\n')
+
+        self._lines -= 1
+        message, _, self._buf = self._buf.partition(b'\n')
+        return decode_payload(message)
 
 
 class ProcessTransport(Transport[T]):
 
-    def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
-                 writer: IO[bytes], stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
-                 callback_object: TransportCallbacks[T], is_node_ipc: bool) -> None:
+    def __init__(self,
+                 name: str,
+                 process: subprocess.Popen,
+                 socket: Optional[socket.socket],
+                 stderr: Optional[IO[bytes]],
+                 processor: AbstractProcessor[T],
+                 callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
         self._socket = socket
-        self._reader = reader
-        self._writer = writer
         self._stderr = stderr
         self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
         self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
         self._callback_object = weakref.ref(callback_object)
-        self._is_node_ipc = is_node_ipc
         self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
         self._reader_thread.start()
         self._writer_thread.start()
@@ -144,8 +171,8 @@ class ProcessTransport(Transport[T]):
 
     def _read_loop(self) -> None:
         try:
-            while self._reader:
-                payload = self._processor.read_data(self._reader, self._is_node_ipc)
+            while True:
+                payload = self._processor.read_data()
                 if payload is None:
                     continue
 
@@ -194,13 +221,11 @@ class ProcessTransport(Transport[T]):
     def _write_loop(self) -> None:
         exception = None  # type: Optional[Exception]
         try:
-            while self._writer:
+            while True:
                 d = self._send_queue.get()
                 if d is None:
                     break
-                self._processor.write_data(self._writer, d, self._is_node_ipc)
-                if not self._is_node_ipc:
-                    self._writer.flush()
+                self._processor.write_data(d)
         except (BrokenPipeError, AttributeError):
             pass
         except Exception as ex:
@@ -226,35 +251,6 @@ class ProcessTransport(Transport[T]):
         except Exception as ex:
             exception_log('unexpected exception type in stderr loop', ex)
         self._send_queue.put_nowait(None)
-
-
-# Can be a singleton since it doesn't hold any state.
-json_rpc_processor = JsonRpcProcessor()
-
-
-class NodeIpcIO():
-    _buf = bytearray()
-    _lines = 0
-
-    def __init__(self, conn: multiprocessing.connection._ConnectionBase):
-        self._conn = conn
-
-    # https://github.com/python/cpython/blob/330f1d58282517bdf1f19577ab9317fa9810bf95/Lib/multiprocessing/connection.py#L378-L392
-    def readline(self) -> bytearray:
-        while self._lines == 0:
-            chunk = self._conn._read(self._conn.fileno(), 65536)  # type: ignore
-            self._buf += chunk
-            self._lines += chunk.count(b'\n')
-
-        self._lines -= 1
-        line, _, self._buf = self._buf.partition(b'\n')
-        return line
-
-    # https://github.com/python/cpython/blob/330f1d58282517bdf1f19577ab9317fa9810bf95/Lib/multiprocessing/connection.py#L369-L376
-    def write(self, data: bytes) -> None:
-        while len(data):
-            n = self._conn._write(self._conn.fileno(), data)  # type: ignore
-            data = data[n:]
 
 
 def create_transport(config: TransportConfig, cwd: Optional[str],
@@ -292,24 +288,27 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             config.listener_socket,
             start_subprocess
         )
+        processor = StandardProcessor(reader, writer)  # type: AbstractProcessor
     else:
         process = start_subprocess()
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:
                 raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
-            reader = sock.makefile('rwb')  # type: ignore
-            writer = reader
+            reader = writer = sock.makefile('rwb')
+            processor = StandardProcessor(reader, writer)
         elif not config.node_ipc:
-            reader = process.stdout  # type: ignore
-            writer = process.stdin  # type: ignore
+            if not process.stdout or not process.stdin:
+                raise RuntimeError(
+                    'Failed initializing transport: reader: {}, writer: {}'
+                    .format(process.stdout, process.stdin)
+                )
+            processor = StandardProcessor(process.stdout, process.stdin)
         else:
-            reader = writer = NodeIpcIO(config.node_ipc.parent_conn)  # type: ignore
-    if not reader or not writer:
-        raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
+            processor = NodeIpcProcessor(config.node_ipc.parent_conn)
+
     stderr_reader = process.stdout if config.node_ipc else process.stderr
-    return ProcessTransport(config.name, process, sock, reader, writer, stderr_reader, json_rpc_processor,
-                            callback_object, bool(config.node_ipc))
+    return ProcessTransport(config.name, process, sock, stderr_reader, processor, callback_object)
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
@@ -403,8 +402,7 @@ def _await_tcp_connection(
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
         thread.join()
-        reader = sock.makefile('rwb')  # type: IO[bytes]
-        writer = reader
+        reader = writer = sock.makefile('rwb')
         assert data.process
         return data.process, sock, reader, writer
 

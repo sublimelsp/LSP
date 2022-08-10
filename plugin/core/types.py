@@ -607,7 +607,7 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-NodeIpc = collections.namedtuple('NodeIpc', 'parent_conn,child_conn')
+NodeIpcPipe = collections.namedtuple('NodeIpcPipe', 'parent_conn,child_conn')
 
 
 class TransportConfig:
@@ -620,15 +620,10 @@ class TransportConfig:
         tcp_port: Optional[int],
         env: Dict[str, str],
         listener_socket: Optional[socket.socket],
-        node_ipc: Optional[NodeIpc]
+        node_ipc: Optional[NodeIpcPipe]
     ) -> None:
         if not command and not tcp_port:
             raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
-        if node_ipc and (tcp_port or listener_socket):
-            raise ValueError(
-                '"tcp_port" and "listener_socket" can\'t be provided in "--node-ipc" mode; ' +
-                'cannot start a language server'
-            )
         self.name = name
         self.command = command
         self.tcp_port = tcp_port
@@ -644,6 +639,7 @@ class ClientConfig:
                  priority_selector: Optional[str] = None,
                  schemes: Optional[List[str]] = None,
                  command: Optional[List[str]] = None,
+                 use_node_ipc: bool = False,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
                  auto_complete_selector: Optional[str] = None,
@@ -668,6 +664,7 @@ class ClientConfig:
         else:
             assert isinstance(binary_args, list)
             self.command = binary_args
+        self.use_node_ipc = use_node_ipc
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled
@@ -701,9 +698,10 @@ class ClientConfig:
             priority_selector=_read_priority_selector(s),
             schemes=s.get("schemes"),
             command=read_list_setting(s, "command", []),
+            use_node_ipc=bool(s.get("use_node_ipc", False)),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
-            # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
+            # Default to True, because an LSP plugin is enabled if it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=init_options,
             settings=settings,
@@ -731,6 +729,7 @@ class ClientConfig:
             priority_selector=_read_priority_selector(d),
             schemes=schemes,
             command=d.get("command", []),
+            use_node_ipc=d.get("use_node_ipc", False),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
             enabled=d.get("enabled", False),
@@ -758,6 +757,7 @@ class ClientConfig:
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
             schemes=override.get("schemes", src_config.schemes),
             command=override.get("command", src_config.command),
+            use_node_ipc=override.get("use_node_ipc", src_config.use_node_ipc),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             enabled=override.get("enabled", src_config.enabled),
@@ -803,8 +803,8 @@ class ClientConfig:
             else:
                 env[key] = sublime.expand_variables(value, variables)
         node_ipc = None
-        if '--node-ipc' in command:
-            node_ipc = NodeIpc(*multiprocessing.Pipe())
+        if self.use_node_ipc:
+            node_ipc = NodeIpcPipe(*multiprocessing.Pipe())
             env["NODE_CHANNEL_FD"] = str(node_ipc.child_conn.fileno())
         return TransportConfig(self.name, command, tcp_port, env, listener_socket, node_ipc)
 

@@ -152,6 +152,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._uri = existing_uri
         else:
             self.set_uri(view_to_uri(view))
+        self._auto_complete_triggered_manually = False
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -429,6 +430,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session = self.session_async("semanticTokensProvider")
             if session:
                 return ("lsp_show_scope_name", {})
+        elif command_name == "auto_complete":
+            self._auto_complete_triggered_manually = True
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
@@ -683,6 +686,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
+            self._auto_complete_triggered_manually = False  # reset state for next completion popup
             return
         self.purge_changes_async()
         completion_promises = []  # type: List[Promise[ResolvedCompletions]]
@@ -713,7 +717,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
-        include_snippets = self.view.settings().get("auto_complete_include_snippets")
+        view_settings = self.view.settings()
+        include_snippets = view_settings.get("auto_complete_include_snippets") and \
+            (self._auto_complete_triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
+        self._auto_complete_triggered_manually = False
         for response, session_name in responses:
             if isinstance(response, Error):
                 errors.append(response)

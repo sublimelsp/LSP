@@ -324,11 +324,16 @@ class LspHoverCommand(LspTextCommand):
                 self.handle_code_action_select(config_name, 0)
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
-            session = self.session_by_name(session_name)
-            if session:
-                position = {"line": row, "character": col_utf16}  # type: Position
-                r = {"start": position, "end": position}  # type: RangeLsp
-                sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
+
+            if (uri.lower().startswith("http://") or uri.lower().startswith("https://")):
+                if not webbrowser.open(uri):
+                    debug("failed to open:", uri)
+            else:
+                session = self.session_by_name(session_name)
+                if session:
+                    position = {"line": row, "character": col_utf16}  # type: Position
+                    r = {"start": position, "end": position}  # type: RangeLsp
+                    sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
         else:
             # NOTE: Remove this check when on py3.8.
             if not (href.lower().startswith("http://") or href.lower().startswith("https://")):

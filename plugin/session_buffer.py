@@ -2,6 +2,8 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import InlayHintParams
+from .core.protocol import InlayHintResponse
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
@@ -28,6 +30,7 @@ from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
+from .inlay_hint import inlay_hint_to_phantom
 from .semantic_highlighting import SemanticToken
 from weakref import WeakSet
 import sublime
@@ -143,6 +146,7 @@ class SessionBuffer:
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
             self.do_semantic_tokens_async(view)
+            self.do_inlay_hints_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, view.change_count())
             self.session.notify_plugin_on_session_buffer_change(self)
@@ -288,6 +292,7 @@ class SessionBuffer:
             self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
+            self.do_inlay_hints_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -611,7 +616,26 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> List[SemanticToken]:
         return self.semantic_tokens.tokens
 
-    # ------------------------------------------------------------------------------------------------------------------
+    def do_inlay_hints_async(self, view: sublime.View) -> None:
+        if not self.session.has_capability("inlayHintProvider"):
+            return
+        params = {
+            "textDocument": text_document_identifier(view),
+            # "range": region_to_range(view, view.visible_region()).to_lsp()
+            "range": region_to_range(view, sublime.Region(0, view.size())).to_lsp()
+        }  # type: InlayHintParams
+
+        request = Request.inlayHint(params, view)
+        self.session.send_request_async(request, self._on_inlay_hints_async)
+
+    def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
+        if response:
+            view = self.some_view()
+            if not view:
+                return
+            phantoms = [inlay_hint_to_phantom(view, inlay_hint) for inlay_hint in response]
+            for sv in self.session_views:
+                sublime.set_timeout(lambda: sv.present_inlay_hints_async(phantoms))
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

@@ -45,6 +45,7 @@ class SessionView:
         self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         self._code_lenses = CodeLensView(self._view)
+        self._inlay_hints_phantom_set = sublime.PhantomSet(self._view, "lsp_inlay_hints")
         settings = self._view.settings()
         buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
@@ -378,6 +379,13 @@ class SessionView:
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
+
+    # --- textDocument/inlayHint ---------------------------------------------------------------------------------------
+
+    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
+        self._inlay_hints_phantom_set.update(phantoms)
+
+    # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

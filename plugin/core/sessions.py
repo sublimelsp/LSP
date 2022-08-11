@@ -351,6 +351,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "codeLens": {
             "dynamicRegistration": True
         },
+        "inlayHint": {
+            "dynamicRegistration": True,
+            "resolveSupport": {
+                "properties": []
+            }
+        },
         "semanticTokens": {
             "dynamicRegistration": True,
             "requests": {
@@ -391,6 +397,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "configuration": True,
         "codeLens": {
+            "refreshSupport": True
+        },
+        "inlayHint": {
             "refreshSupport": True
         },
         "semanticTokens": {
@@ -487,6 +496,9 @@ class SessionViewProtocol(Protocol):
         ...
 
     def start_code_lenses_async(self) -> None:
+        ...
+
+    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
         ...
 
 

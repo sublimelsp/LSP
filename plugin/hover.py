@@ -325,7 +325,7 @@ class LspHoverCommand(LspTextCommand):
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
 
-            if (uri.lower().startswith("http://") or uri.lower().startswith("https://")):
+            if uri.lower().startswith(("http://", "https://")):
                 if not webbrowser.open(uri):
                     debug("failed to open:", uri)
             else:

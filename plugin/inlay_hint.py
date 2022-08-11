@@ -15,6 +15,7 @@ INLAY_HINT_HTML = """
             margin-right: {margin_right};
             padding: 0.05em 4px;
             font-size: 0.9em;
+            font-family: system;
         }}
     </style>
     <div class="inlay-hint" title="{tooltip}">

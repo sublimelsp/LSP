@@ -336,7 +336,7 @@ class LspHoverCommand(LspTextCommand):
                     sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
         else:
             # NOTE: Remove this check when on py3.8.
-            if not (href.lower().startswith("http://") or href.lower().startswith("https://")):
+            if not href.lower().startswith(("http://", "https://")):
                 href = "http://" + href
             if not webbrowser.open(href):
                 debug("failed to open:", href)

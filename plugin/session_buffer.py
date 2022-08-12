@@ -633,7 +633,7 @@ class SessionBuffer:
             view = self.some_view()
             if not view:
                 return
-            phantoms = [inlay_hint_to_phantom(view, inlay_hint) for inlay_hint in response]
+            phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session.config.name) for inlay_hint in response]
             for sv in self.session_views:
                 sublime.set_timeout(lambda: sv.present_inlay_hints_async(phantoms))
 

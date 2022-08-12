@@ -458,6 +458,10 @@ class Request:
         return Request('textDocument/inlayHint', params, view)
 
     @classmethod
+    def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
+        return Request('inlayHint/resolve', params, view)
+
+    @classmethod
     def shutdown(cls) -> 'Request':
         return Request("shutdown")
 

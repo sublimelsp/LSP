@@ -19,6 +19,7 @@ from .promise import PackagedTask
 from .promise import Promise
 from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink
 from .protocol import Command
+from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
@@ -36,6 +37,7 @@ from .protocol import Request
 from .protocol import Response
 from .protocol import SemanticTokenModifiers
 from .protocol import SemanticTokenTypes
+from .protocol import SymbolKind
 from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
@@ -55,13 +57,11 @@ from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator,
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
-from .views import COMPLETION_KINDS
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
 from .views import SEMANTIC_TOKENS_MAP
-from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
@@ -186,18 +186,14 @@ class Manager(metaclass=ABCMeta):
         pass
 
 
-def _sequence_to_lsp_indices(sequence: Sequence[Any]) -> List[int]:
-    return list(range(1, len(sequence) + 1))
-
-
-def _enum_like_class_to_list(c: Type[object]) -> List[str]:
+def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
     return [v for k, v in c.__dict__.items() if not k.startswith('_')]
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
                           config: ClientConfig) -> dict:
-    completion_kinds = _sequence_to_lsp_indices(COMPLETION_KINDS)
-    symbol_kinds = _sequence_to_lsp_indices(SYMBOL_KINDS)
+    completion_kinds = _enum_like_class_to_list(CompletionItemKind)
+    symbol_kinds = _enum_like_class_to_list(SymbolKind)
     diagnostic_tag_value_set = _enum_like_class_to_list(DiagnosticTag)
     completion_tag_value_set = _enum_like_class_to_list(CompletionItemTag)
     symbol_tag_value_set = _enum_like_class_to_list(SymbolTag)
@@ -258,7 +254,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "signatureHelp": {
             "dynamicRegistration": True,
+            "contextSupport": True,
             "signatureInformation": {
+                "activeParameterSupport": True,
                 "documentationFormat": ["markdown", "plaintext"],
                 "parameterInformation": {
                     "labelOffsetSupport": True

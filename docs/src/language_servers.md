@@ -129,7 +129,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         "clients": {
             "fsautocomplete": {
                 "enabled": true,
-                "command": ["dotnet", "fsautocomplete", "--background-service-enabled"],
+                "command": ["fsautocomplete", "--background-service-enabled"],
                 "selector": "source.fsharp",
                 "initializationOptions": {
                     "AutomaticWorkspaceInit": true
@@ -138,6 +138,9 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         }
     }
     ```
+
+!!! info "A note about .NET Tools and $PATH"
+    If the `fsautocomplete` executable isn't on your $PATH after installing it globally, ensure the .NET global tools location (by default `$HOME/.dotnet/tools`) is on your $PATH.
 
 ## Fortran
 
@@ -166,7 +169,25 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
+    
+## GDScript (Godot Engine)
 
+1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
+2. Launch the Godot Editor on the project you are working on and leave it running.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "godot-lsp": {
+                "enabled": true,
+                "command": ["/PATH/TO/godot-editor.exe"], // Update the PATH
+                "tcp_port": 6008,
+                "selector": "source.gdscript",
+            }
+        }
+    }
+    ```
 
 ## GraphQL
 

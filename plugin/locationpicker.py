@@ -6,6 +6,7 @@ from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
 from .core.views import to_encoded_filename
+from urllib.request import url2pathname
 import functools
 import sublime
 import weakref
@@ -36,10 +37,18 @@ def open_basic_file(
     position: Position,
     flags: int = 0,
     group: Optional[int] = None
-) -> sublime.View:
-    filename = session.config.map_server_uri_to_client_path(uri)
+) -> Optional[sublime.View]:
     if group is None:
         group = session.window.active_group()
+    if uri.startswith("file:"):
+        filename = session.config.map_server_uri_to_client_path(uri)
+    else:
+        prefix = 'res://Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
+        assert uri.startswith(prefix)
+        filename = sublime.packages_path() + url2pathname(uri[len(prefix):])
+        # Window.open_file can only focus and scroll to a location in a resource file if it is already opened
+        if not session.window.find_open_file(filename):
+            return None
     return session.window.open_file(to_encoded_filename(filename, position), flags=flags, group=group)
 
 
@@ -86,10 +95,12 @@ class LocationPicker:
                 return
             # Note: this has to run on the main thread (and not via open_location_async)
             # otherwise the bevior feels weird. It's the only reason why open_basic_file exists.
-            if uri.startswith("file:"):
+            if uri.startswith(("file:", "res:")):
                 flags = sublime.ENCODED_POSITION
                 if not self._side_by_side:
-                    open_basic_file(session, uri, position, flags)
+                    view = open_basic_file(session, uri, position, flags)
+                    if not view:
+                        self._window.status_message("Unable to open {}".format(uri))
             else:
                 sublime.set_timeout_async(
                     functools.partial(open_location_async, session, location, self._side_by_side, True))
@@ -106,7 +117,7 @@ class LocationPicker:
         session, _, uri, position = self._unpack(index)
         if not session:
             return
-        if uri.startswith("file:"):
+        if uri.startswith(("file:", "res:")):
             flags = sublime.ENCODED_POSITION | sublime.FORCE_GROUP
             if self._side_by_side:
                 if self._highlighted_view and self._highlighted_view.is_valid():
@@ -117,7 +128,11 @@ class LocationPicker:
                     flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
             else:
                 flags |= sublime.TRANSIENT
-            self._highlighted_view = open_basic_file(session, uri, position, flags, self._window.active_group())
+            view = open_basic_file(session, uri, position, flags, self._window.active_group())
+            # Don't overwrite self._highlighted_view if resource uri can't preview, so that side-by-side view will still
+            # be closed upon canceling
+            if view:
+                self._highlighted_view = view
         else:
-            # TODO: Preview non-file uris?
+            # TODO: Preview for other uri schemes?
             debug("no preview for", uri)

@@ -14,6 +14,8 @@ from .core.protocol import Error
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
+from .core.protocol import SignatureHelpContext
+from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
@@ -28,6 +30,8 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
+from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
+from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import make_command_link
@@ -52,18 +56,6 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
-
-_kind2name = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
-_kind2scope = {
-    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
-    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
-    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
-}
 
 Flags = int
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
@@ -476,10 +468,28 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         last_char = previous_non_whitespace_char(self.view, pos)
         if manual or last_char in triggers:
             self.purge_changes_async()
-            params = text_document_position_params(self.view, pos)
+            position_params = text_document_position_params(self.view, pos)
+            context_params = {}  # type: SignatureHelpContext
+            if manual:
+                context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked
+            else:
+                context_params["triggerKind"] = SignatureHelpTriggerKind.TriggerCharacter
+                context_params["triggerCharacter"] = last_char
+            context_params["isRetrigger"] = self._sighelp is not None
+            if self._sighelp:
+                context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
+            params = {
+                "textDocument": position_params["textDocument"],
+                "position": position_params["position"],
+                "context": context_params
+            }
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
+        elif self.view.match_selector(pos, "meta.function-call.arguments"):
+            # Don't force close the signature help popup while the user is typing the parameters.
+            # See also: https://github.com/sublimehq/sublime_text/issues/5518
+            pass
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
             # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
@@ -520,7 +530,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         show_lsp_popup(
             self.view,
             content,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY | sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             location=point,
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)
@@ -617,7 +627,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
     def _highlights_key(self, kind: int, multiline: bool) -> str:
-        return "lsp_highlight_{}{}".format(_kind2name[kind], "m" if multiline else "s")
+        return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
         for kind in range(1, 4):
@@ -663,7 +673,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 kind, multiline = tup
                 key = self._highlights_key(kind, multiline)
                 flags = flags_multi if multiline else flags_single
-                self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
+                self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
 

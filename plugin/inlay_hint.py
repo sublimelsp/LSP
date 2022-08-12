@@ -14,14 +14,33 @@ class LspInlayHintClickCommand(LspTextCommand):
         session = self.session_by_name(session_name, 'inlayHintProvider.resolveProvider')
         if session:
             request = Request.resolveInlayHint(inlay_hint, self.view)
-            session.send_request_async(request, self.handle)
+            session.send_request_async(request, lambda response: self.handle(session_name, response))
             return
-        self.handle(inlay_hint)
+        self.handle(session_name, inlay_hint)
 
-    def handle(self, inlay_hint: InlayHint) -> None:
+    def handle(self, session_name: str, inlay_hint: InlayHint) -> None:
+        self.handle_inlay_hint_text_edits(inlay_hint)
+        self.handle_inlay_hint_command(session_name, inlay_hint)
+
+    def handle_inlay_hint_text_edits(self, inlay_hint: InlayHint) -> None:
         text_edits = inlay_hint.get('textEdits')
         if text_edits:
             apply_text_edits_to_view(text_edits, self.view)
+
+    def handle_inlay_hint_command(self, session_name: str, inlay_hint: InlayHint) -> None:
+        label_parts = inlay_hint.get('label')
+        if not isinstance(label_parts, list):
+            return
+        for label_part in label_parts:
+            command = label_part.get('command')
+            if not command:
+                continue
+            args = {
+                "session_name": session_name,
+                "command_name": command["command"],
+                "command_args": command["arguments"]
+            }
+            self.view.run_command("lsp_execute", args)
 
 
 INLAY_HINT_HTML = """

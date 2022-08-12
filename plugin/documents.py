@@ -683,7 +683,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
-        triggerd_manually = self._auto_complete_triggered_manually
+        triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
@@ -702,7 +702,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             completion_promises.append(completion_request())
 
         Promise.all(completion_promises).then(
-            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggerd_manually))
+            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggered_manually))
 
     def _on_all_settled(
         self,

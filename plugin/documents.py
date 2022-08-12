@@ -683,10 +683,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
+        triggerd_manually = self._auto_complete_triggered_manually
+        self._auto_complete_triggered_manually = False  # reset state for next completion popup
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
-            self._auto_complete_triggered_manually = False  # reset state for next completion popup
             return
         self.purge_changes_async()
         completion_promises = []  # type: List[Promise[ResolvedCompletions]]
@@ -701,12 +702,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             completion_promises.append(completion_request())
 
         Promise.all(completion_promises).then(
-            lambda responses: self._on_all_settled(responses, resolve_completion_list))
+            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggerd_manually))
 
     def _on_all_settled(
         self,
         responses: List[ResolvedCompletions],
-        resolve_completion_list: ResolveCompletionsFn
+        resolve_completion_list: ResolveCompletionsFn,
+        triggered_manually: bool
     ) -> None:
         LspResolveDocsCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
@@ -719,8 +721,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
         view_settings = self.view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
-            (self._auto_complete_triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
-        self._auto_complete_triggered_manually = False
+            (triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
         for response, session_name in responses:
             if isinstance(response, Error):
                 errors.append(response)

@@ -355,7 +355,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "dynamicRegistration": True,
             "resolveSupport": {
                 # not sure if I can just put "command" because the command is nested in the label
-                "properties": ["textEdits", "label.command"]
+                "properties": ["textEdits", "command"]
             }
         },
         "semanticTokens": {

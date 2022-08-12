@@ -64,3 +64,17 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index]
             wm = windows.lookup(self.window)
             sublime.set_timeout_async(lambda: wm.disable_config_async(config_name))
+
+
+class LspToggleSettingCommand(sublime_plugin.WindowCommand):
+    def run(self, setting: str) -> None:
+        settings = sublime.load_settings("LSP.sublime-settings")
+        setting_value = settings.get(setting)
+        if not isinstance(setting_value, bool):
+            self.window.status_message("Expected a boolean for setting '{setting}', but received value: '{value}'".format(
+                setting=setting,
+                value=setting_value
+            ))
+            return
+        settings.set(setting, not setting_value)
+        sublime.save_settings("LSP.sublime-settings")

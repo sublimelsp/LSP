@@ -11,6 +11,7 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.configuration import LspToggleSettingCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
 from .plugin.core.logging import exception_log
@@ -49,7 +50,6 @@ from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
-from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand

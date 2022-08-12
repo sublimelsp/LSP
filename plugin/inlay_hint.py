@@ -8,16 +8,6 @@ import sublime
 import uuid
 
 
-class LspToggleInlayHintsCommand(LspTextCommand):
-    capability = 'inlayHintProvider'
-
-    def run(self, _edit: sublime.Edit, _event: Optional[dict] = None) -> None:
-        settings = sublime.load_settings("LSP.sublime-settings")
-        show_inlay_hints = settings.get("show_inlay_hints", False)
-        settings.set("show_inlay_hints", not show_inlay_hints)
-        sublime.save_settings("LSP.sublime-settings")
-
-
 class LspInlayHintClickCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 

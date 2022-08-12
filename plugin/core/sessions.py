@@ -500,6 +500,9 @@ class SessionViewProtocol(Protocol):
     def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
         ...
 
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 

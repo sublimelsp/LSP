@@ -385,6 +385,16 @@ class SessionView:
     def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        for p in self._inlay_hints_phantom_set.phantoms:
+            print(getattr(p, 'lsp_uuid'))
+
+        new_phantoms = list(filter(
+            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            self._inlay_hints_phantom_set.phantoms)
+        )
+        self._inlay_hints_phantom_set.update(new_phantoms)
+
     # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:

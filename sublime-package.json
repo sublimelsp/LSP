@@ -508,7 +508,12 @@
                 "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
-            }
+            },
+            "show_inlay_hints": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show inlay hints."
+            },
           },
           "additionalProperties": false
         }

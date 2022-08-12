@@ -126,5 +126,9 @@
     {
         "caption": "LSP: Find References",
         "command": "lsp_symbol_references"
+    },
+    {
+        "caption": "LSP: Toggle Inlay Hints",
+        "command": "lsp_toggle_inlay_hints"
     }
 ]

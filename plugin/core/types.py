@@ -206,6 +206,7 @@ class Settings:
     semantic_highlighting = None  # type: bool
     show_code_actions = None  # type: str
     show_code_lens = None  # type: str
+    show_inlay_hints = None  # type: bool
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
     show_multiline_diagnostics_highlights = None  # type: bool
@@ -243,6 +244,7 @@ class Settings:
         r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
+        r("show_inlay_hints", True)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)

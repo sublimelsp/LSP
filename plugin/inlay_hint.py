@@ -63,7 +63,7 @@ INLAY_HINT_HTML = """
             margin-right: {margin_right};
             padding: 0.05em 4px;
             font-size: 0.9em;
-            font-family: system;
+            font-family: monospace;
         }}
 
         .inlay-hint a {{

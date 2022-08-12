@@ -169,7 +169,7 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
-    
+
 ## GDScript (Godot Engine)
 
 1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
@@ -504,6 +504,35 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+## Steep
+
+1. Add the steep gem into your Gemfile and install it
+
+    ```bash
+    bundle install
+    ```
+
+2. Binstub steep executable
+
+    ```bash
+    steep binstub
+    ```
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "steep": {
+                "command": ["bin/steep", "langserver"],
+                "selector": "source.ruby | text.html.ruby",
+            }
+        }
+    }
+    ```
+
+4. Activate server for the currect project - open Command Palette `LSP: Enable Language Server in Project > steep`
+
 ## Stylelint
 
 Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).
@@ -590,7 +619,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     }
     ```
 
-!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details." 
+!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details."
 
 ## XML
 

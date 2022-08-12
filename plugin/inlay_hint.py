@@ -20,7 +20,7 @@ class LspToggleInlayHintsCommand(LspTextCommand):
 class LspInlayHintClickCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, _event: Optional[dict] = None) -> None:
+    def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, event: Optional[dict] = None) -> None:
         session = self.session_by_name(session_name, 'inlayHintProvider.resolveProvider')
         if session:
             request = Request.resolveInlayHint(inlay_hint, self.view)

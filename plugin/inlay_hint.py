@@ -1,6 +1,5 @@
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.typing import List, Optional, Union
 from .core.views import FORMAT_MARKUP_CONTENT, point_to_offset, minihtml
 from .formatting import apply_text_edits_to_view
@@ -22,21 +21,23 @@ class LspToggleInlayHintsCommand(LspTextCommand):
 class LspInlayHintClickCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str, event: Optional[dict] = None) -> None:
+    def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
+            event: Optional[dict] = None) -> None:
+        session = self.session_by_name(session_name, 'inlayHintProvider')
+        if session and session.has_capability('inlayHintProvider.resolveProvider'):
+            request = Request.resolveInlayHint(inlay_hint, self.view)
+            session.send_request_async(request, lambda response: self.handle(session_name, response, phantom_uuid))
+            return
+        self.handle(session_name, inlay_hint, phantom_uuid)
+
+    def handle(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
+        self.handle_inlay_hint_text_edits(session_name, inlay_hint, phantom_uuid)
+        self.handle_inlay_hint_command(session_name, inlay_hint)
+
+    def handle_inlay_hint_text_edits(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
         session = self.session_by_name(session_name, 'inlayHintProvider')
         if not session:
             return
-        if session.has_capability('inlayHintProvider.resolveProvider'):
-            request = Request.resolveInlayHint(inlay_hint, self.view)
-            session.send_request_async(request, lambda response: self.handle(session, response, phantom_uuid))
-            return
-        self.handle(session, inlay_hint, phantom_uuid)
-
-    def handle(self, session: Session, inlay_hint: InlayHint, phantom_uuid: str) -> None:
-        self.handle_inlay_hint_text_edits(session, inlay_hint, phantom_uuid)
-        self.handle_inlay_hint_command(session, inlay_hint)
-
-    def handle_inlay_hint_text_edits(self, session: Session, inlay_hint: InlayHint, phantom_uuid: str) -> None:
         text_edits = inlay_hint.get('textEdits')
         if not text_edits:
             return
@@ -44,7 +45,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             sv.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits_to_view(text_edits, self.view)
 
-    def handle_inlay_hint_command(self, session: Session, inlay_hint: InlayHint) -> None:
+    def handle_inlay_hint_command(self, session_name: str, inlay_hint: InlayHint) -> None:
         label_parts = inlay_hint.get('label')
         if not isinstance(label_parts, list):
             return
@@ -53,7 +54,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             if not command:
                 continue
             args = {
-                "session_name": session.config.name,
+                "session_name": session_name,
                 "command_name": command["command"],
                 "command_args": command["arguments"]
             }
@@ -111,7 +112,11 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session_nam
     margin_left = "0.6rem" if inlay_hint.get("paddingLeft", False) else "0"
     margin_right = "0.6rem" if inlay_hint.get("paddingRight", False) else "0"
     phantom_uuid = str(uuid.uuid4())
-    command = sublime.command_url('lsp_inlay_hint_click', {'session_name': session_name, 'inlay_hint': inlay_hint, 'phantom_uuid': phantom_uuid})
+    command = sublime.command_url('lsp_inlay_hint_click', {
+        'session_name': session_name,
+        'inlay_hint': inlay_hint,
+        'phantom_uuid': phantom_uuid
+    })
     content = INLAY_HINT_HTML.format(
         margin_left=margin_left,
         margin_right=margin_right,

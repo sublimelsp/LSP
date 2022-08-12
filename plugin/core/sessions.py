@@ -352,8 +352,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "inlayHint": {
             "dynamicRegistration": True,
             "resolveSupport": {
-                # not sure if I can just put "command" because the command is nested in the label
-                "properties": ["textEdits", "command"]
+                "properties": ["textEdits", "label.command"]
             }
         },
         "semanticTokens": {

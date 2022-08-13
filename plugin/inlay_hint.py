@@ -34,7 +34,6 @@ class LspInlayHintClickCommand(LspTextCommand):
 
     def handle(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
         self.handle_inlay_hint_text_edits(session_name, inlay_hint, phantom_uuid)
-        self.handle_inlay_hint_command(session_name, inlay_hint)
 
     def handle_inlay_hint_text_edits(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
         session = self.session_by_name(session_name, 'inlayHintProvider')
@@ -46,21 +45,6 @@ class LspInlayHintClickCommand(LspTextCommand):
         for sv in session.session_views_async():
             sv.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits_to_view(text_edits, self.view)
-
-    def handle_inlay_hint_command(self, session_name: str, inlay_hint: InlayHint) -> None:
-        label_parts = inlay_hint.get('label')
-        if not isinstance(label_parts, list):
-            return
-        for label_part in label_parts:
-            command = label_part.get('command')
-            if not command:
-                continue
-            args = {
-                "session_name": session_name,
-                "command_name": command["command"],
-                "command_args": command["arguments"]
-            }
-            self.view.run_command("lsp_execute", args)
 
 
 INLAY_HINT_HTML = """

@@ -391,8 +391,7 @@
     // },
     // Toggle inlay hints.
     // {
-    //     "command": "lsp_toggle_setting",
-    //     "args": {"setting": "show_inlay_hints"},
+    //     "command": "lsp_toggle_inlay_hints",
     //     "keys": [
     //         "UNBOUND"
     //     ],

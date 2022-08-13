@@ -13,6 +13,7 @@ import shutil
 import socket
 import sublime
 import subprocess
+import sys
 import threading
 import time
 import weakref
@@ -251,7 +252,8 @@ node_ipc_processor = NodeIpcProcessor()
 def create_transport(config: TransportConfig, cwd: Optional[str],
                      callback_object: TransportCallbacks) -> Transport[Dict[str, Any]]:
     stderr = subprocess.PIPE
-    pass_fds = ()  # type: Union[Tuple[()], Tuple[int]]
+    # https://github.com/python/cpython/blob/17bf6b4671ec02d80ad29b278639d5307baddeb5/Lib/subprocess.py#L706
+    close_fds = True if sys.version_info >= (3, 8, 0) else subprocess._PLATFORM_DEFAULT_CLOSE_FDS  # type: ignore
     if config.tcp_port is not None:
         assert config.tcp_port is not None
         if config.tcp_port < 0:
@@ -263,7 +265,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         stdout = subprocess.PIPE
         stdin = subprocess.DEVNULL
         stderr = subprocess.STDOUT
-        pass_fds = (config.node_ipc.child_connection.fileno(),)
+        close_fds = False
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
@@ -273,7 +275,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     process = None  # type: Optional[subprocess.Popen]
 
     def start_subprocess() -> subprocess.Popen:
-        return _start_subprocess(config.command, stdin, stdout, stderr, startupinfo, config.env, cwd, pass_fds)
+        return _start_subprocess(config.command, stdin, stdout, stderr, startupinfo, config.env, cwd, close_fds)
 
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
@@ -356,7 +358,7 @@ def _start_subprocess(
     startupinfo: Any,
     env: Dict[str, str],
     cwd: Optional[str],
-    pass_fds: Union[Tuple[()], Tuple[int]]
+    close_fds: bool
 ) -> subprocess.Popen:
     debug("starting {} in {}".format(args, cwd if cwd else os.getcwd()))
     process = subprocess.Popen(
@@ -367,7 +369,7 @@ def _start_subprocess(
         startupinfo=startupinfo,
         env=env,
         cwd=cwd,
-        pass_fds=pass_fds)
+        close_fds=close_fds)
     _subprocesses.add(process)
     return process
 

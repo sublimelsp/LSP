@@ -48,7 +48,7 @@ from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hover import LspHoverCommand
-from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.inlay_hint import LspInlayHintApplyTextEditsCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand

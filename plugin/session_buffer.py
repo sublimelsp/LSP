@@ -31,6 +31,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
+from .core.types import TemporarySettings
 from .semantic_highlighting import SemanticToken
 from weakref import WeakSet
 import sublime
@@ -617,7 +618,10 @@ class SessionBuffer:
         return self.semantic_tokens.tokens
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not userprefs().show_inlay_hints:
+        if not TemporarySettings.SHOW_INLAY_HINTS:
+            # remove inlay hints
+            for sv in self.session_views:
+                sv.remove_all_inlay_hints()
             return
         if not self.session.has_capability("inlayHintProvider"):
             return

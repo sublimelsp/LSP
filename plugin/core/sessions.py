@@ -502,6 +502,9 @@ class SessionViewProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
+    def remove_all_inlay_hints(self) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 

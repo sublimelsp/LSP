@@ -6,16 +6,18 @@ from .formatting import apply_text_edits_to_view
 import html
 import sublime
 import uuid
+from .core.types import TemporarySettings
 
 
 class LspToggleInlayHintsCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
     def run(self, _edit: sublime.Edit, _event: Optional[dict] = None) -> None:
-        settings = sublime.load_settings("LSP.sublime-settings")
-        show_inlay_hints = settings.get("show_inlay_hints", False)
-        settings.set("show_inlay_hints", not show_inlay_hints)
-        sublime.save_settings("LSP.sublime-settings")
+        sessions = self.sessions('inlayHintProvider')
+        TemporarySettings.SHOW_INLAY_HINTS = not TemporarySettings.SHOW_INLAY_HINTS
+        for session in sessions:
+            for sv in session.session_views_async():
+                sv.session_buffer.do_inlay_hints_async(sv.view)
 
 
 class LspInlayHintClickCommand(LspTextCommand):

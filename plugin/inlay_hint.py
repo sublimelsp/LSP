@@ -53,6 +53,7 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
     label = format_inlay_hint_label(view, inlay_hint["label"])
     margin_left = "0.6rem" if inlay_hint.get("paddingLeft", False) else "0"
     margin_right = "0.6rem" if inlay_hint.get("paddingRight", False) else "0"
+    font = view.settings().get('font_face') or "monospace"
     html = """
     <body id="lsp-inlay-hint">
         <style>
@@ -64,7 +65,7 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
                 margin-right: {margin_right};
                 padding: 0.05em 4px;
                 font-size: 0.9em;
-                font-family: monospace;
+                font-family: {font};
             }}
 
             .inlay-hint a {{
@@ -76,7 +77,8 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
     """.format(
         margin_left=margin_left,
         margin_right=margin_right,
-        tooltip=tooltip
+        tooltip=tooltip,
+        font=font
     )
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     apply_text_edits_command = sublime.command_url('lsp_inlay_hint_apply_text_edits', {

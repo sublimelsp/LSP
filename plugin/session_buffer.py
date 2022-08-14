@@ -627,12 +627,11 @@ class SessionBuffer:
             return
         params = {
             "textDocument": text_document_identifier(view),
-            # "range": region_to_range(view, view.visible_region()).to_lsp()
-            "range": region_to_range(view, sublime.Region(0, view.size())).to_lsp()
+        params = {
+            "textDocument": text_document_identifier(view),
+            "range": entire_content_range(view).to_lsp()
         }  # type: InlayHintParams
-
-        request = Request.inlayHint(params, view)
-        self.session.send_request_async(request, self._on_inlay_hints_async)
+        self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
     def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
         if response:

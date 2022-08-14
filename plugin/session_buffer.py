@@ -25,6 +25,7 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import DOCUMENT_LINK_FLAGS
+from .core.views import entire_content_range
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -625,8 +626,6 @@ class SessionBuffer:
             return
         if not self.session.has_capability("inlayHintProvider"):
             return
-        params = {
-            "textDocument": text_document_identifier(view),
         params = {
             "textDocument": text_document_identifier(view),
             "range": entire_content_range(view).to_lsp()

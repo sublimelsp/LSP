@@ -82,6 +82,7 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, True))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
+        self.remove_all_inlay_hints()
 
     @property
     def session(self) -> Session:

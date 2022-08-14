@@ -619,7 +619,7 @@ class SessionBuffer:
         return self.semantic_tokens.tokens
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not TemporarySettings.SHOW_INLAY_HINTS:
+        if not TemporarySettings.show_inlay_hints:
             # remove inlay hints
             for sv in self.session_views:
                 sv.remove_all_inlay_hints()

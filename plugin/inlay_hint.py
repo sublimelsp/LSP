@@ -15,7 +15,7 @@ class LspToggleInlayHintsCommand(LspTextCommand):
 
     def run(self, _edit: sublime.Edit, _event: Optional[dict] = None) -> None:
         sessions = self.sessions('inlayHintProvider')
-        TemporarySettings.SHOW_INLAY_HINTS = not TemporarySettings.SHOW_INLAY_HINTS
+        TemporarySettings.show_inlay_hints = not TemporarySettings.show_inlay_hints
         for session in sessions:
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)

@@ -35,7 +35,7 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
 
 class TemporarySettings:
     """ Changing TemporarySettings will not cause server re-initialization. """
-    SHOW_INLAY_HINTS = False  # type: bool
+    show_inlay_hints = False  # type: bool
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -224,7 +224,7 @@ class Settings:
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
-        TemporarySettings.SHOW_INLAY_HINTS = self.show_inlay_hints
+        TemporarySettings.show_inlay_hints = self.show_inlay_hints
 
     def update(self, s: sublime.Settings) -> None:
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:

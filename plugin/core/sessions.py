@@ -1643,7 +1643,7 @@ class Session(TransportCallbacks):
             else:
                 sv.session_buffer.set_semantic_tokens_pending_refresh()
 
-    def m_workspace_inlayHint_refresh(self, params: None, request_id: Any) -> None:
+    def m_workspace_inlayHint_refresh(self, request_id: Any) -> None:
         """handles the workspace/inlayHint/refresh request"""
         for sv in self.session_views_async():
             sv.session_buffer.do_inlay_hints_async(sv.view)

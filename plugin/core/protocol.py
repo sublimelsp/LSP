@@ -379,7 +379,7 @@ InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
 
 class InlayHintKind:
     Type = 1
-    Parameter = 1
+    Parameter = 2
 
 
 InlayHint = TypedDict('InlayHint', {

@@ -15,6 +15,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
+from .core.types import TemporarySettings
 from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
@@ -31,7 +32,6 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
-from .core.types import TemporarySettings
 from .semantic_highlighting import SemanticToken
 from weakref import WeakSet
 import sublime

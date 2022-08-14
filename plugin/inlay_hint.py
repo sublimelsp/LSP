@@ -1,13 +1,13 @@
-from .core.sessions import Session
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
+from .core.sessions import Session
+from .core.types import TemporarySettings
 from .core.typing import Optional, Union
 from .core.views import FORMAT_MARKUP_CONTENT, point_to_offset, minihtml
 from .formatting import apply_text_edits_to_view
 import html
 import sublime
 import uuid
-from .core.types import TemporarySettings
 
 
 class LspToggleInlayHintsCommand(LspTextCommand):

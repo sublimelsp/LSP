@@ -374,7 +374,7 @@ InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
     'tooltip': Union[str, MarkupContent],
     'location': Location,
     'command':  Command
-}, total=False)
+}, total=True)
 
 
 class InlayHintKind:

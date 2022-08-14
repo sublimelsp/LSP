@@ -352,7 +352,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "inlayHint": {
             "dynamicRegistration": True,
             "resolveSupport": {
-                "properties": ["textEdits"]
+                "properties": ["textEdits", "label.command"]
             }
         },
         "semanticTokens": {

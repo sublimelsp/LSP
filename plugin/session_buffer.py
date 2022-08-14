@@ -15,7 +15,6 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.types import TemporarySettings
 from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
@@ -619,10 +618,7 @@ class SessionBuffer:
         return self.semantic_tokens.tokens
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not TemporarySettings.show_inlay_hints:
-            # remove inlay hints
-            for sv in self.session_views:
-                sv.remove_all_inlay_hints()
+        if not userprefs().show_inlay_hints:
             return
         if not self.session.has_capability("inlayHintProvider"):
             return

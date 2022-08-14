@@ -1,24 +1,12 @@
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
-from .core.types import TemporarySettings
 from .core.typing import Optional, Union
 from .core.views import FORMAT_MARKUP_CONTENT, point_to_offset, minihtml
 from .formatting import apply_text_edits_to_view
 import html
 import sublime
 import uuid
-
-
-class LspToggleInlayHintsCommand(LspTextCommand):
-    capability = 'inlayHintProvider'
-
-    def run(self, _edit: sublime.Edit, _event: Optional[dict] = None) -> None:
-        sessions = self.sessions('inlayHintProvider')
-        TemporarySettings.show_inlay_hints = not TemporarySettings.show_inlay_hints
-        for session in sessions:
-            for sv in session.session_views_async():
-                sv.session_buffer.do_inlay_hints_async(sv.view)
 
 
 class LspInlayHintClickCommand(LspTextCommand):

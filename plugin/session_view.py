@@ -393,8 +393,6 @@ class SessionView:
         self._inlay_hints_phantom_set.update(new_phantoms)
 
     def remove_all_inlay_hints(self) -> None:
-        if not self._inlay_hints_phantom_set.phantoms:
-            return
         self._inlay_hints_phantom_set.update([])
 
     # ------------------------------------------------------------------------------------------------------------------

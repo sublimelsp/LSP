@@ -100,10 +100,9 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
 def format_inlay_hint_tooltip(view: sublime.View, tooltip: Optional[Union[str, MarkupContent]]) -> str:
     if isinstance(tooltip, str):
         return html.escape(tooltip)
-    elif isinstance(tooltip, dict):  # MarkupContent
+    if isinstance(tooltip, dict):  # MarkupContent
         return minihtml(view, tooltip, allowed_formats=FORMAT_MARKUP_CONTENT)
-    else:
-        return ""
+    return ""
 
 
 def format_inlay_hint_label(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:

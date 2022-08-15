@@ -187,7 +187,6 @@ class SessionBuffer:
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
-        self.remove_all_inlay_hints()
         self.session_views.remove(sv)
 
     def register_capability_async(

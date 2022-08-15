@@ -56,6 +56,16 @@ class LspInlayHintClickCommand(LspTextCommand):
         self.view.run_command("lsp_execute", args)
 
 
+def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
+    position = inlay_hint["position"]  # type: ignore
+    region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
+    phantom_uuid = str(uuid.uuid4())
+    content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
+    p = sublime.Phantom(region, content, sublime.LAYOUT_INLINE)
+    setattr(p, 'lsp_uuid', phantom_uuid)
+    return p
+
+
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
@@ -141,13 +151,3 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             value=value
         )
     return result
-
-
-def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
-    position = inlay_hint["position"]  # type: ignore
-    region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
-    phantom_uuid = str(uuid.uuid4())
-    content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
-    p = sublime.Phantom(region, content, sublime.LAYOUT_INLINE)
-    setattr(p, 'lsp_uuid', phantom_uuid)
-    return p

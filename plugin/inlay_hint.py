@@ -108,7 +108,7 @@ def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> s
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
-    label = inlay_hint['label']
+    label = inlay_hint['label']  # type: ignore
     is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
     if isinstance(label, str):
         inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
@@ -146,7 +146,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
 
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
-    region = sublime.Region(point_to_offset(Point.from_lsp(inlay_hint["position"]), view))
+    position = inlay_hint["position"]  # type: ignore
+    region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
     p = sublime.Phantom(region, content, sublime.LAYOUT_INLINE)

@@ -619,6 +619,8 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> List[SemanticToken]:
         return self.semantic_tokens.tokens
 
+    # --- textDocument/inlayHint ----------------------------------------------------------------------------------
+
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         if not userprefs().show_inlay_hints:
             return

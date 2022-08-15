@@ -134,7 +134,7 @@
   // "phantom" - show a phantom on the top when code actions are available
   "show_code_lens": "annotation",
 
-   // Show inlay hints that interleave with the code.
+   // Inlay hints are short annotations within the code, which show variable types or parameter names.
   "show_inlay_hints": true,
 
   // Show code actions in hover popup if available

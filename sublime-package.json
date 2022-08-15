@@ -512,7 +512,7 @@
             "show_inlay_hints": {
               "type": "boolean",
               "default": true,
-              "markdownDescription": "Show inlay hints that interleave with the code."
+              "markdownDescription": "Inlay hints are short annotations within the code, which show variable types or parameter names."
             },
           },
           "additionalProperties": false

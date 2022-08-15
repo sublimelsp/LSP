@@ -138,6 +138,7 @@ def format_inlay_hint_label(view: sublime.View, inlay_hint: InlayHint, session: 
         value += html.escape(label_part.get('value') or "")
         if is_clickable:
             value += "</a>"
+        # InlayHintLabelPart.location is not supported
         result += "<div title=\"{tooltip}\">{value}</div>".format(
             tooltip=format_inlay_hint_tooltip(view, label_part.get("tooltip")),
             value=value

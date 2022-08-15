@@ -116,6 +116,7 @@ class SessionBuffer:
         self._last_semantic_region_key = 0
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
+        self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
 
     def __del__(self) -> None:
         mgr = self.session.manager()
@@ -186,6 +187,7 @@ class SessionBuffer:
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
+        self.remove_all_inlay_hints()
         self.session_views.remove(sv)
 
     def register_capability_async(
@@ -634,8 +636,20 @@ class SessionBuffer:
             if not view:
                 return
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
-            for sv in self.session_views:
-                sublime.set_timeout(lambda: sv.present_inlay_hints_async(phantoms))
+            sublime.set_timeout(lambda: self.present_inlay_hints_async(phantoms))
+
+    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
+        self._inlay_hints_phantom_set.update(phantoms)
+
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        new_phantoms = list(filter(
+            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            self._inlay_hints_phantom_set.phantoms)
+        )
+        self._inlay_hints_phantom_set.update(new_phantoms)
+
+    def remove_all_inlay_hints(self) -> None:
+        self._inlay_hints_phantom_set.update([])
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

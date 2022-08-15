@@ -38,8 +38,8 @@ class LspInlayHintClickCommand(LspTextCommand):
         text_edits = inlay_hint.get('textEdits')
         if not text_edits:
             return
-        for sv in session.session_views_async():
-            sv.remove_inlay_hint_phantom(phantom_uuid)
+        for sb in session.session_buffers_async():
+            sb.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits_to_view(text_edits, self.view)
 
     def handle_label_part_command(self, session_name: str, label_part: Optional[InlayHintLabelPart] = None) -> None:

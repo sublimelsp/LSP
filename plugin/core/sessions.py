@@ -496,15 +496,6 @@ class SessionViewProtocol(Protocol):
     def start_code_lenses_async(self) -> None:
         ...
 
-    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
-        ...
-
-    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
-        ...
-
-    def remove_all_inlay_hints(self) -> None:
-        ...
-
 
 class SessionBufferProtocol(Protocol):
 
@@ -561,6 +552,15 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
+        ...
+
+    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
+        ...
+
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        ...
+
+    def remove_all_inlay_hints(self) -> None:
         ...
 
 

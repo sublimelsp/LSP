@@ -45,7 +45,6 @@ class SessionView:
         self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         self._code_lenses = CodeLensView(self._view)
-        self._inlay_hints_phantom_set = sublime.PhantomSet(self._view, "lsp_inlay_hints")
         settings = self._view.settings()
         buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
@@ -82,7 +81,6 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, True))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
-        self.remove_all_inlay_hints()
 
     @property
     def session(self) -> Session:
@@ -380,21 +378,6 @@ class SessionView:
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
-
-    # --- textDocument/inlayHint ---------------------------------------------------------------------------------------
-
-    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
-        self._inlay_hints_phantom_set.update(phantoms)
-
-    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
-        new_phantoms = list(filter(
-            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
-            self._inlay_hints_phantom_set.phantoms)
-        )
-        self._inlay_hints_phantom_set.update(new_phantoms)
-
-    def remove_all_inlay_hints(self) -> None:
-        self._inlay_hints_phantom_set.update([])
 
     # ------------------------------------------------------------------------------------------------------------------
 

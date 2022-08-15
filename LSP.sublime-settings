@@ -134,7 +134,7 @@
   // "phantom" - show a phantom on the top when code actions are available
   "show_code_lens": "annotation",
 
-   // Show inlay hints
+   // Show inlay hints that interleave with the code.
   "show_inlay_hints": true,
 
   // Show code actions in hover popup if available

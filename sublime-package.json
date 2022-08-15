@@ -512,7 +512,7 @@
             "show_inlay_hints": {
               "type": "boolean",
               "default": true,
-              "markdownDescription": "Show inlay hints."
+              "markdownDescription": "Show inlay hints that interleave with the code."
             },
           },
           "additionalProperties": false

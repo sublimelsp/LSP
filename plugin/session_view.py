@@ -379,7 +379,5 @@ class SessionView:
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
 
-    # ------------------------------------------------------------------------------------------------------------------
-
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

@@ -1,4 +1,3 @@
-from .core.strip_html import strip_html
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
@@ -100,9 +99,9 @@ def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> s
     if isinstance(tooltip, str):
         # Sublime Text doesn't support HTML for tooltips
         # so we strip the HTML tags from the tooltip
-        return strip_html(tooltip)
+        return tooltip
     if isinstance(tooltip, dict):  # MarkupContent
-        return strip_html(tooltip.get('value') or "")
+        return tooltip.get('value') or ""
     return ""
 
 

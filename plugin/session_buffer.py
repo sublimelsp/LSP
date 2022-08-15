@@ -114,9 +114,9 @@ class SessionBuffer:
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
+        self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
-        self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
 
     def __del__(self) -> None:
         mgr = self.session.manager()

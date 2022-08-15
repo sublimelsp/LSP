@@ -97,8 +97,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
 
 def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> str:
     if isinstance(tooltip, str):
-        # Sublime Text doesn't support HTML for tooltips
-        # so we strip the HTML tags from the tooltip
         return tooltip
     if isinstance(tooltip, dict):  # MarkupContent
         return tooltip.get('value') or ""

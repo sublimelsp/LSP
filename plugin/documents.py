@@ -154,6 +154,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._uri = existing_uri
         else:
             self.set_uri(view_to_uri(view))
+        self._auto_complete_triggered_manually = False
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -451,7 +452,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
-        if command_name == "show_scope_name" and userprefs().semantic_highlighting:
+        if command_name == "auto_complete":
+            self._auto_complete_triggered_manually = True
+        elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
             session = self.session_async("semanticTokensProvider")
             if session:
                 return ("lsp_show_scope_name", {})
@@ -706,6 +709,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
+        triggered_manually = self._auto_complete_triggered_manually
+        self._auto_complete_triggered_manually = False  # reset state for next completion popup
         sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
@@ -723,12 +728,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             completion_promises.append(completion_request())
 
         Promise.all(completion_promises).then(
-            lambda responses: self._on_all_settled(responses, resolve_completion_list))
+            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggered_manually))
 
     def _on_all_settled(
         self,
         responses: List[ResolvedCompletions],
-        resolve_completion_list: ResolveCompletionsFn
+        resolve_completion_list: ResolveCompletionsFn,
+        triggered_manually: bool
     ) -> None:
         LspResolveDocsCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
@@ -739,7 +745,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
-        include_snippets = self.view.settings().get("auto_complete_include_snippets")
+        view_settings = self.view.settings()
+        include_snippets = view_settings.get("auto_complete_include_snippets") and \
+            (triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
         for response, session_name in responses:
             if isinstance(response, Error):
                 errors.append(response)

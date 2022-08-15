@@ -1,0 +1,21 @@
+=> 1.17.0
+
+# Features and Fixes
+
+- Completions rendering overhaul (expose labelDetails more prominently) (#2010) (jwortmann)
+- Prevent failing to load all configs when one fails (Raoul Wols)
+- Show previews in side view for Goto commands with side_by_side (#1982) (jwortmann)
+- Support side_by_side for "Go to reference" (Rafal Chlodnicki)
+- Keep active group when using Goto commands (#1994) (jwortmann)
+- Fix bug for symbol action links in hover popup (jwortmann)
+- Don't use actual linebreaks in log panel if payload is string literal (#1993) (jwortmann)
+- Optionally fallback to goto_definition in lsp_symbol_definition (#1986) (timfjord)
+- Restore selections after location picker panel (jwortmann)
+- Add preview for resource (res:) files in LocationPicker (jwortmann)
+- Tweaks for signature help popup including support for contextSupport and activeParameter (#2006) (jwortmann)
+- Enable admonition extension for mdpopups (jwortmann)
+- docs: Add Godot (GDScript) LSP instructions (lucypero)
+
+# API changes
+
+- Allow plugins to modify server response messages (#1992) (jwortmann)

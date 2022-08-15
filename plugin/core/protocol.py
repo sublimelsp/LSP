@@ -371,10 +371,10 @@ InlayHintParams = TypedDict('InlayHintParams', {
 
 InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
     'value': str,
-    'tooltip': Union[str, MarkupContent],
-    'location': Location,
-    'command':  Command
-}, total=True)
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'location': Location,  # NotRequired
+    'command':  Command  # NotRequired
+}, total=False)
 
 
 class InlayHintKind:
@@ -385,13 +385,13 @@ class InlayHintKind:
 InlayHint = TypedDict('InlayHint', {
     'position': Position,
     'label': Union[str, List[InlayHintLabelPart]],
-    'kind': Optional[int],
-    'textEdits': Optional[List[TextEdit]],
-    'tooltip': Optional[Union[str, MarkupContent]],
-    'paddingLeft': Optional[bool],
-    'paddingRight': Optional[bool],
-    'data': Optional[Any]
-}, total=True)
+    'kind': int,  # NotRequired
+    'textEdits': List[TextEdit],  # NotRequired
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'paddingLeft': bool,
+    'paddingRight': bool,  # NotRequired
+    'data': Any  # NotRequired
+}, total=False)
 
 InlayHintResponse = Union[List[InlayHint], None]
 

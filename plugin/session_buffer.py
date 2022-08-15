@@ -637,9 +637,9 @@ class SessionBuffer:
             if not view:
                 return
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
-            sublime.set_timeout(lambda: self.present_inlay_hints_async(phantoms))
+            sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
 
-    def present_inlay_hints_async(self, phantoms: List[sublime.Phantom]) -> None:
+    def present_inlay_hints(self, phantoms: List[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:

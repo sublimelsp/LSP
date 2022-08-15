@@ -1,8 +1,9 @@
+from .core.strip_html import strip_html
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.typing import Optional, Union
-from .core.views import FORMAT_MARKUP_CONTENT, point_to_offset, minihtml
+from .core.views import point_to_offset
 from .formatting import apply_text_edits_to_view
 import html
 import sublime
@@ -57,8 +58,8 @@ class LspInlayHintClickCommand(LspTextCommand):
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    tooltip = format_inlay_hint_tooltip(view, inlay_hint.get("tooltip"))
-    label = format_inlay_hint_label(view, inlay_hint, session, phantom_uuid)
+    tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
+    label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     margin_left = "0.6rem" if inlay_hint.get("paddingLeft", False) else "0"
     margin_right = "0.6rem" if inlay_hint.get("paddingRight", False) else "0"
     font = view.settings().get('font_face') or "monospace"
@@ -95,15 +96,17 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
     return html
 
 
-def format_inlay_hint_tooltip(view: sublime.View, tooltip: Optional[Union[str, MarkupContent]]) -> str:
+def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> str:
     if isinstance(tooltip, str):
-        return html.escape(tooltip)
+        # Sublime Text doesn't support HTML for tooltips
+        # so we strip the HTML tags from the tooltip
+        return strip_html(tooltip)
     if isinstance(tooltip, dict):  # MarkupContent
-        return minihtml(view, tooltip, allowed_formats=FORMAT_MARKUP_CONTENT)
+        return strip_html(tooltip.get('value') or "")
     return ""
 
 
-def format_inlay_hint_label(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
+def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     label = inlay_hint['label']
@@ -137,7 +140,7 @@ def format_inlay_hint_label(view: sublime.View, inlay_hint: InlayHint, session: 
             value += "</a>"
         # InlayHintLabelPart.location is not supported
         result += "<div title=\"{tooltip}\">{value}</div>".format(
-            tooltip=format_inlay_hint_tooltip(view, label_part.get("tooltip")),
+            tooltip=format_inlay_hint_tooltip(label_part.get("tooltip")),
             value=value
         )
     return result

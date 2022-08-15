@@ -14,11 +14,9 @@ class LspInlayHintClickCommand(LspTextCommand):
 
     def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
             event: Optional[dict] = None, label_part: Optional[InlayHintLabelPart] = None) -> None:
-        """
-        Insert textEdits for the given inlay hint.
-        If a InlayHintLabelPart was clicked, label_part will be passed as an argument to the LspInlayHintClickCommand
-        and InlayHintLabelPart.command will be executed.
-        """
+        # Insert textEdits for the given inlay hint.
+        # If a InlayHintLabelPart was clicked, label_part will be passed as an argument to the LspInlayHintClickCommand
+        # and InlayHintLabelPart.command will be executed.
         session = self.session_by_name(session_name, 'inlayHintProvider')
         if session and session.has_capability('inlayHintProvider.resolveProvider'):
             request = Request.resolveInlayHint(inlay_hint, self.view)

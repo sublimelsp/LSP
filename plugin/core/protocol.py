@@ -388,7 +388,7 @@ InlayHint = TypedDict('InlayHint', {
     'kind': int,  # NotRequired
     'textEdits': List[TextEdit],  # NotRequired
     'tooltip': Union[str, MarkupContent],  # NotRequired
-    'paddingLeft': bool,
+    'paddingLeft': bool,  # NotRequired
     'paddingRight': bool,  # NotRequired
     'data': Any  # NotRequired
 }, total=False)

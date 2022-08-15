@@ -30,7 +30,7 @@ class LspInlayHintClickCommand(LspTextCommand):
     def handle(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
                label_part: Optional[InlayHintLabelPart] = None) -> None:
         self.handle_inlay_hint_text_edits(session_name, inlay_hint, phantom_uuid)
-        self.handle_inlay_hint_command(session_name, label_part)
+        self.handle_label_part_command(session_name, label_part)
 
     def handle_inlay_hint_text_edits(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str) -> None:
         session = self.session_by_name(session_name, 'inlayHintProvider')
@@ -43,7 +43,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             sv.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits_to_view(text_edits, self.view)
 
-    def handle_inlay_hint_command(self, session_name: str, label_part: Optional[InlayHintLabelPart] = None) -> None:
+    def handle_label_part_command(self, session_name: str, label_part: Optional[InlayHintLabelPart] = None) -> None:
         if not label_part:
             return
         command = label_part.get('command')

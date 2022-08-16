@@ -41,6 +41,7 @@ from .protocol import SymbolKind
 from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
+from .settings import userprefs
 from .settings import globalprefs
 from .transports import Transport
 from .transports import TransportCallbacks
@@ -1128,6 +1129,7 @@ class Session(TransportCallbacks):
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
+        self.show_inlay_hints = userprefs().show_inlay_hints or True
 
     def __getattr__(self, name: str) -> Any:
         """

@@ -389,7 +389,21 @@
     //         }
     //     ]
     // },
-    // Internal key-binding
+    // Toggle inlay hints.
+    // {
+    //     "command": "lsp_toggle_inlay_hints",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "inlayHintProvider"
+    //         }
+    //     ]
+    // },
+    // // Internal key-binding
     {
         "keys": [
             "<character>"

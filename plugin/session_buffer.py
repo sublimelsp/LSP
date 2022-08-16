@@ -623,9 +623,10 @@ class SessionBuffer:
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not userprefs().show_inlay_hints:
-            return
         if not self.session.has_capability("inlayHintProvider"):
+            return
+        if not self.session.show_inlay_hints:
+            self.remove_all_inlay_hints()
             return
         params = {
             "textDocument": text_document_identifier(view),

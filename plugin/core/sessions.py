@@ -539,7 +539,7 @@ class SessionBufferProtocol(Protocol):
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         ...
 
-    def update_document_link(self, link: DocumentLink) -> None:
+    def update_document_link(self, new_link: DocumentLink) -> None:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:

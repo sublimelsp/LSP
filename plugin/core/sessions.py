@@ -1129,7 +1129,7 @@ class Session(TransportCallbacks):
         self._status_messages = {}  # type: Dict[str, str]
         self.diagnostics_manager = DiagnosticsManager()
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
-        self.show_inlay_hints = userprefs().show_inlay_hints or True
+        self.show_inlay_hints = userprefs().show_inlay_hints
 
     def __getattr__(self, name: str) -> Any:
         """

@@ -33,9 +33,15 @@ from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
 from .semantic_highlighting import SemanticToken
+from functools import partial
 from weakref import WeakSet
 import sublime
 import time
+
+
+# If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
+# visible part first when the file was just opened
+HUGE_FILE_SIZE = 50000
 
 
 class PendingChanges:
@@ -147,7 +153,7 @@ class SessionBuffer:
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
-            self.do_semantic_tokens_async(view)
+            self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             self.do_inlay_hints_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, view.change_count())
@@ -494,7 +500,7 @@ class SessionBuffer:
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
-    def do_semantic_tokens_async(self, view: sublime.View) -> None:
+    def do_semantic_tokens_async(self, view: sublime.View, only_viewport: bool = False) -> None:
         if not userprefs().semantic_highlighting:
             return
         if not self.session.has_capability("semanticTokensProvider"):
@@ -506,7 +512,12 @@ class SessionBuffer:
             self.session.cancel_request(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
-        if self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+        if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
+            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            request = Request.semanticTokensRange(params, view)
+            self.semantic_tokens.pending_response = self.session.send_request_async(
+                request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
+        elif self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
@@ -516,21 +527,25 @@ class SessionBuffer:
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
-            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            params["range"] = entire_content_range(view).to_lsp()
             request = Request.semanticTokensRange(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
 
     def _on_semantic_tokens_async(self, response: Optional[Dict]) -> None:
+        self.semantic_tokens.pending_response = None
         if response:
-            self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
+    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: Optional[Dict]) -> None:
+        self._on_semantic_tokens_async(response)
+        self.do_semantic_tokens_async(view)  # now request semantic tokens for the full file
+
     def _on_semantic_tokens_delta_async(self, response: Optional[Dict]) -> None:
+        self.semantic_tokens.pending_response = None
         if response:
-            self.semantic_tokens.pending_response = None
             self.semantic_tokens.result_id = response.get("resultId")
             if "edits" in response:  # response is of type SemanticTokensDelta
                 for semantic_tokens_edit in response["edits"]:

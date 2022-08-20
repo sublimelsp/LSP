@@ -243,7 +243,7 @@ class Settings:
         r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
-        r("show_inlay_hints", True)
+        r("show_inlay_hints", False)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)

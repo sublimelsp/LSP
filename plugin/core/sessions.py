@@ -349,6 +349,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "codeLens": {
             "dynamicRegistration": True
         },
+        "inlayHint": {
+            "dynamicRegistration": True,
+            "resolveSupport": {
+                "properties": ["textEdits", "label.command"]
+            }
+        },
         "semanticTokens": {
             "dynamicRegistration": True,
             "requests": {
@@ -389,6 +395,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "configuration": True,
         "codeLens": {
+            "refreshSupport": True
+        },
+        "inlayHint": {
             "refreshSupport": True
         },
         "semanticTokens": {
@@ -530,7 +539,7 @@ class SessionBufferProtocol(Protocol):
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         ...
 
-    def update_document_link(self, link: DocumentLink) -> None:
+    def update_document_link(self, new_link: DocumentLink) -> None:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
@@ -540,6 +549,12 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def get_semantic_tokens(self) -> List[Any]:
+        ...
+
+    def do_inlay_hints_async(self, view: sublime.View) -> None:
+        ...
+
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
 
@@ -1621,6 +1636,12 @@ class Session(TransportCallbacks):
                 sv.session_buffer.do_semantic_tokens_async(view)
             else:
                 sv.session_buffer.set_semantic_tokens_pending_refresh()
+
+    def m_workspace_inlayHint_refresh(self, params: None, request_id: Any) -> None:
+        """handles the workspace/inlayHint/refresh request"""
+        for sv in self.session_views_async():
+            sv.session_buffer.do_inlay_hints_async(sv.view)
+        self.send_response(Response(request_id, None))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

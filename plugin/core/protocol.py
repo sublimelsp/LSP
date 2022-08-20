@@ -364,6 +364,37 @@ DidChangeWatchedFilesRegistrationOptions = TypedDict('DidChangeWatchedFilesRegis
     'watchers': List[FileSystemWatcher],
 }, total=True)
 
+InlayHintParams = TypedDict('InlayHintParams', {
+    'textDocument': TextDocumentIdentifier,
+    'range': RangeLsp,
+}, total=True)
+
+InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
+    'value': str,
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'location': Location,  # NotRequired
+    'command':  Command  # NotRequired
+}, total=False)
+
+
+class InlayHintKind:
+    Type = 1
+    Parameter = 2
+
+
+InlayHint = TypedDict('InlayHint', {
+    'position': Position,
+    'label': Union[str, List[InlayHintLabelPart]],
+    'kind': int,  # NotRequired
+    'textEdits': List[TextEdit],  # NotRequired
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'paddingLeft': bool,  # NotRequired
+    'paddingRight': bool,  # NotRequired
+    'data': Any  # NotRequired
+}, total=False)
+
+InlayHintResponse = Union[List[InlayHint], None]
+
 WatchKind = int
 WatchKindCreate = 1
 WatchKindChange = 2
@@ -451,6 +482,14 @@ class Request:
     @classmethod
     def resolveDocumentLink(cls, params: DocumentLink, view: sublime.View) -> 'Request':
         return Request("documentLink/resolve", params, view)
+
+    @classmethod
+    def inlayHint(cls, params: InlayHintParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/inlayHint', params, view)
+
+    @classmethod
+    def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
+        return Request('inlayHint/resolve', params, view)
 
     @classmethod
     def shutdown(cls) -> 'Request':

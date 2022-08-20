@@ -2,6 +2,8 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import InlayHintParams
+from .core.protocol import InlayHintResponse
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
@@ -29,6 +31,7 @@ from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
+from .inlay_hint import inlay_hint_to_phantom
 from .semantic_highlighting import SemanticToken
 from functools import partial
 from weakref import WeakSet
@@ -117,6 +120,7 @@ class SessionBuffer:
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
+        self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
@@ -150,6 +154,7 @@ class SessionBuffer:
             self.opened = True
             self._do_color_boxes_async(view, view.change_count())
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
+            self.do_inlay_hints_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, view.change_count())
             self.session.notify_plugin_on_session_buffer_change(self)
@@ -189,6 +194,8 @@ class SessionBuffer:
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
+        if len(self.session_views) == 0:
+            self.remove_all_inlay_hints()
 
     def register_capability_async(
         self,
@@ -295,6 +302,7 @@ class SessionBuffer:
             self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
+            self.do_inlay_hints_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
@@ -626,6 +634,42 @@ class SessionBuffer:
 
     def get_semantic_tokens(self) -> List[SemanticToken]:
         return self.semantic_tokens.tokens
+
+    # --- textDocument/inlayHint ----------------------------------------------------------------------------------
+
+    def do_inlay_hints_async(self, view: sublime.View) -> None:
+        if not userprefs().show_inlay_hints:
+            return
+        if not self.session.has_capability("inlayHintProvider"):
+            return
+        params = {
+            "textDocument": text_document_identifier(view),
+            "range": entire_content_range(view).to_lsp()
+        }  # type: InlayHintParams
+        self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
+
+    def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
+        if response:
+            view = self.some_view()
+            if not view:
+                return
+            phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
+            sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
+        else:
+            sublime.set_timeout(lambda: self.remove_all_inlay_hints())
+
+    def present_inlay_hints(self, phantoms: List[sublime.Phantom]) -> None:
+        self._inlay_hints_phantom_set.update(phantoms)
+
+    def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        new_phantoms = list(filter(
+            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            self._inlay_hints_phantom_set.phantoms)
+        )
+        self._inlay_hints_phantom_set.update(new_phantoms)
+
+    def remove_all_inlay_hints(self) -> None:
+        self._inlay_hints_phantom_set.update([])
 
     # ------------------------------------------------------------------------------------------------------------------
 

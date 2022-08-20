@@ -206,6 +206,7 @@ class Settings:
     semantic_highlighting = None  # type: bool
     show_code_actions = None  # type: str
     show_code_lens = None  # type: str
+    show_inlay_hints = None  # type: bool
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
     show_multiline_diagnostics_highlights = None  # type: bool
@@ -220,7 +221,6 @@ class Settings:
         self.update(s)
 
     def update(self, s: sublime.Settings) -> None:
-
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
@@ -243,6 +243,7 @@ class Settings:
         r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
+        r("show_inlay_hints", False)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)

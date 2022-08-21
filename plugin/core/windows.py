@@ -11,6 +11,7 @@ from .promise import Promise
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
+from .protocol import LocationLink
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -20,7 +21,7 @@ from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -109,7 +110,7 @@ class WindowManager(Manager):
 
     def open_location_async(
         self,
-        location: Location,
+        location: Union[Location, LocationLink],
         session_name: Optional[str],
         view: sublime.View,
         flags: int = 0,

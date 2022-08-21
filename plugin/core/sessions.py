@@ -683,6 +683,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @classmethod
+    def status_name(cls) -> str:
+        """
+        Overrides the name shown in the status field for a running server. Defaults to name().
+
+        The difference between overriding name() and this is that name() also affects the names of the configuration
+        keys, name shown in the error messages and other places.
+        """
+        return cls.name()
+
+    @classmethod
     def configuration(cls) -> Tuple[sublime.Settings, str]:
         """
         Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",

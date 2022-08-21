@@ -668,6 +668,7 @@ class ClientConfig:
         self.file_watcher = file_watcher
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
+        self.status_name = self.name
         self.semantic_tokens = semantic_tokens
 
     @classmethod
@@ -793,9 +794,12 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
+    def override_status_name(self, name: str) -> None:
+        self.status_name = name
+
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = "{}: {}".format(self.name, message) if message else self.name
+            status = "{}: {}".format(self.status_name, message) if message else self.status_name
             view.set_status(self.status_key, status)
 
     def erase_view_status(self, view: sublime.View) -> None:

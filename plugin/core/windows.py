@@ -244,6 +244,7 @@ class WindowManager(Manager):
             variables = extract_variables(self._window)
             cwd = None  # type: Optional[str]
             if plugin_class is not None:
+                config.override_status_name(plugin_class.status_name())
                 if plugin_class.needs_update_or_installation():
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_or_update()

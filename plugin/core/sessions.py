@@ -496,6 +496,9 @@ class SessionViewProtocol(Protocol):
     def start_code_lenses_async(self) -> None:
         ...
 
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -552,6 +555,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
@@ -1578,6 +1584,25 @@ class Session(TransportCallbacks):
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
+    def session_views_by_visibility(self) -> Tuple[List[SessionViewProtocol], List[SessionViewProtocol]]:
+        visible_session_views = []  # type: List[SessionViewProtocol]
+        not_visible_session_views = []  # type: List[SessionViewProtocol]
+        selected_sheets = []
+        for group in range(self.window.num_groups()):
+            selected_sheets.extend(self.window.selected_sheets_in_group(group))
+        for sheet in self.window.sheets():
+            view = sheet.view()
+            if not view:
+                continue
+            sv = self.session_view_for_view_async(view)
+            if not sv:
+                continue
+            if sheet in selected_sheets:
+                visible_session_views.append(sv)
+            else:
+                not_visible_session_views.append(sv)
+        return visible_session_views, not_visible_session_views
+
     # --- server request handlers --------------------------------------------------------------------------------------
 
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
@@ -1614,34 +1639,31 @@ class Session(TransportCallbacks):
 
     def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
-        if self.uses_plugin():
-            for sv in self.session_views_async():
-                sv.start_code_lenses_async()
         self.send_response(Response(request_id, None))
+        if self.uses_plugin():
+            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+            for sv in visible_session_views:
+                sv.start_code_lenses_async()
+            for sv in not_visible_session_views:
+                sv.set_code_lenses_pending_refresh()
 
     def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
-        selected_sheets = []
-        for group in range(self.window.num_groups()):
-            selected_sheets.extend(self.window.selected_sheets_in_group(group))
-        for sheet in self.window.sheets():
-            view = sheet.view()
-            if not view:
-                continue
-            sv = self.session_view_for_view_async(view)
-            if not sv:
-                continue
-            if sheet in selected_sheets:
-                sv.session_buffer.do_semantic_tokens_async(view)
-            else:
-                sv.session_buffer.set_semantic_tokens_pending_refresh()
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_semantic_tokens_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_semantic_tokens_pending_refresh()
 
     def m_workspace_inlayHint_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/inlayHint/refresh request"""
-        for sv in self.session_views_async():
-            sv.session_buffer.do_inlay_hints_async(sv.view)
         self.send_response(Response(request_id, None))
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_inlay_hints_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_inlay_hints_pending_refresh()
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

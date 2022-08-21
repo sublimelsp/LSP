@@ -45,6 +45,7 @@ class SessionView:
         self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         self._code_lenses = CodeLensView(self._view)
+        self.code_lenses_needs_refresh = False
         settings = self._view.settings()
         buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
@@ -375,6 +376,9 @@ class SessionView:
     def _on_code_lenses_resolved_async(self, mode: str) -> None:
         if self._is_listener_alive():
             sublime.set_timeout(lambda: self._code_lenses.render(mode))
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.code_lenses_needs_refresh = needs_refresh
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

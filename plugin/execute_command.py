@@ -9,6 +9,9 @@ from .core.views import uri_from_view, offset_to_point, region_to_range, text_do
 
 
 class LspExecuteCommand(LspTextCommand):
+    """
+    Helper command for triggering workspace/executeCommand requests.
+    """
 
     def run(self,
             edit: sublime.Edit,
@@ -37,16 +40,32 @@ class LspExecuteCommand(LspTextCommand):
             def handle_response(response: Any) -> None:
                 assert command_name
                 if isinstance(response, Error):
-                    sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(response)))
+                    self.handle_error_async(response, command_name)
                     return
-                msg = "command {} completed".format(command_name)
-                if response:
-                    msg += "with response: {}".format(response)
-                window = self.view.window()
-                if window:
-                    window.status_message(msg)
+                self.handle_success_async(response, command_name)
 
             session.execute_command(params, progress=True).then(handle_response)
+
+    def handle_success_async(self, result: Any, command_name: str) -> None:
+        """
+        Override this method to handle successful response to workspace/executeCommand.
+
+        :param result: The result returned from the server.
+        :param command_name: The name of the command that was executed.
+        """
+        msg = "command {} completed".format(command_name)
+        window = self.view.window()
+        if window:
+            window.status_message(msg)
+
+    def handle_error_async(self, error: Error, command_name: str) -> None:
+        """
+        Override this method to handle failed response to workspace/executeCommand.
+
+        :param error: The Error object.
+        :param command_name: The name of the command that was executed.
+        """
+        sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(error)))
 
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
         view = self.view  # type: sublime.View

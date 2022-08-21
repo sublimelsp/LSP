@@ -20,6 +20,7 @@ from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.panels import WindowPanelListener
+from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand

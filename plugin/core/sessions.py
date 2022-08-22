@@ -1665,12 +1665,6 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 
-    def m_workspace_inlayHint_refresh(self, params: None, request_id: Any) -> None:
-        """handles the workspace/inlayHint/refresh request"""
-        for sv in self.session_views_async():
-            sv.session_buffer.do_inlay_hints_async(sv.view)
-        self.send_response(Response(request_id, None))
-
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
         uri = params["uri"]

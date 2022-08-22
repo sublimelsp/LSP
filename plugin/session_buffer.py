@@ -31,7 +31,7 @@ from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
-from .inlay_hint import inlay_hint_to_phantom
+from .inlay_hint import InlayHints, inlay_hint_to_phantom
 from .semantic_highlighting import SemanticToken
 from functools import partial
 from weakref import WeakSet
@@ -641,7 +641,7 @@ class SessionBuffer:
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         if not self.session.has_capability("inlayHintProvider"):
             return
-        if not view.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints):
+        if not InlayHints.are_enabled(view):
             self.remove_all_inlay_hints()
             return
         params = {

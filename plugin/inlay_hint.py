@@ -1,6 +1,6 @@
 from .inlay_hints_toggle import InlayHints, ToggleInlayHintStrategy
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
-from .core.registry import LspTextCommand,  windows
+from .core.registry import LspTextCommand, windows
 from .core.sessions import Session
 from .core.typing import Optional, Union
 from .core.views import point_to_offset

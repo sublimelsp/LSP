@@ -121,6 +121,7 @@ class SessionBuffer:
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
+        self.inlay_hints_needs_refresh = False
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
@@ -661,6 +662,9 @@ class SessionBuffer:
 
     def present_inlay_hints(self, phantoms: List[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
+
+    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.inlay_hints_needs_refresh = needs_refresh
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(

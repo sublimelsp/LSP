@@ -80,8 +80,6 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
-    margin_left = "0.6rem" if inlay_hint.get("paddingLeft", False) else "0"
-    margin_right = "0.6rem" if inlay_hint.get("paddingRight", False) else "0"
     font = view.settings().get('font_face') or "monospace"
     html = """
     <body id="lsp-inlay-hint">
@@ -90,8 +88,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
                 color: color(var(--foreground) alpha(0.6));
                 background-color: color(var(--foreground) alpha(0.08));
                 border-radius: 4px;
-                margin-left: {margin_left};
-                margin-right: {margin_right};
                 padding: 0.05em 4px;
                 font-size: 0.9em;
                 font-family: {font};
@@ -107,8 +103,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
         </div>
     </body>
     """.format(
-        margin_left=margin_left,
-        margin_right=margin_right,
         tooltip=tooltip,
         font=font,
         label=label

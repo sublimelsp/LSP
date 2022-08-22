@@ -511,8 +511,8 @@
             },
             "show_inlay_hints": {
               "type": "boolean",
-              "default": true,
-              "markdownDescription": "Inlay hints are short annotations within the code, which show variable types or parameter names."
+              "default": false,
+              "markdownDescription": "Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names."
             },
           },
           "additionalProperties": false

@@ -392,6 +392,10 @@
     // Toggle inlay hints.
     // {
     //     "command": "lsp_toggle_inlay_hints",
+    //     "args": {
+    //     "args": {
+    //         "toggle": "current_view" // values: "current_view", "current_window", "all_windows"
+    //     },
     //     "keys": [
     //         "UNBOUND"
     //     ],

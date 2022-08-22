@@ -1,3 +1,4 @@
+from .core.settings import userprefs
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
@@ -14,8 +15,9 @@ class LspToggleInlayHintsCommand(LspTextCommand):
 
     def run(self, _edit: sublime.Edit, _event: Optional[dict] = None) -> None:
         sessions = self.sessions('inlayHintProvider')
+        show_inlay_hints = self.view.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints)
+        self.view.settings().set('lsp_show_inlay_hints', not show_inlay_hints)
         for session in sessions:
-            session.show_inlay_hints = not session.show_inlay_hints
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)
 

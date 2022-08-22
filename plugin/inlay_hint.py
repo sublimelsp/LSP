@@ -43,7 +43,6 @@ class LspToggleInlayHintsCommand(LspTextCommand):
         InlayHints.toggle(self.view)
 
         if InlayHints.toggle_strategy == 'current_window':
-            print('dsadas')
             self.run_inlay_hints_for_current_window()
             return
         self.run_inlay_hints_for_current_view()

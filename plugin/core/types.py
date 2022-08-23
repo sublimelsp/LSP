@@ -219,8 +219,6 @@ class Settings:
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
-        from ..inlay_hints_toggle import InlayHints
-        InlayHints.global_show_inlay_hints = self.show_inlay_hints
 
     def update(self, s: sublime.Settings) -> None:
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:

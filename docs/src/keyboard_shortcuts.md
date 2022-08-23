@@ -31,4 +31,5 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Hover Popup | unbound | `lsp_hover`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
+| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

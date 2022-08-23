@@ -1,7 +1,7 @@
-from .inlay_hints_toggle import InlayHints, ToggleInlayHintStrategy
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand, windows
 from .core.sessions import Session
+from .core.settings import userprefs
 from .core.typing import Optional, Union
 from .core.views import point_to_offset
 from .formatting import apply_text_edits_to_view
@@ -13,23 +13,9 @@ import uuid
 class LspToggleInlayHintsCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, _edit: sublime.Edit, toggle: ToggleInlayHintStrategy = 'current_view') -> None:
-        InlayHints.toggle_strategy = toggle
-        InlayHints.toggle(self.view)
-
-        if InlayHints.toggle_strategy == 'all_windows':
-            self.run_inlay_hints_for_all_windows()
-            return
-        if InlayHints.toggle_strategy == 'current_window':
-            self.run_inlay_hints_for_current_window()
-            return
-        self.run_inlay_hints_for_current_view()
-
-    def run_inlay_hints_for_current_view(self) -> None:
-        sessions = self.sessions('inlayHintProvider')
-        for session in sessions:
-            for sv in session.session_views_async():
-                sv.session_buffer.do_inlay_hints_async(sv.view)
+    def run(self, _edit: sublime.Edit) -> None:
+        InlayHints.toggle(self.view.window())
+        self.run_inlay_hints_for_current_window()
 
     def run_inlay_hints_for_current_window(self) -> None:
         window = self.view.window()
@@ -42,14 +28,19 @@ class LspToggleInlayHintsCommand(LspTextCommand):
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)
 
-    def run_inlay_hints_for_all_windows(self) -> None:
-        for window in sublime.windows():
-            wm = windows.lookup(window)
-            for session in wm.get_sessions():
-                if not session.has_capability('inlayHintProvider'):
-                    continue
-                for sv in session.session_views_async():
-                    sv.session_buffer.do_inlay_hints_async(sv.view)
+
+class InlayHints:
+    @staticmethod
+    def are_enabled(w: Optional[sublime.Window]) -> bool:
+        if not w:
+            return userprefs().show_inlay_hints
+        return w.settings().get('lsp_show_inlay_hints') or userprefs().show_inlay_hints
+
+    @staticmethod
+    def toggle(w: Optional[sublime.Window]) -> None:
+        if not w:
+            return
+        w.settings().set('lsp_show_inlay_hints', not InlayHints.are_enabled(w))
 
 
 class LspInlayHintClickCommand(LspTextCommand):

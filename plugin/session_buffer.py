@@ -1,4 +1,4 @@
-from .inlay_hints_toggle import InlayHints
+from .inlay_hint import InlayHints
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
@@ -642,7 +642,7 @@ class SessionBuffer:
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         if not self.session.has_capability("inlayHintProvider"):
             return
-        if not InlayHints.are_enabled(view):
+        if not InlayHints.are_enabled(view.window()):
             self.remove_all_inlay_hints()
             return
         params = {

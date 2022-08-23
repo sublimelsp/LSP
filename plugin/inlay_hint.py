@@ -13,7 +13,7 @@ import uuid
 class LspToggleInlayHintsCommand(LspWindowCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, _edit: sublime.Edit) -> None:
+    def run(self) -> None:
         InlayHints.toggle(self.window)
         self.run_inlay_hints_for_current_window()
 

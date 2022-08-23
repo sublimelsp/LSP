@@ -142,6 +142,21 @@ This package presents Code Lenses as a greenish clickable annotation positioned 
 
 Sublime Text has no concept of Code Lenses.
 
+## Inlay Hints
+
+Inlay hints are short textual annotations that show parameter names, type hints.
+
+![inlay-hints](./images/inlay-hints.png)
+
+To enable inlay hints, modify the following settings through `Preferences: LSP Settings`:
+```js
+{
+    "show_inlay_hints": true
+}
+```
+
+!!! info "Some LSP-* plugins require additional settings to be enabled in order to show inlay hints."
+
 ## Server Commands
 
 In Sublime Text you can bind any runnable command to a key or add it to various UI elements. Commands in Sublime Text are normally supplied by plugins or packages written in Python. A language server may provide a runnable command as well. These kinds of commands are wrapped in an `lsp_execute` Sublime command that you can bind to a key.

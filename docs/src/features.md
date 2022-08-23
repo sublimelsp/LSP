@@ -148,12 +148,7 @@ Inlay hints are short textual annotations that show parameter names, type hints.
 
 ![inlay-hints](./images/inlay-hints.png)
 
-To enable inlay hints, modify the following settings through `Preferences: LSP Settings`:
-```js
-{
-    "show_inlay_hints": true
-}
-```
+To enable inlay hints, enable the `show_inlay_hints` setting through `Preferences: LSP Settings`.
 
 !!! info "Some LSP-* plugins require additional settings to be enabled in order to show inlay hints."
 

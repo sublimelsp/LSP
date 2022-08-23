@@ -1,5 +1,5 @@
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
-from .core.registry import LspTextCommand, LspWindowCommand, windows
+from .core.registry import LspTextCommand, LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Optional, Union
@@ -17,10 +17,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         InlayHints.toggle(self.window)
         status = "on" if InlayHints.are_enabled(self.window) else "off"
         sublime.status_message("Inlay Hints are {}".format(status))
-        wm = windows.lookup(self.window)
-        for session in wm.get_sessions():
-            if not session.has_capability('inlayHintProvider'):
-                continue
+        for session in self.sessions():
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)
 

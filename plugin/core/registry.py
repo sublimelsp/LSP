@@ -65,6 +65,12 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         else:
             return None
 
+    def sessions(self) -> Generator[Session, None, None]:
+        for session in windows.lookup(self.window).get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            yield session
+
 
 class LspTextCommand(sublime_plugin.TextCommand):
     """

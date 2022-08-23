@@ -1,4 +1,3 @@
-from .inlay_hint import InlayHints
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
@@ -33,6 +32,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
+from .inlay_hint import InlayHints
 from .semantic_highlighting import SemanticToken
 from functools import partial
 from weakref import WeakSet

@@ -150,7 +150,7 @@ Inlay hints are short textual annotations that show parameter names, type hints.
 
 To enable inlay hints, enable the `show_inlay_hints` setting through `Preferences: LSP Settings`.
 
-!!! info "Some LSP-* plugins require additional settings to be enabled in order to show inlay hints."
+!!! info "Some servers require additional settings to be enabled in order to show inlay hints."
 
 ## Server Commands
 

@@ -33,7 +33,7 @@ class InlayHints:
     def are_enabled(w: Optional[sublime.Window]) -> bool:
         if not w:
             return userprefs().show_inlay_hints
-        return w.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints)
+        return bool(w.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints))
 
     @staticmethod
     def toggle(w: sublime.Window) -> None:

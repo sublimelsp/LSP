@@ -144,7 +144,7 @@ Sublime Text has no concept of Code Lenses.
 
 ## Inlay Hints
 
-Inlay hints are short textual annotations that show parameter names, type hints.
+Inlay hints are short textual annotations that show parameter names and type hints for servers that support that feature.
 
 ![inlay-hints](./images/inlay-hints.png)
 

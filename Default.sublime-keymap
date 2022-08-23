@@ -154,7 +154,8 @@
     {
         "command": "lsp_symbol_references",
         "args": {
-            "side_by_side": false
+            "side_by_side": false,
+            "fallback": false
         },
         "keys": [
             "shift+f12"

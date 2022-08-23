@@ -44,6 +44,9 @@ By parsing and indexing a project with `.sublime-syntax` files, Sublime Text is 
 
 This package provides a replacement of that functionality if your language server has this capability.
 
+Additionally, the LSP's "Find References" command can fall back to the built-in Sublime's "Goto Reference" if the `fallback` argument is set to `true`.
+This way, when there are no results found the built-in "Goto Reference" command will be triggered.
+
 ## Highlights
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128552021-d9058c65-d6f6-48f5-b7aa-652eafe23247.gif)

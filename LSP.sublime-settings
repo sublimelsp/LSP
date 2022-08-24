@@ -81,9 +81,14 @@
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "fill", "underline", "stippled", or "".
+  // Valid values are "background", "underline", "stippled", or "".
   // When set to the empty string (""), no document highlighting is requested.
   "document_highlight_style": "underline",
+
+  // Highlight style of the word or range for which a hover popup is shown.
+  // Valid values are "background", "underline", "stippled", or "".
+  // When set to the empty string (""), no highlighting is applied.
+  "hover_highlight_style": "",
 
   // Highlight style of code diagnostics.
   // Can be a string, or a mapping of string->string for severity-based styling.

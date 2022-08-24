@@ -156,7 +156,18 @@ If neither a scope for a custom token type is defined, nor a color scheme rule f
 | `markup.highlight.write.lsp` | Write | Write-access of a symbol, like writing to a variable |
 
 !!! note
-    If `document_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
+    If `document_highlight_style` is set to "background" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
+
+### Hover Highlights
+
+Allows to highlight the word or range for which a hover popup is shown (disabled by default).
+
+| scope |
+| ----- |
+| `markup.highlight.hover.lsp` |
+
+!!! note
+    If `hover_highlight_style` is set to "background" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule.
 
 ### Diagnostics
 

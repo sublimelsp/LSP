@@ -34,7 +34,7 @@ In addition to the basic "Goto Definition", the protocol also provides further r
 Additionally, the LSP's "Goto Definition" command can fall back to the built-in Sublime's "Goto Definition" if the `fallback` argument is set to `true`.
 This way, when there are no results found the built-in "Goto Definition" command will be triggered.
 
-To always open the results in a certain group, you can pass the `group` argument.
+To always open the results in a certain group, you can use the `group` argument.
 
 ## Find References
 

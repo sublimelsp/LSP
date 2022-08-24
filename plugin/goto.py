@@ -34,7 +34,8 @@ class LspGotoCommand(LspTextCommand):
         point: Optional[int] = None,
         side_by_side: bool = False,
         force_group: bool = True,
-        fallback: bool = False
+        fallback: bool = False,
+        group: int = -1
     ) -> None:
         session = self.best_session(self.capability)
         position = get_position(self.view, event, point)
@@ -42,7 +43,11 @@ class LspGotoCommand(LspTextCommand):
             params = text_document_position_params(self.view, position)
             request = Request(self.method, params, self.view, progress=True)
             session.send_request(
-                request, functools.partial(self._handle_response_async, session, side_by_side, force_group, fallback))
+                request,
+                functools.partial(
+                    self._handle_response_async, session, side_by_side, force_group, fallback, group
+                ),
+            )
         else:
             self._handle_no_results(fallback, side_by_side)
 
@@ -52,20 +57,21 @@ class LspGotoCommand(LspTextCommand):
         side_by_side: bool,
         force_group: bool,
         fallback: bool,
+        group: int,
         response: Union[None, Location, List[Location], List[LocationLink]]
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-            open_location_async(session, response, side_by_side, force_group)
+            open_location_async(session, response, side_by_side, force_group, group)
         elif isinstance(response, list):
             if len(response) == 0:
                 self._handle_no_results(fallback, side_by_side)
             elif len(response) == 1:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                open_location_async(session, response[0], side_by_side, force_group)
+                open_location_async(session, response[0], side_by_side, force_group, group)
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-                sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side))
+                sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side, group))
         else:
             self._handle_no_results(fallback, side_by_side)
 

@@ -15,6 +15,25 @@ import subprocess
 opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
 
 
+def _return_existing_view(flags: int, open_file_group: int, active_group: int, specified_group: int ) -> bool:
+    open_side_by_side = bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU))
+    file_in_active_group = open_file_group == active_group
+
+    # true if DONT want to force it to open in the active group
+    # i.e. just jump to the file
+    select_file = not bool(flags & sublime.FORCE_GROUP)
+
+    if specified_group > -1:
+        return False
+    if open_side_by_side:
+        # default is -1... and is ignored
+        # always open in the specific group if pass in
+        return False
+    elif file_in_active_group:
+        return True
+    else:
+        return select_file
+
 def open_file(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
@@ -27,11 +46,12 @@ def open_file(
     # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
     # to open as a separate view).
     view = window.find_open_file(file)
+
     if view:
-        opens_in_desired_group = not bool(flags & sublime.FORCE_GROUP) or \
-                                 window.get_view_index(view)[0] == window.active_group()
-        opens_in_side_by_side = bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU))
-        return_existing_view = opens_in_desired_group and not opens_in_side_by_side
+        return_existing_view = _return_existing_view(
+            flags, window.get_view_index(view)[0], window.active_group(), group
+        )
+
         if return_existing_view:
             return Promise.resolve(view)
 

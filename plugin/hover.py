@@ -122,7 +122,7 @@ class LspHoverCommand(LspTextCommand):
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
-        self._document_link_content = ('', False)
+        self._document_link = ('', False, None)  # type: Tuple[str, bool, Optional[sublime.Region]]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -227,7 +227,8 @@ class LspHoverCommand(LspTextCommand):
             contents.append('<a href="{}">{}</a>'.format(target, title))
         if len(contents) > 1:
             link_has_standard_tooltip = False
-        self._document_link_content = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip)
+        link_range = range_to_region(Range.from_lsp(links[0]["range"]), self.view) if links else None
+        self._document_link = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip, link_range)
         self.show_hover(listener, point, only_diagnostics=False)
 
     def handle_code_actions(
@@ -281,7 +282,8 @@ class LspHoverCommand(LspTextCommand):
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
-        link_content, link_has_standard_tooltip = self._document_link_content
+        link_content, link_has_standard_tooltip, link_range = self._document_link
+        only_link_content = not bool(contents) and link_range is not None
         prefs = userprefs()
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
             symbol_actions_content = self.symbol_actions_content(listener, point)
@@ -301,7 +303,7 @@ class LspHoverCommand(LspTextCommand):
 
         if contents:
             if prefs.hover_highlight_style:
-                hover_range = self.hover_range()
+                hover_range = link_range if only_link_content else self.hover_range()
                 if hover_range:
                     _, flags = prefs.highlight_style_region_flags(prefs.hover_highlight_style)
                     self.view.add_regions(

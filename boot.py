@@ -22,6 +22,7 @@ from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
+from .plugin.core.protocol import LocationLink
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
@@ -33,7 +34,7 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.typing import Any, Optional, List, Type, Dict
+from .plugin.core.typing import Any, Optional, List, Type, Dict, Union
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
@@ -186,21 +187,23 @@ class LspOpenLocationCommand(sublime_plugin.TextCommand):
     def run(
         self,
         _: sublime.Edit,
-        location: Location,
+        location: Union[Location, LocationLink],
         session_name: Optional[str] = None,
         flags: int = 0,
         group: int = -1
     ) -> None:
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
 
-    def _run_async(self, location: Location, session_name: Optional[str], flags: int = 0, group: int = -1) -> None:
+    def _run_async(
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int = 0, group: int = -1
+    ) -> None:
         window = self.view.window()
         if not window:
             return
         windows.lookup(window).open_location_async(location, session_name, self.view, flags, group).then(
-            lambda success: self._handle_continuation(location, success))
+            lambda view: self._handle_continuation(location, view is not None))
 
-    def _handle_continuation(self, location: Location, success: bool) -> None:
+    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
         if not success:
             uri, _ = get_uri_and_position_from_location(location)
             message = "Failed to open {}".format(uri)

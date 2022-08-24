@@ -355,7 +355,7 @@
                 ""
               ],
               "default": "underline",
-              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor."
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/customization/#document-highlights for how to customize the color."
             },
             "hover_highlight_style": {
               "enum": [
@@ -365,7 +365,7 @@
                 ""
               ],
               "default": "",
-              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown."
+              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/customization/#hover-highlights for how to customize the color."
             },
             "diagnostics_gutter_marker": {
               "enum": [

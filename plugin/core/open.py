@@ -15,7 +15,7 @@ import subprocess
 opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
 
 
-def _return_existing_view(flags: int, open_file_group: int, active_group: int, specified_group: int ) -> bool:
+def _return_existing_view(flags: int, open_file_group: int, active_group: int, specified_group: int) -> bool:
     open_side_by_side = bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU))
     file_in_active_group = open_file_group == active_group
 
@@ -33,6 +33,7 @@ def _return_existing_view(flags: int, open_file_group: int, active_group: int, s
         return True
     else:
         return select_file
+
 
 def open_file(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1

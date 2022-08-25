@@ -15,16 +15,18 @@ import subprocess
 opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
 
 
-def _return_existing_view(flags: int, open_file_group: int, active_group: int, specified_group: int) -> bool:
+def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:
+    # the specified_group is supplied
     if specified_group > -1:
+        # use existing_view_group if it is in the active group
+        return existing_view_group == active_group
+    # open side by side
+    if bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)):
         return False
-    open_side_by_side = bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU))
-    if open_side_by_side:
-        return False
-    file_in_active_group = open_file_group == active_group
-    if file_in_active_group:
+    # existing view is in active group ( no group is specified and not side by side )
+    if existing_view_group == active_group:
         return True
-    # Jump to the file if sublime.FORCE_GROUP is set
+    # Jump to the file if sublime.FORCE_GROUP is not set
     return not bool(flags & sublime.FORCE_GROUP)
 
 

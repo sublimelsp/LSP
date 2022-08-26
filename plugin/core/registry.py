@@ -282,6 +282,7 @@ class LspToggleCapabilityCommand(LspWindowCommand):
                 capabilities.add(capability)
             sorted_capabilities = sorted(capabilities, key=lambda item: SERVER_CAPABILITIES[item])
             return CapabilityInputHandler(sorted_capabilities, self.last_toggled)
+        return None
 
 
 class CapabilityInputHandler(sublime_plugin.ListInputHandler):
@@ -299,7 +300,6 @@ class CapabilityInputHandler(sublime_plugin.ListInputHandler):
             kind = self.KIND_DISABLED if capability in toggled_capabilities else self.KIND_ENABLED
             items.append(sublime.ListInputItem(
                 SERVER_CAPABILITIES[capability], value=capability, annotation=capability, kind=kind))
-        items.sort(key=lambda item: item.text)
         if self.last_toggled:
             try:
                 idx = self.capabilities.index(self.last_toggled)

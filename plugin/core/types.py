@@ -32,7 +32,7 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
     "ignores": Optional[List[str]],
 }, total=False)
 
-toggled_capabilities = set()  # global variable to store currently toggled capabilities
+toggled_capabilities = set()  # type: Set[str]  # global variable to store currently toggled capabilities
 
 
 def basescope2languageid(base_scope: str) -> str:

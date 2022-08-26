@@ -193,7 +193,7 @@ class SessionBuffer:
         self.session_views.add(sv)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
-        self.clear_semantic_token_regions(sv.view)
+        self.clear_semantic_token_regions()
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
             self.remove_all_inlay_hints()
@@ -398,7 +398,6 @@ class SessionBuffer:
         self.document_links = []
         for sv in self.session_views:
             sv.view.erase_regions("lsp_document_link")
-
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 

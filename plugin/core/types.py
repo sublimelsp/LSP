@@ -32,6 +32,8 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
     "ignores": Optional[List[str]],
 }, total=False)
 
+toggled_capabilities = set()  # global variable to store currently toggled capabilities
+
 
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.
@@ -831,6 +833,8 @@ class ClientConfig:
         return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:
+        if capability_path.split(".")[0] in toggled_capabilities:
+            return True
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value

@@ -207,7 +207,8 @@ class SessionView:
             count -= 1
             if count == 0:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
-                settings.set(self.SHOW_DEFINITIONS_KEY, True)
+                user_setting = sublime.load_settings("Preferences.sublime-settings").get(self.SHOW_DEFINITIONS_KEY)
+                settings.set(self.SHOW_DEFINITIONS_KEY, user_setting)
 
     def get_uri(self) -> Optional[str]:
         listener = self.listener()
@@ -382,6 +383,9 @@ class SessionView:
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
+
+    def clear_all_code_lenses(self) -> None:
+        self._code_lenses.clear_view()
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

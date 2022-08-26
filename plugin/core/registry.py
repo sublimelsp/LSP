@@ -2,7 +2,8 @@ from .configurations import ConfigManager
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Any, Generator, Iterable
+from .types import toggled_capabilities
+from .typing import Optional, Any, Dict, Generator, Iterable, List, Set, Tuple
 from .windows import WindowRegistry
 import sublime
 import sublime_plugin
@@ -64,6 +65,12 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             return session
         else:
             return None
+
+    def sessions(self) -> Generator[Session, None, None]:
+        for session in windows.lookup(self.window).get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            yield session
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -161,3 +168,143 @@ class LspRestartServerCommand(LspTextCommand):
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
     def run(self, config_name: Optional[str] = None) -> None:
         sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))
+
+
+# The server capabilities which are possible to toggle on/off.
+# This should only contain the capabilities which are related to a certain feature.
+# https://microsoft.github.io/language-server-protocol/specifications/specification-current/#serverCapabilities
+SERVER_CAPABILITIES = {
+    "completionProvider": "Auto Complete",
+    "hoverProvider": "Hover",
+    "signatureHelpProvider": "Signature Help",
+    "declarationProvider": "Goto Declaration",
+    "definitionProvider": "Goto Definition",
+    "typeDefinitionProvider": "Goto Type Definition",
+    "implementationProvider": "Goto Implementation",
+    "referencesProvider": "Find References",
+    "documentHighlightProvider": "Highlights",
+    "documentSymbolProvider": "Goto Symbol",
+    "codeActionProvider": "Code Actions",
+    "codeLensProvider": "Code Lenses",
+    "documentLinkProvider": "Links",
+    "colorProvider": "Color Boxes",
+    "documentFormattingProvider": "Formatting",
+    "documentRangeFormattingProvider": "Range Formatting",
+    # "documentOnTypeFormattingProvider": "On Type Formatting",  # not supported by this client
+    "renameProvider": "Rename",
+    # "foldingRangeProvider": "Folding",  # not supported by this client
+    "executeCommandProvider": "Run Server Command",
+    "selectionRangeProvider": "Expand Selection",
+    # "linkedEditingRangeProvider": "Linked Editing",  # not supported by this client
+    # "callHierarchyProvider": "Call Hierarchy",  # not supported by this client
+    "semanticTokensProvider": "Semantic Highlighting",
+    # "typeHierarchyProvider": "Type Hierarchy",  # not supported by this client
+    "inlayHintProvider": "Inlay Hints",
+    # "diagnosticProvider": "Pull Diagnostics",  # not supported by this client
+    "workspaceSymbolProvider": "Goto Symbol in Project"
+}
+
+
+class LspToggleCapabilityCommand(LspWindowCommand):
+
+    last_toggled = None
+
+    def run(self, capability: str) -> None:
+        global toggled_capabilities
+        if capability not in SERVER_CAPABILITIES:
+            raise ValueError("Invalid capability name: {}".format(capability))
+        if capability in toggled_capabilities:
+            toggled_capabilities.remove(capability)
+            new_state = "on"
+        else:
+            toggled_capabilities.add(capability)
+            new_state = "off"
+        self.last_toggled = capability
+        if capability == "hoverProvider":
+            user_setting = sublime.load_settings("Preferences.sublime-settings").get("show_definitions")
+            for session in self.sessions():
+                for sv in session.session_views_async():
+                    if new_state == "on":
+                        sv.view.settings().set("show_definitions", False)
+                    else:
+                        sv.view.settings().set("show_definitions", user_setting)
+        elif capability == "codeLensProvider":
+            for session in self.sessions():
+                for sv in session.session_views_async():
+                    if new_state == "on":
+                        sv.start_code_lenses_async()
+                    else:
+                        sv.clear_all_code_lenses()
+        elif capability == "documentLinkProvider":
+            for session in self.sessions():
+                for sb in session.session_buffers_async():
+                    if new_state == "on":
+                        view = sb.some_view()
+                        if view:
+                            sb.do_document_link_async(view, view.change_count())
+                    else:
+                        sb.clear_all_document_links()
+        elif capability == "colorProvider":
+            for session in self.sessions():
+                for sb in session.session_buffers_async():
+                    if new_state == "on":
+                        view = sb.some_view()
+                        if view:
+                            sb.do_color_boxes_async(view, view.change_count())
+                    else:
+                        sb.clear_all_color_boxes()
+        elif capability == "semanticTokensProvider":
+            for session in self.sessions():
+                for sb in session.session_buffers_async():
+                    if new_state == "on":
+                        view = sb.some_view()
+                        if view:
+                            sb.do_semantic_tokens_async(view)
+                    else:
+                        sb.clear_semantic_token_regions()
+        elif capability == "inlayHintProvider":
+            for session in self.sessions():
+                for sv in session.session_views_async():
+                    if new_state == "on":
+                        sv.session_buffer.do_inlay_hints_async(sv.view)
+                    else:
+                        sv.session_buffer.remove_all_inlay_hints()
+        sublime.status_message("{} toggled {}".format(SERVER_CAPABILITIES[capability], new_state))
+
+    def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
+        if "capability" not in args:
+            capabilities = set()  # type: Set[str]
+            for session in self.sessions():
+                for capability in SERVER_CAPABILITIES:
+                    if session.has_capability(capability):
+                        capabilities.add(capability)
+            for capability in toggled_capabilities:
+                capabilities.add(capability)
+            sorted_capabilities = sorted(capabilities, key=lambda item: SERVER_CAPABILITIES[item])
+            return CapabilityInputHandler(sorted_capabilities, self.last_toggled)
+
+
+class CapabilityInputHandler(sublime_plugin.ListInputHandler):
+
+    KIND_ENABLED = (sublime.KIND_ID_COLOR_GREENISH, "✓", "Enabled")
+    KIND_DISABLED = (sublime.KIND_ID_COLOR_REDISH, "✗", "Disabled")
+
+    def __init__(self, capabilities: List[str], last_toggled: Optional[str]) -> None:
+        self.capabilities = capabilities
+        self.last_toggled = last_toggled
+
+    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+        items = []  # type: List[sublime.ListInputItem]
+        for capability in self.capabilities:
+            kind = self.KIND_DISABLED if capability in toggled_capabilities else self.KIND_ENABLED
+            items.append(sublime.ListInputItem(
+                SERVER_CAPABILITIES[capability], value=capability, annotation=capability, kind=kind))
+        items.sort(key=lambda item: item.text)
+        if self.last_toggled:
+            try:
+                idx = self.capabilities.index(self.last_toggled)
+            except ValueError:
+                idx = 0
+        else:
+            idx = 0
+        return (items, idx)

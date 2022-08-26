@@ -25,6 +25,7 @@ from .plugin.core.protocol import Location
 from .plugin.core.protocol import LocationLink
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
+from .plugin.core.registry import LspToggleCapabilityCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin

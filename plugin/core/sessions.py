@@ -499,6 +499,9 @@ class SessionViewProtocol(Protocol):
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
+    def clear_all_code_lenses(self) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -508,6 +511,9 @@ class SessionBufferProtocol(Protocol):
 
     @property
     def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        ...
+
+    def some_view(self) -> Optional[sublime.View]:
         ...
 
     def get_uri(self) -> Optional[str]:
@@ -539,10 +545,22 @@ class SessionBufferProtocol(Protocol):
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
 
+    def do_color_boxes_async(self, view: sublime.View, version: int) -> None:
+        ...
+
+    def clear_all_color_boxes(self) -> None:
+        ...
+
+    def do_document_link_async(self, view: sublime.View, version: int) -> None:
+        ...
+
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         ...
 
     def update_document_link(self, new_link: DocumentLink) -> None:
+        ...
+
+    def clear_all_document_links(self) -> None:
         ...
 
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
@@ -554,6 +572,9 @@ class SessionBufferProtocol(Protocol):
     def get_semantic_tokens(self) -> List[Any]:
         ...
 
+    def clear_semantic_token_regions(self) -> None:
+        ...
+
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         ...
 
@@ -561,6 +582,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        ...
+
+    def remove_all_inlay_hints(self) -> None:
         ...
 
 

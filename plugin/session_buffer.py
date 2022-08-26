@@ -153,11 +153,11 @@ class SessionBuffer:
                 return
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
-            self._do_color_boxes_async(view, view.change_count())
+            self.do_color_boxes_async(view, view.change_count())
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             self.do_inlay_hints_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
-                self._do_document_link_async(view, view.change_count())
+                self.do_document_link_async(view, view.change_count())
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -193,7 +193,7 @@ class SessionBuffer:
         self.session_views.add(sv)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
-        self._clear_semantic_token_regions(sv.view)
+        self.clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
             self.remove_all_inlay_hints()
@@ -299,10 +299,10 @@ class SessionBuffer:
                 return  # we're closing
             finally:
                 self.pending_changes = None
-            self._do_color_boxes_async(view, version)
+            self.do_color_boxes_async(view, version)
             self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
-                self._do_document_link_async(view, version)
+                self.do_document_link_async(view, version)
             self.do_inlay_hints_async(view)
             self.session.notify_plugin_on_session_buffer_change(self)
 
@@ -345,7 +345,7 @@ class SessionBuffer:
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
-    def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
+    def do_color_boxes_async(self, view: sublime.View, version: int) -> None:
         if self.session.has_capability("colorProvider"):
             self.session.send_request_async(
                 Request.documentColor(document_color_params(view), view),
@@ -356,9 +356,12 @@ class SessionBuffer:
         color_infos = response if response else []
         self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in color_infos])
 
+    def clear_all_color_boxes(self) -> None:
+        self.color_phantoms.update([])
+
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
-    def _do_document_link_async(self, view: sublime.View, version: int) -> None:
+    def do_document_link_async(self, view: sublime.View, version: int) -> None:
         if self.session.has_capability("documentLinkProvider"):
             self.session.send_request_async(
                 Request.documentLink({'textDocument': text_document_identifier(view)}, view),
@@ -390,6 +393,12 @@ class SessionBuffer:
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break
+
+    def clear_all_document_links(self) -> None:
+        self.document_links = []
+        for sv in self.session_views:
+            sv.view.erase_regions("lsp_document_link")
+
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -626,9 +635,10 @@ class SessionBuffer:
             self._semantic_region_keys[scope] = self._last_semantic_region_key
         return self._semantic_region_keys[scope]
 
-    def _clear_semantic_token_regions(self, view: sublime.View) -> None:
-        for region_key in self.semantic_tokens.active_region_keys:
-            view.erase_regions("lsp_semantic_{}".format(region_key))
+    def clear_semantic_token_regions(self) -> None:
+        for sv in self.session_views:
+            for region_key in self.semantic_tokens.active_region_keys:
+                sv.view.erase_regions("lsp_semantic_{}".format(region_key))
 
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh

@@ -1,6 +1,14 @@
 {
     "rules": [
         {
+            "scope": "markup.highlight",
+            "background": "color(var(grey2) alpha(0.2))"
+        },
+        {
+            "scope": "markup.highlight.hover",
+            "background": "color(var(blue2) alpha(0.15))"
+        },
+        {
             "scope": "meta.semantic-token",
             "background": "#00000001"
         }

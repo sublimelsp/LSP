@@ -20,6 +20,7 @@ import functools
 import sublime
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+HOVER_HIGHLIGHT_KEY = "lsp_hover_highlight"
 
 
 class SessionView:
@@ -113,15 +114,18 @@ class SessionView:
         """
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
+        hover_highlight_style = userprefs().hover_highlight_style
         document_highlight_kinds = ["text", "read", "write"]
         line_modes = ["m", "s"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
         for key in range(1, 100):
             self.view.add_regions("lsp_semantic_{}".format(key), r)
-        if document_highlight_style == "fill":
+        if document_highlight_style in ("background", "fill"):
             for kind in document_highlight_kinds:
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        if hover_highlight_style in ("background", "fill"):
+            self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
         for severity in range(1, 5):
             for mode in line_modes:
                 for tag in range(1, 3):
@@ -130,10 +134,12 @@ class SessionView:
         for severity in range(1, 5):
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
-        if document_highlight_style != "fill":
+        if document_highlight_style in ("underline", "stippled"):
             for kind in document_highlight_kinds:
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        if hover_highlight_style in ("underline", "stippled"):
+            self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

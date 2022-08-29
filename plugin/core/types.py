@@ -191,6 +191,7 @@ class Settings:
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
+    hover_highlight_style = None  # type: str
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
     link_highlight_style = None  # type: str
@@ -232,6 +233,7 @@ class Settings:
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
+        r("hover_highlight_style", "")
         r("link_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
@@ -297,10 +299,10 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
-        if self.document_highlight_style == "fill":
+    def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
+        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
-        elif self.document_highlight_style == "stippled":
+        elif style_str == "stippled":
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501

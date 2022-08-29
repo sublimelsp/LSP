@@ -147,7 +147,7 @@ class Listener(sublime_plugin.EventListener):
         for listener in listeners:
             if isinstance(listener, DocumentSyncListener):
                 # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
-                sublime.set_timeout_async(listener.on_post_move_window_async, timeout_ms=1)
+                sublime.set_timeout_async(listener.on_post_move_window_async, 1)
                 return
 
     def on_load(self, view: sublime.View) -> None:

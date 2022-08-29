@@ -44,6 +44,9 @@ By parsing and indexing a project with `.sublime-syntax` files, Sublime Text is 
 
 This package provides a replacement of that functionality if your language server has this capability.
 
+Additionally, the LSP's "Find References" command can fall back to the built-in Sublime's "Goto Reference" if the `fallback` argument is set to `true`.
+This way, when there are no results found the built-in "Goto Reference" command will be triggered.
+
 ## Highlights
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128552021-d9058c65-d6f6-48f5-b7aa-652eafe23247.gif)
@@ -141,6 +144,16 @@ Code Lenses are "actionable contextual information interspersed" in your source 
 This package presents Code Lenses as a greenish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as phantoms.
 
 Sublime Text has no concept of Code Lenses.
+
+## Inlay Hints
+
+Inlay hints are short textual annotations that show parameter names and type hints for servers that support that feature.
+
+![inlay-hints](./images/inlay-hints.png)
+
+To enable inlay hints, enable the `show_inlay_hints` setting through `Preferences: LSP Settings`.
+
+!!! info "Some servers require additional settings to be enabled in order to show inlay hints."
 
 ## Server Commands
 

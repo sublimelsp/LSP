@@ -87,6 +87,15 @@ class LspSymbolReferencesCommand(LspTextCommand):
         else:
             self._handle_no_results(fallback, side_by_side)
 
+    def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        if fallback:
+            window.run_command("goto_reference", {"side_by_side": side_by_side})
+        else:
+            window.status_message("No references found")
+
     def _show_references_in_quick_panel(self, session: Session, locations: List[Location], side_by_side: bool) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
         LocationPicker(self.view, session, locations, side_by_side)
@@ -122,17 +131,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # highlight all word occurrences
         regions = panel.find_all(r"\b{}\b".format(word))
         panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-
-    def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
-        window = self.view.window()
-
-        if not window:
-            return
-
-        if fallback:
-            window.run_command("goto_reference", {"side_by_side": side_by_side})
-        else:
-            window.status_message("No references found")
 
 
 def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:

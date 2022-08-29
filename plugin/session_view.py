@@ -2,6 +2,7 @@ from .code_lens import CodeLensView
 from .core.progress import ViewProgressReporter
 from .core.promise import Promise
 from .core.protocol import CodeLens
+from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
@@ -12,6 +13,7 @@ from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import format_diagnostics_for_annotation
 from .core.views import text_document_identifier
 from .session_buffer import SessionBuffer
 from weakref import ref
@@ -82,6 +84,7 @@ class SessionView:
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
         self.view.erase_regions("lsp_document_link")
+        self._clear_inline_diagnostics_regions()
         self.session_buffer.remove_session_view(self)
 
     @property
@@ -293,6 +296,30 @@ class SessionView:
             self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags)
         else:
             self.view.erase_regions(key)
+
+    def update_inline_diagnostics_async(self, diagnostics: List[Diagnostic]) -> None:
+        region_key = self._inline_diagnostics_region_key()
+        self.view.erase_regions(region_key)
+        if userprefs().show_diagnostics_inline != 'at-cursor':
+            return
+        if diagnostics:
+            sorted_diagnostics = sorted(diagnostics, key=lambda d: d.get('severity', 1))
+            first_diagnostic = sorted_diagnostics[0]
+            lsp_range = first_diagnostic.get('range')
+            if lsp_range:
+                scope = DIAGNOSTIC_SEVERITY[first_diagnostic.get('severity', 1) - 1][2]
+                icon = ""
+                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+                annotation_color = self.view.style_for_scope(scope).get('foreground') or 'red'
+                regions, annotations = format_diagnostics_for_annotation(sorted_diagnostics, self.view)
+                self.view.add_regions(region_key, regions, scope, icon, flags, annotations, annotation_color)
+
+    def _inline_diagnostics_region_key(self) -> str:
+        return "lsp_d-annotations"
+
+    def _clear_inline_diagnostics_regions(self) -> None:
+        region_key = self._inline_diagnostics_region_key()
+        self.view.erase_regions(region_key)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request

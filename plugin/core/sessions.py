@@ -481,6 +481,9 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self) -> None:
         ...
 
+    def update_inline_diagnostics_async(self, diagnostics: List[Diagnostic]) -> None:
+        ...
+
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         ...
 

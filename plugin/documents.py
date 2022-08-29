@@ -284,7 +284,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
-        self._update_inline_diagnostic_async()
+        self._update_inline_diagnostics_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -300,27 +300,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
-    def _update_inline_diagnostic_async(self) -> None:
-        region_key = "lsp_d-annotations"
-        self.view.erase_regions(region_key)
-        if userprefs().show_diagnostics_inline != 'at-cursor':
-            return
-        sorted_diagnostics = []  # type: List[Diagnostic]
+    def _update_inline_diagnostics_async(self) -> None:
+        diagnostics = []  # type: List[Diagnostic]
         for r in self.view.sel():
             session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
             for _, diagnostics in session_buffer_diagnostics:
-                sorted_diagnostics.extend(diagnostics)
-        if sorted_diagnostics:
-            sorted_diagnostics = sorted(sorted_diagnostics, key=lambda d: d.get('severity', 1))
-            first_diagnostic = sorted_diagnostics[0]
-            lsp_range = first_diagnostic.get('range')
-            if lsp_range:
-                scope = DIAGNOSTIC_SEVERITY[first_diagnostic.get('severity', 1) - 1][2]
-                icon = ""
-                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-                annotation_color = self.view.style_for_scope(scope).get('foreground') or 'red'
-                regions, annotations = format_diagnostics_for_annotation(sorted_diagnostics, self.view)
-                self.view.add_regions(region_key, regions, scope, icon, flags, annotations, annotation_color)
+                diagnostics.extend(diagnostics)
+        for sv in self.session_views_async():
+            sv.update_inline_diagnostics_async(diagnostics)
 
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -389,7 +376,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                           after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
-            self._update_inline_diagnostic_async()
+            self._update_inline_diagnostics_async()
             self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:

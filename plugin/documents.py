@@ -676,7 +676,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
-            flags_multi, flags_single = userprefs().document_highlight_style_region_flags()
+            prefs = userprefs()
+            flags_multi, flags_single = prefs.highlight_style_region_flags(prefs.document_highlight_style)
             for tup, regions in kind2regions.items():
                 if not regions:
                     continue

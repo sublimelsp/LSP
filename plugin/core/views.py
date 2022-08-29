@@ -567,7 +567,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         wrapper_class=wrapper_class,
         max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
         max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
-        on_navigate=on_navigate)
+        on_navigate=on_navigate,
+        on_hide=on_hide)
 
 
 def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: Optional[str] = None,

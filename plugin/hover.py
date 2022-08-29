@@ -38,6 +38,7 @@ from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
 from urllib.parse import unquote, urlparse
 import functools
+import html
 import re
 import sublime
 import webbrowser
@@ -224,7 +225,7 @@ class LspHoverCommand(LspTextCommand):
             title = link.get("tooltip") or "Follow link"
             if title != "Follow link":
                 link_has_standard_tooltip = False
-            contents.append('<a href="{}">{}</a>'.format(target, title))
+            contents.append('<a href="{}">{}</a>'.format(html.escape(target), html.escape(title)))
         if len(contents) > 1:
             link_has_standard_tooltip = False
         link_range = range_to_region(Range.from_lsp(links[0]["range"]), self.view) if links else None

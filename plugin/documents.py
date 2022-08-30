@@ -29,13 +29,11 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_completion
-from .core.views import format_diagnostics_for_annotation
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region

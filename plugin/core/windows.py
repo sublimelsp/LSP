@@ -464,6 +464,10 @@ class WindowManager(Manager):
         if self._window.active_panel() is None:
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
 
+    def hide_diagnostics_panel_async(self) -> None:
+        if self._window.active_panel() == "output.diagnostics":
+            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
+
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigManager) -> None:

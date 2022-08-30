@@ -383,6 +383,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
+        # Hide empty diagnostics panels on save if the show_diagnostics_panel_on_save option is enabled.
+        if userprefs().show_diagnostics_panel_on_save > 0:
+            self._hide_empty_diagnostics_panels()
+
+    def _hide_empty_diagnostics_panels(self) -> None:
+        severity_threshold = userprefs().show_diagnostics_severity_level
+        hide_panel = True
+        for sb, diagnostics in self.diagnostics_async():
+            for diagnostic, _ in diagnostics:
+                if diagnostic_severity(diagnostic) <= severity_threshold:
+                    hide_panel = False
+        if hide_panel and self._manager:
+            self._manager.hide_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:

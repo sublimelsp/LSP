@@ -23,7 +23,8 @@ class LspGotoCommand(LspTextCommand):
         point: Optional[int] = None,
         side_by_side: bool = False,
         force_group: bool = True,
-        fallback: bool = False
+        fallback: bool = False,
+        group: int = -1
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 

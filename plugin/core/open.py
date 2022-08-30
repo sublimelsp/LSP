@@ -15,16 +15,15 @@ import subprocess
 opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
 
 
-def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:
+def _return_existing_view(flags: int, is_view_in_active_group: bool, specified_group: int) -> bool:
     # the specified_group is supplied
     if specified_group > -1:
-        # use existing_view_group if it is in the active group
-        return existing_view_group == active_group
+        return is_view_in_active_group
     # open side by side
     if bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)):
         return False
-    # existing view is in active group ( no group is specified and not side by side )
-    if existing_view_group == active_group:
+    # view is in active group ( no group is specified and not side by side )
+    if is_view_in_active_group:
         return True
     # Jump to the file if sublime.FORCE_GROUP is not set
     return not bool(flags & sublime.FORCE_GROUP)
@@ -42,12 +41,8 @@ def open_file(
     # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
     # to open as a separate view).
     view = window.find_open_file(file)
-    if view:
-        return_existing_view = _return_existing_view(
-            flags, window.get_view_index(view)[0], window.active_group(), group
-        )
-        if return_existing_view:
-            return Promise.resolve(view)
+    if view and _return_existing_view(flags, window.get_view_index(view)[0] == window.active_group(), group):
+        return Promise.resolve(view)
 
     view = window.open_file(file, flags, group)
     if not view.is_loading():

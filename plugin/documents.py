@@ -33,6 +33,7 @@ from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
@@ -598,12 +599,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            titles = [command["title"] for command in self._actions_by_config[config_name]]
-            if len(titles) > 1:
+            actions = self._actions_by_config[config_name]
+            if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
-                                            placeholder="Code actions")
+                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    window.show_quick_panel(
+                        items,
+                        lambda i: self.handle_code_action_select(config_name, i),
+                        selected_index=selected_index,
+                        placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, 0)
 

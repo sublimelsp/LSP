@@ -11,6 +11,7 @@ from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, Sequence
 from .core.views import entire_content_region
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 import sublime
@@ -308,10 +309,14 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def show_code_actions(self) -> None:
         if len(self.commands) > 0:
-            items = [command[1] for command in self.commands]
             window = self.view.window()
             if window:
-                window.show_quick_panel(items, self.handle_select, placeholder="Code action")
+                items, selected_index = format_code_actions_for_quick_panel([command[2] for command in self.commands])
+                window.show_quick_panel(
+                    items,
+                    self.handle_select,
+                    selected_index=selected_index,
+                    placeholder="Code action")
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 

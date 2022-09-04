@@ -11,6 +11,7 @@ from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, Sequence
 from .core.views import entire_content_region
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 import sublime
@@ -274,7 +275,7 @@ class LspCodeActionsCommand(LspTextCommand):
         only_kinds: Optional[List[str]] = None,
         commands_by_config: Optional[CodeActionsByConfigName] = None
     ) -> None:
-        self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
+        self.commands = []  # type: List[Tuple[str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         if commands_by_config:
             self.handle_responses_async(commands_by_config, run_first=True)
@@ -299,19 +300,23 @@ class LspCodeActionsCommand(LspTextCommand):
         else:
             self.show_code_actions()
 
-    def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
+    def combine_commands(self) -> 'List[Tuple[str, CodeActionOrCommand]]':
         results = []
         for config, commands in self.commands_by_config.items():
             for command in commands:
-                results.append((config, command['title'], command))
+                results.append((config, command))
         return results
 
     def show_code_actions(self) -> None:
         if len(self.commands) > 0:
-            items = [command[1] for command in self.commands]
             window = self.view.window()
             if window:
-                window.show_quick_panel(items, self.handle_select, placeholder="Code action")
+                items, selected_index = format_code_actions_for_quick_panel([command[1] for command in self.commands])
+                window.show_quick_panel(
+                    items,
+                    self.handle_select,
+                    selected_index=selected_index,
+                    placeholder="Code action")
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
@@ -323,7 +328,7 @@ class LspCodeActionsCommand(LspTextCommand):
                 session = self.session_by_name(selected[0])
                 if session:
                     name = session.config.name
-                    session.run_code_action_async(selected[2], progress=True).then(
+                    session.run_code_action_async(selected[1], progress=True).then(
                         lambda resp: self.handle_response_async(name, resp))
 
             sublime.set_timeout_async(run_async)

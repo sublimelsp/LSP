@@ -199,17 +199,6 @@ CodeActionDisabledInformation = TypedDict('CodeActionDisabledInformation', {
 }, total=True)
 
 
-CodeAction = TypedDict('CodeAction', {
-    'title': str,
-    'kind': Optional[str],
-    'diagnostics': Optional[List[Any]],
-    'isPreferred': Optional[bool],
-    'disabled': Optional[CodeActionDisabledInformation],
-    'edit': Optional[dict],
-    'command': Optional[Command],
-}, total=True)
-
-
 CodeLens = TypedDict('CodeLens', {
     'range': RangeLsp,
     'command': Optional[Command],
@@ -294,6 +283,17 @@ Diagnostic = TypedDict('Diagnostic', {
     'message': str,
     'tags': List[int],
     'relatedInformation': List[DiagnosticRelatedInformation]
+}, total=False)
+
+CodeAction = TypedDict('CodeAction', {
+    'title': str,
+    'kind': str,  # NotRequired
+    'diagnostics': List[Diagnostic],  # NotRequired
+    'isPreferred': bool,  # NotRequired
+    'disabled': CodeActionDisabledInformation,  # NotRequired
+    'edit': dict,  # NotRequired
+    'command': Command,  # NotRequired
+    'data': Any  # NotRequired
 }, total=False)
 
 TextEdit = TypedDict('TextEdit', {

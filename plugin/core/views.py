@@ -1,5 +1,8 @@
 from .css import css as lsp_css
 from .protocol import CodeAction
+from .protocol import CodeActionContext
+from .protocol import CodeActionParams
+from .protocol import CodeActionTriggerKind
 from .protocol import Command
 from .protocol import CompletionItem
 from .protocol import CompletionItemKind
@@ -25,7 +28,7 @@ from .protocol import TextDocumentIdentifier
 from .protocol import TextDocumentPositionParams
 from .settings import userprefs
 from .types import ClientConfig
-from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
+from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
 import html
@@ -544,14 +547,16 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
 def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
-    diagnostics: Sequence[Diagnostic],
-    on_save_actions: Optional[Sequence[str]] = None
-) -> Dict[str, Any]:
+    diagnostics: List[Diagnostic],
+    on_save_actions: Optional[List[str]] = None,
+    manual: Optional[bool] = False
+) -> CodeActionParams:
     context = {
-        "diagnostics": diagnostics
-    }  # type: Dict[str, Any]
+        "diagnostics": diagnostics,
+        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+    }  # type: CodeActionContext
     if on_save_actions:
-        context['only'] = on_save_actions
+        context["only"] = on_save_actions
     return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),

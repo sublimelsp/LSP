@@ -987,6 +987,10 @@ def format_completion(
         if lsp_label_description:
             details.append(html.escape(lsp_label_description))
 
+    insert_replace_support_html = get_insert_replace_support_html(item)
+    if insert_replace_support_html:
+        details.append(insert_replace_support_html)
+
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
 
@@ -1000,6 +1004,15 @@ def format_completion(
     if item.get('textEdit'):
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
+
+
+def get_insert_replace_support_html(item: CompletionItem) -> Optional[str]:
+    text_edit = item.get('textEdit')
+    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
+        insert_mode = userprefs().completion_insert_mode
+        oposite_insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
+        return '<code>⇧ + ↵</code> to {}'.format(oposite_insert_mode)
+    return None
 
 
 def format_code_actions_for_quick_panel(

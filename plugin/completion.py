@@ -3,7 +3,7 @@ from .core.logging import debug
 from .core.protocol import InsertReplaceEdit, TextEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import List, Dict, Optional, Generator, Union
+from .core.typing import List, Dict, Optional, Generator, Union, cast
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
@@ -21,9 +21,11 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeL
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
-        if LspCommitCompletionWithOppositeInsertMode.shift_pressed: # if shift is pressed, we want the oposite insert mode range
+        # if shift is pressed, we want the oposite insert mode range
+        if LspCommitCompletionWithOppositeInsertMode.shift_pressed:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
-        return text_edit.get(insert_mode, 'insert')
+        return text_edit.get(insert_mode)  # type: ignore
+    text_edit = cast(TextEdit, text_edit)
     return text_edit['range']
 
 
@@ -97,26 +99,12 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
         LspCommitCompletionWithOppositeInsertMode.shift_pressed = False
 
 
-
 class LspSelectCompletionItemCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
-            # resolve this
-            # new_text = text_edit["newText"]
-            # edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
-            # if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            #     for region in self.translated_regions(edit_region):
-            #         self.view.erase(edit, region)
-            #     self.view.run_command("insert_snippet", {"contents": new_text})
-            # else:
-            #     for region in self.translated_regions(edit_region):
-            #         # NOTE: Cannot do .replace, because ST will select the replacement.
-            #         self.view.erase(edit, region)
-            #         self.view.insert(edit, region.a, new_text)
-
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

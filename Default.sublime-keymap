@@ -35,19 +35,11 @@
                 "key": "auto_complete_visible",
                 "operator": "equal",
                 "operand": true
-            }
-        ]
-    },
-    {
-        "command": "lsp_commit_completion_with_opposite_insert_mode", 
-        "keys": [
-            "shift+tab"
-        ],
-        "context": [
+            },
             {
-                "key": "auto_complete_visible",
+                "key": "lsp.session_with_capability",
                 "operator": "equal",
-                "operand": true
+                "operand": "completionProvider"
             }
         ]
     },

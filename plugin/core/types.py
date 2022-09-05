@@ -5,13 +5,15 @@ from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from .typing import cast
 from .url import filename_to_uri
-from .url import uri_to_filename
+from .url import parse_uri
 from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
+import fnmatch
 import os
+import posixpath
 import socket
 import sublime
 import time
@@ -21,11 +23,11 @@ import urllib.parse
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
 
-PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
+PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 FileWatcherConfig = TypedDict("FileWatcherConfig", {
-    "pattern": Optional[str],
+    "patterns": List[str],
     "events": Optional[List[FileWatcherEventType]],
     "ignores": Optional[List[str]],
 }, total=False)
@@ -57,6 +59,48 @@ def diff(old: Iterable[T], new: Iterable[T]) -> Tuple[Set[T], Set[T]]:
     added = new_set - old_set
     removed = old_set - new_set
     return added, removed
+
+
+def matches_pattern(path: str, patterns: Any) -> bool:
+    if not isinstance(patterns, list):
+        return False
+    for pattern in patterns:
+        if not isinstance(pattern, str):
+            continue
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
+
+
+def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path: Optional[str] = None) -> str:
+    """
+    Convert a Sublime Text pattern (http://www.sublimetext.com/docs/file_patterns.html)
+    to a glob pattern that utilizes globstar extension.
+    """
+    glob = pattern
+    if '/' not in glob:  # basic pattern: compared against exact file or directory name
+        glob = '**/{}'.format(glob)
+        if is_directory_pattern:
+            glob += '/**'
+    else:  # complex pattern
+        # With '*/' prefix or '/*' suffix, the '*' matches '/' characters.
+        if glob.startswith('*/'):
+            glob = '*{}'.format(glob)
+        if glob.endswith('/*'):
+            glob += '*'
+        # If a pattern ends in '/' it will be treated as a directory pattern, and will match both a directory with that
+        # name and any contained files or subdirectories.
+        if glob.endswith('/'):
+            glob += '**'
+        # If pattern begins with '//', it will be compared as a relative path from the project root.
+        if glob.startswith('//') and root_path:
+            glob = posixpath.join(root_path, glob[2:])
+        # If a pattern begins with a single /, it will be treated as an absolute path.
+        if not glob.startswith('/') and not glob.startswith('**/'):
+            glob = '**/{}'.format(glob)
+        if is_directory_pattern and not glob.endswith('/**'):
+            glob += '/**'
+    return glob
 
 
 def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
@@ -143,11 +187,14 @@ class Settings:
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
+    diagnostics_highlight_style = None  # type: Union[str, Dict[str, str]]
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
+    hover_highlight_style = None  # type: str
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
+    link_highlight_style = None  # type: str
     completion_insert_mode = None  # type: str
     log_debug = None  # type: bool
     log_max_size = None  # type: int
@@ -158,11 +205,13 @@ class Settings:
     only_show_lsp_completions = None  # type: bool
     popup_max_characters_height = None  # type: int
     popup_max_characters_width = None  # type: int
+    semantic_highlighting = None  # type: bool
     show_code_actions = None  # type: str
     show_code_lens = None  # type: str
+    show_inlay_hints = None  # type: bool
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
-    show_diagnostics_highlights = None  # type: bool
+    show_multiline_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
@@ -174,7 +223,6 @@ class Settings:
         self.update(s)
 
     def update(self, s: sublime.Settings) -> None:
-
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
@@ -185,6 +233,8 @@ class Settings:
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
+        r("hover_highlight_style", "")
+        r("link_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
@@ -194,12 +244,14 @@ class Settings:
         r("completion_insert_mode", 'insert')
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
+        r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
+        r("show_inlay_hints", False)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
-        r("show_diagnostics_highlights", True)
+        r("show_multiline_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
@@ -233,11 +285,12 @@ class Settings:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
 
-        # Backwards-compatible with "diagnostics_highlight_style"
-        diagnostics_highlight_style = s.get("diagnostics_highlight_style")
-        if isinstance(diagnostics_highlight_style, str):
-            if not diagnostics_highlight_style:
-                self.show_diagnostics_highlights = False
+        # correctness checking will happen inside diagnostics_highlight_style_flags method
+        self.diagnostics_highlight_style = s.get("diagnostics_highlight_style")  # type: ignore
+
+        # Backwards-compatible with "show_diagnostics_highlights"
+        if s.get("show_diagnostics_highlights") is False:
+            self.diagnostics_highlight_style = ""
 
         # Backwards-compatible with "code_action_on_save_timeout_ms"
         code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
@@ -246,13 +299,48 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
-        if self.document_highlight_style == "fill":
+    def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
+        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
-        elif self.document_highlight_style == "stippled":
+        elif style_str == "stippled":
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+
+    @staticmethod
+    def _style_str_to_flag(style_str: str) -> Optional[int]:
+        # This method could be a dict or lru_cache
+        if style_str == "":
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        elif style_str == "box":
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL
+        elif style_str == "underline":
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+        elif style_str == "stippled":
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+        elif style_str == "squiggly":
+            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
+        else:
+            # default style
+            return None
+
+    def diagnostics_highlight_style_flags(self) -> List[Optional[int]]:
+        """Returns flags for highlighting diagnostics on single lines per severity"""
+        if isinstance(self.diagnostics_highlight_style, str):
+            # same style for all severity levels
+            return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
+        elif isinstance(self.diagnostics_highlight_style, dict):
+            flags = []  # type: List[Optional[int]]
+            for sev in ("error", "warning", "info", "hint"):
+                user_style = self.diagnostics_highlight_style.get(sev)
+                if user_style is None:  # user did not provide a style
+                    flags.append(None)  # default styling, see comment below
+                else:
+                    flags.append(self._style_str_to_flag(user_style))
+            return flags
+        else:
+            # Defaults are defined in DIAGNOSTIC_SEVERITY in plugin/core/views.py
+            return [None] * 4  # default styling
 
 
 class ClientStates:
@@ -555,10 +643,11 @@ class ClientConfig:
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
-                 env: Dict[str, str] = {},
+                 env: Dict[str, Union[str, List[str]]] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
+                 semantic_tokens: Optional[Dict[str, str]] = None,
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -583,6 +672,7 @@ class ClientConfig:
         self.file_watcher = file_watcher
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
+        self.semantic_tokens = semantic_tokens
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -593,6 +683,7 @@ class ClientConfig:
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
+        semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
@@ -613,6 +704,7 @@ class ClientConfig:
             experimental_capabilities=s.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
+            semantic_tokens=semantic_tokens,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -641,6 +733,7 @@ class ClientConfig:
             experimental_capabilities=d.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
+            semantic_tokens=d.get("semantic_tokens", dict()),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -669,6 +762,7 @@ class ClientConfig:
                 "experimental_capabilities", src_config.experimental_capabilities),
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
+            semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
@@ -695,6 +789,8 @@ class ClientConfig:
             command = [a.replace('{port}', str(tcp_port)) for a in command]
         env = os.environ.copy()
         for key, value in self.env.items():
+            if isinstance(value, list):
+                value = os.path.pathsep.join(value)
             if key == 'PATH':
                 env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
             else:
@@ -728,7 +824,9 @@ class ClientConfig:
         return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
-        path = uri_to_filename(uri)
+        scheme, path = parse_uri(uri)
+        if scheme != "file":
+            raise ValueError("{}: {} URI scheme is unsupported".format(uri, scheme))
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_remote_to_local(path)

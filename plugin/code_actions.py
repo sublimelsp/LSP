@@ -11,6 +11,7 @@ from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, Sequence
 from .core.views import entire_content_region
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 import sublime
@@ -56,8 +57,11 @@ class CodeActionsCollector:
 
     def _collect_response(self, config_name: str, actions: CodeActionsResponse) -> None:
         self._response_count += 1
-        self._commands_by_config[config_name] = actions or []
+        self._commands_by_config[config_name] = self._get_enabled_actions(actions or [])
         self._notify_if_all_finished()
+
+    def _get_enabled_actions(self, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
+        return [action for action in actions if not action.get('disabled')]
 
     def _notify_if_all_finished(self) -> None:
         if self._all_requested and self._request_count == self._response_count:
@@ -97,7 +101,12 @@ class CodeActionsManager:
         """
         Requests code actions on save.
         """
-        self._request_async(view, entire_content_region(view), [], False, actions_handler, on_save_actions)
+        listener = windows.listener_for_view(view)
+        if not listener:
+            return
+        region = entire_content_region(view)
+        session_buffer_diagnostics, _ = listener.diagnostics_intersecting_region_async(region)
+        self._request_async(view, region, session_buffer_diagnostics, False, actions_handler, on_save_actions)
 
     def _request_async(
         self,
@@ -108,6 +117,7 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> None:
+        location_cache_key = None
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(
@@ -125,26 +135,26 @@ class CodeActionsManager:
             listener = windows.listener_for_view(view)
             if listener:
                 for session in listener.sessions_async('codeActionProvider'):
+                    diagnostics = []  # type: Sequence[Diagnostic]
+                    for sb, diags in session_buffer_diagnostics:
+                        if sb.session == session:
+                            diagnostics = diags
+                            break
                     if on_save_actions:
                         supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
-                            params = text_document_code_action_params(view, region, [], matching_kinds)
+                            params = text_document_code_action_params(view, region, diagnostics, matching_kinds)
                             request = Request.codeAction(params, view)
                             session.send_request_async(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
-                        diagnostics = []  # type: Sequence[Diagnostic]
-                        for sb, diags in session_buffer_diagnostics:
-                            if sb.session == session:
-                                diagnostics = diags
-                                break
                         if only_with_diagnostics and not diagnostics:
                             continue
                         params = text_document_code_action_params(view, region, diagnostics)
                         request = Request.codeAction(params, view)
                         session.send_request_async(request, collector.create_collector(session.config.name))
-        if use_cache:
+        if location_cache_key:
             self._response_cache = (location_cache_key, collector)
 
 
@@ -265,7 +275,7 @@ class LspCodeActionsCommand(LspTextCommand):
         only_kinds: Optional[List[str]] = None,
         commands_by_config: Optional[CodeActionsByConfigName] = None
     ) -> None:
-        self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
+        self.commands = []  # type: List[Tuple[str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         if commands_by_config:
             self.handle_responses_async(commands_by_config, run_first=True)
@@ -290,19 +300,23 @@ class LspCodeActionsCommand(LspTextCommand):
         else:
             self.show_code_actions()
 
-    def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
+    def combine_commands(self) -> 'List[Tuple[str, CodeActionOrCommand]]':
         results = []
         for config, commands in self.commands_by_config.items():
             for command in commands:
-                results.append((config, command['title'], command))
+                results.append((config, command))
         return results
 
     def show_code_actions(self) -> None:
         if len(self.commands) > 0:
-            items = [command[1] for command in self.commands]
             window = self.view.window()
             if window:
-                window.show_quick_panel(items, self.handle_select, placeholder="Code action")
+                items, selected_index = format_code_actions_for_quick_panel([command[1] for command in self.commands])
+                window.show_quick_panel(
+                    items,
+                    self.handle_select,
+                    selected_index=selected_index,
+                    placeholder="Code action")
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
@@ -314,7 +328,7 @@ class LspCodeActionsCommand(LspTextCommand):
                 session = self.session_by_name(selected[0])
                 if session:
                     name = session.config.name
-                    session.run_code_action_async(selected[2], progress=True).then(
+                    session.run_code_action_async(selected[1], progress=True).then(
                         lambda resp: self.handle_response_async(name, resp))
 
             sublime.set_timeout_async(run_async)

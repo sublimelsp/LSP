@@ -30,15 +30,18 @@
               "type": "object",
               "examples": [
                 {
-                  "pattern": "{**/*.js,**/*.ts,**/*.json}",
-                  "events": ["create", "change", "delete"],
-                  "ignores": ["**/.git/**", "**/node_modules/**", "**/.hg/**"]
+                  "patterns": ["{**/*.js,**/*.ts,**/*.json}"],
                 }
               ],
               "additionalProperties": false,
+              "required": ["patterns"],
               "properties": {
-                "pattern": {
-                  "type": "string"
+                "patterns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true
                 },
                 "events": {
                   "type": "array",
@@ -106,9 +109,20 @@
               "type": "object",
               "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
               "additionalProperties": {
-                "type": "string",
-                "markdownDescription": "The value for this environment variable."
-              },
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "markdownDescription": "The value for this environment variable."
+                  },
+                  {
+                    "type": "array",
+                    "markdownDescription": "A list of values. The list will be joined into a string with your native file system's path separator. For example, `[\"a\", \"b\"]` will turn into `\"a;b\"` on Windows.",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
             },
             "ClientSelector": {
               // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373
@@ -298,18 +312,60 @@
               "markdownDescription": "Add an additional delay when the auto-complete widget is currently visible. Just like `\"diagnostics_delay_ms\"`, the unit is milliseconds. The total amount of delay would be `diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms`."
             },
             "diagnostics_highlight_style": {
-              "enum": [],
-              "deprecationMessage": "Use \"show_diagnostics_highlights\" instead",
+              "oneOf": [
+                {
+                  "enum": ["box", "underline", "stippled", "squiggly", ""],
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "default": "squiggly"
+                    },
+                    "warning": {
+                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "default": "squiggly"
+                    },
+                    "info": {
+                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "default": "stippled"
+                    },
+                    "hint": {
+                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "default": "stippled"
+                    },
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "default": {
+                "error": "squiggly",
+                "warning": "squiggly",
+                "info": "stippled",
+                "hint": "stippled"
+              },
+              "markdownDescription": "Highlight style of code diagnostics.\nCan be a string, or a mapping of string->string for severity-based styling.\nValid string values are `\"box\"`, `\"underline\"`, `\"stippled\"`, `\"squiggly\"` or the empty string (`\"\"`).\nWhen set to a valid string value, all severities will use that style.\nWhen set to the empty string (`\"\"`), no diagnostics are drawn.\nWhen disabled, gutter markers are still drawn, unless `\"diagnostics_gutter_marker\"` is set to `\"\"`.\nDiagnostics which span multiple lines are always drawn with the `box` style (See `\"show_multiline_diagnostics_highlights\"`)."
             },
             "document_highlight_style": {
               "enum": [
-                "fill",
+                "background",
                 "underline",
                 "stippled",
                 ""
               ],
               "default": "underline",
-              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/customization/#document-highlights for how to customize the color."
+            },
+            "hover_highlight_style": {
+              "enum": [
+                "background",
+                "underline",
+                "stippled",
+                ""
+              ],
+              "default": "",
+              "markdownDescription": "Highlight style of the word or range for which a hover popup is shown.\n\nSee https://lsp.sublimetext.io/customization/#hover-highlights for how to customize the color."
             },
             "diagnostics_gutter_marker": {
               "enum": [
@@ -321,6 +377,20 @@
               ],
               "default": "dot",
               "markdownDescription": "Gutter marker for code diagnostics."
+            },
+            "link_highlight_style": {
+              "enum": [
+                "underline",
+                "none",
+                "disabled"
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlight style of links to internal or external resources, like another text document or a web site."
+            },
+            "semantic_highlighting": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Enable semantic highlighting in addition to standard syntax highlighting."
             },
             "show_code_actions": {
               "enum": [
@@ -355,8 +425,12 @@
             },
             "show_diagnostics_highlights": {
               "type": "boolean",
+              "deprecationMessage": "Use \"diagnostics_highlight_style\" instead",
+            },
+            "show_multiline_diagnostics_highlights": {
+              "type": "boolean",
               "default": true,
-              "markdownDescription": "Show diagnostics (error/warning squigglies) in the view. When disabled, gutter markers are still drawn, unless `\"diagnostics_gutter_marker\"` is set to `\"\"`."
+              "markdownDescription": "Show diagnostics spanning multiline diagnostics (as outlines) in the view. See also: `\"diagnostics_highlight_style\"`."
             },
             "show_symbol_action_links": {
               "type": "boolean",
@@ -450,7 +524,12 @@
                 "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
-            }
+            },
+            "show_inlay_hints": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names."
+            },
           },
           "additionalProperties": false
         }

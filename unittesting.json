@@ -1,6 +1,6 @@
 {
     "deferred": true,
-    "verbosity": 0,
+    "verbosity": 2,
     "capture_console": true,
     "failfast": false,
     "reload_package_on_testing": false,

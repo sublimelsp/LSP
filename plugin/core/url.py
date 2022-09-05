@@ -50,15 +50,24 @@ def parse_uri(uri: str) -> Tuple[str, str]:
     if parsed.scheme == "file":
         path = url2pathname(parsed.path)
         if os.name == 'nt':
+            netloc = url2pathname(parsed.netloc)
             path = path.lstrip("\\")
             path = re.sub(r"^([a-z]):", _uppercase_driveletter, path)
-            if parsed.netloc:
+            if netloc:
                 # Convert to UNC path
-                return parsed.scheme, "\\\\{}\\{}".format(parsed.netloc, path)
+                return parsed.scheme, "\\\\{}\\{}".format(netloc, path)
             else:
                 return parsed.scheme, path
         return parsed.scheme, path
     return parsed.scheme, uri
+
+
+def unparse_uri(parsed_uri: Tuple[str, str]) -> str:
+    """
+    Reverse of `parse_uri()`.
+    """
+    scheme, path = parsed_uri
+    return filename_to_uri(path) if scheme == "file" else path
 
 
 def _to_resource_uri(path: str, prefix: str) -> str:

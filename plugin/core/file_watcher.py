@@ -4,7 +4,6 @@ from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
 
-DEFAULT_IGNORES = ['**/.git/**', '**/node_modules/**', '**/.hg/**']
 DEFAULT_KIND = WatchKindCreate | WatchKindChange | WatchKindDelete
 
 FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
@@ -55,7 +54,7 @@ class FileWatcher(metaclass=ABCMeta):
     def create(
         cls,
         root_path: str,
-        pattern: str,
+        patterns: List[str],
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
@@ -63,7 +62,7 @@ class FileWatcher(metaclass=ABCMeta):
         """
         Creates a new instance of the file watcher.
 
-        :param pattern: The glob pattern to enable watching for.
+        :param patterns: The list of glob pattern to enable watching for.
         :param events: The type of events that should be watched.
         :param ignores: The list of glob patterns that should excluded from file watching.
 

@@ -61,8 +61,21 @@
         "command": "lsp_symbol_implementation"
       },
       {
+        "caption": "LSP: Goto Diagnostic…",
+        "command": "lsp_goto_diagnostic",
+        "args": {"uri": "$view_uri"}
+      },
+      {
+        "caption": "LSP: Goto Diagnostic in Project…",
+        "command": "lsp_goto_diagnostic"
+      },
+      {
         "caption": "LSP: Find References",
         "command": "lsp_symbol_references"
+      },
+      {
+        "caption": "LSP: Follow Link",
+        "command": "lsp_open_link"
       }
     ]
   },

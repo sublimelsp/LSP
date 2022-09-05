@@ -1,0 +1,17 @@
+=> 1.11.0
+
+# New Helper Packages
+
+- LSP-volar: https://packagecontrol.io/packages/LSP-volar
+- LSP-Bicep: https://packagecontrol.io/packages/LSP-Bicep
+- LSP-rust-analyzer: https://packagecontrol.io/packages/LSP-rust-analyzer
+
+# Fixes and Features
+
+- Generalize implementation of the transport (#1847) (Rafał Chłodnicki)
+- use config_name, because session.config.name can change (Предраг Николић)
+- Remove obsolete dependencies (#1853) (deathaxe)
+- Ensure lsp_save actually runs when context is active for keybinding (#1852) (jwortmann)
+- Ensure the process is killed if it didn't exit within 1 second (Rafal Chlodnicki)
+- Send hover request to all sessions that supports hoverProvider (#1845) (Предраг Николић)
+- Clear undo stack on every panel mutation (#1841) (Raoul Wols)

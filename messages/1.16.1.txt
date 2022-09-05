@@ -1,0 +1,5 @@
+=> 1.16.1
+
+# Features and Fixes
+
+- Fix missing logs in the logging panel (Raoul Wols)

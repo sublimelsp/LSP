@@ -1,0 +1,5 @@
+=> 1.12.1
+
+# Fixes
+
+- Revert "Don't allow old nested dict style keys anymore (#1865)" due to regression. Pending better fix.

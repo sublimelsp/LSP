@@ -6,13 +6,13 @@ from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request
+from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
-from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -20,6 +20,7 @@ import functools
 import sublime
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+HOVER_HIGHLIGHT_KEY = "lsp_hover_highlight"
 
 
 class SessionView:
@@ -33,18 +34,21 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
+    CODE_ACTIONS_KEY = "lsp_code_action"
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
-        self.view = listener.view
-        self.session = session
+        self._view = listener.view
+        self._session = session
+        self._initialize_region_keys()
         self.active_requests = {}  # type: Dict[int, Request]
-        self.listener = ref(listener)
+        self._listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
-        self._code_lenses = CodeLensView(self.view)
-        settings = self.view.settings()
-        buffer_id = self.view.buffer_id()
+        self._code_lenses = CodeLensView(self._view)
+        self.code_lenses_needs_refresh = False
+        settings = self._view.settings()
+        buffer_id = self._view.buffer_id()
         key = (id(session), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
@@ -52,15 +56,15 @@ class SessionView:
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
-        self.session_buffer = session_buffer
+        self._session_buffer = session_buffer
         session.register_session_view_async(self)
-        session.config.set_view_status(self.view, "")
-        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+        session.config.set_view_status(self._view, "")
+        if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
 
-    def __del__(self) -> None:
+    def on_before_remove(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         self._code_lenses.clear_view()
@@ -77,6 +81,65 @@ class SessionView:
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self.view.erase_regions(self.diagnostics_key(severity, False))
             self.view.erase_regions(self.diagnostics_key(severity, True))
+        self.view.erase_regions("lsp_document_link")
+        self.session_buffer.remove_session_view(self)
+
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    @property
+    def view(self) -> sublime.View:
+        return self._view
+
+    @property
+    def listener(self) -> 'ref[AbstractViewListener]':
+        return self._listener
+
+    @property
+    def session_buffer(self) -> SessionBuffer:
+        return self._session_buffer
+
+    def _is_listener_alive(self) -> bool:
+        return bool(self.listener())
+
+    def _initialize_region_keys(self) -> None:
+        """
+        Initialize all region keys for the View.add_regions method to enforce a certain draw order for overlapping
+        diagnostics, semantic tokens, document highlights, and gutter icons. The draw order seems to follow the
+        following rules:
+          - inline decorations (underline & background) from region keys which were initialized _last_ are drawn on top
+          - gutter icons from region keys which were initialized _first_ are drawn
+        For more context, see https://github.com/sublimelsp/LSP/issues/1593.
+        """
+        r = [sublime.Region(0, 0)]
+        document_highlight_style = userprefs().document_highlight_style
+        hover_highlight_style = userprefs().hover_highlight_style
+        document_highlight_kinds = ["text", "read", "write"]
+        line_modes = ["m", "s"]
+        self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
+        for key in range(1, 100):
+            self.view.add_regions("lsp_semantic_{}".format(key), r)
+        if document_highlight_style in ("background", "fill"):
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        if hover_highlight_style in ("background", "fill"):
+            self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
+        for severity in range(1, 5):
+            for mode in line_modes:
+                for tag in range(1, 3):
+                    self.view.add_regions("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag), r)
+        self.view.add_regions("lsp_document_link", r)
+        for severity in range(1, 5):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+        if document_highlight_style in ("underline", "stippled"):
+            for kind in document_highlight_kinds:
+                for mode in line_modes:
+                    self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
+        if hover_highlight_style in ("underline", "stippled"):
+            self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
@@ -202,11 +265,12 @@ class SessionView:
         return None
 
     def present_diagnostics_async(self) -> None:
-        flags = 0 if userprefs().show_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
         for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][4] if flags == 0 else flags, False)
-            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][5] if flags == 0 else flags, True)
+            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], False)
+            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], True)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()
@@ -294,8 +358,7 @@ class SessionView:
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
-        self._code_lenses.clear_annotations()
-        if not isinstance(response, list):
+        if not self._is_listener_alive() or not isinstance(response, list):
             return
         self._code_lenses.handle_response(self.session.config.name, response)
         self.resolve_visible_code_lenses_async()
@@ -306,16 +369,22 @@ class SessionView:
             return
         if self._code_lenses.is_empty():
             return
-        promises = []  # type: List[Promise[None]]
-        for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
-            callback = functools.partial(code_lens.resolve, self.view)
-            promise = self.session.send_request_task(
-                Request("codeLens/resolve", code_lens.data, self.view)
-            ).then(callback)
-            promises.append(promise)
+        promises = [Promise.resolve(None)]  # type: List[Promise[None]]
+        if self.session.get_capability('codeLensProvider.resolveProvider'):
+            for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
+                request = Request("codeLens/resolve", code_lens.data, self.view)
+                callback = functools.partial(code_lens.resolve, self.view)
+                promise = self.session.send_request_task(request).then(callback)
+                promises.append(promise)
         mode = userprefs().show_code_lens
-        render = functools.partial(self._code_lenses.render, mode)
-        Promise.all(promises).then(lambda _: sublime.set_timeout(render))
+        Promise.all(promises).then(lambda _: self._on_code_lenses_resolved_async(mode))
+
+    def _on_code_lenses_resolved_async(self, mode: str) -> None:
+        if self._is_listener_alive():
+            sublime.set_timeout(lambda: self._code_lenses.render(mode))
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.code_lenses_needs_refresh = needs_refresh
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

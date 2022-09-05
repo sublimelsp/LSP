@@ -1,18 +1,28 @@
 from .css import css as lsp_css
+from .protocol import CodeAction
+from .protocol import Command
 from .protocol import CompletionItem
+from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
+from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import MarkedString
+from .protocol import MarkupContent
 from .protocol import Notification
 from .protocol import Point
 from .protocol import Position
 from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import Request
+from .protocol import SymbolKind
+from .protocol import TextDocumentIdentifier
+from .protocol import TextDocumentPositionParams
 from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
@@ -28,6 +38,10 @@ import sublime
 import sublime_plugin
 import tempfile
 
+MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
+
+DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 DIAGNOSTIC_SEVERITY = [
@@ -38,65 +52,204 @@ DIAGNOSTIC_SEVERITY = [
     ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
 ]  # type: List[Tuple[str, str, str, str, int, int]]
 
-# The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
-SYMBOL_KINDS = [
-    # ST Kind                    Icon  Display Name      ST Scope
-    (sublime.KIND_ID_NAVIGATION, "f", "File",           "string"),
-    (sublime.KIND_ID_NAMESPACE,  "m", "Module",         "entity.name.namespace"),
-    (sublime.KIND_ID_NAMESPACE,  "n", "Namespace",      "entity.name.namespace"),
-    (sublime.KIND_ID_NAMESPACE,  "p", "Package",        "entity.name.namespace"),
-    (sublime.KIND_ID_TYPE,       "c", "Class",          "entity.name.class"),
-    (sublime.KIND_ID_FUNCTION,   "m", "Method",         "entity.name.function"),
-    (sublime.KIND_ID_VARIABLE,   "p", "Property",       "variable.other.member"),
-    (sublime.KIND_ID_VARIABLE,   "f", "Field",          "variable.other.member"),
-    (sublime.KIND_ID_FUNCTION,   "c", "Constructor",    "entity.name.function.constructor"),
-    (sublime.KIND_ID_TYPE,       "e", "Enum",           "entity.name.enum"),
-    (sublime.KIND_ID_VARIABLE,   "i", "Interface",      "entity.name.interface"),
-    (sublime.KIND_ID_FUNCTION,   "f", "Function",       "entity.name.function"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Variable",       "variable.other.readwrite"),
-    (sublime.KIND_ID_VARIABLE,   "c", "Constant",       "variable.other.constant"),
-    (sublime.KIND_ID_MARKUP,     "s", "String",         "string"),
-    (sublime.KIND_ID_VARIABLE,   "n", "Number",         "constant.numeric"),
-    (sublime.KIND_ID_VARIABLE,   "b", "Boolean",        "constant.language"),
-    (sublime.KIND_ID_TYPE,       "a", "Array",          "meta.sequence"),  # [scope taken from JSON.sublime-syntax]
-    (sublime.KIND_ID_TYPE,       "o", "Object",         "meta.mapping"),  # [scope taken from JSON.sublime-syntax]
-    (sublime.KIND_ID_NAVIGATION, "k", "Key",            "meta.mapping.key string"),  # [from JSON.sublime-syntax]
-    (sublime.KIND_ID_VARIABLE,   "n", "Null",           "constant.language"),
-    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member",    "constant.other.enum"),  # Based on {Java,C#}.sublime-syntax
-    (sublime.KIND_ID_TYPE,       "s", "Struct",         "entity.name.struct"),
-    (sublime.KIND_ID_TYPE,       "e", "Event",          "storage.modifier"),   # [scope taken from C#.sublime-syntax]
-    (sublime.KIND_ID_FUNCTION,   "o", "Operator",       "keyword.operator"),
-    (sublime.KIND_ID_TYPE,       "t", "Type Parameter", "storage.type"),
-]
+# sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem
+# https://www.sublimetext.com/docs/api_reference.html#sublime.Kind
+KIND_ARRAY = (sublime.KIND_ID_TYPE, "a", "Array")
+KIND_BOOLEAN = (sublime.KIND_ID_VARIABLE, "b", "Boolean")
+KIND_CLASS = (sublime.KIND_ID_TYPE, "c", "Class")
+KIND_COLOR = (sublime.KIND_ID_MARKUP, "c", "Color")
+KIND_CONSTANT = (sublime.KIND_ID_VARIABLE, "c", "Constant")
+KIND_CONSTRUCTOR = (sublime.KIND_ID_FUNCTION, "c", "Constructor")
+KIND_ENUM = (sublime.KIND_ID_TYPE, "e", "Enum")
+KIND_ENUMMEMBER = (sublime.KIND_ID_VARIABLE, "e", "Enum Member")
+KIND_EVENT = (sublime.KIND_ID_FUNCTION, "e", "Event")
+KIND_FIELD = (sublime.KIND_ID_VARIABLE, "f", "Field")
+KIND_FILE = (sublime.KIND_ID_NAVIGATION, "f", "File")
+KIND_FOLDER = (sublime.KIND_ID_NAVIGATION, "f", "Folder")
+KIND_FUNCTION = (sublime.KIND_ID_FUNCTION, "f", "Function")
+KIND_INTERFACE = (sublime.KIND_ID_TYPE, "i", "Interface")
+KIND_KEY = (sublime.KIND_ID_NAVIGATION, "k", "Key")
+KIND_KEYWORD = (sublime.KIND_ID_KEYWORD, "k", "Keyword")
+KIND_METHOD = (sublime.KIND_ID_FUNCTION, "m", "Method")
+KIND_MODULE = (sublime.KIND_ID_NAMESPACE, "m", "Module")
+KIND_NAMESPACE = (sublime.KIND_ID_NAMESPACE, "n", "Namespace")
+KIND_NULL = (sublime.KIND_ID_VARIABLE, "n", "Null")
+KIND_NUMBER = (sublime.KIND_ID_VARIABLE, "n", "Number")
+KIND_OBJECT = (sublime.KIND_ID_TYPE, "o", "Object")
+KIND_OPERATOR = (sublime.KIND_ID_KEYWORD, "o", "Operator")
+KIND_PACKAGE = (sublime.KIND_ID_NAMESPACE, "p", "Package")
+KIND_PROPERTY = (sublime.KIND_ID_VARIABLE, "p", "Property")
+KIND_REFERENCE = (sublime.KIND_ID_NAVIGATION, "r", "Reference")
+KIND_SNIPPET = (sublime.KIND_ID_SNIPPET, "s", "Snippet")
+KIND_STRING = (sublime.KIND_ID_VARIABLE, "s", "String")
+KIND_STRUCT = (sublime.KIND_ID_TYPE, "s", "Struct")
+KIND_TEXT = (sublime.KIND_ID_MARKUP, "t", "Text")
+KIND_TYPEPARAMETER = (sublime.KIND_ID_TYPE, "t", "Type Parameter")
+KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
+KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
+KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
-COMPLETION_KINDS = [
-    # ST Kind                    Icon Display Name
-    (sublime.KIND_ID_MARKUP,     "t", "Text"),
-    (sublime.KIND_ID_FUNCTION,   "m", "Method"),
-    (sublime.KIND_ID_FUNCTION,   "f", "Function"),
-    (sublime.KIND_ID_FUNCTION,   "c", "Constructor"),
-    (sublime.KIND_ID_VARIABLE,   "f", "Field"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Variable"),
-    (sublime.KIND_ID_TYPE,       "c", "Class"),
-    (sublime.KIND_ID_TYPE,       "i", "Interface"),
-    (sublime.KIND_ID_NAMESPACE,  "m", "Module"),
-    (sublime.KIND_ID_VARIABLE,   "p", "Property"),
-    (sublime.KIND_ID_VARIABLE,   "u", "Unit"),
-    (sublime.KIND_ID_VARIABLE,   "v", "Value"),
-    (sublime.KIND_ID_TYPE,       "e", "Enum"),
-    (sublime.KIND_ID_KEYWORD,    "k", "Keyword"),
-    (sublime.KIND_ID_SNIPPET,    "s", "Snippet"),
-    (sublime.KIND_ID_MARKUP,     "c", "Color"),
-    (sublime.KIND_ID_NAVIGATION, "f", "File"),
-    (sublime.KIND_ID_NAVIGATION, "r", "Reference"),
-    (sublime.KIND_ID_NAMESPACE,  "f", "Folder"),
-    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member"),
-    (sublime.KIND_ID_VARIABLE,   "c", "Constant"),
-    (sublime.KIND_ID_TYPE,       "s", "Struct"),
-    (sublime.KIND_ID_TYPE,       "e", "Event"),
-    (sublime.KIND_ID_KEYWORD,    "o", "Operator"),
-    (sublime.KIND_ID_TYPE,       "t", "Type Parameter"),
-]
+KIND_QUICKFIX = (sublime.KIND_ID_COLOR_YELLOWISH, "f", "QuickFix")
+KIND_REFACTOR = (sublime.KIND_ID_COLOR_CYANISH, "r", "Refactor")
+KIND_SOURCE = (sublime.KIND_ID_COLOR_PURPLISH, "s", "Source")
+
+KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
+
+COMPLETION_KINDS = {
+    CompletionItemKind.Text: KIND_TEXT,
+    CompletionItemKind.Method: KIND_METHOD,
+    CompletionItemKind.Function: KIND_FUNCTION,
+    CompletionItemKind.Constructor: KIND_CONSTRUCTOR,
+    CompletionItemKind.Field: KIND_FIELD,
+    CompletionItemKind.Variable: KIND_VARIABLE,
+    CompletionItemKind.Class: KIND_CLASS,
+    CompletionItemKind.Interface: KIND_INTERFACE,
+    CompletionItemKind.Module: KIND_MODULE,
+    CompletionItemKind.Property: KIND_PROPERTY,
+    CompletionItemKind.Unit: KIND_UNIT,
+    CompletionItemKind.Value: KIND_VALUE,
+    CompletionItemKind.Enum: KIND_ENUM,
+    CompletionItemKind.Keyword: KIND_KEYWORD,
+    CompletionItemKind.Snippet: KIND_SNIPPET,
+    CompletionItemKind.Color: KIND_COLOR,
+    CompletionItemKind.File: KIND_FILE,
+    CompletionItemKind.Reference: KIND_REFERENCE,
+    CompletionItemKind.Folder: KIND_FOLDER,
+    CompletionItemKind.EnumMember: KIND_ENUMMEMBER,
+    CompletionItemKind.Constant: KIND_CONSTANT,
+    CompletionItemKind.Struct: KIND_STRUCT,
+    CompletionItemKind.Event: KIND_EVENT,
+    CompletionItemKind.Operator: KIND_OPERATOR,
+    CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+SYMBOL_KINDS = {
+    SymbolKind.File: KIND_FILE,
+    SymbolKind.Module: KIND_MODULE,
+    SymbolKind.Namespace: KIND_NAMESPACE,
+    SymbolKind.Package: KIND_PACKAGE,
+    SymbolKind.Class: KIND_CLASS,
+    SymbolKind.Method: KIND_METHOD,
+    SymbolKind.Property: KIND_PROPERTY,
+    SymbolKind.Field: KIND_FIELD,
+    SymbolKind.Constructor: KIND_CONSTRUCTOR,
+    SymbolKind.Enum: KIND_ENUM,
+    SymbolKind.Interface: KIND_INTERFACE,
+    SymbolKind.Function: KIND_FUNCTION,
+    SymbolKind.Variable: KIND_VARIABLE,
+    SymbolKind.Constant: KIND_CONSTANT,
+    SymbolKind.String: KIND_STRING,
+    SymbolKind.Number: KIND_NUMBER,
+    SymbolKind.Boolean: KIND_BOOLEAN,
+    SymbolKind.Array: KIND_ARRAY,
+    SymbolKind.Object: KIND_OBJECT,
+    SymbolKind.Key: KIND_KEY,
+    SymbolKind.Null: KIND_NULL,
+    SymbolKind.EnumMember: KIND_ENUMMEMBER,
+    SymbolKind.Struct: KIND_STRUCT,
+    SymbolKind.Event: KIND_EVENT,
+    SymbolKind.Operator: KIND_OPERATOR,
+    SymbolKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+CODE_ACTION_KINDS = {
+    "quickfix": KIND_QUICKFIX,
+    "refactor": KIND_REFACTOR,
+    "source": KIND_SOURCE
+}
+
+SYMBOL_KIND_SCOPES = {
+    SymbolKind.File: "string",
+    SymbolKind.Module: "entity.name.namespace",
+    SymbolKind.Namespace: "entity.name.namespace",
+    SymbolKind.Package: "entity.name.namespace",
+    SymbolKind.Class: "entity.name.class",
+    SymbolKind.Method: "entity.name.function",
+    SymbolKind.Property: "variable.other.member",
+    SymbolKind.Field: "variable.other.member",
+    SymbolKind.Constructor: "entity.name.function.constructor",
+    SymbolKind.Enum: "entity.name.enum",
+    SymbolKind.Interface: "entity.name.interface",
+    SymbolKind.Function: "entity.name.function",
+    SymbolKind.Variable: "variable.other",
+    SymbolKind.Constant: "variable.other.constant",
+    SymbolKind.String: "string",
+    SymbolKind.Number: "constant.numeric",
+    SymbolKind.Boolean: "constant.language.boolean",
+    SymbolKind.Array: "meta.sequence",
+    SymbolKind.Object: "meta.mapping",
+    SymbolKind.Key: "meta.mapping.key string",
+    SymbolKind.Null: "constant.language.null",
+    SymbolKind.EnumMember: "constant.other.enum",
+    SymbolKind.Struct: "entity.name.struct",
+    SymbolKind.Event: "entity.name.function",
+    SymbolKind.Operator: "keyword.operator",
+    SymbolKind.TypeParameter: "variable.parameter.type"
+}
+
+DOCUMENT_HIGHLIGHT_KINDS = {
+    DocumentHighlightKind.Text: "text",
+    DocumentHighlightKind.Read: "read",
+    DocumentHighlightKind.Write: "write"
+}
+
+DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
+    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
+    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
+    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
+}
+
+SEMANTIC_TOKENS_MAP = {
+    "namespace": "variable.other.namespace.lsp",
+    "namespace.declaration": "entity.name.namespace.lsp",
+    "namespace.definition": "entity.name.namespace.lsp",
+    "type": "storage.type.lsp",
+    "type.declaration": "entity.name.type.lsp",
+    "type.defaultLibrary": "support.type.lsp",
+    "type.definition": "entity.name.type.lsp",
+    "class": "storage.type.class.lsp",
+    "class.declaration": "entity.name.class.lsp",
+    "class.defaultLibrary": "support.class.lsp",
+    "class.definition": "entity.name.class.lsp",
+    "enum": "variable.other.enum.lsp",
+    "enum.declaration": "entity.name.enum.lsp",
+    "enum.definition": "entity.name.enum.lsp",
+    "interface": "entity.other.inherited-class.lsp",
+    "interface.declaration": "entity.name.interface.lsp",
+    "interface.definition": "entity.name.interface.lsp",
+    "struct": "storage.type.struct.lsp",
+    "struct.declaration": "entity.name.struct.lsp",
+    "struct.defaultLibrary": "support.struct.lsp",
+    "struct.definition": "entity.name.struct.lsp",
+    "typeParameter": "variable.parameter.generic.lsp",
+    "parameter": "variable.parameter.lsp",
+    "variable": "variable.other.lsp",
+    "variable.readonly": "variable.other.constant.lsp",
+    "property": "variable.other.property.lsp",
+    "enumMember": "constant.other.enum.lsp",
+    "event": "entity.name.function.lsp",
+    "function": "variable.function.lsp",
+    "function.declaration": "entity.name.function.lsp",
+    "function.defaultLibrary": "support.function.builtin.lsp",
+    "function.definition": "entity.name.function.lsp",
+    "method": "variable.function.lsp",
+    "method.declaration": "entity.name.function.lsp",
+    "method.defaultLibrary": "support.function.builtin.lsp",
+    "method.definition": "entity.name.function.lsp",
+    "macro": "variable.macro.lsp",
+    "macro.declaration": "entity.name.macro.lsp",
+    "macro.defaultLibrary": "support.macro.lsp",
+    "macro.definition": "entity.name.macro.lsp",
+    "keyword": "keyword.lsp",
+    "modifier": "storage.modifier.lsp",
+    "comment": "comment.lsp",
+    "comment.documentation": "comment.block.documentation.lsp",
+    "string": "string.lsp",
+    "number": "constant.numeric.lsp",
+    "regexp": "string.regexp.lsp",
+    "operator": "keyword.operator.lsp",
+    "decorator": "variable.annotation.lsp",
+}
 
 
 class InvalidUriSchemeException(Exception):
@@ -154,7 +307,7 @@ def offset_to_point(view: sublime.View, offset: int) -> Point:
     return Point(*view.rowcol_utf16(offset))
 
 
-def position(view: sublime.View, offset: int) -> Dict[str, Any]:
+def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
@@ -223,7 +376,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
     raise MissingUriError(view.id())
 
 
-def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> Dict[str, Any]:
+def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> TextDocumentIdentifier:
     if isinstance(view_or_uri, DocumentUri):
         uri = view_or_uri
     else:
@@ -263,8 +416,17 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict
     return {"uri": uri_from_view(view), "version": version}
 
 
-def text_document_position_params(view: sublime.View, location: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view), "position": offset_to_point(view, location).to_lsp()}
+def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
+    return {"textDocument": text_document_identifier(view), "position": position(view, location)}
+
+
+def text_document_range_params(view: sublime.View, location: int,
+                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
+    return {
+        "textDocument": text_document_identifier(view),
+        "position": position(view, location),
+        "range": region_to_range(view, region).to_lsp()
+    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
@@ -276,7 +438,7 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
     return {
         "range": {
             "start": {"line": change.a.row, "character": change.a.col_utf16},
-            "end":   {"line": change.b.row, "character": change.b.col_utf16}},
+            "end": {"line": change.b.row, "character": change.b.col_utf16}},
         "rangeLength": change.len_utf16,
         "text": change.str
     }
@@ -385,16 +547,16 @@ def text_document_code_action_params(
     diagnostics: Sequence[Diagnostic],
     on_save_actions: Optional[Sequence[str]] = None
 ) -> Dict[str, Any]:
-    params = {
+    context = {
+        "diagnostics": diagnostics
+    }  # type: Dict[str, Any]
+    if on_save_actions:
+        context['only'] = on_save_actions
+    return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),
-        "context": {
-            "diagnostics": diagnostics
-        }
+        "context": context
     }
-    if on_save_actions:
-        params['context']['only'] = on_save_actions
-    return params
 
 
 # Workaround for a limited margin-collapsing capabilities of the minihtml.
@@ -417,7 +579,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         wrapper_class=wrapper_class,
         max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
         max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
-        on_navigate=on_navigate)
+        on_navigate=on_navigate,
+        on_hide=on_hide)
 
 
 def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: Optional[str] = None,
@@ -433,7 +596,12 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allowed_formats: int) -> str:
+def minihtml(
+    view: sublime.View,
+    content: Union[MarkedString, MarkupContent, List[MarkedString]],
+    allowed_formats: int,
+    language_id_map: Optional[MarkdownLangMap] = None
+) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 
@@ -504,6 +672,7 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
         frontmatter = {
             "allow_code_wrap": True,
             "markdown_extensions": [
+                "markdown.extensions.admonition",
                 {
                     "pymdownx.escapeall": {
                         "hardbreak": True,
@@ -521,6 +690,8 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
                 }
             ]
         }
+        if isinstance(language_id_map, dict):
+            frontmatter["language_map"] = language_id_map
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
         result = re.sub('(\\S)  \n', '\\1\n\n', result)
         return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
@@ -639,8 +810,31 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
                 When the last three elemenst are not optional, show an inline phantom
                 using the information given.
     """
+    formatted, code, href = diagnostic_source_and_code(diagnostic)
+    lines = diagnostic["message"].splitlines() or [""]
+    # \u200B is the zero-width space
+    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
+        diagnostic["range"]["start"]["line"] + 1,
+        diagnostic["range"]["start"]["character"] + 1,
+        format_severity(diagnostic_severity(diagnostic)),
+        lines[0],
+        formatted
+    )
+    offset = len(result) if href else None
+    for line in itertools.islice(lines, 1, None):
+        result += "\n" + 18 * " " + line
+    return result, offset, code, href
+
+
+def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
+    formatted, code, href = diagnostic_source_and_code(diagnostic)
+    if href is None or code is None:
+        return formatted
+    return formatted + code
+
+
+def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
     formatted = [diagnostic_source(diagnostic)]
-    offset = None
     href = None
     code = diagnostic.get("code")
     if code is not None:
@@ -651,20 +845,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
             href = code_description["href"]
         else:
             formatted.append(code)
-    lines = diagnostic["message"].splitlines() or [""]
-    # \u200B is the zero-width space
-    result = "{:>5}:{:<4}{:<8}{} \u200B{}".format(
-        diagnostic["range"]["start"]["line"] + 1,
-        diagnostic["range"]["start"]["character"] + 1,
-        format_severity(diagnostic_severity(diagnostic)),
-        lines[0],
-        "".join(formatted)
-    )
-    if href:
-        offset = len(result)
-    for line in itertools.islice(lines, 1, None):
-        result += "\n" + 17 * " " + line
-    return result, offset, code, href
+    return "".join(formatted), code, href
 
 
 def location_to_human_readable(
@@ -676,12 +857,15 @@ def location_to_human_readable(
     Format an LSP Location (or LocationLink) into a string suitable for a human to read
     """
     uri, position = get_uri_and_position_from_location(location)
-    scheme, parsed = parse_uri(uri)
+    scheme, _ = parse_uri(uri)
     if scheme == "file":
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):
             pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+    elif scheme == "res":
+        fmt = "{}:{}"
+        pathname = uri
     else:
         # https://tools.ietf.org/html/rfc5147
         fmt = "{}#line={}"
@@ -768,51 +952,65 @@ def format_diagnostic_for_html(
     return "".join(formatted)
 
 
-def _is_completion_item_deprecated(item: CompletionItem) -> bool:
-    if item.get("deprecated", False):
-        return True
-    tags = item.get("tags")
-    if isinstance(tags, list):
-        return CompletionItemTag.Deprecated in tags
-    return False
-
-
 def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
-    item_kind = item.get("kind")
-    if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
-        kind = COMPLETION_KINDS[item_kind - 1]
+
+    lsp_label = item['label']
+    lsp_label_details = item.get('labelDetails') or {}
+    lsp_label_detail = lsp_label_details.get('detail') or ""
+    lsp_label_description = lsp_label_details.get('description') or ""
+    lsp_filter_text = item.get('filterText') or ""
+    lsp_detail = (item.get('detail') or "").replace("\n", " ")
+
+    kind = COMPLETION_KINDS.get(item.get('kind', -1), KIND_UNSPECIFIED)
+
+    details = []  # type: List[str]
+    if can_resolve_completion_items or item.get('documentation'):
+        details.append(make_command_link('lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}))
+
+    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
+        trigger = lsp_label + lsp_label_detail
+        annotation = lsp_label_description or lsp_detail
+    elif lsp_label.startswith(lsp_filter_text):
+        trigger = lsp_label
+        annotation = lsp_detail
+        if lsp_label_detail:
+            details.append(html.escape(lsp_label + lsp_label_detail))
+        if lsp_label_description:
+            details.append(html.escape(lsp_label_description))
     else:
-        kind = sublime.KIND_AMBIGUOUS
+        trigger = lsp_filter_text
+        annotation = lsp_detail
+        details.append(html.escape(lsp_label + lsp_label_detail))
+        if lsp_label_description:
+            details.append(html.escape(lsp_label_description))
 
-    if _is_completion_item_deprecated(item):
-        kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
-
-    lsp_label = item["label"]
-    lsp_filter_text = item.get("filterText")
-    st_annotation = (item.get("detail") or "").replace('\n', ' ')
-
-    st_details = ""
-    if can_resolve_completion_items or item.get("documentation"):
-        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
-
-    if lsp_filter_text and lsp_filter_text != lsp_label:
-        st_trigger = lsp_filter_text
-        if st_details:
-            st_details += " | "
-        st_details += "<p>{}</p>".format(html.escape(lsp_label))
-    else:
-        st_trigger = lsp_label
+    if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
+        annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
 
     completion = sublime.CompletionItem.command_completion(
-        trigger=st_trigger,
-        command="lsp_select_completion_item",
+        trigger=trigger,
+        command='lsp_select_completion_item',
         args={"item": item, "session_name": session_name},
-        annotation=st_annotation,
+        annotation=annotation,
         kind=kind,
-        details=st_details)
-    if item.get("textEdit"):
+        details=" | ".join(details))
+    if item.get('textEdit'):
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
+
+
+def format_code_actions_for_quick_panel(
+    code_actions: List[Union[CodeAction, Command]]
+) -> Tuple[List[sublime.QuickPanelItem], int]:
+    items = []  # type: List[sublime.QuickPanelItem]
+    selected_index = -1
+    for idx, code_action in enumerate(code_actions):
+        lsp_kind = str(code_action.get("kind", ""))
+        kind = CODE_ACTION_KINDS.get(lsp_kind.split(".")[0], sublime.KIND_AMBIGUOUS)
+        items.append(sublime.QuickPanelItem(code_action["title"], kind=kind))
+        if code_action.get('isPreferred', False):
+            selected_index = idx
+    return items, selected_index

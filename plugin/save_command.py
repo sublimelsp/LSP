@@ -23,7 +23,7 @@ class SaveTask(metaclass=ABCMeta):
         self._on_done = on_done
         self._completed = False
         self._cancelled = False
-        self._status_key = 'lsp_save_task_timeout'
+        self._status_key = type(self).__name__
 
     def run_async(self) -> None:
         self._erase_view_status()
@@ -112,3 +112,16 @@ class LspSaveCommand(LspTextCommand):
     def _trigger_native_save(self) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
+
+
+class LspSaveAllCommand(sublime_plugin.WindowCommand):
+    def run(self) -> None:
+        done = set()
+        for view in self.window.views():
+            buffer_id = view.buffer_id()
+            if buffer_id in done:
+                continue
+            if not view.is_dirty():
+                continue
+            done.add(buffer_id)
+            view.run_command("lsp_save", None)

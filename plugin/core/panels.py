@@ -42,6 +42,14 @@ def mutable(view: sublime.View) -> Generator:
     view.set_read_only(True)
 
 
+def clear_undo_stack(view: sublime.View) -> None:
+    clear_undo_stack = getattr(view, "clear_undo_stack", None)
+    if not callable(clear_undo_stack):
+        return
+    # The clear_undo_stack method cannot be called from within a text command...
+    sublime.set_timeout(clear_undo_stack)
+
+
 class WindowPanelListener(sublime_plugin.EventListener):
 
     server_log_map = {}  # type: Dict[int, List[Tuple[str, str]]]
@@ -112,7 +120,6 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_panel command to clear the error panel.
     """
-
     def run(self, edit: sublime.Edit) -> None:
         with mutable(self.view):
             self.view.erase(edit, sublime.Region(0, self.view.size()))
@@ -133,6 +140,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         # Clear the selection
         selection = self.view.sel()
         selection.clear()
+        clear_undo_stack(self.view)
 
 
 def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
@@ -144,9 +152,9 @@ def is_server_panel_open(window: sublime.Window) -> bool:
 
 
 def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:
-    if not window.is_valid():
-        return
     window_id = window.id()
+    if not window.is_valid() or window_id not in WindowPanelListener.server_log_map:
+        return
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
     list_len = len(WindowPanelListener.server_log_map[window_id])
     if list_len >= SERVER_PANEL_MAX_LINES:
@@ -182,3 +190,4 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 erase_region = sublime.Region(0, last_region_end)
                 if not erase_region.empty():
                     self.view.erase(edit, erase_region)
+        clear_undo_stack(self.view)

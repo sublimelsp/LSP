@@ -1,7 +1,6 @@
 import os
 import sublime
 import sublime_plugin
-import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
@@ -15,7 +14,6 @@ from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
-from .plugin.core.handlers import LanguageHandler
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
@@ -23,24 +21,24 @@ from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.panels import WindowPanelListener
+from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
-from .plugin.core.protocol import Response
-from .plugin.core.protocol import WorkspaceFolder
+from .plugin.core.protocol import LocationLink
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
-from .plugin.core.sessions import method2attr
 from .plugin.core.sessions import register_plugin
-from .plugin.core.sessions import Session
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
+from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
+from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.types import ClientConfig
-from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
+from .plugin.core.typing import Any, Optional, List, Type, Dict, Union
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
+from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
@@ -51,13 +49,17 @@ from .plugin.goto import LspSymbolDeclarationCommand
 from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
+from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hover import LspHoverCommand
+from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
+from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
+from .plugin.semantic_highlighting import LspShowScopeNameCommand
 from .plugin.symbols import LspDocumentSymbolsCommand
 from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
@@ -89,65 +91,6 @@ def _register_all_plugins() -> None:
         except NotImplementedError:
             continue
         register_plugin(plugin_class, notify_listener=False)
-    # TODO: Anything below here should be removed about a month after ST4 is released.
-    language_handler_classes = []  # type: List[Type[LanguageHandler]]
-    _get_final_subclasses(LanguageHandler.__subclasses__(), language_handler_classes)
-    for language_handler_class in language_handler_classes:
-        # Create an ephemeral plugin that stores an instance of the LanguageHandler as a class instance. Custom requests
-        # and notifications will work.
-        class LanguageHandlerTransition(AbstractPlugin):
-
-            handler = language_handler_class()
-
-            @classmethod
-            def name(cls) -> str:
-                return cls.handler.name  # type: ignore
-
-            @classmethod
-            def configuration(cls) -> Tuple[sublime.Settings, str]:
-                file_base_name = cls.name()
-                if file_base_name.startswith("lsp-"):
-                    file_base_name = "LSP-" + file_base_name[len("lsp-"):]
-                settings = sublime.load_settings("{}.sublime-settings".format(file_base_name))
-                cfg = cls.handler.config  # type: ignore
-                settings.set("command", cfg.command)
-                settings.set("settings", cfg.settings.get(None))
-                if isinstance(cfg.init_options, DottedDict):
-                    init_options = cfg.init_options.get()
-                elif isinstance(cfg.init_options, dict):
-                    init_options = cfg.init_options
-                else:
-                    init_options = {}
-                settings.set("initializationOptions", init_options)
-                settings.set("selector", cfg.selector)
-                settings.set("priority_selector", cfg.priority_selector)
-                return settings, "Packages/{0}/{0}.sublime-settings".format(file_base_name)
-
-            @classmethod
-            def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                          workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
-                if hasattr(cls.handler, 'on_start'):
-                    if not cls.handler.on_start(window):  # type: ignore
-                        return "{} cannot start".format(cls.name())
-                return None
-
-            def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
-                super().__init__(weaksession)
-                if hasattr(self.handler, 'on_initialized'):
-                    self.handler.on_initialized(self)  # type: ignore
-
-            def on_notification(self, method: str, handler: Callable) -> None:
-                setattr(self, method2attr(method), handler)
-
-            def on_request(self, method: str, handler: Callable) -> None:
-                setattr(self, method2attr(method), handler)
-
-            def send_response(self, response: Response) -> None:
-                session = self.weaksession()
-                if session:
-                    session.send_response(response)
-
-        register_plugin(LanguageHandlerTransition, notify_listener=False)
 
 
 def _unregister_all_plugins() -> None:
@@ -195,13 +138,18 @@ class Listener(sublime_plugin.EventListener):
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
 
-    def on_post_move_async(self, view: sublime.View) -> None:
+    # Note: EventListener.on_post_move_async does not fire when a tab is moved out of the current window in such a way
+    # that a new window is created: https://github.com/sublimehq/sublime_text/issues/4630
+    # Hence, as a workaround we use on_pre_move, which still works in that case.
+    def on_pre_move(self, view: sublime.View) -> None:
         listeners = sublime_plugin.view_event_listeners.get(view.id())
         if not isinstance(listeners, list):
             return
         for listener in listeners:
             if isinstance(listener, DocumentSyncListener):
-                return listener.on_post_move_window_async()
+                # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
+                sublime.set_timeout_async(listener.on_post_move_window_async, 1)
+                return
 
     def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()
@@ -240,21 +188,23 @@ class LspOpenLocationCommand(sublime_plugin.TextCommand):
     def run(
         self,
         _: sublime.Edit,
-        location: Location,
+        location: Union[Location, LocationLink],
         session_name: Optional[str] = None,
         flags: int = 0,
         group: int = -1
     ) -> None:
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
 
-    def _run_async(self, location: Location, session_name: Optional[str], flags: int = 0, group: int = -1) -> None:
+    def _run_async(
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int = 0, group: int = -1
+    ) -> None:
         window = self.view.window()
         if not window:
             return
         windows.lookup(window).open_location_async(location, session_name, self.view, flags, group).then(
-            lambda success: self._handle_continuation(location, success))
+            lambda view: self._handle_continuation(location, view is not None))
 
-    def _handle_continuation(self, location: Location, success: bool) -> None:
+    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
         if not success:
             uri, _ = get_uri_and_position_from_location(location)
             message = "Failed to open {}".format(uri)

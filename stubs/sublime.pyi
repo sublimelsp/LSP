@@ -21,6 +21,8 @@ TRANSIENT = ...  # type: int
 SEMI_TRANSIENT = ...  # type: int
 FORCE_GROUP = ...  # type: int
 ADD_TO_SELECTION = ...  # type: int
+REPLACE_MRU = ...  # type: int
+CLEAR_TO_RIGHT = ...  # type: int
 IGNORECASE = ...  # type: int
 LITERAL = ...  # type: int
 MONOSPACE_FONT = ...  # type: int
@@ -76,6 +78,16 @@ LAYOUT_BLOCK = ...  # type: int
 KIND_ID_AMBIGUOUS = ...  # type: int
 KIND_ID_KEYWORD = ...  # type: int
 KIND_ID_TYPE = ...  # type: int
+KIND_ID_COLOR_DARK = ... # type: int
+KIND_ID_COLOR_LIGHT = ... # type: int
+KIND_ID_COLOR_BLUISH = ... # type: int
+KIND_ID_COLOR_CYANISH = ... # type: int
+KIND_ID_COLOR_GREENISH = ... # type: int
+KIND_ID_COLOR_ORANGISH = ... # type: int
+KIND_ID_COLOR_PINKISH = ... # type: int
+KIND_ID_COLOR_PURPLISH = ... # type: int
+KIND_ID_COLOR_REDISH = ... # type: int
+KIND_ID_COLOR_YELLOWISH = ... # type: int
 KIND_ID_FUNCTION = ...  # type: int
 KIND_ID_NAMESPACE = ...  # type: int
 KIND_ID_NAVIGATION = ...  # type: int
@@ -93,6 +105,7 @@ KIND_VARIABLE = ...  # type: Tuple[int, str, str]
 KIND_SNIPPET = ...  # type: Tuple[int, str, str]
 COMPLETION_FORMAT_TEXT = ...  # type: int
 COMPLETION_FORMAT_SNIPPET = ...  # type: int
+WANT_EVENT = ...  # type: int
 
 
 class Settings:
@@ -284,6 +297,9 @@ class Syntax:
 
 class CompletionItem:
     flags = ...  # type: int
+    details = ...  # type: str
+    annotation = ...  # type: str
+    kind = ...  # type: Tuple[int, str, str]
 
     def __init__(
             self,
@@ -389,6 +405,12 @@ class Window:
         ...
 
     def sheets(self) -> 'List[Sheet]':
+        ...
+
+    def selected_sheets(self) -> 'List[Sheet]':
+        ...
+
+    def selected_sheets_in_group(self, group: int) -> 'List[Sheet]':
         ...
 
     def views(self) -> 'List[View]':
@@ -627,6 +649,9 @@ class Sheet:
     def view(self) -> 'Optional[View]':
         ...
 
+    def is_semi_transient(self) -> bool:
+        ...
+
     def is_transient(self) -> bool:
         ...
 
@@ -642,6 +667,12 @@ class HtmlSheet:
 
     def set_contents(self, contents: str) -> None:
         ...
+
+
+class ContextStackFrame:
+    context_name = ... # type: str
+    source_file = ... # type: str
+    source_location = ... # type: Tuple[int, int]
 
 
 class View:
@@ -779,6 +810,9 @@ class View:
     def scope_name(self, pt: int) -> str:
         ...
 
+    def context_backtrace(self, pt: int) -> Union[List[ContextStackFrame], List[str]]:
+        ...
+
     def match_selector(self, pt: int, selector: str) -> bool:
         ...
 
@@ -841,7 +875,7 @@ class View:
     def show(self, x: Union[Selection, Region, int], show_surrounds: bool = ...) -> None:
         ...
 
-    def show_at_center(self, x: Union[Selection, Region, int]) -> None:
+    def show_at_center(self, x: Union[Selection, Region, int], animate: bool = True) -> None:
         ...
 
     def viewport_position(self) -> Tuple[int, int]:
@@ -1030,5 +1064,25 @@ class QuickPanelItem:
         details: Union[str, List[str]] = "",
         annotation: str = "",
         kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...
+
+
+class ListInputItem:
+    def __init__(
+        self,
+        text: str,
+        value: Any,
+        details: Union[str, List[str]] = "",
+        annotation: str = "",
+        kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...
+
+
+class Html:
+    def __init__(
+        self,
+        text: str,
     ) -> None:
         ...

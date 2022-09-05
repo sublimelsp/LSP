@@ -22,6 +22,10 @@ Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP
 
 Also see [Shell](#shell).
 
+## Bicep
+
+Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LSP-Bicep).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
@@ -56,18 +60,22 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
 ## D
 
-1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"dls"` client configuration to the `"clients"`:
+1. Install the [D Language Server](https://github.com/Pure-D/serve-d#installation).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"serve-d"` client configuration to the `"clients"`:
 
     ```json
     {
-        "clients": {
-            "dls": {
-                "enabled": true,
-                "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
-                "selector": "source.d"
-            }
-        }
+    	"clients": {
+    		"serve-d": {
+    			"enabled": true,
+    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+    			"selector": "source.d",
+    			"settings": {
+    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+    			}
+    		}
+    	}
     }
     ```
 
@@ -104,13 +112,35 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
     }
     ```
 
-## ESLint
+## F\#
 
-Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
+1. Install the [F#](https://packagecontrol.io/packages/F%23) package from Package Control for syntax highlighting.
+2. Make sure you have installed the latest [.NET SDK](https://dotnet.microsoft.com/download).
+3. Install the [FsAutoComplete](https://github.com/fsharp/FsAutoComplete) from command prompt using the following command:
 
-## Flow
+    ```
+    dotnet tool install --global fsautocomplete
+    ```
 
-Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
+4. Open `Preferences > Package Settings > LSP > Settings` and add the `"fsautocomplete"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "fsautocomplete": {
+                "enabled": true,
+                "command": ["fsautocomplete", "--background-service-enabled"],
+                "selector": "source.fsharp",
+                "initializationOptions": {
+                    "AutomaticWorkspaceInit": true
+                }
+            }
+        }
+    }
+    ```
+
+!!! info "A note about .NET Tools and $PATH"
+    If the `fsautocomplete` executable isn't on your $PATH after installing it globally, ensure the .NET global tools location (by default `$HOME/.dotnet/tools`) is on your $PATH.
 
 ## Fortran
 
@@ -135,27 +165,29 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 
 ## Go
 
-1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/README.md#installation).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"gopls"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "gopls": {
-                "enabled": true,
-                "command": ["gopls"],
-                "selector": "source.go",
-                "initializationOptions": {
-                    "experimentalWorkspaceModule": false
-                }
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LSP-gopls).
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
 
+## GDScript (Godot Engine)
+
+1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
+2. Launch the Godot Editor on the project you are working on and leave it running.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "godot-lsp": {
+                "enabled": true,
+                "command": ["/PATH/TO/godot-editor.exe"], // Update the PATH
+                "tcp_port": 6008,
+                "selector": "source.gdscript",
+            }
+        }
+    }
+    ```
 
 ## GraphQL
 
@@ -186,57 +218,52 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
 
 Follow installation instructions on [LSP-jdtls](https://github.com/sublimelsp/LSP-jdtls).
 
+## JavaScript/TypeScript
+
+See also [Vue](#vue).
+
+There are multiple options:
+
+### Deno
+
+Follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
+
+### ESLint
+
+Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
+
+### Flow
+
+Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
+
+### quick-lint-js
+
+1. Install the [quick-lint-js LSP server](https://quick-lint-js.com/install/cli/) for JavaScript.
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"quick-lint-js"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "quick-lint-js": {
+                "command": ["quick-lint-js", "--lsp-server"],
+                "enabled": true,
+                "selector": "source.js"
+            }
+        }
+    }
+    ```
+
+### TypeScript
+
+Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
+
 ## JSON
 
 Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP-json).
 
 ## Julia
 
-1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
-2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
-
-        import Pkg;
-        Pkg.add("LanguageServer")
-        Pkg.add("SymbolServer")
-
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"julials"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "julials": {
-                "enabled": true,
-                "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-              // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
-                "selector": "source.julia",
-                "settings": {
-                    // Default values from VS Code:
-                    "julia.format.calls": true,      // Format function calls
-                    "julia.format.comments": true,   // Format comments
-                    "julia.format.curly": true,      // Format braces
-                    "julia.format.docs": true,       // Format inline documentation
-                    "julia.format.indent": 4,        // Indent size for formatting
-                    "julia.format.indents": true,    // Format file indents
-                    "julia.format.iterOps": true,    // Format loop iterators
-                    "julia.format.kw": true,         // Remove spaces around = in function keywords
-                    "julia.format.lineends": false,  // [undocumented]
-                    "julia.format.ops": true,        // Format whitespace around operators
-                    "julia.format.tuples": true,     // Format tuples
-                    "julia.lint.call": false,        // Check calls against existing methods (experimental)
-                    "julia.lint.constif": true,      // Check for constant conditionals of if statements
-                    "julia.lint.datadecl": false,    // [undocumented]
-                    "julia.lint.iter": true,         // Check iterator syntax of loops
-                    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
-                    "julia.lint.modname": true,      // Check for invalid submodule names
-                    "julia.lint.nothingcomp": false, // [undocumented]
-                    "julia.lint.pirates": true,      // Check for type piracy
-                    "julia.lint.run": true,          // run the linter on active files
-                    "julia.lint.typeparam": true     // Check for unused DataType parameters
-                }
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LSP-julia).
 
 ## Kotlin
 
@@ -265,6 +292,8 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
 
+Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
+
 ## Lisp
 
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
@@ -282,9 +311,17 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
     }
     ```
 
+## Leo
+
+Follow installation instructions on [LSP-leo](https://github.com/sublimelsp/LSP-leo).
+
 ## Lua
 
 Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-lua).
+
+## Markdown
+
+Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
 ## OCaml/Reason
 
@@ -406,26 +443,7 @@ There are multiple options:
 
 ## Rust
 
-There are multiple options:
-
-### Rust Analyzer
-
-1. Download a binary from the release page of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
-2. Rename the binary to `rust-analyzer`.
-3. Make sure the binary is in your `$PATH`.
-4. Open `Preferences > Package Settings > LSP > Settings` and add the `"rust-analyzer"` client configuration to the `"clients"`:
-
-    ```json
-    {
-        "clients": {
-            "rust-analyzer": {
-                "enabled": true,
-                "command": ["rust-analyzer"],
-                "selector": "source.rust"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
 ## Scala
 
@@ -486,6 +504,35 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+## Steep
+
+1. Add the steep gem into your Gemfile and install it
+
+    ```bash
+    bundle install
+    ```
+
+2. Binstub steep executable
+
+    ```bash
+    steep binstub
+    ```
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "steep": {
+                "command": ["bin/steep", "langserver"],
+                "selector": "source.ruby | text.html.ruby",
+            }
+        }
+    }
+    ```
+
+4. Activate server for the currect project - open Command Palette `LSP: Enable Language Server in Project > steep`
+
 ## Stylelint
 
 Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).
@@ -509,8 +556,24 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 ## Terraform
 
 1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
+2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
+
+    For `terraform-ls`:
+
+    ```json
+    {
+        "clients": {
+            "terraform": {
+                "enabled": true,
+                "command": ["terraform-ls", "serve"],
+                "selector": "source.terraform"
+            }
+        }
+    }
+    ```
+
+    For `terraform-lsp`:
 
     ```json
     {
@@ -524,15 +587,17 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
     }
     ```
 
-## TypeScript / JavaScript
-
-Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
-
-For development using the Deno framework follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
-
 ## Vue
 
+There are multiple options:
+
+### Vetur
+
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
+
+### Volar
+
+Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
 
 ## Vala
 
@@ -544,6 +609,7 @@ Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-
     {
         "clients": {
             "vala-language-server": {
+                "enabled": true,
                 "command": [
                     "/path/to/vala-language-server"
                 ],
@@ -553,8 +619,7 @@ Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-
     }
     ```
 
-4. Enable the Vala Langauge Server for the project by going to `Tools > LSP > Enable Language Server In Project...`
-5. For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
+!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details."
 
 ## XML
 

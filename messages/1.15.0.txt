@@ -1,0 +1,34 @@
+# Semantic Highlighting (#1839) (jwortmann)
+
+Semantic highlighting is an advanced language server capability where the server
+can communicate token regions to highlight. This allows for accurate
+highlighting for project-dependent tokens in languages like C++ and TypeScript.
+
+There is no official ST API endpoint to communicate this information to ST. As
+such, any implementation of this feature for this package will have to resort
+to a few workarounds to make it work. For this reason the feature is disabled
+by default and should be regarded as **EXPERIMENTAL**.
+
+To enable the feature, set the "semantic_highlighting" boolean to "true" in your
+LSP.sublime-settings file. Moreover, you'll need to add a special scope rule in
+your color scheme. The built-in color schemes are overridden in this package to
+make that process easier for you.
+
+If:
+
+- you're using a color scheme that's not a default one, or
+- you want to adjust the colors for semantic tokens by applying a foreground
+  color to the individual token types, or
+- you need to finetune custom token types provided by your language server,
+
+then see the updated documentation: https://lsp.sublimetext.io/customization/#semantic-highlighting
+
+# Features and Fixes
+
+- Allow plugins to specify a custom syntax for code blocks in markdown (#1914) (Raoul Wols)
+- Call can_start() and on_pre_start() in the troubleshooting flow (#1916) (Rafał Chłodnicki)
+- Don't call the callback if the transport was closed (Rafal Chlodnicki)
+- Handle Code Lens Refresh Request (#1918) (Ayoub Benali)
+- fix types for protocols to add type safety (#1903) (Rafał Chłodnicki)
+- fix crash loop on disabling helper package of a running server (#1906) (Rafał Chłodnicki)
+- Send range with textDocument/hover when possible (#1900) (Ayoub Benali)

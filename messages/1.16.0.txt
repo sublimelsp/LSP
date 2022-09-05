@@ -1,0 +1,16 @@
+=> 1.16.0
+
+# Features and Fixes
+
+- Remove registration of the legacy LanguageHandler class (#1936) (Raoul Wols)
+- Don't use emoji for deprecated completion items icon (#1942) (Janos Wortmann)
+- Document the command for showing signature help (#1938) (Seph Soliman)
+- Fix "disable server globally" command for LSP packages (#1907) (Предраг Николић)
+- Lowercase keys for initializing semantic token regions (Janos Wortmann)
+- Show popup with code actions when hovering over lightbulb icon (#1929) (Janos Wortmann)
+- Remove more usage of uri_to_filename (#1796) (Raoul Wols)
+- Prevent semantic tokens delta request after previous error response (Janos Wortmann)
+- Announce in initialize that we augment syntax tokens (Janos Wortmann)
+- Ensure code actions lightbulb icon is on top (#1928) (Janos Wortmann)
+- Ensure view gets registered when tab is moved to create new window (#1927) (Janos Wortmann)
+- Fix lsp_show_scope_name command not working if view was dragged to new window (Janos Wortmann)

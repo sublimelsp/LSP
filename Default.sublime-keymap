@@ -1,4 +1,7 @@
 [
+    // To enable or change an existing key binding, copy it to the right view and uncomment, if needed.
+    // To change the associated key press, edit the "keys" value.
+
     // Show a list of available LSP commands
     // {
     //     "keys": ["f1"],
@@ -48,6 +51,13 @@
             }
         ]
     },
+    // Save all open files with lsp_save
+    // {
+    //     "command": "lsp_save_all",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ]
+    // },
     // Run Code Action
     // {
     //     "command": "lsp_code_actions",
@@ -121,48 +131,58 @@
     // },
     // Trigger Signature Help
     {
-        "command": "noop",
+        "command": "lsp_signature_help_show",
         "keys": [
             "primary+alt+space"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_available",
                 "operator": "equal",
-                "operand": 0
+                "operand": true
             }
         ]
     },
     // Move Up/Down in Signature Help
     {
-        "command": "noop",
+        "command": "lsp_signature_help_navigate",
+        "args": {
+            "forward": false
+        },
         "keys": [
             "up"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_multiple_choices_available",
                 "operator": "equal",
-                "operand": -1
+                "operand": true
             }
         ]
     },
     {
-        "command": "noop",
+        "command": "lsp_signature_help_navigate",
+        "args": {
+            "forward": true
+        },
         "keys": [
             "down"
         ],
         "context": [
             {
-                "key": "lsp.signature_help",
+                "key": "lsp.signature_help_multiple_choices_available",
                 "operator": "equal",
-                "operand": 1
+                "operand": true
             }
         ]
     },
     // Find References
     {
         "command": "lsp_symbol_references",
+        "args": {
+            "side_by_side": false,
+            "fallback": false
+        },
         "keys": [
             "shift+f12"
         ],
@@ -178,7 +198,9 @@
     // {
     //     "command": "lsp_symbol_definition",
     //     "args": {
-    //         "side_by_side": false
+    //         "side_by_side": false,
+    //         "force_group": true,
+    //         "fallback": false
     //     },
     //     "keys": [
     //         "f12"
@@ -200,7 +222,8 @@
     // {
     //     "command": "lsp_symbol_type_definition",
     //     "args": {
-    //         "side_by_side": false
+    //         "side_by_side": false,
+    //         "force_group": true
     //     },
     //     "keys": [
     //         "UNBOUND"
@@ -222,7 +245,8 @@
     // {
     //     "command": "lsp_symbol_declaration",
     //     "args": {
-    //         "side_by_side": false
+    //         "side_by_side": false,
+    //         "force_group": true
     //     },
     //     "keys": [
     //         "UNBOUND"
@@ -244,7 +268,8 @@
     // {
     //     "command": "lsp_symbol_implementation",
     //     "args": {
-    //         "side_by_side": false
+    //         "side_by_side": false,
+    //         "force_group": true
     //     },
     //     "keys": [
     //         "UNBOUND"
@@ -261,6 +286,23 @@
     //             "operand": false
     //         }
     //     ]
+    // },
+    // Goto Diagnostic
+    // {
+    //     "command": "lsp_goto_diagnostic",
+    //     "args": {
+    //         "uri": "$view_uri"
+    //     },
+    //     "keys": [
+    //         "f8"
+    //     ],
+    // },
+    // Goto Diagnostic in Project
+    // {
+    //     "command": "lsp_goto_diagnostic",
+    //     "keys": [
+    //         "shift+f8"
+    //     ],
     // },
     // Rename
     // {
@@ -343,6 +385,20 @@
     //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "hoverProvider"
+    //         }
+    //     ]
+    // },
+    // Follow Link
+    // {
+    //     "command": "lsp_open_link",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "documentLinkProvider"
     //         }
     //     ]
     // },

@@ -31,7 +31,7 @@ def format_document(text_command: LspTextCommand) -> Promise[FormatResponse]:
     return Promise.resolve(None)
 
 
-def apply_response_to_view(response: Optional[List[TextEdit]], view: sublime.View) -> None:
+def apply_text_edits_to_view(response: Optional[List[TextEdit]], view: sublime.View) -> None:
     edits = list(parse_text_edit(change) for change in response) if response else []
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 
@@ -66,7 +66,7 @@ class WillSaveWaitTask(SaveTask):
 
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
-            apply_response_to_view(response, self._task_runner.view)
+            apply_text_edits_to_view(response, self._task_runner.view)
         sublime.set_timeout_async(self._handle_next_session_async)
 
 
@@ -85,7 +85,7 @@ class FormattingTask(SaveTask):
 
     def _on_response(self, response: FormatResponse) -> None:
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_response_to_view(response, self._task_runner.view)
+            apply_text_edits_to_view(response, self._task_runner.view)
         sublime.set_timeout_async(self._on_complete)
 
 
@@ -105,7 +105,7 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     def on_result(self, result: FormatResponse) -> None:
         if result and not isinstance(result, Error):
-            apply_response_to_view(result, self.view)
+            apply_text_edits_to_view(result, self.view)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -125,4 +125,4 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         selection = first_selection_region(self.view)
         if session and selection is not None:
             req = text_document_range_formatting(self.view, selection)
-            session.send_request(req, lambda response: apply_response_to_view(response, self.view))
+            session.send_request(req, lambda response: apply_text_edits_to_view(response, self.view))

@@ -1,11 +1,11 @@
-from LSP.plugin.core.url import filename_to_uri, parse_uri
-from LSP.plugin.core.url import uri_to_filename
+from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.url import parse_uri
 from LSP.plugin.core.url import view_to_uri
+import os
+import sublime
 import sys
 import unittest
 import unittest.mock
-import sublime
-import os
 
 
 @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
@@ -15,11 +15,11 @@ class WindowsTests(unittest.TestCase):
         self.assertEqual("file:///C:/dir%20ectory/file.txt", filename_to_uri("c:\\dir ectory\\file.txt"))
 
     def test_converts_uri_to_path(self):
-        self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c:/dir ectory/file.txt"))
+        self.assertEqual("C:\\dir ectory\\file.txt", parse_uri("file:///c:/dir ectory/file.txt")[1])
 
     def test_converts_encoded_bad_drive_uri_to_path(self):
         # url2pathname does not understand %3A
-        self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c%3A/dir%20ectory/file.txt"))
+        self.assertEqual("C:\\dir ectory\\file.txt", parse_uri("file:///c%3A/dir%20ectory/file.txt")[1])
 
     def test_view_to_uri_with_valid_filename(self):
         view = sublime.active_window().active_view()
@@ -35,6 +35,11 @@ class WindowsTests(unittest.TestCase):
         self.assertEqual(scheme, "file")
         self.assertEqual(path, R'\\192.168.80.2\D$\www\File.php')
 
+    def test_wsl_path(self):
+        scheme, path = parse_uri('file://wsl%24/Ubuntu-20.04/File.php')
+        self.assertEqual(scheme, "file")
+        self.assertEqual(path, R'\\wsl$\Ubuntu-20.04\File.php')
+
 
 @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
 class NixTests(unittest.TestCase):
@@ -43,7 +48,7 @@ class NixTests(unittest.TestCase):
         self.assertEqual("file:///dir%20ectory/file.txt", filename_to_uri("/dir ectory/file.txt"))
 
     def test_converts_uri_to_path(self):
-        self.assertEqual("/dir ectory/file.txt", uri_to_filename("file:///dir ectory/file.txt"))
+        self.assertEqual("/dir ectory/file.txt", parse_uri("file:///dir ectory/file.txt")[1])
 
     def test_view_to_uri_with_valid_filename(self):
         view = sublime.active_window().active_view()

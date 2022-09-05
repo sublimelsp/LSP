@@ -1,0 +1,21 @@
+=> 1.8.0
+
+# New Client Configurations
+
+- Add documentation for Phpactor (#1800) (theLine)
+
+# Features and Fixes
+
+- Discard diagnostics in a few cases (#1816) (Raoul Wols)
+- Allow lists in `env` dict of client configuration (#1815) (Raoul Wols)
+- Remember the cwd for plugins (#1814) (Raoul Wols)
+- Re-evaluate what langservers to attach when the URI scheme changes (#1813) (Raoul Wols)
+- Include the list of key bindings (shortcuts) in the documentation (#1805) (Rafał Chłodnicki)
+- remove implementation status from docs as it is only developer related (Predrag Nikolic)
+- Rewrite / reorganize the troubleshooting documentation (#1802) (Rafał Chłodnicki)
+- Make hover popup also follow the show_diagnostics_severity_level setting (#1798) (Rafał Chłodnicki)
+- Improve keyboard shortcuts documentation (#1799) (Rafał Chłodnicki)
+- Update client configuration documentation (Rafal Chlodnicki)
+- Fix UNC paths on Windows (Raoul Wols)
+- Fix mypy type issue on windows (#1786) (Raoul Wols)
+- LSP-Serenata doesn't support ST4 (Luca Pomero)

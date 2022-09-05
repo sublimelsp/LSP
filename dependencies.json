@@ -1,14 +1,10 @@
 {
     "*": {
-        ">=3124": [
+        ">=4096": [
             "backrefs",
             "bracex",
-            "markupsafe",
             "mdpopups",
-            "pygments",
-            "pymdownx",
-            "python-jinja2",
-            "python-markdown",
+            "pathlib",
             "pyyaml",
             "wcmatch"
         ]

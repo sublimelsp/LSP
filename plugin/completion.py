@@ -1,15 +1,18 @@
-import sublime
-import webbrowser
 from .core.edit import parse_text_edit
 from .core.logging import debug
-from .core.protocol import InsertReplaceEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem, TextEdit
+from .core.protocol import InsertReplaceEdit, TextEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import List, Dict, Optional, Generator, Union, cast
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.typing import List, Dict, Optional, Generator, Union
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
+from .core.views import MarkdownLangMap
+from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import update_lsp_popup
+import functools
+import sublime
+import webbrowser
 
 SessionName = str
 
@@ -35,23 +38,31 @@ class LspResolveDocsCommand(LspTextCommand):
             session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
                 request = Request.resolveCompletionItem(item, self.view)
-                session.send_request_async(request, self._handle_resolve_response_async)
+                language_map = session.markdown_language_id_to_st_syntax_map()
+                handler = functools.partial(self._handle_resolve_response_async, language_map)
+                session.send_request_async(request, handler)
             else:
-                self._handle_resolve_response_async(item)
+                self._handle_resolve_response_async(None, item)
 
         sublime.set_timeout_async(run_async)
 
-    def _format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
-        return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
+    def _format_documentation(
+        self,
+        content: Union[str, Dict[str, str]],
+        language_map: Optional[MarkdownLangMap]
+    ) -> str:
+        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
-    def _handle_resolve_response_async(self, item: CompletionItem) -> None:
+    def _handle_resolve_response_async(self, language_map: Optional[MarkdownLangMap], item: CompletionItem) -> None:
         detail = ""
         documentation = ""
         if item:
-            detail = self._format_documentation(item.get('detail') or "")
-            documentation = self._format_documentation(item.get("documentation") or "")
+            detail = self._format_documentation(item.get('detail') or "", language_map)
+            documentation = self._format_documentation(item.get("documentation") or "", language_map)
         if not documentation:
-            documentation = self._format_documentation({"kind": "markdown", "value": "*No documentation available.*"})
+            markdown = {"kind": "markdown", "value": "*No documentation available.*"}
+            # No need for a language map here
+            documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
             minihtml_content += "<div class='highlight'>{}</div>".format(detail)
@@ -91,50 +102,44 @@ class LspSelectCompletionItemCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
-            new_text = text_edit["newText"]
-            edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
-            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-                for region in self.translated_regions(edit_region):
-                    self.view.erase(edit, region)
-                self.view.run_command("insert_snippet", {"contents": new_text})
-            else:
-                for region in self.translated_regions(edit_region):
-                    # NOTE: Cannot do .replace, because ST will select the replacement.
-                    self.view.erase(edit, region)
-                    self.view.insert(edit, region.a, new_text)
+            # resolve this
+            # new_text = text_edit["newText"]
+            # edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
+            # if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+            #     for region in self.translated_regions(edit_region):
+            #         self.view.erase(edit, region)
+            #     self.view.run_command("insert_snippet", {"contents": new_text})
+            # else:
+            #     for region in self.translated_regions(edit_region):
+            #         # NOTE: Cannot do .replace, because ST will select the replacement.
+            #         self.view.erase(edit, region)
+            #         self.view.insert(edit, region.a, new_text)
+
+            new_text = text_edit["newText"].replace("\r", "")
+            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            for region in self._translated_regions(edit_region):
+                self.view.erase(edit, region)
         else:
-            insert_text = item.get("insertText") or item.get("label")
-            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-                self.view.run_command("insert_snippet", {"contents": insert_text})
-            else:
-                self.view.run_command("insert", {"characters": insert_text})
-        self.epilogue(item, session_name)
-
-    def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
-        selection = self.view.sel()
-        primary_cursor_position = selection[0].b
-        for region in reversed(selection):
-            # For each selection region, apply the same removal as for the "primary" region.
-            # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
-            # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
-            translation = region.b - primary_cursor_position
-            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
-            yield translated_edit_region
-
-    def epilogue(self, item: CompletionItem, session_name: str) -> None:
+            new_text = item.get("insertText") or item["label"]
+            new_text = new_text.replace("\r", "")
+        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+            self.view.run_command("insert_snippet", {"contents": new_text})
+        else:
+            self.view.run_command("insert", {"characters": new_text})
+        # todo: this should all run from the worker thread
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-
-        def resolve_on_main_thread(item: CompletionItem, session_name: str) -> None:
-            sublime.set_timeout(lambda: self.on_resolved(item, session_name))
-
         additional_text_edits = item.get('additionalTextEdits')
         if session and not additional_text_edits:
-            request = Request.resolveCompletionItem(item, self.view)
-            session.send_request_async(request, lambda response: resolve_on_main_thread(response, session_name))
+            session.send_request_async(
+                Request.resolveCompletionItem(item, self.view),
+                functools.partial(self._on_resolved_async, session_name))
         else:
-            self.on_resolved(item, session_name)
+            self._on_resolved(session_name, item)
 
-    def on_resolved(self, item: CompletionItem, session_name: str) -> None:
+    def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
+        sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
+
+    def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
@@ -148,3 +153,14 @@ class LspSelectCompletionItemCommand(LspTextCommand):
                 "session_name": session_name
             }
             self.view.run_command("lsp_execute", args)
+
+    def _translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
+        selection = self.view.sel()
+        primary_cursor_position = selection[0].b
+        for region in reversed(selection):
+            # For each selection region, apply the same removal as for the "primary" region.
+            # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
+            # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
+            translation = region.b - primary_cursor_position
+            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
+            yield translated_edit_region

@@ -1,6 +1,9 @@
 from copy import deepcopy
+from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
-from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
+from LSP.plugin.core.protocol import InsertTextFormat
+from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
 import sublime
@@ -143,7 +146,6 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 'sortText': '0006USERPROFILE',
                 'label': 'USERPROFILE',
                 'additionalTextEdits': None,
-                'detail': None,
                 'data': None,
                 'kind': 6,
                 'command': None,
@@ -179,7 +181,6 @@ class QueryCompletionsTests(CompletionsTestsBase):
                     }
                 },
                 'label': '$someParam',
-                'filterText': None,
                 'data': None,
                 'command': None,
                 'detail': 'null',
@@ -214,7 +215,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                         }
                     }
                 },
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "insertText": "const",
                 "filterText": "const",
                 "score": 6
@@ -246,7 +247,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "additionalTextEdits": None,
                 "data": None,
                 "range": None,
-                "insertTextFormat": 1,
+                "insertTextFormat": InsertTextFormat.PlainText,
                 "sortText": "0001UniqueId",
                 "kind": 6,
                 "detail": "[string[]]"
@@ -311,7 +312,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "label": "apply[A](xs: A*): List[A]",
                 "sortText": "00000",
                 "preselect": True,
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "filterText": "apply",
                 "data": {
                     "symbol": "scala/collection/immutable/List.apply().",
@@ -344,7 +345,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
                 "kind": 12,
                 "sortText": "00002",
                 "filterText": "e",
-                "insertTextFormat": 2,
+                "insertTextFormat": InsertTextFormat.Snippet,
                 "textEdit": {
                     "range": {
                         "start": {"line": 0, "character": 0},
@@ -590,6 +591,22 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
 
+    def test_text_edit_plaintext_with_multiple_lines_indented(self) -> Generator[None, None, None]:
+        self.type("\t\n\t")
+        self.move_cursor(1, 2)
+        self.set_response("textDocument/completion", [{
+            'label': 'a',
+            'textEdit': {
+                'range': {'start': {'line': 1, 'character': 4}, 'end': {'line': 1, 'character': 4}},
+                'newText': 'a\n\tb'
+            },
+            'insertTextFormat': InsertTextFormat.PlainText
+        }])
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        # the "b" should be intended one level deeper
+        self.assertEqual(self.read_file(), '\t\n\ta\n\t\tb')
+
     def test_insert_insert_mode(self) -> 'Generator':
         self.type('{{ title }}')
         self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
@@ -620,25 +637,128 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield from self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), '{{ title }}')
 
-    def test_show_deprecated_flag(self) -> 'Generator':
+    def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {
             "label": 'hello',
             "kind": 2,  # Method
             "deprecated": True
-        }
+        }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
-        self.assertEqual('⚠', formatted_completion_item.kind[1])
-        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+        self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
-    def test_show_deprecated_tag(self) -> 'Generator':
+    def test_show_deprecated_tag(self) -> None:
         item_with_deprecated_tags = {
             "label": 'hello',
             "kind": 2,  # Method
             "tags": [CompletionItemTag.Deprecated]
-        }
+        }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
-        self.assertEqual('⚠', formatted_completion_item.kind[1])
-        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+        self.assertIn("DEPRECATED", formatted_completion_item.annotation)
+
+    def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'greeting',
+                'insertText': 'hello\r\nworld'
+            }],
+            insert_text='',
+            expected_text='hello\nworld')
+
+    def test_strips_carriage_return_in_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'greeting',
+                'textEdit': {
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}},
+                    'newText': 'hello\r\nworld'
+                }
+            }],
+            insert_text='',
+            expected_text='hello\nworld')
+
+    def test_label_details_with_filter_text(self) -> None:
+
+        def check(
+            resolve_support: bool,
+            expected_regex: str,
+            label: str,
+            label_details: Optional[CompletionItemLabelDetails]
+        ) -> None:
+            lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
+            if label_details is not None:
+                lsp["labelDetails"] = label_details
+            native = format_completion(lsp, 0, resolve_support, "")
+            self.assertRegex(native.details, expected_regex)
+
+        check(
+            resolve_support=False,
+            expected_regex=r"^f$",
+            label="f",
+            label_details=None
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^f\(X&amp; x\)$",
+            label="f",
+            label_details={"detail": "(X& x)"}
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^f\(X&amp; x\) \| does things$",
+            label="f",
+            label_details={"detail": "(X& x)", "description": "does things"}
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f$",
+            label="f",
+            label_details=None
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\)$",
+            label="f",
+            label_details={"detail": "(X& x)"}
+        )
+        check(
+            resolve_support=True,
+            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
+            label="f",
+            label_details={"detail": "(X& x)", "description": "does things"}
+        )
+
+    def test_label_details_without_filter_text(self) -> None:
+
+        def check(
+            resolve_support: bool,
+            expected_regex: str,
+            label: str,
+            label_details: Optional[CompletionItemLabelDetails]
+        ) -> None:
+            lsp = {"label": label}  # type: CompletionItem
+            if label_details is not None:
+                lsp["labelDetails"] = label_details
+            native = format_completion(lsp, 0, resolve_support, "")
+            self.assertRegex(native.trigger, expected_regex)
+
+        check(
+            resolve_support=False,
+            expected_regex=r"^f$",
+            label="f",
+            label_details=None
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^f\(X& x\)$",
+            label="f",
+            label_details={"detail": "(X& x)"}
+        )
+        check(
+            resolve_support=False,
+            expected_regex=r"^f\(X& x\)$",
+            label="f",
+            label_details={"detail": "(X& x)", "description": "does things"}
+        )
 
 
 class QueryCompletionsNoResolverTests(CompletionsTestsBase):

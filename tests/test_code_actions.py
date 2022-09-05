@@ -1,11 +1,11 @@
 from copy import deepcopy
-from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple, Optional
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
+from LSP.plugin.session_view import SessionView
 from LSP.plugin.core.views import versioned_text_document_identifier
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
@@ -59,6 +59,17 @@ def create_test_code_action2(command_name: str, command_args: Optional[List[Any]
     return action
 
 
+def create_disabled_code_action(view: sublime.View, version: int, edits: List[Tuple[str, Range]]) -> Dict[str, Any]:
+    action = {
+        "title": "Fix errors",
+        "edit": create_code_action_edit(view, version, edits),
+        "disabled": {
+            "reason": "Do not use"
+        },
+    }
+    return action
+
+
 def create_test_diagnostics(diagnostics: List[Tuple[str, Range]]) -> Dict:
     def diagnostic_to_lsp(diagnostic: Tuple[str, Range]) -> Dict:
         message, range = diagnostic
@@ -102,6 +113,24 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/didSave')
+        self.assertEquals(entire_content(self.view), 'const x = 1;')
+        self.assertEquals(self.view.is_dirty(), False)
+
+    def test_requests_with_diagnostics(self) -> Generator:
+        yield from self._setup_document_with_missing_semicolon()
+        code_action_kind = 'source.fixAll'
+        code_action = create_test_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', Range(Point(0, 11), Point(0, 11)))],
+            code_action_kind
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+        self.view.run_command('lsp_save')
+        code_action_request = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(len(code_action_request['context']['diagnostics']), 1)
+        self.assertEquals(code_action_request['context']['diagnostics'][0]['message'], 'Missing semicolon')
         yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
         self.assertEquals(self.view.is_dirty(), False)
@@ -222,7 +251,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.original_debounce_time = DocumentSyncListener.code_actions_debounce_time
         DocumentSyncListener.code_actions_debounce_time = 0
 
-    def tearDown(self) -> Generator:
+    def tearDown(self) -> None:
         DocumentSyncListener.code_actions_debounce_time = self.original_debounce_time
         super().tearDown()
 
@@ -254,7 +283,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEquals(params['range']['end']['line'], 1)
         self.assertEquals(params['range']['end']['character'], 1)
         self.assertEquals(len(params['context']['diagnostics']), 2)
-        annotations_range = self.view.get_regions(DocumentSyncListener.CODE_ACTIONS_KEY)
+        annotations_range = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
         self.assertEquals(len(annotations_range), 1)
         self.assertEquals(annotations_range[0].a, 3)
         self.assertEquals(annotations_range[0].b, 0)
@@ -276,14 +305,28 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEquals(params['range']['end']['line'], 1)
         self.assertEquals(params['range']['end']['character'], 1)
         self.assertEquals(len(params['context']['diagnostics']), 0)
-        annotations_range = self.view.get_regions(DocumentSyncListener.CODE_ACTIONS_KEY)
+        annotations_range = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
         self.assertEquals(len(annotations_range), 1)
         self.assertEquals(annotations_range[0].a, 3)
         self.assertEquals(annotations_range[0].b, 0)
 
+    def test_excludes_disabled_code_actions(self) -> Generator:
+        initial_content = 'a\n'
+        self.insert_characters(initial_content)
+        yield from self.await_message("textDocument/didChange")
+        code_action = create_disabled_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', Range(Point(0, 0), Point(0, 1)))]
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a
+        yield 100
+        yield from self.await_message('textDocument/codeAction')
+        code_action_ranges = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
+        self.assertEquals(len(code_action_ranges), 0)
+
     def test_extends_range_to_include_diagnostics(self) -> Generator:
-        def handle_response(actions_by_config: CodeActionsByConfigName) -> None:
-            pass
         self.insert_characters('x diagnostic')
         yield from self.await_message("textDocument/didChange")
         yield from self.await_client_notification(

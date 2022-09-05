@@ -1,4 +1,5 @@
 from .configurations import ConfigManager
+from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable
@@ -37,18 +38,46 @@ def get_position(view: sublime.View, event: Optional[dict] = None, point: Option
         return None
 
 
+class LspWindowCommand(sublime_plugin.WindowCommand):
+    """
+    Inherit from this class to define requests which are not bound to a particular view. This allows to run requests
+    for example from links in HtmlSheets or when an unrelated file has focus.
+    """
+
+    # When this is defined in a derived class, the command is enabled only if there exists a session with the given
+    # capability attached to a view in the window.
+    capability = ''
+
+    # When this is defined in a derived class, the command is enabled only if there exists a session with the given
+    # name attached to a view in the window.
+    session_name = ''
+
+    def is_enabled(self) -> bool:
+        return self.session() is not None
+
+    def session(self) -> Optional[Session]:
+        for session in windows.lookup(self.window).get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            if self.session_name and session.config.name != self.session_name:
+                continue
+            return session
+        else:
+            return None
+
+
 class LspTextCommand(sublime_plugin.TextCommand):
     """
     Inherit from this class to define your requests that should be triggered via the command palette and/or a
     keybinding.
     """
 
-    # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
-    # view that has the given capability.
+    # When this is defined in a derived class, the command is enabled only if there exists a session with the given
+    # capability attached to the active view.
     capability = ''
 
-    # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
-    # view that has the given name.
+    # When this is defined in a derived class, the command is enabled only if there exists a session with the given
+    # name attached to the active view.
     session_name = ''
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
@@ -71,13 +100,16 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def want_event(self) -> bool:
         return True
 
+    def get_listener(self) -> Optional[AbstractViewListener]:
+        return windows.listener_for_view(self.view)
+
     def best_session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
-        listener = windows.listener_for_view(self.view)
+        listener = self.get_listener()
         return listener.session_async(capability, point) if listener else None
 
     def session_by_name(self, name: Optional[str] = None, capability_path: Optional[str] = None) -> Optional[Session]:
         target = name if name else self.session_name
-        listener = windows.listener_for_view(self.view)
+        listener = self.get_listener()
         if listener:
             for sv in listener.session_views_async():
                 if sv.session.config.name == target:
@@ -88,7 +120,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return None
 
     def sessions(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
-        listener = windows.listener_for_view(self.view)
+        listener = self.get_listener()
         if listener:
             for sv in listener.session_views_async():
                 if capability_path is None or sv.has_capability_async(capability_path):
@@ -118,7 +150,7 @@ class LspRestartServerCommand(LspTextCommand):
             config_name = self._config_names[index]
             if not config_name:
                 return
-            self._wm.end_config_sessions_async(config_name)
+            self._wm._end_sessions_async(config_name)
             listener = windows.listener_for_view(self.view)
             if listener:
                 self._wm.register_listener_async(listener)
@@ -127,5 +159,5 @@ class LspRestartServerCommand(LspTextCommand):
 
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async())
+    def run(self, config_name: Optional[str] = None) -> None:
+        sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))

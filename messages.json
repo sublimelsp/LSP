@@ -1,4 +1,18 @@
 {
+    "1.10.0": "messages/1.10.0.txt",
+    "1.10.1": "messages/1.10.1.txt",
+    "1.11.0": "messages/1.11.0.txt",
+    "1.12.0": "messages/1.12.0.txt",
+    "1.12.1": "messages/1.12.1.txt",
+    "1.13.0": "messages/1.13.0.txt",
+    "1.14.0": "messages/1.14.0.txt",
+    "1.15.0": "messages/1.15.0.txt",
+    "1.16.0": "messages/1.16.0.txt",
+    "1.16.1": "messages/1.16.1.txt",
+    "1.16.2": "messages/1.16.2.txt",
+    "1.16.3": "messages/1.16.3.txt",
+    "1.17.0": "messages/1.17.0.txt",
+    "1.18.0": "messages/1.18.0.txt",
     "1.2.7": "messages/1.2.7.txt",
     "1.2.8": "messages/1.2.8.txt",
     "1.2.9": "messages/1.2.9.txt",
@@ -9,5 +23,7 @@
     "1.6.0": "messages/1.6.0.txt",
     "1.6.1": "messages/1.6.1.txt",
     "1.7.0": "messages/1.7.0.txt",
+    "1.8.0": "messages/1.8.0.txt",
+    "1.9.0": "messages/1.9.0.txt",
     "install": "messages/install.txt"
 }

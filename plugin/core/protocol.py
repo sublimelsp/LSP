@@ -3,6 +3,8 @@ from .url import filename_to_uri
 import os
 import sublime
 
+INT_MAX = 2**31 - 1
+UINT_MAX = INT_MAX
 
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
@@ -21,8 +23,65 @@ class DiagnosticTag:
     Deprecated = 2
 
 
+class CompletionItemKind:
+    Text = 1
+    Method = 2
+    Function = 3
+    Constructor = 4
+    Field = 5
+    Variable = 6
+    Class = 7
+    Interface = 8
+    Module = 9
+    Property = 10
+    Unit = 11
+    Value = 12
+    Enum = 13
+    Keyword = 14
+    Snippet = 15
+    Color = 16
+    File = 17
+    Reference = 18
+    Folder = 19
+    EnumMember = 20
+    Constant = 21
+    Struct = 22
+    Event = 23
+    Operator = 24
+    TypeParameter = 25
+
+
 class CompletionItemTag:
     Deprecated = 1
+
+
+class SymbolKind:
+    File = 1
+    Module = 2
+    Namespace = 3
+    Package = 4
+    Class = 5
+    Method = 6
+    Property = 7
+    Field = 8
+    Constructor = 9
+    Enum = 10
+    Interface = 11
+    Function = 12
+    Variable = 13
+    Constant = 14
+    String = 15
+    Number = 16
+    Boolean = 17
+    Array = 18
+    Object = 19
+    Key = 20
+    Null = 21
+    EnumMember = 22
+    Struct = 23
+    Event = 24
+    Operator = 25
+    TypeParameter = 26
 
 
 class SymbolTag:
@@ -51,6 +110,45 @@ class InsertTextMode:
     AdjustIndentation = 2
 
 
+class SemanticTokenTypes:
+    Namespace = "namespace"
+    Type = "type"
+    Class = "class"
+    Enum = "enum"
+    Interface = "interface"
+    Struct = "struct"
+    TypeParameter = "typeParameter"
+    Parameter = "parameter"
+    Variable = "variable"
+    Property = "property"
+    EnumMember = "enumMember"
+    Event = "event"
+    Function = "function"
+    Method = "method"
+    Macro = "macro"
+    Keyword = "keyword"
+    Modifier = "modifier"
+    Comment = "comment"
+    String = "string"
+    Number = "number"
+    Regexp = "regexp"
+    Operator = "operator"
+    Decorator = "decorator"
+
+
+class SemanticTokenModifiers:
+    Declaration = "declaration"
+    Definition = "definition"
+    Readonly = "readonly"
+    Static = "static"
+    Deprecated = "deprecated"
+    Abstract = "abstract"
+    Async = "async"
+    Modification = "modification"
+    Documentation = "documentation"
+    DefaultLibrary = "defaultLibrary"
+
+
 DocumentUri = str
 
 Position = TypedDict('Position', {
@@ -62,6 +160,21 @@ RangeLsp = TypedDict('RangeLsp', {
     'start': Position,
     'end': Position
 })
+
+TextDocumentIdentifier = TypedDict('TextDocumentIdentifier', {
+    'uri': DocumentUri,
+}, total=True)
+
+TextDocumentPositionParams = TypedDict('TextDocumentPositionParams', {
+    'textDocument': TextDocumentIdentifier,
+    'position': Position,
+}, total=True)
+
+ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangeParams', {
+    'textDocument': TextDocumentIdentifier,
+    'position': Position,
+    'range': RangeLsp,
+}, total=True)
 
 CodeDescription = TypedDict('CodeDescription', {
     'href': str
@@ -81,13 +194,8 @@ Command = TypedDict('Command', {
 }, total=True)
 
 
-CodeAction = TypedDict('CodeAction', {
-    'title': str,
-    'kind': Optional[str],
-    'diagnostics': Optional[List[Any]],
-    'isPreferred': Optional[bool],
-    'edit': Optional[dict],
-    'command': Optional[Command],
+CodeActionDisabledInformation = TypedDict('CodeActionDisabledInformation', {
+    'reason': str
 }, total=True)
 
 
@@ -109,7 +217,8 @@ ParameterInformation = TypedDict('ParameterInformation', {
 SignatureInformation = TypedDict('SignatureInformation', {
     'label': str,
     'documentation': Union[str, Dict[str, str]],
-    'parameters': List[ParameterInformation]
+    'parameters': List[ParameterInformation],
+    'activeParameter': int
 }, total=False)
 
 
@@ -176,10 +285,26 @@ Diagnostic = TypedDict('Diagnostic', {
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 
+CodeAction = TypedDict('CodeAction', {
+    'title': str,
+    'kind': str,  # NotRequired
+    'diagnostics': List[Diagnostic],  # NotRequired
+    'isPreferred': bool,  # NotRequired
+    'disabled': CodeActionDisabledInformation,  # NotRequired
+    'edit': dict,  # NotRequired
+    'command': Command,  # NotRequired
+    'data': Any  # NotRequired
+}, total=False)
+
 TextEdit = TypedDict('TextEdit', {
     'newText': str,
     'range': RangeLsp
 }, total=True)
+
+CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
+    'detail': str,
+    'description': str
+}, total=False)
 
 InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
     'newText': str,
@@ -201,9 +326,10 @@ CompletionItem = TypedDict('CompletionItem', {
     'insertTextMode': InsertTextMode,
     'kind': int,
     'label': str,
+    'labelDetails': CompletionItemLabelDetails,
     'preselect': bool,
     'sortText': str,
-    'tags': List[CompletionItemTag],
+    'tags': List[int],
     'textEdit': Union[TextEdit, InsertReplaceEdit]
 }, total=False)
 
@@ -211,6 +337,22 @@ CompletionList = TypedDict('CompletionList', {
     'isIncomplete': bool,
     'items': List[CompletionItem],
 }, total=True)
+
+DocumentLink = TypedDict('DocumentLink', {
+    'range': RangeLsp,
+    'target': DocumentUri,
+    'tooltip': str,
+    'data': Any
+}, total=False)
+
+MarkedString = Union[str, Dict[str, str]]
+
+MarkupContent = Dict[str, str]
+
+Hover = TypedDict('Hover', {
+    'contents': Union[MarkedString, MarkupContent, List[MarkedString]],
+    'range': RangeLsp,
+}, total=False)
 
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
     'uri': DocumentUri,
@@ -227,6 +369,37 @@ FileSystemWatcher = TypedDict('FileSystemWatcher', {
 DidChangeWatchedFilesRegistrationOptions = TypedDict('DidChangeWatchedFilesRegistrationOptions', {
     'watchers': List[FileSystemWatcher],
 }, total=True)
+
+InlayHintParams = TypedDict('InlayHintParams', {
+    'textDocument': TextDocumentIdentifier,
+    'range': RangeLsp,
+}, total=True)
+
+InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
+    'value': str,
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'location': Location,  # NotRequired
+    'command':  Command  # NotRequired
+}, total=False)
+
+
+class InlayHintKind:
+    Type = 1
+    Parameter = 2
+
+
+InlayHint = TypedDict('InlayHint', {
+    'position': Position,
+    'label': Union[str, List[InlayHintLabelPart]],
+    'kind': int,  # NotRequired
+    'textEdits': List[TextEdit],  # NotRequired
+    'tooltip': Union[str, MarkupContent],  # NotRequired
+    'paddingLeft': bool,  # NotRequired
+    'paddingRight': bool,  # NotRequired
+    'data': Any  # NotRequired
+}, total=False)
+
+InlayHintResponse = Union[List[InlayHint], None]
 
 WatchKind = int
 WatchKindCreate = 1
@@ -251,7 +424,7 @@ class Request:
     def __init__(
         self,
         method: str,
-        params: Optional[Mapping[str, Any]] = None,
+        params: Any = None,
         view: Optional[sublime.View] = None,
         progress: bool = False
     ) -> None:
@@ -293,8 +466,36 @@ class Request:
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
+    def documentLink(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/documentLink", params, view)
+
+    @classmethod
+    def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full", params, view)
+
+    @classmethod
+    def semanticTokensFullDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full/delta", params, view)
+
+    @classmethod
+    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/range", params, view)
+
+    @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
+
+    @classmethod
+    def resolveDocumentLink(cls, params: DocumentLink, view: sublime.View) -> 'Request':
+        return Request("documentLink/resolve", params, view)
+
+    @classmethod
+    def inlayHint(cls, params: InlayHintParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/inlayHint', params, view)
+
+    @classmethod
+    def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
+        return Request('inlayHint/resolve', params, view)
 
     @classmethod
     def shutdown(cls) -> 'Request':
@@ -375,7 +576,7 @@ class Notification:
 
     __slots__ = ('method', 'params')
 
-    def __init__(self, method: str, params: Optional[Mapping[str, Any]] = None) -> None:
+    def __init__(self, method: str, params: Any = None) -> None:
         self.method = method
         self.params = params
 
@@ -447,7 +648,7 @@ class Point(object):
     def from_lsp(cls, point: Position) -> 'Point':
         return Point(point['line'], point['character'])
 
-    def to_lsp(self) -> Dict[str, Any]:
+    def to_lsp(self) -> Position:
         return {
             "line": self.row,
             "character": self.col
@@ -472,7 +673,7 @@ class Range(object):
     def from_lsp(cls, range: RangeLsp) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
-    def to_lsp(self) -> Dict[str, Any]:
+    def to_lsp(self) -> RangeLsp:
         return {
             'start': self.start.to_lsp(),
             'end': self.end.to_lsp()

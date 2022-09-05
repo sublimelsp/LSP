@@ -2,31 +2,33 @@ from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import ensure_diagnostics_panel
+from .diagnostics_manager import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
 from .promise import Promise
-from .protocol import Diagnostic
-from .protocol import DiagnosticSeverity
+from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import Location
+from .protocol import LocationLink
+from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
-from .sessions import SessionBufferProtocol
-from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .types import matches_pattern
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
+from .url import parse_uri
 from .views import extract_variables
+from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
-from abc import ABCMeta
-from abc import abstractmethod
+from collections import OrderedDict
 from collections import deque
 from subprocess import CalledProcessError
 from time import time
@@ -34,102 +36,12 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
-import os
 import sublime
 import threading
 import urllib.parse
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
-
-
-class AbstractViewListener(metaclass=ABCMeta):
-
-    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
-
-    view = None  # type: sublime.View
-
-    @abstractmethod
-    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def sessions_async(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def session_views_async(self) -> Iterable[SessionViewProtocol]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_session_initialized_async(self, session: Session) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_session_shutdown_async(self, session: Session) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_async(self) -> Iterable[Tuple[SessionBufferProtocol, Sequence[Tuple[Diagnostic, sublime.Region]]]]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_intersecting_region_async(
-        self,
-        region: sublime.Region
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_touching_point_async(
-        self,
-        pt: int,
-        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        raise NotImplementedError()
-
-    def diagnostics_intersecting_async(
-        self,
-        region_or_point: Union[sublime.Region, int]
-    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
-        if isinstance(region_or_point, int):
-            return self.diagnostics_touching_point_async(region_or_point)
-        elif region_or_point.empty():
-            return self.diagnostics_touching_point_async(region_or_point.a)
-        else:
-            return self.diagnostics_intersecting_region_async(region_or_point)
-
-    @abstractmethod
-    def diagnostics_panel_contribution_async(self) -> Sequence[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_diagnostics_updated_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_code_lens_capability_registered_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_language_id(self) -> str:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_uri(self) -> str:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def do_signature_help_async(self, manual: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_post_move_window_async(self) -> None:
-        raise NotImplementedError()
 
 
 def extract_message(params: Any) -> str:
@@ -169,10 +81,13 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
-        sublime.set_timeout(functools.partial(self._update_panel_main_thread, None, _NO_DIAGNOSTICS_PLACEHOLDER, []))
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
+
+    def get_sessions(self) -> Generator[Session, None, None]:
+        yield from self._sessions
 
     def on_load_project_async(self) -> None:
         self.update_workspace_folders_async()
@@ -195,16 +110,16 @@ class WindowManager(Manager):
 
     def open_location_async(
         self,
-        location: Location,
+        location: Union[Location, LocationLink],
         session_name: Optional[str],
         view: sublime.View,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[bool]:
+    ) -> Promise[Optional[sublime.View]]:
         for session in self.sessions(view):
             if session_name is None or session_name == session.config.name:
                 return session.open_location_async(location, flags, group)
-        return Promise.resolve(False)
+        return Promise.resolve(None)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
@@ -347,16 +262,21 @@ class WindowManager(Manager):
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if not cwd:
-                cwd = workspace_folders[0].path if workspace_folders else None
+            if cwd:
+                transport_cwd = cwd  # type: Optional[str]
+            else:
+                transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, cwd, session)
+            transport = create_transport(transport_config, transport_cwd, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
-                variables, transport,
-                lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
+                variables=variables,
+                transport=transport,
+                working_directory=cwd,
+                init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
+            )
             self._new_session = session
         except Exception as e:
             message = "".join((
@@ -410,22 +330,17 @@ class WindowManager(Manager):
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
-    def restart_sessions_async(self) -> None:
-        self._end_sessions_async()
+    def restart_sessions_async(self, config_name: Optional[str] = None) -> None:
+        self._end_sessions_async(config_name)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self) -> None:
-        for session in self._sessions:
-            session.end_async()
-        self._sessions.clear()
-
-    def end_config_sessions_async(self, config_name: str) -> None:
+    def _end_sessions_async(self, config_name: Optional[str] = None) -> None:
         sessions = list(self._sessions)
         for session in sessions:
-            if session.config.name == config_name:
+            if config_name is None or config_name == session.config.name:
                 session.end_async()
                 self._sessions.discard(session)
 
@@ -436,6 +351,24 @@ class WindowManager(Manager):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder
         return candidate
+
+    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+        scheme, path = parse_uri(uri)
+        if scheme != "file":
+            return None
+        if not self._workspace.contains(path):
+            return "not inside window folders"
+        view = self._window.active_view()
+        if not view:
+            return None
+        settings = view.settings()
+        if matches_pattern(path, settings.get("binary_file_patterns")):
+            return "matches a pattern in binary_file_patterns"
+        if matches_pattern(path, settings.get("file_exclude_patterns")):
+            return "matches a pattern in file_exclude_patterns"
+        if matches_pattern(path, settings.get("folder_exclude_patterns")):
+            return "matches a pattern in folder_exclude_patterns"
+        return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)
@@ -478,23 +411,26 @@ class WindowManager(Manager):
 
     def update_diagnostics_panel_async(self) -> None:
         to_render = []  # type: List[str]
-        base_dir = None
         self.total_error_count = 0
         self.total_warning_count = 0
         listeners = list(self._listeners)
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
-        for listener in listeners:
-            local_errors, local_warnings = listener.sum_total_errors_and_warnings_async()
+        max_severity = userprefs().diagnostics_panel_include_severity_level
+        contributions = OrderedDict(
+        )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
+        for session in self._sessions:
+            local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
-            contribution = listener.diagnostics_panel_contribution_async()
-            if not contribution:
-                continue
-            file_path = listener.view.file_name() or ""
-            base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
-            file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-            to_render.append("{}:".format(file_path))
+            for (_, path), contribution in session.diagnostics_manager.filter_map_diagnostics_async(
+                    is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
+                seen = path in contributions
+                contributions.setdefault(path, []).extend(contribution)
+                if not seen:
+                    contributions.move_to_end(path)
+        for path, contribution in contributions.items():
+            to_render.append("{}:".format(path))
             row += 1
             for content, offset, code, href in contribution:
                 to_render.append(content)
@@ -508,17 +444,12 @@ class WindowManager(Manager):
         characters = "\n".join(to_render)
         if not characters:
             characters = _NO_DIAGNOSTICS_PLACEHOLDER
-        sublime.set_timeout(functools.partial(self._update_panel_main_thread, base_dir, characters, prephantoms))
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, characters, prephantoms))
 
-    def _update_panel_main_thread(self, base_dir: Optional[str], characters: str,
-                                  prephantoms: List[Tuple[int, int, str, str]]) -> None:
+    def _update_panel_main_thread(self, characters: str, prephantoms: List[Tuple[int, int, str, str]]) -> None:
         panel = ensure_diagnostics_panel(self._window)
         if not panel or not panel.is_valid():
             return
-        if isinstance(base_dir, str):
-            panel.settings().set("result_base_dir", base_dir)
-        else:
-            panel.settings().erase("result_base_dir")
         panel.run_command("lsp_update_panel", {"characters": characters})
         if self._panel_code_phantoms is None:
             self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
@@ -576,7 +507,7 @@ class PanelLogger(Logger):
 
         def run_on_async_worker_thread() -> None:
             nonlocal message
-            params_str = str(params)
+            params_str = repr(params)
             if 0 < userprefs().log_max_size <= len(params_str):
                 params_str = '<params with {} characters>'.format(len(params_str))
             message = "{}: {}".format(message, params_str)

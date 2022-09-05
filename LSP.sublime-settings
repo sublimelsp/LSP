@@ -81,20 +81,61 @@
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "fill", "underline", "stippled", or "".
+  // Valid values are "background", "underline", "stippled", or "".
   // When set to the empty string (""), no document highlighting is requested.
+  // See https://lsp.sublimetext.io/customization/#document-highlights for how to
+  // customize the color.
   "document_highlight_style": "underline",
+
+  // Highlight style of the word or range for which a hover popup is shown.
+  // Valid values are "background", "underline", "stippled", or "".
+  // When set to the empty string (""), no highlighting is applied.
+  // See https://lsp.sublimetext.io/customization/#hover-highlights for how to
+  // customize the color.
+  "hover_highlight_style": "",
+
+  // Highlight style of code diagnostics.
+  // Can be a string, or a mapping of string->string for severity-based styling.
+  // Valid string values are "box", "underline", "stippled", "squiggly" or "".
+  // When set to a valid string value, all severities will use that style.
+  // When set to the empty string (""), no diagnostics are drawn.
+  // When disabled, gutter markers are still drawn, unless "diagnostics_gutter_marker"
+  // is set to "".
+  // Diagnostics which span multiple lines are always drawn with the "box" style.
+  // See also: "show_multiline_diagnostics_highlights".
+  "diagnostics_highlight_style": {
+    "error": "squiggly",
+    "warning": "squiggly",
+    "info": "stippled",
+    "hint": "stippled"
+  },
 
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
 
+  // Highlight style of links to internal or external resources, like another text document
+  // or a web site. Link navigation is implemented via the popup on mouse hover.
+  // Valid values are:
+  // "underline"
+  // "none" - disables special highlighting, but still allows to navigate links in the hover popup
+  // "disabled" - disables highlighting and the hover popup for links
+  // Note that depending on the syntax and color scheme, some internet URLs may still be
+  // underlined via regular syntax highlighting.
+  "link_highlight_style": "underline",
+
+  // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).
+  // Note: Must be supported by the language server and also requires a special rule in the
+  // color scheme to work. If you use none of the built-in color schemes from Sublime Text,
+  // please see the documentation under
+  //   https://lsp.sublimetext.io/customization/#semantic-highlighting
+  // for a description about how to configure your color scheme for semantic highlighting.
+  "semantic_highlighting": false,
+
   // Show code actions:
   // "annotation" - show an annotation on the right when code actions are available.
   // "bulb" - show a bulb in the gutter when code actions are available.
   // "" - don't show code actions.
-  // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only be triggered
-  // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 
   // Show code lens:
@@ -102,13 +143,15 @@
   // "phantom" - show a phantom on the top when code actions are available
   "show_code_lens": "annotation",
 
+   // Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names.
+  "show_inlay_hints": false,
+
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
 
-  // Show diagnostics (error/warning squigglies) in the view. When disabled,
-  // gutter markers are still drawn, unless "diagnostics_gutter_marker" is
-  // set to "".
-  "show_diagnostics_highlights": true,
+  // Show diagnostics spanning multiple lines in the view (as outlines).
+  // See also: "diagnostics_highlight_style".
+  "show_multiline_diagnostics_highlights": true,
 
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,

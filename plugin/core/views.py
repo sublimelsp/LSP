@@ -549,7 +549,7 @@ def text_document_code_action_params(
     region: sublime.Region,
     diagnostics: List[Diagnostic],
     on_save_actions: Optional[List[str]] = None,
-    manual: Optional[bool] = False
+    manual: bool = False
 ) -> CodeActionParams:
     context = {
         "diagnostics": diagnostics,

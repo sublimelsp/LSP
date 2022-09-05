@@ -85,7 +85,7 @@ class CodeActionsManager:
         session_buffer_diagnostics: List[Tuple[SessionBufferProtocol, List[Diagnostic]]],
         actions_handler: Callable[[CodeActionsByConfigName], None],
         only_kinds: Optional[Dict[str, bool]] = None,
-        manual: Optional[bool] = False,
+        manual: bool = False,
     ) -> None:
         """
         Requests code actions with provided diagnostics and specified region. If there are
@@ -118,7 +118,7 @@ class CodeActionsManager:
         only_with_diagnostics: bool,
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None,
-        manual: Optional[bool] = False,
+        manual: bool = False,
     ) -> None:
         location_cache_key = None
         use_cache = on_save_actions is None and not manual

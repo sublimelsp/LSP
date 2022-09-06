@@ -84,7 +84,6 @@ class WindowManager(Manager):
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         ensure_log_panel(window)
-        ensure_diagnostics_panel(window)
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs

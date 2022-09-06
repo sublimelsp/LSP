@@ -1,3 +1,4 @@
+from re import sub
 from .typing import Dict, Optional, List, Generator, Tuple
 from contextlib import contextmanager
 import sublime
@@ -193,13 +194,19 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
         clear_undo_stack(self.view)
 
 
-class LspClearLogPanelCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        if is_log_panel_open(self.window):
-            panel = ensure_server_panel(self.window)
-            if not panel:
-                return
+class LspClearLogPanelCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        panel = ensure_server_panel(window)
+        if panel:
             panel.run_command("lsp_clear_panel")
 
     def is_visible(self) -> bool:
-        return is_log_panel_open(self.window)
+        window = self.view.window()
+        if not window:
+            return False
+        panel = ensure_server_panel(window)
+        return panel.id() == self.view.id() if panel else False
+

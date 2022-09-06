@@ -22,7 +22,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Goto Symbol | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>r</kbd> | `lsp_document_symbols`
 | Goto Type Definition | unbound | `lsp_symbol_type_definition`
 | Hover Popup | unbound | `lsp_hover`
-| Insert/Replace Completions | <kbd>shift</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
+| Insert/Replace Completions | unbound | `lsp_commit_completion_with_opposite_insert_mode`
 | Next Diagnostic | <kbd>F4</kbd> | -
 | Previous Diagnostic | <kbd>shift</kbd> <kbd>F4</kbd> | -
 | Rename | unbound | `lsp_symbol_rename`

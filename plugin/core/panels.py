@@ -1,4 +1,3 @@
-from re import sub
 from .typing import Dict, Optional, List, Generator, Tuple
 from contextlib import contextmanager
 import sublime
@@ -209,4 +208,3 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
             return False
         panel = ensure_server_panel(window)
         return panel.id() == self.view.id() if panel else False
-

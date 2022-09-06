@@ -26,7 +26,7 @@
         ]
     },
     {
-        "command": "lsp_commit_completion_with_opposite_insert_mode", 
+        "command": "lsp_commit_completion_with_opposite_insert_mode",
         "keys": [
             "shift+enter"
         ],

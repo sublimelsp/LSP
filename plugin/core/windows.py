@@ -6,7 +6,7 @@ from .diagnostics_manager import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .panels import ensure_server_panel
+from .panels import ensure_log_panel
 from .panels import log_server_message
 from .promise import Promise
 from .protocol import DocumentUri
@@ -83,7 +83,7 @@ class WindowManager(Manager):
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
-        ensure_server_panel(window)
+        ensure_log_panel(window)
         ensure_diagnostics_panel(window)
 
     def get_config_manager(self) -> WindowConfigManager:

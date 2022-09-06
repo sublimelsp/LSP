@@ -70,7 +70,7 @@ class WindowPanelListener(sublime_plugin.EventListener):
 
     def maybe_update_server_panel(self, window: sublime.Window) -> None:
         if is_log_panel_open(window):
-            panel = ensure_server_panel(window)
+            panel = ensure_log_panel(window)
             if panel:
                 update_server_panel(panel, window.id())
 
@@ -143,7 +143,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         clear_undo_stack(self.view)
 
 
-def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
+def ensure_log_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
@@ -160,7 +160,7 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
     if list_len >= SERVER_PANEL_MAX_LINES:
         # Trim leading items in the list, leaving only the max allowed count.
         del WindowPanelListener.server_log_map[window_id][:list_len - SERVER_PANEL_MAX_LINES]
-    panel = ensure_server_panel(window)
+    panel = ensure_log_panel(window)
     if is_log_panel_open(window) and panel:
         update_server_panel(panel, window_id)
 
@@ -198,7 +198,7 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         if not window:
             return
-        panel = ensure_server_panel(window)
+        panel = ensure_log_panel(window)
         if panel:
             panel.run_command("lsp_clear_panel")
 
@@ -206,5 +206,5 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         if not window:
             return False
-        panel = ensure_server_panel(window)
+        panel = ensure_log_panel(window)
         return bool(panel and panel.id() == self.view.id())

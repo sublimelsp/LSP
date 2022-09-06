@@ -206,5 +206,4 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         if not window:
             return False
-        panel = ensure_log_panel(window)
-        return bool(panel and panel.id() == self.view.id())
+        return ensure_log_panel(window) == self.view

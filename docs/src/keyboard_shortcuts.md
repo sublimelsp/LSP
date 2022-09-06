@@ -26,6 +26,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Rename | unbound | `lsp_symbol_rename`
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
+| Insert/Replace Completions | <kbd>shift</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
 | Run Code Lens | unbound | `lsp_code_lens`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`

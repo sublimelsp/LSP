@@ -5,7 +5,7 @@ import sublime_plugin
 
 
 # about 80 chars per line implies maintaining a buffer of about 40kb per window
-SERVER_PANEL_MAX_LINES = 500
+LOG_PANEL_MAX_LINES = 500
 
 OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
@@ -66,13 +66,13 @@ class WindowPanelListener(sublime_plugin.EventListener):
 
     def on_window_command(self, window: sublime.Window, command_name: str, args: Dict) -> None:
         if command_name in ('show_panel', 'hide_panel'):
-            sublime.set_timeout(lambda: self.maybe_update_server_panel(window))
+            sublime.set_timeout(lambda: self.maybe_update_log_panel(window))
 
-    def maybe_update_server_panel(self, window: sublime.Window) -> None:
+    def maybe_update_log_panel(self, window: sublime.Window) -> None:
         if is_log_panel_open(window):
             panel = ensure_log_panel(window)
             if panel:
-                update_server_panel(panel, window.id())
+                update_log_panel(panel, window.id())
 
 
 def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
@@ -157,19 +157,19 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         return
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
     list_len = len(WindowPanelListener.server_log_map[window_id])
-    if list_len >= SERVER_PANEL_MAX_LINES:
+    if list_len >= LOG_PANEL_MAX_LINES:
         # Trim leading items in the list, leaving only the max allowed count.
-        del WindowPanelListener.server_log_map[window_id][:list_len - SERVER_PANEL_MAX_LINES]
+        del WindowPanelListener.server_log_map[window_id][:list_len - LOG_PANEL_MAX_LINES]
     panel = ensure_log_panel(window)
     if is_log_panel_open(window) and panel:
-        update_server_panel(panel, window_id)
+        update_log_panel(panel, window_id)
 
 
-def update_server_panel(panel: sublime.View, window_id: int) -> None:
-    panel.run_command("lsp_update_server_panel", {"window_id": window_id})
+def update_log_panel(panel: sublime.View, window_id: int) -> None:
+    panel.run_command("lsp_update_log_panel", {"window_id": window_id})
 
 
-class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
+class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, window_id: int) -> None:
         to_process = WindowPanelListener.server_log_map.get(window_id) or []
@@ -183,7 +183,7 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 self.view.insert(edit, self.view.size(), ''.join(new_lines))
                 last_region_end = 0  # Starting from point 0 in the panel ...
                 total_lines, _ = self.view.rowcol(self.view.size())
-                for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
+                for _ in range(0, max(0, total_lines - LOG_PANEL_MAX_LINES)):
                     # ... collect all regions that span an entire line ...
                     region = self.view.full_line(last_region_end)
                     last_region_end = region.b

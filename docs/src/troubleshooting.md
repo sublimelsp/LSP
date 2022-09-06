@@ -1,6 +1,6 @@
 ## Self-help instructions
 
-The LSP client/server communications log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart Sublime Text and reproduce the issue again, so that the logs are clean.
+The LSP client/server communication log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart Sublime Text and reproduce the issue again, so that the logs are clean.
 
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 

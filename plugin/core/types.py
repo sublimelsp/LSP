@@ -195,7 +195,6 @@ class Settings:
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
     link_highlight_style = None  # type: str
-    log_debug = None  # type: bool
     log_max_size = None  # type: int
     log_server = None  # type: List[str]
     lsp_code_actions_on_save = None  # type: Dict[str, bool]
@@ -234,7 +233,6 @@ class Settings:
         r("document_highlight_style", "underline")
         r("hover_highlight_style", "")
         r("link_highlight_style", "underline")
-        r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_save", False)
@@ -294,8 +292,6 @@ class Settings:
         code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
         if isinstance(code_action_on_save_timeout_ms, int):
             self.on_save_task_timeout_ms = code_action_on_save_timeout_ms
-
-        set_debug_logging(self.log_debug)
 
     def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"

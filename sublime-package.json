@@ -477,6 +477,7 @@
             },
             "log_debug": {
               "type": "boolean",
+              "deprecationMessage": "@deprecated Instead from the command palette run `LSP: Toggle Log Panel` and the logs will be visible.",
               "default": false,
               "markdownDescription": "Show verbose debug messages in the sublime console."
             },

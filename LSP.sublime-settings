@@ -172,9 +172,6 @@
   // The maximum number of characters (approximately) before a scrollbar appears.
   "popup_max_characters_height": 1000,
 
-  // Show verbose debug messages in the sublime console.
-  "log_debug": false,
-
   // Log communication from and to language servers.
   // Set to an array of values:
   // - "panel" - log to the LSP Language Servers output panel

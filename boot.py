@@ -13,11 +13,9 @@ from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
-from .plugin.core.diagnostics import ensure_diagnostics_panel
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
-from .plugin.core.panels import ensure_server_panel
 from .plugin.core.panels import LspClearLogPanelCommand
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
@@ -56,9 +54,7 @@ from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
-from .plugin.references import ensure_references_panel
 from .plugin.references import LspSymbolReferencesCommand
-from .plugin.rename import ensure_rename_panel
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
@@ -111,10 +107,6 @@ def plugin_loaded() -> None:
     client_configs.update_configs()
     for window in sublime.windows():
         windows.lookup(window)
-        ensure_server_panel(window)
-        ensure_references_panel(window)
-        ensure_diagnostics_panel(window)
-        ensure_rename_panel(window)
 
 
 def plugin_unloaded() -> None:

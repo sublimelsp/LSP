@@ -14,7 +14,7 @@ def toggle_output_panel(window: Window, panel_type: str) -> None:
 class LspToggleServerPanelCommand(WindowCommand):
     def run(self) -> None:
         ensure_server_panel(self.window)
-        toggle_output_panel(self.window, PanelName.LanguageServers)
+        toggle_output_panel(self.window, PanelName.Log)
 
 
 class LspShowDiagnosticsPanelCommand(WindowCommand):

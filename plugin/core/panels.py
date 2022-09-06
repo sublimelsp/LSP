@@ -32,7 +32,7 @@ class PanelName:
     Diagnostics = "diagnostics"
     References = "references"
     Rename = "rename"
-    LanguageServers = "language servers"
+    Log = "LSP Log Panel"
 
 
 @contextmanager
@@ -144,11 +144,11 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
 
 
 def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
+    return ensure_panel(window, PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
 def is_log_panel_open(window: sublime.Window) -> bool:
-    return window.is_valid() and window.active_panel() == "output.{}".format(PanelName.LanguageServers)
+    return window.is_valid() and window.active_panel() == "output.{}".format(PanelName.Log)
 
 
 def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:

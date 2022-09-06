@@ -194,12 +194,12 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
 
 
 class LspClearLogPanelCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         if is_log_panel_open(self.window):
             panel = ensure_server_panel(self.window)
             if not panel:
                 return
             panel.run_command("lsp_clear_panel")
 
-    def is_visible(self):
+    def is_visible(self) -> bool:
         return is_log_panel_open(self.window)

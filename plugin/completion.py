@@ -22,7 +22,7 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeL
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
         # if shift is pressed, we want the oposite insert mode range
-        if LspCommitCompletionWithOppositeInsertMode.shift_pressed:
+        if LspCommitCompletionWithOppositeInsertMode.active:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast(TextEdit, text_edit)
@@ -91,12 +91,12 @@ class LspResolveDocsCommand(LspTextCommand):
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
-    shift_pressed = False
+    active = False
 
     def run(self, edit: sublime.Edit) -> None:
-        LspCommitCompletionWithOppositeInsertMode.shift_pressed = True
+        LspCommitCompletionWithOppositeInsertMode.active = True
         self.view.run_command("commit_completion")
-        LspCommitCompletionWithOppositeInsertMode.shift_pressed = False
+        LspCommitCompletionWithOppositeInsertMode.active = False
 
 
 class LspSelectCompletionItemCommand(LspTextCommand):

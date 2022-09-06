@@ -1,6 +1,6 @@
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
-from .logging import debug, set_debug_logging
+from .logging import debug
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from .typing import cast

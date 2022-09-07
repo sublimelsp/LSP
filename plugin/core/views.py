@@ -762,8 +762,8 @@ COLOR_BOX_HTML = """
     html {{padding: 0; background-color: transparent}}
 
     #lsp-color-box {{
-        height: 1.2rem;
-        width: 1.2rem;
+        height: 1rem;
+        width: 1rem;
         border: 1px solid color(var(--foreground) alpha(0.25));
         background-color: rgba({red}, {green}, {blue}, {alpha});
     }}

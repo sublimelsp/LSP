@@ -456,7 +456,7 @@
               "type": "string",
               "default": "insert",
               "enum": ["insert", "replace"],
-              "markdownDescription": "For servers that support it, chooses the primary mode used for inserting completions. For example, when triggering completion in a middle of a word, insert would insert the completion text in a middle of the word, while replace would replace the existing word with a new completion text.\nAn LSP keybinding lsp_commit_completion_with_opposite_insert_mode can be enabled to insert completion using the opposite mode to the one selected here."
+              "markdownDescription": "For servers that support it, chooses the primary mode used for inserting completions. For example, when triggering completion in a middle of a word, insert would insert the completion text in a middle of the word, while replace would replace the existing word with a new completion text.\nAn LSP keybinding lsp_commit_completion_with_opposite_insert_mode can be used to insert completion using the opposite mode to the one selected here."
             },
             "show_references_in_quick_panel": {
               "type": "boolean",

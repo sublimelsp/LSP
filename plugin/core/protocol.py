@@ -23,6 +23,11 @@ class DiagnosticTag:
     Deprecated = 2
 
 
+class CodeActionTriggerKind:
+    Invoked = 1
+    Automatic = 2
+
+
 class CompletionItemKind:
     Text = 1
     Method = 2
@@ -295,6 +300,18 @@ CodeAction = TypedDict('CodeAction', {
     'command': Command,  # NotRequired
     'data': Any  # NotRequired
 }, total=False)
+
+CodeActionContext = TypedDict('CodeActionContext', {
+    'diagnostics': List[Diagnostic],
+    'only': List[str],  # NotRequired
+    'triggerKind': int,  # NotRequired
+}, total=False)
+
+CodeActionParams = TypedDict('CodeActionParams', {
+    'textDocument': TextDocumentIdentifier,
+    'range': RangeLsp,
+    'context': CodeActionContext,
+}, total=True)
 
 TextEdit = TypedDict('TextEdit', {
     'newText': str,

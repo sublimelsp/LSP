@@ -145,7 +145,7 @@ class LspHoverCommand(LspTextCommand):
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point))
+                    functools.partial(self.handle_code_actions, listener, hover_point), manual=False)
 
         sublime.set_timeout_async(run_async)
 

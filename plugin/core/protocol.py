@@ -161,6 +161,18 @@ RangeLsp = TypedDict('RangeLsp', {
     'end': Position
 })
 
+Color = TypedDict('Color', {
+    'red': float,
+    'green': float,
+    'blue': float,
+    'alpha': float
+}, total=True)
+
+ColorInformation = TypedDict('ColorInformation', {
+    'range': RangeLsp,
+    'color': Color
+}, total=True)
+
 TextDocumentIdentifier = TypedDict('TextDocumentIdentifier', {
     'uri': DocumentUri,
 }, total=True)

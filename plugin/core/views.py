@@ -1,5 +1,5 @@
 from .css import css as lsp_css
-from .protocol import CodeAction
+from .protocol import CodeAction, ColorInformation
 from .protocol import Command
 from .protocol import CompletionItem
 from .protocol import CompletionItemKind
@@ -764,7 +764,7 @@ COLOR_BOX_HTML = """
     .lsp_color_box {{
         height: 1rem;
         width: 1rem;
-        border: 1px solid color(var(--foreground) alpha(0.25));
+        border: 1px solid rgba({red}, {green}, {blue}, {alpha});
         background-color: rgba({red}, {green}, {blue}, {alpha});
     }}
 
@@ -782,22 +782,25 @@ COLOR_BOX_HTML = """
 <body id='lsp-color-box'>
 
 <div class="lsp_color_box">
-    <a href="subl:lsp_choose_color_picker">■</a>
+    <a href="{command}">■</a>
 </div>
 </body>"""
 
-def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
-    color = color_info['color']
+def lsp_color_to_html(color_information: ColorInformation) -> str:
+    color = color_information['color']
     red = color['red'] * 255
     green = color['green'] * 255
     blue = color['blue'] * 255
     alpha = color['alpha']
-    return COLOR_BOX_HTML.format(red=red, green=green, blue=blue, alpha=alpha)
+    command = sublime.command_url('lsp_choose_color_picker', {
+        'color_information': color_information,
+    })
+    return COLOR_BOX_HTML.format(command=command, red=red, green=green, blue=blue, alpha=alpha)
 
 
-def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
-    region = range_to_region(Range.from_lsp(color_info['range']), view)
-    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
+def lsp_color_to_phantom(view: sublime.View, color_information: ColorInformation) -> sublime.Phantom:
+    region = range_to_region(Range.from_lsp(color_information['range']), view)
+    return sublime.Phantom(region, lsp_color_to_html(color_information), sublime.LAYOUT_INLINE)
 
 
 def document_color_params(view: sublime.View) -> Dict[str, Any]:
@@ -1032,8 +1035,3 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
-
-
-class LspChooseColorPicker(sublime_plugin.TextCommand):
-    def run(self, edit):
-        print('run')

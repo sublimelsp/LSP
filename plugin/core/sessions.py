@@ -53,7 +53,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Sequence, Mapping, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -325,6 +325,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             },
             "dataSupport": True,
             "disabledSupport": True,
+            "isPreferredSupport": True,
             "resolveSupport": {
                 "properties": [
                     "edit"
@@ -597,14 +598,14 @@ class AbstractViewListener(metaclass=ABCMeta):
     @abstractmethod
     def diagnostics_async(
         self
-    ) -> Iterable[Tuple['SessionBufferProtocol', Sequence[Tuple[Diagnostic, sublime.Region]]]]:
+    ) -> Iterable[Tuple['SessionBufferProtocol', List[Tuple[Diagnostic, sublime.Region]]]]:
         raise NotImplementedError()
 
     @abstractmethod
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -612,13 +613,13 @@ class AbstractViewListener(metaclass=ABCMeta):
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     def diagnostics_intersecting_async(
         self,
         region_or_point: Union[sublime.Region, int]
-    ) -> Tuple[Sequence[Tuple['SessionBufferProtocol', Sequence[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
         if isinstance(region_or_point, int):
             return self.diagnostics_touching_point_async(region_or_point)
         elif region_or_point.empty():

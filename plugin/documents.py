@@ -20,6 +20,7 @@ from .core.registry import best_session
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
@@ -33,6 +34,7 @@ from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
@@ -232,7 +234,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def diagnostics_async(
         self
-    ) -> Generator[Tuple[SessionBuffer, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
+    ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
             # do not provide stale diagnostics
@@ -242,9 +244,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
@@ -261,9 +263,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
@@ -576,7 +578,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_actions(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
+        actions_manager.request_for_region_async(
+            self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))
@@ -611,12 +614,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            titles = [command["title"] for command in self._actions_by_config[config_name]]
-            if len(titles) > 1:
+            actions = self._actions_by_config[config_name]
+            if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
-                                            placeholder="Code actions")
+                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    window.show_quick_panel(
+                        items,
+                        lambda i: self.handle_code_action_select(config_name, i),
+                        selected_index=selected_index,
+                        placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, 0)
 

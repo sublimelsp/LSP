@@ -21,6 +21,7 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
@@ -144,7 +145,7 @@ class LspHoverCommand(LspTextCommand):
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point))
+                    functools.partial(self.handle_code_actions, listener, hover_point), manual=False)
 
         sublime.set_timeout_async(run_async)
 
@@ -338,13 +339,17 @@ class LspHoverCommand(LspTextCommand):
                 window.open_file(fn, flags=sublime.ENCODED_POSITION)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            titles = [command["title"] for command in self._actions_by_config[config_name]]
+            actions = self._actions_by_config[config_name]
             self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
-            if len(titles) > 1:
+            if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
-                                            placeholder="Code actions")
+                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    window.show_quick_panel(
+                        items,
+                        lambda i: self.handle_code_action_select(config_name, i),
+                        selected_index=selected_index,
+                        placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, 0)
         elif is_location_href(href):

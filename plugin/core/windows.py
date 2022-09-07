@@ -7,7 +7,9 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import ensure_log_panel
+from .panels import is_panel_open
 from .panels import log_server_message
+from .panels import PanelName
 from .promise import Promise
 from .protocol import DocumentUri
 from .protocol import Error
@@ -467,7 +469,7 @@ class WindowManager(Manager):
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
 
     def hide_diagnostics_panel_async(self) -> None:
-        if self._window.active_panel() == "output.diagnostics":
+        if is_panel_open(self._window, PanelName.Diagnostics):
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 

@@ -69,7 +69,7 @@ class WindowPanelListener(sublime_plugin.EventListener):
             sublime.set_timeout(lambda: self.maybe_update_log_panel(window))
 
     def maybe_update_log_panel(self, window: sublime.Window) -> None:
-        if is_log_panel_open(window):
+        if is_panel_open(window, PanelName.Log):
             panel = ensure_log_panel(window)
             if panel:
                 update_log_panel(panel, window.id())
@@ -114,6 +114,10 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
     return panel
 
 
+def is_panel_open(window: sublime.Window, panel_name: str) -> bool:
+    return window.is_valid() and window.active_panel() == "output.{}".format(panel_name)
+
+
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
                  syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
     return window.find_output_panel(name) or \
@@ -152,10 +156,6 @@ def ensure_log_panel(window: sublime.Window) -> Optional[sublime.View]:
                         "Context LSP Log Panel.sublime-menu")
 
 
-def is_log_panel_open(window: sublime.Window) -> bool:
-    return window.is_valid() and window.active_panel() == "output.{}".format(PanelName.Log)
-
-
 def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:
     window_id = window.id()
     if not window.is_valid() or window_id not in WindowPanelListener.server_log_map:
@@ -166,7 +166,7 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         # Trim leading items in the list, leaving only the max allowed count.
         del WindowPanelListener.server_log_map[window_id][:list_len - LOG_PANEL_MAX_LINES]
     panel = ensure_log_panel(window)
-    if is_log_panel_open(window) and panel:
+    if is_panel_open(window, PanelName.Log) and panel:
         update_log_panel(panel, window_id)
 
 

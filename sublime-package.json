@@ -103,7 +103,143 @@
             },
             "ClientDisabledCapabilities": {
               "type": "object",
-              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.\n\nTo figure out exactly which _provider_ you need to disable here is an advanced topic. You'll have to study the official specification to see what particular providers exist. Here are a few common provider names that might do what you want:\n\n- hoverProvider\n- completionProvider\n- colorProvider\n- documentHighlightProvider\n- signatureHelpProvider\n- codeLensProvider\n- codeActionProvider"
+              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.\n\nTo figure out exactly which _provider_ you need to disable here is an advanced topic. You'll have to study the official specification to see what particular providers exist. Here are a few common provider names that might do what you want:\n\n- hoverProvider\n- completionProvider\n- colorProvider\n- documentHighlightProvider\n- signatureHelpProvider\n- codeLensProvider\n- codeActionProvider",
+              "additionalProperties": false,
+              "properties": {
+                "completionProvider": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "triggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ],
+                },
+                "hoverProvider" : {
+                  "type": "boolean",
+                  "default": true
+                },
+                "signatureHelpProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "declarationProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "definitionProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "typeDefinitionProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "implementationProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "referencesProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentHighlightProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentSymbolProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "codeActionProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "codeLensProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentLinkProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "colorProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentFormattingProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentRangeFormattingProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentOnTypeFormattingProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "renameProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "foldingRangeProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "executeCommandProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "selectionRangeProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "linkedEditingRangeProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "callHierarchyProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "semanticTokensProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "monikerProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "typeHierarchyProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "inlineValueProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "inlayHintProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "diagnosticProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "workspaceSymbolProvider": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
             },
             "ClientEnv": {
               "type": "object",

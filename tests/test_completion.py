@@ -624,18 +624,18 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_replace_insert_mode(self) -> 'Generator':
         self.type('{{ title }}')
-        self.move_cursor(0, 5)  # Put the cursor inbetween 'i' and 't'
+        self.move_cursor(0, 4)  # Put the cursor inbetween 't' and 'i'
         self.set_response("textDocument/completion", [{
-           'label': 'title',
+           'label': 'turtle',
            'textEdit': {
-                'newText': 'title',
-                'insert': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 5}},
+                'newText': 'turtle',
+                'insert': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 4}},
                 'replace': {'start': {'line': 0, 'character': 3}, 'end': {'line': 0, 'character': 8}}
             }
         }])
         yield from self.shift_select_completion()  # commit the opposite insert mode
         yield from self.await_message("textDocument/completion")
-        self.assertEqual(self.read_file(), '{{ title }}')
+        self.assertEqual(self.read_file(), '{{ turtle }}')
 
     def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {

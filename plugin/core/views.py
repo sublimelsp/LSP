@@ -761,29 +761,21 @@ COLOR_BOX_HTML = """
 <style>
     html {{padding: 0; background-color: transparent}}
 
-    .lsp_color_box {{
-        height: 1rem;
-        width: 1rem;
-        border: 1px solid rgba({red}, {green}, {blue}, {alpha});
+    #lsp-color-box {{
+        height: 1.2rem;
+        width: 1.2rem;
+        border: 1px solid color(var(--foreground) alpha(0.25));
         background-color: rgba({red}, {green}, {blue}, {alpha});
     }}
 
-    .lsp_color_box a {{
-        display: block;
-        /** Hack
-          * make the inner box bigger that the parent
-          * to make the whole box clickable
-          **/
-        font-size: 1.8rem;
-        color: rgba({red}, {green}, {blue}, {alpha});
+    #lsp-color-box a {{
+        font-size: 1rem;
         text-decoration: none;
+        color: rgba({red}, {green}, {blue}, {alpha});
     }}
 </style>
 <body id='lsp-color-box'>
-
-<div class="lsp_color_box">
-    <a href="{command}">■</a>
-</div>
+    <a href="{command}">▬</a>
 </body>"""
 
 def lsp_color_to_html(color_information: ColorInformation) -> str:

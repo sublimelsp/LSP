@@ -93,27 +93,31 @@ def destroy_output_panels(window: sublime.Window) -> None:
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
+                 syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
     panel = create_output_panel(window, name)
     if not panel:
         return None
+    settings = panel.settings()
     if result_file_regex:
-        panel.settings().set("result_file_regex", result_file_regex)
+        settings.set("result_file_regex", result_file_regex)
     if result_line_regex:
-        panel.settings().set("result_line_regex", result_line_regex)
+        settings.set("result_line_regex", result_line_regex)
+    if context_menu:
+        settings.set("context_menu", context_menu)
     panel.assign_syntax(syntax)
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
+    # Call create_output_panel a second time after assigning the above settings, so that it'll be picked up
+    # as a result buffer. See: Packages/Default/exec.py#L228-L230
     panel = window.create_output_panel(name)
-    # All our panels are read-only
-    panel.set_read_only(True)
+    if panel:
+        # All our panels are read-only
+        panel.set_read_only(True)
     return panel
 
 
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
-    return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
+                 syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
+    return window.find_output_panel(name) or \
+        create_panel(window, name, result_file_regex, result_line_regex, syntax, context_menu)
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
@@ -144,7 +148,8 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
 
 
 def ensure_log_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
+    return ensure_panel(window, PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
+                        "Context LSP Log Panel.sublime-menu")
 
 
 def is_log_panel_open(window: sublime.Window) -> bool:

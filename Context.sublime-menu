@@ -49,9 +49,5 @@
                 "caption": "Expand Selection"
             }
         ]
-    },
-    {
-        "command": "lsp_clear_log_panel",
-        "caption": "Clear Log Panel"
     }
 ]

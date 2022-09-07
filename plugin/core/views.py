@@ -758,15 +758,33 @@ class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
 
 
 COLOR_BOX_HTML = """
-<style>html {{padding: 0; background-color: transparent}}</style>
+<style>
+    html {{padding: 0; background-color: transparent}}
+
+    .lsp_color_box {{
+        height: 1rem;
+        width: 1rem;
+        border: 1px solid color(var(--foreground) alpha(0.25));
+        background-color: rgba({red}, {green}, {blue}, {alpha});
+    }}
+
+    .lsp_color_box a {{
+        display: block;
+        /** Hack
+          * make the inner box bigger that the parent
+          * to make the whole box clickable
+          **/
+        font-size: 1.8rem;
+        color: rgba({red}, {green}, {blue}, {alpha});
+        text-decoration: none;
+    }}
+</style>
 <body id='lsp-color-box'>
-<div style='padding: 0.4em;
-            margin-top: 0.2em;
-            border: 1px solid color(var(--foreground) alpha(0.25));
-            background-color: rgba({}, {}, {}, {})'>
+
+<div class="lsp_color_box">
+    <a href="subl:lsp_choose_color_picker">■</a>
 </div>
 </body>"""
-
 
 def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
     color = color_info['color']
@@ -774,7 +792,7 @@ def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
     green = color['green'] * 255
     blue = color['blue'] * 255
     alpha = color['alpha']
-    return COLOR_BOX_HTML.format(red, green, blue, alpha)
+    return COLOR_BOX_HTML.format(red=red, green=green, blue=blue, alpha=alpha)
 
 
 def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
@@ -1014,3 +1032,8 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
+
+
+class LspChooseColorPicker(sublime_plugin.TextCommand):
+    def run(self, edit):
+        print('run')

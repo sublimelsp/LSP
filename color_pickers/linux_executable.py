@@ -17,17 +17,9 @@ if len(sys.argv) > 1: # sys.argv[1] looks like '1,0.2,1,0.5'
     preselect_color = Gdk.RGBA(r, g, b, a)
     color_chooser_dialog.set_rgba(preselect_color)
 
-
 def on_select_color():
     color = color_chooser_dialog.get_rgba()
-    red = int(color.red * 255)
-    green = int(color.green * 255)
-    blue = int(color.blue * 255)
-    alpha = int(color.alpha * 255)
-    if alpha < 255:
-        print('#%02x%02x%02x%02x' % (red, green, blue, alpha))
-    else:
-        print('#%02x%02x%02x' % (red, green, blue))
+    print('{},{},{},{}'.format(color.red, color.green, color.blue, color.alpha))
 
 if color_chooser_dialog.run() == Gtk.ResponseType.OK:
     on_select_color()

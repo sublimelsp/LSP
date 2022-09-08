@@ -1,5 +1,5 @@
 from .css import css as lsp_css
-from .protocol import CodeAction, ColorInformation
+from .protocol import CodeAction, Color, ColorInformation
 from .protocol import Command
 from .protocol import CompletionItem
 from .protocol import CompletionItemKind
@@ -766,7 +766,7 @@ COLOR_BOX_HTML = """
         height: 1rem;
         width: 1rem;
         border: 1px solid color(var(--foreground) alpha(0.25));
-        background-color: rgba({red}, {green}, {blue}, {alpha});
+        background-color: {backgroundColor};
     }}
 
     #lsp-color-box a {{
@@ -780,17 +780,24 @@ COLOR_BOX_HTML = """
 </body>"""
 
 
+def lsp_color_to_hex(color: Color) -> str:
+    red = int(color['red'] * 255)
+    green = int(color['green'] * 255)
+    blue = int(color['blue'] * 255)
+    alpha = int(color['alpha'] * 255)
+
+    if color['alpha'] < 1:
+        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, alpha)
+    return "#{:02x}{:02x}{:02x}".format(red, green, blue)
+
+
 def lsp_color_to_html(view: sublime.View, color_information: ColorInformation) -> str:
-    color = color_information['color']
-    red = color['red'] * 255
-    green = color['green'] * 255
-    blue = color['blue'] * 255
-    alpha = color['alpha']
+    color = lsp_color_to_hex(color_information['color'])
     command = sublime.command_url('lsp_choose_color_picker', {
         'color_information': color_information,
         'file_name': view.file_name()
     })
-    return COLOR_BOX_HTML.format(command=command, red=red, green=green, blue=blue, alpha=alpha)
+    return COLOR_BOX_HTML.format(command=command, backgroundColor=color)
 
 
 def lsp_color_to_phantom(view: sublime.View, color_information: ColorInformation) -> sublime.Phantom:

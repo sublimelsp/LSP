@@ -163,9 +163,12 @@
   // sorting algorithm and instead uses the sorting defined by the relevant language server.
   "inhibit_word_completions": true,
 
-  // For servers that support it, chooses the primary mode used for inserting completions.
-  // For example, when triggering completion in a middle of a word, `insert` would insert the completion text in a middle of the word, while `replace` would replace the existing word with a new completion text.
-  // An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode` can be used to insert completion using the opposite mode to the one selected here.
+  // The mode used for inserting completions:
+  // - `insert` would insert the completion text in a middle of the word
+  // - `replace` would replace the existing word with a new completion text
+  // An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`
+  // can be used to insert completion using the opposite mode to the one selected here.
+  // Note: Must be supported by the language server.
   "completion_insert_mode": "insert",
 
   // Show symbol references in Sublime's quick panel instead of the bottom panel.

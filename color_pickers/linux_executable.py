@@ -9,11 +9,7 @@ color_chooser_dialog = Gtk.ColorChooserDialog(show_editor=True)
 color_chooser_dialog.set_title('LSP Color Picker')
 
 if len(sys.argv) > 1: # sys.argv[1] looks like '1,0.2,1,0.5'
-    r, g, b, a = sys.argv[1].split(',')
-    r = float(r or 0)
-    g = float(g or 0)
-    b = float(b or 0)
-    a = float(a or 0)
+    r, g, b, a = map(lambda color: float(color or 0), sys.argv[1].split(','))
     preselect_color = Gdk.RGBA(r, g, b, a)
     color_chooser_dialog.set_rgba(preselect_color)
 

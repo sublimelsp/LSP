@@ -56,7 +56,7 @@ class WindowsColorPicker(ColorPickerPlugin):
         if color_information:
             value = color_information['color']
             preselect_color = "{},{},{},{}".format(value['red'], value['green'], value['blue'], value['alpha'])
-        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "windows_executable.py"), preselect_color]
+        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "win_colorpicker.exe")]
         self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
         color = self.process.communicate()[0].strip().decode('utf-8')
         on_pick(color or None)

@@ -772,14 +772,14 @@ COLOR_BOX_HTML = """
     #lsp-color-box a {{
         font-size: 1rem;
         text-decoration: none;
-        color: rgba({red}, {green}, {blue}, {alpha});
+        color: #00000001;
     }}
 </style>
 <body id='lsp-color-box'>
     <a href="{command}">▬</a>
 </body>"""
 
-def lsp_color_to_html(color_information: ColorInformation) -> str:
+def lsp_color_to_html(view: sublime.View, color_information: ColorInformation) -> str:
     color = color_information['color']
     red = color['red'] * 255
     green = color['green'] * 255
@@ -787,13 +787,14 @@ def lsp_color_to_html(color_information: ColorInformation) -> str:
     alpha = color['alpha']
     command = sublime.command_url('lsp_choose_color_picker', {
         'color_information': color_information,
+        'file_name': view.file_name()
     })
     return COLOR_BOX_HTML.format(command=command, red=red, green=green, blue=blue, alpha=alpha)
 
 
 def lsp_color_to_phantom(view: sublime.View, color_information: ColorInformation) -> sublime.Phantom:
     region = range_to_region(Range.from_lsp(color_information['range']), view)
-    return sublime.Phantom(region, lsp_color_to_html(color_information), sublime.LAYOUT_INLINE)
+    return sublime.Phantom(region, lsp_color_to_html(view, color_information), sublime.LAYOUT_INLINE)
 
 
 def document_color_params(view: sublime.View) -> Dict[str, Any]:

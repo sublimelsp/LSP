@@ -5,12 +5,11 @@ import subprocess
 import os
 
 from .protocol import Color
-from .typing import Callable, Union, Optional
+from .typing import Callable, Optional
 import sublime
 import sublime_plugin
 
-ColorPickResult = Union[Color, None]  # str - if a color is selected, else None
-OnPickCallback = Callable[[ColorPickResult], None]
+OnPickCallback = Callable[[Optional[Color]], None]
 
 
 class ColorPickerPlugin(metaclass=ABCMeta):

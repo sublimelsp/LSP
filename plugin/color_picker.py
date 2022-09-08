@@ -1,7 +1,7 @@
 from .core.views import lsp_color_to_hex
-from .core.color_picker import ColorPickResult, color_picker
-from .core.protocol import ColorInformation, TextEdit
-from .core.typing import List
+from .core.color_picker import color_picker
+from .core.protocol import ColorInformation, TextEdit, Color
+from .core.typing import List, Optional
 from .formatting import apply_text_edits_to_view
 import sublime
 import sublime_plugin
@@ -16,13 +16,13 @@ class LspChooseColorPicker(sublime_plugin.TextCommand):
         if not window:
             return
 
-        def on_select(color: ColorPickResult) -> None:
+        def on_select(color: Optional[Color]) -> None:
             self.on_pick_color(color, color_information, file_name)
 
         color_picker.pick(on_select, color_information['color'])
 
     def on_pick_color(
-        self, selected_color: ColorPickResult, color_information: ColorInformation, file_name: str
+        self, selected_color: Optional[Color], color_information: ColorInformation, file_name: str
     ) -> None:
         if not selected_color:
             return

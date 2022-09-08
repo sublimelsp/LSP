@@ -779,6 +779,7 @@ COLOR_BOX_HTML = """
     <a href="{command}">▬</a>
 </body>"""
 
+
 def lsp_color_to_html(view: sublime.View, color_information: ColorInformation) -> str:
     color = color_information['color']
     red = color['red'] * 255

@@ -33,7 +33,30 @@ class LinuxColorPicker(ColorPickerPlugin):
         if color_information:
             value = color_information['color']
             preselect_color = "{},{},{},{}".format(value['red'], value['green'], value['blue'], value['alpha'])
-        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "linux.py"), preselect_color]
+        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "linux_executable.py"), preselect_color]
+        self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
+        color = self.process.communicate()[0].strip().decode('utf-8')
+        on_pick(color or None)
+
+    def close(self) -> None:
+        if self.process:
+            self.process.kill()
+            self.process = None
+
+
+class WindowsColorPicker(ColorPickerPlugin):
+    process = None  # type: Optional[subprocess.Popen]
+
+    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[ColorInformation] = None) -> None:
+        t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
+        t.start()
+
+    def _open_picker(self, on_pick: OnPickCallback, color_information: Optional[ColorInformation] = None) -> None:
+        preselect_color = ""
+        if color_information:
+            value = color_information['color']
+            preselect_color = "{},{},{},{}".format(value['red'], value['green'], value['blue'], value['alpha'])
+        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "windows_executable.py"), preselect_color]
         self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
         color = self.process.communicate()[0].strip().decode('utf-8')
         on_pick(color or None)
@@ -48,7 +71,7 @@ def get_color_picker() -> Optional[ColorPickerPlugin]:
     if sublime.platform() == "linux":
         return LinuxColorPicker()
     if sublime.platform() == "windows":
-        return None
+        return WindowsColorPicker()
     if sublime.platform() == "osx":
         return None
     return None

@@ -114,14 +114,39 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
     return panel
 
 
+def get_panel(window: Optional[sublime.Window], panel_name: str) -> Optional[sublime.View]:
+    if not window:
+        return None
+    return window.find_output_panel(panel_name)
+
+
 def is_panel_open(window: sublime.Window, panel_name: str) -> bool:
     return window.is_valid() and window.active_panel() == "output.{}".format(panel_name)
 
 
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
                  syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
-    return window.find_output_panel(name) or \
+    return get_panel(window, name) or \
         create_panel(window, name, result_file_regex, result_line_regex, syntax, context_menu)
+
+
+class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
+    SETTING_NAME = 'lsp_limit_lines'
+
+    @classmethod
+    def is_limit_enabled(cls, window: Optional[sublime.Window]) -> bool:
+        panel = get_panel(window, PanelName.Log)
+        return bool(panel and panel.settings().get(cls.SETTING_NAME, True))
+
+    def run(self, edit: sublime.Edit) -> None:
+        window = self.view.window()
+        panel = get_panel(window, PanelName.Log)
+        if panel:
+            settings = panel.settings()
+            settings.set(self.SETTING_NAME, not self.is_limit_enabled(window))
+
+    def is_checked(self) -> bool:
+        return self.is_limit_enabled(self.view.window())
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
@@ -162,7 +187,7 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         return
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
     list_len = len(WindowPanelListener.server_log_map[window_id])
-    if list_len >= LOG_PANEL_MAX_LINES:
+    if LspToggleLogPanelLinesLimitCommand.is_limit_enabled(window) and list_len >= LOG_PANEL_MAX_LINES:
         # Trim leading items in the list, leaving only the max allowed count.
         del WindowPanelListener.server_log_map[window_id][:list_len - LOG_PANEL_MAX_LINES]
     panel = ensure_log_panel(window)
@@ -186,15 +211,16 @@ class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
                 new_lines.append("{}: {}\n".format(prefix, message))
             if new_lines:
                 self.view.insert(edit, self.view.size(), ''.join(new_lines))
-                last_region_end = 0  # Starting from point 0 in the panel ...
-                total_lines, _ = self.view.rowcol(self.view.size())
-                for _ in range(0, max(0, total_lines - LOG_PANEL_MAX_LINES)):
-                    # ... collect all regions that span an entire line ...
-                    region = self.view.full_line(last_region_end)
-                    last_region_end = region.b
-                erase_region = sublime.Region(0, last_region_end)
-                if not erase_region.empty():
-                    self.view.erase(edit, erase_region)
+                if LspToggleLogPanelLinesLimitCommand.is_limit_enabled(self.view.window()):
+                    last_region_end = 0  # Starting from point 0 in the panel ...
+                    total_lines, _ = self.view.rowcol(self.view.size())
+                    for _ in range(0, max(0, total_lines - LOG_PANEL_MAX_LINES)):
+                        # ... collect all regions that span an entire line ...
+                        region = self.view.full_line(last_region_end)
+                        last_region_end = region.b
+                    erase_region = sublime.Region(0, last_region_end)
+                    if not erase_region.empty():
+                        self.view.erase(edit, erase_region)
         clear_undo_stack(self.view)
 
 

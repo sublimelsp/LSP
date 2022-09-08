@@ -18,6 +18,7 @@ from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
 from .plugin.core.panels import LspClearLogPanelCommand
 from .plugin.core.panels import LspClearPanelCommand
+from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateLogPanelCommand
 from .plugin.core.panels import WindowPanelListener

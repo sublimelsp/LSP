@@ -24,7 +24,6 @@ class ColorPickerPlugin(metaclass=ABCMeta):
         ...
 
 
-
 class LinuxColorPicker(ColorPickerPlugin):
     process = None  # type: Optional[subprocess.Popen]
 
@@ -32,11 +31,16 @@ class LinuxColorPicker(ColorPickerPlugin):
         t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
         t.start()
 
-    def _open_picker(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
-        color_arg = ""
-        if preselect_color:
-            color_arg = "{},{},{},{}".format(preselect_color['red'], preselect_color['green'], preselect_color['blue'], preselect_color['alpha'])
-        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "linux_executable.py"), color_arg]
+    def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
+        preselect_color_arg = ""
+        if color:
+            preselect_color_arg = "{},{},{},{}".format(
+                color['red'], color['green'], color['blue'], color['alpha']
+            )
+        picker_cmd = [
+            os.path.join(sublime.packages_path(), "LSP", "color_pickers", "linux_executable.py"),
+            preselect_color_arg
+        ]
         self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
         output = self.process.communicate()[0].strip().decode('utf-8')
         on_pick(self.normalize_color(output))
@@ -44,11 +48,7 @@ class LinuxColorPicker(ColorPickerPlugin):
     def normalize_color(self, color: str) -> Optional[Color]:
         if not color:
             return None
-        r, g, b, a = color.split(',')
-        r = float(r)
-        g = float(g)
-        b = float(b)
-        a = float(a)
+        r, g, b, a = map(float, color.split(','))
         return {
             "red": r,
             "green": g,
@@ -69,11 +69,16 @@ class WindowsColorPicker(ColorPickerPlugin):
         t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
         t.start()
 
-    def _open_picker(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
-        color_arg = ""
-        if preselect_color:
-            color_arg = "{},{},{},{}".format(preselect_color['red'], preselect_color['green'], preselect_color['blue'], preselect_color['alpha'])
-        picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "win_colorpicker.exe"), color_arg]
+    def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
+        preselect_color_arg = ""
+        if color:
+            preselect_color_arg = "{},{},{},{}".format(
+                color['red'], color['green'], color['blue'], color['alpha']
+            )
+        picker_cmd = [
+            os.path.join(sublime.packages_path(), "LSP", "color_pickers", "win_colorpicker.exe"),
+            preselect_color_arg
+        ]
         self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
         output = self.process.communicate()[0].strip().decode('utf-8')
         on_pick(self.normalize_color(output))

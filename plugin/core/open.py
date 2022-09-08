@@ -16,17 +16,12 @@ opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], Res
 
 
 def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:
-    # the specified_group is supplied
     if specified_group > -1:
-        # use existing_view_group if it is in the specified group
         return existing_view_group == specified_group
-    # open side by side
     if bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)):
         return False
-    # existing view is in active group ( no group is specified and not side by side )
     if existing_view_group == active_group:
         return True
-    # Jump to the file if sublime.FORCE_GROUP is not set
     return not bool(flags & sublime.FORCE_GROUP)
 
 

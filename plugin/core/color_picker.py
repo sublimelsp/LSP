@@ -48,7 +48,7 @@ class LinuxColorPicker(ColorPickerPlugin):
     def normalize_color(self, color: str) -> Optional[Color]:
         if not color:
             return None
-        r, g, b, a = map(lambda color: float(color or 0), color.split(','))
+        r, g, b, a = map(float, color.split(','))
         return {
             "red": r,
             "green": g,

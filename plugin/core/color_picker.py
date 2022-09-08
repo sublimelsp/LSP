@@ -1,3 +1,4 @@
+from abc import ABCMeta
 import threading
 import subprocess
 
@@ -12,35 +13,55 @@ ColorPickResult = Union[str, None]  # str - if a color is selected, else None
 OnPickCallback = Callable[[ColorPickResult], None]
 
 
-class ColorPicker:
+class ColorPickerPlugin(metaclass=ABCMeta):
+    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[ColorInformation] = None) -> None:
+        ...
+
+    def close(self) -> None:
+        ...
+
+
+class LinuxColorPicker(ColorPickerPlugin):
     process = None  # type: Optional[subprocess.Popen]
 
-    @classmethod
-    def pick(cls, on_pick: OnPickCallback, preselect_color: Optional[ColorInformation] = None) -> None:
-        t = threading.Thread(target=cls._open_picker, args=(on_pick, preselect_color))
+    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[ColorInformation] = None) -> None:
+        t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
         t.start()
 
-    @classmethod
-    def _open_picker(cls, on_pick: OnPickCallback, color_information: Optional[ColorInformation] = None) -> None:
+    def _open_picker(self, on_pick: OnPickCallback, color_information: Optional[ColorInformation] = None) -> None:
         preselect_color = ""
         if color_information:
             value = color_information['color']
             preselect_color = "{},{},{},{}".format(value['red'], value['green'], value['blue'], value['alpha'])
         picker_cmd = [os.path.join(sublime.packages_path(), "LSP", "color_pickers", "linux.py"), preselect_color]
-        cls.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
-        color = cls.process.communicate()[0].strip().decode('utf-8')
+        self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
+        color = self.process.communicate()[0].strip().decode('utf-8')
         on_pick(color or None)
 
-    @classmethod
-    def close(cls) -> None:
-        if cls.process:
-            cls.process.kill()
-            cls.process = None
+    def close(self) -> None:
+        if self.process:
+            self.process.kill()
+            self.process = None
+
+
+def get_color_picker() -> Optional[ColorPickerPlugin]:
+    if sublime.platform() == "linux":
+        return LinuxColorPicker()
+    if sublime.platform() == "windows":
+        return None
+    if sublime.platform() == "osx":
+        return None
+    return None
+
+
+color_picker = get_color_picker()
 
 
 class CloseColorPickerOnBlur(sublime_plugin.EventListener):
     def on_activated(self, view: sublime.View) -> None:
-        ColorPicker.close()
+        if color_picker:
+            color_picker.close()
 
     def on_exit(self) -> None:
-        ColorPicker.close()
+        if color_picker:
+            color_picker.close()

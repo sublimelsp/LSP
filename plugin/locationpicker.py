@@ -110,6 +110,12 @@ class LocationPicker:
                     functools.partial(open_location_async, session, location, self._side_by_side, True, self._group))
         else:
             self._window.focus_view(self._view)
+            # When a group was specified close the current highlighted
+            # sheet upon canceling if the sheet is transient
+            if self._group > -1 and self._highlighted_view:
+                sheet = self._highlighted_view.sheet()
+                if sheet and sheet.is_transient():
+                    self._highlighted_view.close()
             # When in side-by-side mode close the current highlighted
             # sheet upon canceling if the sheet is semi-transient
             if self._side_by_side and self._highlighted_view:

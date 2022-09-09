@@ -21,7 +21,7 @@ from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
-from .plugin.core.color_picker import CloseColorPickerOnBlur
+from .plugin.color_picker import CloseColorPickerOnBlur
 from .plugin.core.protocol import Location
 from .plugin.core.protocol import LocationLink
 from .plugin.core.registry import LspRecheckSessionsCommand

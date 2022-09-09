@@ -98,7 +98,7 @@ if sublime.platform() == "windows":
             cc = CHOOSECOLOR()
             ctypes.memset(ctypes.byref(cc), 0, ctypes.sizeof(cc))
             cc.lStructSize = ctypes.sizeof(cc)
-            cc.hwndOwner = None
+            cc.hwndOwner = sublime.active_window().hwnd()
             CustomColors = ctypes.c_uint32 * 16
             cc.lpCustColors = CustomColors() # uses 0 (black) for all 16 predefined custom colors
             cc.rgbResult = ctypes.c_uint32(default_color)

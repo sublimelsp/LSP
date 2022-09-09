@@ -85,16 +85,10 @@ if sublime.platform() == "windows":
 
 
     class WindowsColorPicker(ColorPickerPlugin):
-        process = None  # type: Optional[subprocess.Popen]
-
         def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
-            t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
-            t.start()
-
-        def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
             default_color = (255 << 16) | (255 << 8) | (255)
-            if color:
-                default_color = (round(255*color['blue']) << 16) | (round(255*color['green']) << 8) | round(255*color['red'])
+            if preselect_color:
+                default_color = (round(255*preselect_color['blue']) << 16) | (round(255*preselect_color['green']) << 8) | round(255*preselect_color['red'])
             cc = CHOOSECOLOR()
             ctypes.memset(ctypes.byref(cc), 0, ctypes.sizeof(cc))
             cc.lStructSize = ctypes.sizeof(cc)
@@ -136,9 +130,7 @@ if sublime.platform() == "windows":
             return None
 
         def close(self) -> None:
-            if self.process:
-                self.process.kill()
-                self.process = None
+            pass # on windows, the color picker will block until a color is choosen 
 
 
 

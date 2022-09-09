@@ -62,6 +62,26 @@ class LinuxColorPicker(ColorPickerPlugin):
 
 
 if sublime.platform() == "windows":
+    import ctypes
+
+    class CHOOSECOLOR(ctypes.Structure):
+        _fields_ = [
+            ("lStructSize", ctypes.c_uint32),
+            ("hwndOwner", ctypes.c_void_p),
+            ("hInstance", ctypes.c_void_p),
+            ("rgbResult", ctypes.c_uint32),
+            ("lpCustColors", ctypes.POINTER(ctypes.c_uint32)),
+            ("Flags", ctypes.c_uint32),
+            ("lCustData", ctypes.c_void_p),
+            ("lpfnHook", ctypes.c_void_p),
+            ("lpTemplateName", ctypes.c_wchar_p)]
+
+    CC_SOLIDCOLOR = 0x80
+    CC_RGBINIT = 0x01
+    CC_FULLOPEN = 0x02
+    ChooseColorW = ctypes.windll.Comdlg32.ChooseColorW
+    ChooseColorW.argtypes = [ctypes.POINTER(CHOOSECOLOR)]
+    ChooseColorW.restype = ctypes.c_int32
 
 
     class WindowsColorPicker(ColorPickerPlugin):
@@ -72,28 +92,47 @@ if sublime.platform() == "windows":
             t.start()
 
         def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
-            preselect_color_arg = ""
+            default_color = (255 << 16) | (255 << 8) | (255)
             if color:
-                preselect_color_arg = "{},{},{}".format(
-                    color['red'], color['green'], color['blue']
-                )
-            picker_cmd = [
-                os.path.join(sublime.packages_path(), "LSP", "plugin", "color_picker", "windows_executable.py"),
-                preselect_color_arg
-            ]
-            self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
-            output = self.process.communicate()[0].strip().decode('utf-8')
-            on_pick(self.normalize_color(output))
+                default_color = (round(255*color['blue']) << 16) | (round(255*color['green']) << 8) | round(255*color['red'])
+            cc = CHOOSECOLOR()
+            ctypes.memset(ctypes.byref(cc), 0, ctypes.sizeof(cc))
+            cc.lStructSize = ctypes.sizeof(cc)
+            cc.hwndOwner = None
+            CustomColors = ctypes.c_uint32 * 16
+            cc.lpCustColors = CustomColors() # uses 0 (black) for all 16 predefined custom colors
+            cc.rgbResult = ctypes.c_uint32(default_color)
+            cc.Flags = CC_SOLIDCOLOR | CC_FULLOPEN | CC_RGBINIT
 
-        def normalize_color(self, color: Any) -> Optional[Color]:
-            if isinstance(color, str):
-                r, g, b = map(float, color.split(','))
+            # ST window will become unresponsive until color picker dialog is closed
+            output = ChooseColorW(ctypes.byref(cc))
+
+            if output == 1: # user clicked OK
+                on_pick(self.normalize_color(cc.rgbResult))
+            else:
+                on_pick(None)
+
+        def normalize_color(self, bgr_color: Any) -> Optional[Color]:
+
+            def bgr2color(bgr) -> Color:
+                # 0x00BBGGRR
+                byte_table = list(["{0:02X}".format(b) for b in range(256)])
+                b_hex = byte_table[(bgr >> 16) & 0xff]
+                g_hex = byte_table[(bgr >> 8) & 0xff]
+                r_hex = byte_table[(bgr) & 0xff]
+
+                r = int(r_hex, 16) / 255
+                g = int(g_hex, 16) / 255
+                b = int(b_hex, 16) / 255
                 return {
                     "red": r,
                     "green": g,
                     "blue": b,
                     "alpha": 1  # windows picker doesn't support alpha, so fallback to 1
                 }
+
+            if bgr_color:
+                return bgr2color(bgr_color)
             return None
 
         def close(self) -> None:

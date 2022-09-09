@@ -1,6 +1,6 @@
 from LSP.plugin.core.panels import ensure_log_panel
-from LSP.plugin.core.panels import LOG_PANEL_MAX_LINES
 from LSP.plugin.core.panels import log_server_message
+from LSP.plugin.core.panels import LspToggleLogPanelLinesLimitCommand
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -29,7 +29,7 @@ class LspServerPanelTests(DeferrableTestCase):
         log_server_message(self.window, "test", msg)
 
     def test_server_panel_circular_behavior(self):
-        n = LOG_PANEL_MAX_LINES
+        n = LspToggleLogPanelLinesLimitCommand.MAX_LINES_LIMIT_ON
         for i in range(0, n + 1):
             self.update_panel(str(i))
         self.update_panel("overflow")

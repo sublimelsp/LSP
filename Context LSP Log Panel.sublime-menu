@@ -6,6 +6,7 @@
     {
         "caption": "Limit to 500 Lines",
         "command": "lsp_toggle_log_panel_lines_limit",
+        "checkbox": true
     },
     {
         "caption": "-"

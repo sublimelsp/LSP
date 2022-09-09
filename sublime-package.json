@@ -505,7 +505,7 @@
                   "deprecationMessage": "Use an array instead."
                 }
               ],
-              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Language Servers output panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
+              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Log Panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
             },
             "log_max_size": {
               "type": "integer",

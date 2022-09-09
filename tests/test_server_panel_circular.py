@@ -1,5 +1,5 @@
-from LSP.plugin.core.panels import ensure_server_panel
-from LSP.plugin.core.panels import SERVER_PANEL_MAX_LINES
+from LSP.plugin.core.panels import ensure_log_panel
+from LSP.plugin.core.panels import LOG_PANEL_MAX_LINES
 from LSP.plugin.core.panels import log_server_message
 from unittesting import DeferrableTestCase
 import sublime
@@ -14,7 +14,7 @@ class LspServerPanelTests(DeferrableTestCase):
             self.skipTest("window is None!")
             return
         self.view = self.window.active_view()
-        panel = ensure_server_panel(self.window)
+        panel = ensure_log_panel(self.window)
         if panel is None:
             self.skipTest("panel is None!")
             return
@@ -29,7 +29,7 @@ class LspServerPanelTests(DeferrableTestCase):
         log_server_message(self.window, "test", msg)
 
     def test_server_panel_circular_behavior(self):
-        n = SERVER_PANEL_MAX_LINES
+        n = LOG_PANEL_MAX_LINES
         for i in range(0, n + 1):
             self.update_panel(str(i))
         self.update_panel("overflow")

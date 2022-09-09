@@ -1,6 +1,6 @@
 [
     {
-        "caption": "Clear Log Panel",
+        "caption": "Clear",
         "command": "lsp_clear_log_panel",
     },
     {

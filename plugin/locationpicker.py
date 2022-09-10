@@ -16,7 +16,8 @@ def open_location_async(
     session: Session,
     location: Union[Location, LocationLink],
     side_by_side: bool,
-    force_group: bool
+    force_group: bool,
+    group: int = -1
 ) -> None:
     flags = sublime.ENCODED_POSITION
     if force_group:
@@ -28,7 +29,7 @@ def open_location_async(
         if not view:
             sublime.error_message("Unable to open URI")
 
-    session.open_location_async(location, flags).then(check_success_async)
+    session.open_location_async(location, flags, group).then(check_success_async)
 
 
 def open_basic_file(
@@ -59,7 +60,8 @@ class LocationPicker:
         view: sublime.View,
         session: Session,
         locations: Union[List[Location], List[LocationLink]],
-        side_by_side: bool
+        side_by_side: bool,
+        group: int = -1
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -69,10 +71,12 @@ class LocationPicker:
         self._window = window
         self._weaksession = weakref.ref(session)
         self._side_by_side = side_by_side
+        self._group = group
         self._items = locations
         self._highlighted_view = None  # type: Optional[sublime.View]
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
+        self._window.focus_group(group)
         self._window.show_quick_panel(
             items=[location_to_human_readable(session.config, base_dir, location) for location in locations],
             on_select=self._select_entry,
@@ -103,9 +107,15 @@ class LocationPicker:
                         self._window.status_message("Unable to open {}".format(uri))
             else:
                 sublime.set_timeout_async(
-                    functools.partial(open_location_async, session, location, self._side_by_side, True))
+                    functools.partial(open_location_async, session, location, self._side_by_side, True, self._group))
         else:
             self._window.focus_view(self._view)
+            # When a group was specified close the current highlighted
+            # sheet upon canceling if the sheet is transient
+            if self._group > -1 and self._highlighted_view:
+                sheet = self._highlighted_view.sheet()
+                if sheet and sheet.is_transient():
+                    self._highlighted_view.close()
             # When in side-by-side mode close the current highlighted
             # sheet upon canceling if the sheet is semi-transient
             if self._side_by_side and self._highlighted_view:

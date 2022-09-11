@@ -32,11 +32,13 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import parse_uri
 from .core.url import view_to_uri
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import format_diagnostics_for_annotation
 from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
@@ -130,6 +132,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
+    INLINE_DIAGNOSTIC_REGION_KEY = "lsp_d-annotations"
     code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
@@ -303,13 +306,26 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
     def _update_inline_diagnostics_async(self) -> None:
-        diagnostics = []  # type: List[Diagnostic]
+        selections_diagnostics = []  # type: List[Diagnostic]
         for r in self.view.sel():
             session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
             for _, diagnostics in session_buffer_diagnostics:
-                diagnostics.extend(diagnostics)
-        for sv in self.session_views_async():
-            sv.update_inline_diagnostics_async(diagnostics)
+                selections_diagnostics.extend(diagnostics)
+        self.view.erase_regions(self.INLINE_DIAGNOSTIC_REGION_KEY)
+        if userprefs().show_diagnostics_inline != 'at-cursor':
+            return
+        if selections_diagnostics:
+            sorted_diagnostics = sorted(selections_diagnostics, key=lambda d: d.get('severity', 1))
+            first_diagnostic = sorted_diagnostics[0]
+            lsp_range = first_diagnostic.get('range')
+            if lsp_range:
+                scope = DIAGNOSTIC_SEVERITY[first_diagnostic.get('severity', 1) - 1][2]
+                icon = ""
+                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+                annotation_color = self.view.style_for_scope(scope).get('foreground') or 'red'
+                regions, annotations = format_diagnostics_for_annotation(sorted_diagnostics, self.view)
+                self.view.add_regions(
+                    self.INLINE_DIAGNOSTIC_REGION_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()

@@ -1519,6 +1519,8 @@ class Session(TransportCallbacks):
             result = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
 
             def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
+                if group > -1:
+                    self.window.focus_group(group)
                 v = self.window.new_file(syntax=syntax, flags=flags)
                 # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
                 # settings object here at our leisure.

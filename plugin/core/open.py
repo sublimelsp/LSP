@@ -55,18 +55,16 @@ def open_file_uri(
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     parsed = urlparse(decoded_uri)
+    open_promise = open_file(window, decoded_uri, flags, group)
     if parsed.fragment:
-        r = parse_fragment(parsed.fragment)
+        return open_promise.then(lambda view: _select_and_center(view, parse_fragment(parsed.fragment)))
+    return open_promise
 
-        def handle_continuation(view: Optional[sublime.View]) -> Promise[Optional[sublime.View]]:
-            if view:
-                center_selection(view, r)
-                return Promise.resolve(view)
-            return Promise.resolve(None)
 
-        return open_file(window, decoded_uri, flags, group).then(handle_continuation)
-    else:
-        return open_file(window, decoded_uri, flags, group)
+def _select_and_center(view: Optional[sublime.View], r: RangeLsp) -> Optional[sublime.View]:
+    if view:
+        return center_selection(view, r)
+    return None
 
 
 def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:

@@ -4,9 +4,6 @@ import sublime
 import sublime_plugin
 
 
-# about 80 chars per line implies maintaining a buffer of about 40kb per window
-SERVER_PANEL_MAX_LINES = 500
-
 OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
@@ -32,7 +29,7 @@ class PanelName:
     Diagnostics = "diagnostics"
     References = "references"
     Rename = "rename"
-    LanguageServers = "language servers"
+    Log = "LSP Log Panel"
 
 
 @contextmanager
@@ -66,13 +63,13 @@ class WindowPanelListener(sublime_plugin.EventListener):
 
     def on_window_command(self, window: sublime.Window, command_name: str, args: Dict) -> None:
         if command_name in ('show_panel', 'hide_panel'):
-            sublime.set_timeout(lambda: self.maybe_update_server_panel(window))
+            sublime.set_timeout(lambda: self.maybe_update_log_panel(window))
 
-    def maybe_update_server_panel(self, window: sublime.Window) -> None:
-        if is_server_panel_open(window):
-            panel = ensure_server_panel(window)
+    def maybe_update_log_panel(self, window: sublime.Window) -> None:
+        if is_panel_open(window, PanelName.Log):
+            panel = ensure_log_panel(window)
             if panel:
-                update_server_panel(panel, window.id())
+                update_log_panel(panel, window.id())
 
 
 def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
@@ -93,27 +90,66 @@ def destroy_output_panels(window: sublime.Window) -> None:
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
+                 syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
     panel = create_output_panel(window, name)
     if not panel:
         return None
+    settings = panel.settings()
     if result_file_regex:
-        panel.settings().set("result_file_regex", result_file_regex)
+        settings.set("result_file_regex", result_file_regex)
     if result_line_regex:
-        panel.settings().set("result_line_regex", result_line_regex)
+        settings.set("result_line_regex", result_line_regex)
+    if context_menu:
+        settings.set("context_menu", context_menu)
     panel.assign_syntax(syntax)
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
+    # Call create_output_panel a second time after assigning the above settings, so that it'll be picked up
+    # as a result buffer. See: Packages/Default/exec.py#L228-L230
     panel = window.create_output_panel(name)
-    # All our panels are read-only
-    panel.set_read_only(True)
+    if panel:
+        # All our panels are read-only
+        panel.set_read_only(True)
     return panel
 
 
+def get_panel(window: Optional[sublime.Window], panel_name: str) -> Optional[sublime.View]:
+    if not window:
+        return None
+    return window.find_output_panel(panel_name)
+
+
+def is_panel_open(window: sublime.Window, panel_name: str) -> bool:
+    return window.is_valid() and window.active_panel() == "output.{}".format(panel_name)
+
+
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
-    return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
+                 syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
+    return get_panel(window, name) or \
+        create_panel(window, name, result_file_regex, result_line_regex, syntax, context_menu)
+
+
+class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
+    SETTING_NAME = 'lsp_limit_lines'
+    MAX_LINES_LIMIT_ON = 500
+    MAX_LINES_LIMIT_OFF = 10000
+
+    @classmethod
+    def is_limit_enabled(cls, window: Optional[sublime.Window]) -> bool:
+        panel = get_panel(window, PanelName.Log)
+        return bool(panel and panel.settings().get(cls.SETTING_NAME, True))
+
+    @classmethod
+    def get_lines_limit(cls, window: Optional[sublime.Window]) -> int:
+        return cls.MAX_LINES_LIMIT_ON if cls.is_limit_enabled(window) else cls.MAX_LINES_LIMIT_OFF
+
+    def run(self, edit: sublime.Edit) -> None:
+        window = self.view.window()
+        panel = get_panel(window, PanelName.Log)
+        if panel:
+            settings = panel.settings()
+            settings.set(self.SETTING_NAME, not self.is_limit_enabled(window))
+
+    def is_checked(self) -> bool:
+        return self.is_limit_enabled(self.view.window())
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
@@ -143,12 +179,9 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         clear_undo_stack(self.view)
 
 
-def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
-
-
-def is_server_panel_open(window: sublime.Window) -> bool:
-    return window.is_valid() and window.active_panel() == "output.{}".format(PanelName.LanguageServers)
+def ensure_log_panel(window: sublime.Window) -> Optional[sublime.View]:
+    return ensure_panel(window, PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
+                        "Context LSP Log Panel.sublime-menu")
 
 
 def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:
@@ -157,19 +190,20 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         return
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
     list_len = len(WindowPanelListener.server_log_map[window_id])
-    if list_len >= SERVER_PANEL_MAX_LINES:
+    max_lines = LspToggleLogPanelLinesLimitCommand.get_lines_limit(window)
+    if list_len >= max_lines:
         # Trim leading items in the list, leaving only the max allowed count.
-        del WindowPanelListener.server_log_map[window_id][:list_len - SERVER_PANEL_MAX_LINES]
-    panel = ensure_server_panel(window)
-    if is_server_panel_open(window) and panel:
-        update_server_panel(panel, window_id)
+        del WindowPanelListener.server_log_map[window_id][:list_len - max_lines]
+    panel = ensure_log_panel(window)
+    if is_panel_open(window, PanelName.Log) and panel:
+        update_log_panel(panel, window_id)
 
 
-def update_server_panel(panel: sublime.View, window_id: int) -> None:
-    panel.run_command("lsp_update_server_panel", {"window_id": window_id})
+def update_log_panel(panel: sublime.View, window_id: int) -> None:
+    panel.run_command("lsp_update_log_panel", {"window_id": window_id})
 
 
-class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
+class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, window_id: int) -> None:
         to_process = WindowPanelListener.server_log_map.get(window_id) or []
@@ -183,7 +217,8 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 self.view.insert(edit, self.view.size(), ''.join(new_lines))
                 last_region_end = 0  # Starting from point 0 in the panel ...
                 total_lines, _ = self.view.rowcol(self.view.size())
-                for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
+                max_lines = LspToggleLogPanelLinesLimitCommand.get_lines_limit(self.view.window())
+                for _ in range(0, max(0, total_lines - max_lines)):
                     # ... collect all regions that span an entire line ...
                     region = self.view.full_line(last_region_end)
                     last_region_end = region.b
@@ -191,3 +226,13 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 if not erase_region.empty():
                     self.view.erase(edit, erase_region)
         clear_undo_stack(self.view)
+
+
+class LspClearLogPanelCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        panel = ensure_log_panel(window)
+        if panel:
+            panel.run_command("lsp_clear_panel")

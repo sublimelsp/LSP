@@ -1,4 +1,9 @@
 from .css import css as lsp_css
+from .protocol import CodeAction
+from .protocol import CodeActionContext
+from .protocol import CodeActionParams
+from .protocol import CodeActionTriggerKind
+from .protocol import Command
 from .protocol import CompletionItem
 from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
@@ -23,7 +28,7 @@ from .protocol import TextDocumentIdentifier
 from .protocol import TextDocumentPositionParams
 from .settings import userprefs
 from .types import ClientConfig
-from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
+from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
 import html
@@ -87,6 +92,10 @@ KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
 KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
 KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
+KIND_QUICKFIX = (sublime.KIND_ID_COLOR_YELLOWISH, "f", "QuickFix")
+KIND_REFACTOR = (sublime.KIND_ID_COLOR_CYANISH, "r", "Refactor")
+KIND_SOURCE = (sublime.KIND_ID_COLOR_PURPLISH, "s", "Source")
+
 KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
 
 COMPLETION_KINDS = {
@@ -144,6 +153,12 @@ SYMBOL_KINDS = {
     SymbolKind.Event: KIND_EVENT,
     SymbolKind.Operator: KIND_OPERATOR,
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+CODE_ACTION_KINDS = {
+    "quickfix": KIND_QUICKFIX,
+    "refactor": KIND_REFACTOR,
+    "source": KIND_SOURCE
 }
 
 SYMBOL_KIND_SCOPES = {
@@ -532,14 +547,16 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
 def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
-    diagnostics: Sequence[Diagnostic],
-    on_save_actions: Optional[Sequence[str]] = None
-) -> Dict[str, Any]:
+    diagnostics: List[Diagnostic],
+    on_save_actions: Optional[List[str]] = None,
+    manual: bool = False
+) -> CodeActionParams:
     context = {
-        "diagnostics": diagnostics
-    }  # type: Dict[str, Any]
+        "diagnostics": diagnostics,
+        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+    }  # type: CodeActionContext
     if on_save_actions:
-        context['only'] = on_save_actions
+        context["only"] = on_save_actions
     return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),
@@ -1008,3 +1025,17 @@ def format_completion(
     if item.get('textEdit'):
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
+
+
+def format_code_actions_for_quick_panel(
+    code_actions: List[Union[CodeAction, Command]]
+) -> Tuple[List[sublime.QuickPanelItem], int]:
+    items = []  # type: List[sublime.QuickPanelItem]
+    selected_index = -1
+    for idx, code_action in enumerate(code_actions):
+        lsp_kind = str(code_action.get("kind", ""))
+        kind = CODE_ACTION_KINDS.get(lsp_kind.split(".")[0], sublime.KIND_AMBIGUOUS)
+        items.append(sublime.QuickPanelItem(code_action["title"], kind=kind))
+        if code_action.get('isPreferred', False):
+            selected_index = idx
+    return items, selected_index

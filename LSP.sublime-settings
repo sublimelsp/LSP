@@ -183,7 +183,7 @@
 
   // Log communication from and to language servers.
   // Set to an array of values:
-  // - "panel" - log to the LSP Language Servers output panel
+  // - "panel" - log to the LSP Log Panel
   // - "remote" - start a local websocket server on port 9981. Can be connected to with
   //              a websocket client to receive the log messages in real time.
   // For backward-compatibility, when set to "true", enables the "panel" logger and when

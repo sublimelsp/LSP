@@ -24,19 +24,11 @@ def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
 
-    def parse_int(s: Optional[str]) -> Optional[int]:
-        if s:
-            try:
-                # assume that line and column numbers in the fragment are 1-based
-                return max(1, int(s))
-            except ValueError:
-                return None
-        return None
-
     def parse_fragment(fragment: str) -> RangeLsp:
         match = FRAGMENT_PATTERN.match(fragment)
         if match:
-            start_line, start_column, end_line, end_column = [parse_int(g) for g in match.groups()]
+            # assume that line and column numbers in the fragment are 1-based
+            start_line, start_column, end_line, end_column = [max(1, int(g)) if g else None for g in match.groups()]
             if start_line is not None:
                 if end_line is not None:
                     if start_column is not None and end_column is not None:

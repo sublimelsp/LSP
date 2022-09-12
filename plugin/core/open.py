@@ -132,7 +132,7 @@ def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
 
 def open_in_browser(uri: str) -> None:
     # NOTE: Remove this check when on py3.8.
-    if not (uri.lower().startswith("http://") or uri.lower().startswith("https://")):
+    if not uri.lower().startswith(("http://", "https://")):
         uri = "https://" + uri
     if not webbrowser.open(uri):
         sublime.status_message("failed to open: " + uri)

@@ -15,7 +15,7 @@ The LSP package enhances the auto-complete list with results provided by the lan
 To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
 or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
 
-To inser or replace a completion item using the opposite "completion_insert_mode" setting value, the following keybinding can be used <kbd>alt+enter</kbd>.
+To insert or replace a completion item using the opposite "completion_insert_mode" setting value, the following keybinding can be used <kbd>alt+enter</kbd>.
 Note, this feature can only be used if **Replace** or **Insert** are shown at the bottom of the autocomplete popup.
 
 [Example GIF 3](https://user-images.githubusercontent.com/22029477/189607770-1a8018f6-1fd1-40de-b6d9-be1f657dfc0d.gif)

@@ -6,6 +6,7 @@ from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import UINT_MAX
 from .typing import Dict, Tuple, Optional
+from .typing import cast
 from .url import parse_uri
 from .views import range_to_region
 from urllib.parse import unquote, urlparse
@@ -24,10 +25,10 @@ def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
 
-    def parse_fragment(fragment: str) -> RangeLsp:
+    def parse_fragment(fragment: str) -> Optional[RangeLsp]:
         match = FRAGMENT_PATTERN.match(fragment)
-        selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: RangeLsp
         if match:
+            selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: RangeLsp
             # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
             # numbers for the LSP Position structure.
             start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
@@ -42,13 +43,16 @@ def open_file_uri(
                 selection['end']['character'] = UINT_MAX
             if end_column is not None:
                 selection['end']['character'] = end_column
-        return selection
+            return selection
+        return None
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     parsed = urlparse(decoded_uri)
     open_promise = open_file(window, decoded_uri, flags, group)
     if parsed.fragment:
-        return open_promise.then(lambda view: _select_and_center(view, parse_fragment(parsed.fragment)))
+        selection = parse_fragment(parsed.fragment)
+        if selection:
+            return open_promise.then(lambda view: _select_and_center(view, cast(RangeLsp, selection)))
     return open_promise
 
 

@@ -995,6 +995,10 @@ def format_completion(
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
 
+    insert_replace_support_html = get_insert_replace_support_html(item)
+    if insert_replace_support_html:
+        details.append(insert_replace_support_html)
+
     completion = sublime.CompletionItem.command_completion(
         trigger=trigger,
         command='lsp_select_completion_item',
@@ -1019,3 +1023,13 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
+
+
+def get_insert_replace_support_html(item: CompletionItem) -> Optional[str]:
+    text_edit = item.get('textEdit')
+    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
+        insert_mode = userprefs().completion_insert_mode
+        oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
+        command_url = sublime.command_url("lsp_commit_completion_with_opposite_insert_mode")
+        return "<a href='{}'>{}</a>".format(command_url, oposite_insert_mode)
+    return None

@@ -93,7 +93,7 @@ class LspResolveDocsCommand(LspTextCommand):
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
     active = False
 
-    def run(self, edit: sublime.Edit) -> None:
+    def run(self, edit: sublime.Edit, event=None) -> None:
         LspCommitCompletionWithOppositeInsertMode.active = True
         self.view.run_command("commit_completion")
         LspCommitCompletionWithOppositeInsertMode.active = False

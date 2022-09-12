@@ -133,6 +133,47 @@ if sublime.platform() == "windows":
             pass # on windows, the color picker will block until a color is choosen 
 
 
+class OsxColorPicker(ColorPickerPlugin):
+    process = None  # type: Optional[subprocess.Popen]
+    script = '''
+    function run(argv) {{
+        var app = Application.currentApplication();
+        app.includeStandardAdditions = true;
+        var color = app.chooseColor({{defaultColor: [{red}, {green}, {blue}]}});
+        console.log(JSON.stringify(color));
+    }}
+    '''
+
+    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+        t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
+        t.start()
+
+    def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
+        script = self.script.format(red=0, green=0, blue=0)
+        if color:
+            script = self.script.format(red=color['red'], green=color['green'], blue=color['blue'])
+        picker_cmd = ["/usr/bin/osascript", "-l", "JavaScript", "-e", script]
+        self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = self.process.communicate()[0].strip().decode('ascii')
+        on_pick(self.normalize_color(output))
+
+    def normalize_color(self, color: Any) -> Optional[Color]:
+        print('OSX output contains a warning:', color)
+        if isinstance(color, list):
+            r, g, b = 1, 1, 1 # hardcoded
+            return {
+                "red": r,
+                "green": g,
+                "blue": b,
+                "alpha": 1,
+            }
+        return None
+
+    def close(self) -> None:
+        if self.process:
+            self.process.kill()
+            self.process = None
+
 
 def get_color_picker() -> Optional[ColorPickerPlugin]:
     if sublime.platform() == "linux":
@@ -140,7 +181,7 @@ def get_color_picker() -> Optional[ColorPickerPlugin]:
     if sublime.platform() == "windows":
         return WindowsColorPicker()
     if sublime.platform() == "osx":
-        return None
+        return OsxColorPicker()
     return None
 
 

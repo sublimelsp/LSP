@@ -40,7 +40,7 @@ def open_file_uri(
             if end_line:
                 selection['end']['line'] = end_line
                 selection['end']['character'] = UINT_MAX
-            if end_column:
+            if end_column is not None:
                 selection['end']['character'] = end_column
         return selection
 

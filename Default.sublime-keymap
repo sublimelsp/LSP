@@ -25,6 +25,25 @@
             }
         ]
     },
+    // Insert/Replace Completions
+    {
+        "command": "lsp_commit_completion_with_opposite_insert_mode",
+        "keys": [
+            "alt+enter"
+        ],
+        "context": [
+            {
+                "key": "auto_complete_visible",
+                "operator": "equal",
+                "operand": true
+            },
+            {
+                "key": "lsp.session_with_capability",
+                "operator": "equal",
+                "operand": "completionProvider"
+            }
+        ]
+    },
     // Save all open files with lsp_save
     // {
     //     "command": "lsp_save_all",

@@ -452,6 +452,12 @@
               "default": true,
               "markdownDescription": "Disable Sublime Text's word completions. \"word\" completion means Sublime Text's internal completer that takes words from the current buffer you're editing and presents them in the auto-complete widget."
             },
+            "completion_insert_mode": {
+              "type": "string",
+              "default": "insert",
+              "enum": ["insert", "replace"],
+              "markdownDescription": "The mode used for inserting completions:\n\n - `insert` would insert the completion text in a middle of the word\n\n - `replace` would replace the existing word with a new completion text\n\n An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`\n can be used to insert completion using the opposite mode to the one selected here.\n\n Note: Must be supported by the language server."
+            },
             "show_references_in_quick_panel": {
               "type": "boolean",
               "default": false,

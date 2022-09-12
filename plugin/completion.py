@@ -1,8 +1,9 @@
 from .core.edit import parse_text_edit
 from .core.logging import debug
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
+from .core.protocol import InsertReplaceEdit, TextEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
-from .core.typing import List, Dict, Optional, Generator, Union
+from .core.settings import userprefs
+from .core.typing import List, Dict, Optional, Generator, Union, cast
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
@@ -14,6 +15,17 @@ import sublime
 import webbrowser
 
 SessionName = str
+
+
+def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeLsp:
+    if 'insert' in text_edit and 'replace' in text_edit:
+        text_edit = cast(InsertReplaceEdit, text_edit)
+        insert_mode = userprefs().completion_insert_mode
+        if LspCommitCompletionWithOppositeInsertMode.active:
+            insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
+        return text_edit.get(insert_mode)  # type: ignore
+    text_edit = cast(TextEdit, text_edit)
+    return text_edit['range']
 
 
 class LspResolveDocsCommand(LspTextCommand):
@@ -77,12 +89,21 @@ class LspResolveDocsCommand(LspTextCommand):
         webbrowser.open(url)
 
 
+class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
+    active = False
+
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+        LspCommitCompletionWithOppositeInsertMode.active = True
+        self.view.run_command("commit_completion")
+        LspCommitCompletionWithOppositeInsertMode.active = False
+
+
 class LspSelectCompletionItemCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

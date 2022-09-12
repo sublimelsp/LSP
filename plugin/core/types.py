@@ -195,6 +195,7 @@ class Settings:
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
     link_highlight_style = None  # type: str
+    completion_insert_mode = None  # type: str
     log_debug = None  # type: bool
     log_max_size = None  # type: int
     log_server = None  # type: List[str]
@@ -241,6 +242,7 @@ class Settings:
         r("lsp_format_on_save", False)
         r("on_save_task_timeout_ms", 2000)
         r("only_show_lsp_completions", False)
+        r("completion_insert_mode", 'insert')
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
         r("semantic_highlighting", False)

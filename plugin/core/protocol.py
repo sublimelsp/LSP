@@ -323,6 +323,12 @@ CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
     'description': str
 }, total=False)
 
+InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
+    'newText': str,
+    'insert': RangeLsp,
+    'replace': RangeLsp
+}, total=True)
+
 CompletionItem = TypedDict('CompletionItem', {
     'additionalTextEdits': List[TextEdit],
     'command': Command,
@@ -341,7 +347,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'preselect': bool,
     'sortText': str,
     'tags': List[int],
-    'textEdit': TextEdit
+    'textEdit': Union[TextEdit, InsertReplaceEdit]
 }, total=False)
 
 CompletionList = TypedDict('CompletionList', {

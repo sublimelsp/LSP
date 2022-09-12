@@ -18,7 +18,7 @@ or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
 To inser or replace a completion item using the opposite "completion_insert_mode" setting value, the following keybinding can be used <kbd>alt+enter</kbd>.
 Note, this feature can only be used if **Replace** or **Insert** are shown at the bottom of the autocomplete popup.
 
-[Example GIF 3](https://user-images.githubusercontent.com/22029477/189605439-89c49e30-7c80-4eb5-8220-df7789dd06c6.gif)
+[Example GIF 3](https://user-images.githubusercontent.com/22029477/189607770-1a8018f6-1fd1-40de-b6d9-be1f657dfc0d.gif)
 
 ## Goto Definition
 

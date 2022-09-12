@@ -21,7 +21,6 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeL
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
-        # if shift is pressed, we want the oposite insert mode range
         if LspCommitCompletionWithOppositeInsertMode.active:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore

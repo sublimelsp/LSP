@@ -31,16 +31,16 @@ def open_file_uri(
             # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
             # numbers for the LSP Position structure.
             start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
-            if start_line is not None:
+            if start_line:
                 selection['start']['line'] = start_line
                 selection['end']['line'] = start_line
-            if start_column is not None:
+            if start_column:
                 selection['start']['character'] = start_column
                 selection['end']['character'] = start_column
-            if end_line is not None:
+            if end_line:
                 selection['end']['line'] = end_line
                 selection['end']['character'] = UINT_MAX
-            if end_column is not None:
+            if end_column:
                 selection['end']['character'] = end_column
         return selection
 

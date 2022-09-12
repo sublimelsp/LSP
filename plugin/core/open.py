@@ -2,9 +2,9 @@ from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import DocumentUri
-from .protocol import UINT_MAX
 from .protocol import Range
 from .protocol import RangeLsp
+from .protocol import UINT_MAX
 from .typing import Dict, Tuple, Optional
 from .url import parse_uri
 from .views import range_to_region
@@ -26,32 +26,23 @@ def open_file_uri(
 
     def parse_fragment(fragment: str) -> RangeLsp:
         match = FRAGMENT_PATTERN.match(fragment)
+        selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: RangeLsp
         if match:
-            # assume that line and column numbers in the fragment are 1-based
-            start_line, start_column, end_line, end_column = [max(1, int(g)) if g else None for g in match.groups()]
+            # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
+            # numbers for the LSP Position structure.
+            start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
             if start_line is not None:
-                if end_line is not None:
-                    if start_column is not None and end_column is not None:
-                        return {
-                            "start": {"line": start_line - 1, "character": start_column - 1},
-                            "end": {"line": end_line - 1, "character": end_column - 1}
-                        }
-                    else:
-                        return {
-                            "start": {"line": start_line - 1, "character": 0},
-                            "end": {"line": end_line - 1, "character": UINT_MAX}
-                        }
-                elif start_column is not None:
-                    return {
-                        "start": {"line": start_line - 1, "character": start_column - 1},
-                        "end": {"line": start_line - 1, "character": start_column - 1}
-                    }
-                else:
-                    return {
-                        "start": {"line": start_line - 1, "character": 0},
-                        "end": {"line": start_line - 1, "character": 0}
-                    }
-        return {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+                selection['start']['line'] = start_line
+                selection['end']['line'] = start_line
+            if start_column is not None:
+                selection['start']['character'] = start_column
+                selection['end']['character'] = start_column
+            if end_line is not None:
+                selection['end']['line'] = end_line
+                selection['end']['character'] = UINT_MAX
+            if end_column is not None:
+                selection['end']['character'] = end_column
+        return selection
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     parsed = urlparse(decoded_uri)

@@ -58,8 +58,11 @@ class LinuxColorPicker(ColorPickerPlugin):
 
     def close(self) -> None:
         if self.process:
-            self.process.kill()
-            self.process = None
+            try:
+                self.process.kill()
+            except:
+                pass
+        self.process = None
 
 
 if sublime.platform() == "windows":
@@ -174,8 +177,11 @@ class OsxColorPicker(ColorPickerPlugin):
 
     def close(self) -> None:
         if self.process:
-            self.process.kill()
-            self.process = None
+            try:
+                self.process.kill()
+            except:
+                pass
+        self.process = None
 
 
 def get_color_picker() -> Optional[ColorPickerPlugin]:

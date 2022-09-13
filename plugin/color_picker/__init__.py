@@ -27,6 +27,7 @@ class LinuxColorPicker(ColorPickerPlugin):
     process = None  # type: Optional[subprocess.Popen]
 
     def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+        self.close()
         t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
         t.start()
 
@@ -86,6 +87,7 @@ if sublime.platform() == "windows":
 
     class WindowsColorPicker(ColorPickerPlugin):
         def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+            self.close()
             default_color = (255 << 16) | (255 << 8) | (255)
             if preselect_color:
                 default_color = (round(255*preselect_color['blue']) << 16) | (round(255*preselect_color['green']) << 8) | round(255*preselect_color['red'])
@@ -145,6 +147,7 @@ class OsxColorPicker(ColorPickerPlugin):
     '''
 
     def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+        self.close()
         t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
         t.start()
 

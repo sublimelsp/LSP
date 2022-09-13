@@ -103,7 +103,7 @@
             },
             "ClientDisabledCapabilities": {
               "type": "object",
-              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.\n\nTo figure out exactly which _provider_ you need to disable here is an advanced topic. You'll have to study the official specification to see what particular providers exist. Here are a few common provider names that might do what you want:\n\n- hoverProvider\n- completionProvider\n- colorProvider\n- documentHighlightProvider\n- signatureHelpProvider\n- codeLensProvider\n- codeActionProvider",
+              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
               "additionalProperties": false,
               "properties": {
                 "completionProvider": {

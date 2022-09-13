@@ -105,6 +105,22 @@
               "type": "object",
               "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
               "properties": {
+                "callHierarchyProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "codeActionProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "codeLensProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "colorProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
                 "completionProvider": {
                   "oneOf": [
                     {
@@ -122,31 +138,6 @@
                     }
                   ],
                 },
-                "hoverProvider" : {
-                  "type": "boolean",
-                  "default": true
-                },
-                "signatureHelpProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "triggerCharacters": {
-                          "type": "boolean",
-                          "default": true
-                        },
-                        "retriggerCharacters": {
-                          "type": "boolean",
-                          "default": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ]
-                },
                 "declarationProvider": {
                   "type": "boolean",
                   "default": true
@@ -155,39 +146,7 @@
                   "type": "boolean",
                   "default": true
                 },
-                "typeDefinitionProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "implementationProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "referencesProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "documentHighlightProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "documentSymbolProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "codeActionProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "codeLensProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "documentLinkProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "colorProvider": {
+                "diagnosticProvider": {
                   "type": "boolean",
                   "default": true
                 },
@@ -195,7 +154,11 @@
                   "type": "boolean",
                   "default": true
                 },
-                "documentRangeFormattingProvider": {
+                "documentHighlightProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "documentLinkProvider": {
                   "type": "boolean",
                   "default": true
                 },
@@ -220,11 +183,11 @@
                     }
                   ]
                 },
-                "renameProvider": {
+                "documentRangeFormattingProvider": {
                   "type": "boolean",
                   "default": true
                 },
-                "foldingRangeProvider": {
+                "documentSymbolProvider": {
                   "type": "boolean",
                   "default": true
                 },
@@ -232,31 +195,15 @@
                   "type": "boolean",
                   "default": true
                 },
-                "selectionRangeProvider": {
+                "foldingRangeProvider": {
                   "type": "boolean",
                   "default": true
                 },
-                "linkedEditingRangeProvider": {
+                "hoverProvider" : {
                   "type": "boolean",
                   "default": true
                 },
-                "callHierarchyProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "semanticTokensProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "monikerProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "typeHierarchyProvider": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "inlineValueProvider": {
+                "implementationProvider": {
                   "type": "boolean",
                   "default": true
                 },
@@ -264,7 +211,60 @@
                   "type": "boolean",
                   "default": true
                 },
-                "diagnosticProvider": {
+                "inlineValueProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "linkedEditingRangeProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "monikerProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "referencesProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "renameProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "selectionRangeProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "semanticTokensProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "signatureHelpProvider": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "triggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "retriggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ]
+                },
+                "typeDefinitionProvider": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "typeHierarchyProvider": {
                   "type": "boolean",
                   "default": true
                 },

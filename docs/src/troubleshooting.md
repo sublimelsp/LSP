@@ -5,7 +5,6 @@ To get more visibility into the inner-workings of the LSP client and the server 
 | Option                  | Description                                                          |
 | ----------------------- | -------------------------------------------------------------------- |
 | `log_debug: true`       | Show verbose debug messages in the Sublime Text console.             |
-| `log_server: ["panel"]` | Log communication from and to language servers in the output panel.  |
 
 Once enabled (no restart necessary), the communication log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart Sublime Text and reproduce the issue again, so that the logs are clean.
 

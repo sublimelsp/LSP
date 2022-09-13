@@ -490,6 +490,7 @@
               "oneOf": [
                 {
                   "type": "array",
+                  "default": ["panel"],
                   "items": {
                     "type": "string",
                     "enum": [

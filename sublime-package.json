@@ -101,53 +101,33 @@
               "type": "object",
               "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
             },
+            "DisabledCapability": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "default": {}
+                },
+                {
+                  "type": "boolean",
+                  "default": true
+                }
+              ],
+            },
             "ClientDisabledCapabilities": {
               "type": "object",
               "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
               "properties": {
                 "callHierarchyProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability",
                 },
                 "codeActionProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "codeLensProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "colorProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "completionProvider": {
                   "oneOf": [
@@ -167,70 +147,22 @@
                   ],
                 },
                 "declarationProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "definitionProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "diagnosticProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "documentFormattingProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "documentHighlightProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "documentLinkProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "documentOnTypeFormattingProvider": {
                   "oneOf": [
@@ -254,158 +186,46 @@
                   ]
                 },
                 "documentRangeFormattingProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "documentSymbolProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "executeCommandProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "foldingRangeProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "hoverProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "implementationProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "inlayHintProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "inlineValueProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "linkedEditingRangeProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "monikerProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "referencesProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "renameProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "selectionRangeProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "semanticTokensProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "signatureHelpProvider": {
                   "oneOf": [
@@ -429,37 +249,13 @@
                   ]
                 },
                 "typeDefinitionProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "typeHierarchyProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 },
                 "workspaceSymbolProvider": {
-                  "oneOf": [
-                    {
-                      "type": "object"
-                    },
-                    {
-                      "type": "boolean",
-                      "default": true
-                    }
-                  ],
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
                 }
               }
             },

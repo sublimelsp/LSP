@@ -128,8 +128,25 @@
                   "default": true
                 },
                 "signatureHelpProvider": {
-                  "type": "boolean",
-                  "default": true
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "triggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "retriggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ]
                 },
                 "declarationProvider": {
                   "type": "boolean",
@@ -184,8 +201,25 @@
                   "default": true
                 },
                 "documentOnTypeFormattingProvider": {
-                  "type": "boolean",
-                  "default": true
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstTriggerCharacter": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "moreTriggerCharacter": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ]
                 },
                 "renameProvider": {
                   "type": "boolean",

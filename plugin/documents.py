@@ -3,6 +3,8 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
+from .core.panels import is_panel_open
+from .core.panels import PanelName
 from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
@@ -20,6 +22,7 @@ from .core.registry import best_session
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
@@ -233,7 +236,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def diagnostics_async(
         self
-    ) -> Generator[Tuple[SessionBuffer, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
+    ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
             # do not provide stale diagnostics
@@ -243,9 +246,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
@@ -262,9 +265,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
         for sb, diagnostics in self.diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
@@ -384,6 +387,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
+        window = self.view.window()
+        if window and userprefs().show_diagnostics_panel_on_save > 0 and is_panel_open(window, PanelName.Diagnostics):
+            self._hide_diagnostics_panel_if_empty()
+
+    def _hide_diagnostics_panel_if_empty(self) -> None:
+        severity_threshold = userprefs().show_diagnostics_panel_on_save
+        hide_panel = True
+        for _, diagnostics in self.diagnostics_async():
+            if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
+                hide_panel = False
+                break
+        if hide_panel and self._manager:
+            self._manager.hide_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -564,7 +580,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_actions(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
+        actions_manager.request_for_region_async(
+            self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))

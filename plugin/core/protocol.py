@@ -23,6 +23,11 @@ class DiagnosticTag:
     Deprecated = 2
 
 
+class CodeActionTriggerKind:
+    Invoked = 1
+    Automatic = 2
+
+
 class CompletionItemKind:
     Text = 1
     Method = 2
@@ -296,6 +301,18 @@ CodeAction = TypedDict('CodeAction', {
     'data': Any  # NotRequired
 }, total=False)
 
+CodeActionContext = TypedDict('CodeActionContext', {
+    'diagnostics': List[Diagnostic],
+    'only': List[str],  # NotRequired
+    'triggerKind': int,  # NotRequired
+}, total=False)
+
+CodeActionParams = TypedDict('CodeActionParams', {
+    'textDocument': TextDocumentIdentifier,
+    'range': RangeLsp,
+    'context': CodeActionContext,
+}, total=True)
+
 TextEdit = TypedDict('TextEdit', {
     'newText': str,
     'range': RangeLsp
@@ -305,6 +322,12 @@ CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
     'detail': str,
     'description': str
 }, total=False)
+
+InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
+    'newText': str,
+    'insert': RangeLsp,
+    'replace': RangeLsp
+}, total=True)
 
 CompletionItem = TypedDict('CompletionItem', {
     'additionalTextEdits': List[TextEdit],
@@ -324,7 +347,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'preselect': bool,
     'sortText': str,
     'tags': List[int],
-    'textEdit': TextEdit
+    'textEdit': Union[TextEdit, InsertReplaceEdit]
 }, total=False)
 
 CompletionList = TypedDict('CompletionList', {

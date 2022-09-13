@@ -5,6 +5,7 @@ import sublime_plugin
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_lens import LspCodeLensCommand
+from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionItemCommand
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
@@ -16,9 +17,11 @@ from .plugin.core.css import load as load_css
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
+from .plugin.core.panels import LspClearLogPanelCommand
 from .plugin.core.panels import LspClearPanelCommand
+from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.core.panels import LspUpdatePanelCommand
-from .plugin.core.panels import LspUpdateServerPanelCommand
+from .plugin.core.panels import LspUpdateLogPanelCommand
 from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location

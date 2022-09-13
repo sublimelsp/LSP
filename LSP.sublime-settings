@@ -199,7 +199,7 @@
   // This output panel can be toggled from the command palette with the
   // command "LSP: Toggle Log Panel".
   "log_server": [
-    // "panel",
+    "panel",
     // "remote",
   ],
 

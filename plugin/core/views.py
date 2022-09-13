@@ -762,7 +762,7 @@ COLOR_BOX_HTML = """
     html {{padding: 0; background-color: transparent}}
 
     #lsp-color-box {{
-        margin-top: 0.2em;
+        margin-top: 0.1em;
         height: 1rem;
         width: 1rem;
         border: 1px solid color(var(--foreground) alpha(0.25));

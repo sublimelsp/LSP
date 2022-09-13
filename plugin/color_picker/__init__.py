@@ -46,7 +46,7 @@ class LinuxColorPicker(ColorPickerPlugin):
         on_pick(self.normalize_color(output))
 
     def normalize_color(self, color: Any) -> Optional[Color]:
-        if isinstance(color, str):
+        if color and isinstance(color, str):
             r, g, b, a = map(float, color.split(','))
             return {
                 "red": r,
@@ -162,7 +162,7 @@ class OsxColorPicker(ColorPickerPlugin):
 
     def normalize_color(self, color: Any) -> Optional[Color]:
         print('OSX output contains a warning:', color)
-        if isinstance(color, list):
+        if color and isinstance(color, list):
             r, g, b = 1, 1, 1 # hardcoded
             return {
                 "red": r,

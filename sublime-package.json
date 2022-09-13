@@ -104,7 +104,6 @@
             "ClientDisabledCapabilities": {
               "type": "object",
               "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
-              "additionalProperties": false,
               "properties": {
                 "completionProvider": {
                   "oneOf": [

@@ -124,7 +124,7 @@ if sublime.platform() == "windows":
                     "red": r,
                     "green": g,
                     "blue": b,
-                    "alpha": 1  # windows picker doesn't support alpha, so fallback to 1
+                    "alpha": 1  # Windows color picker doesn't support alpha, so fallback to 1
                 }
 
             if bgr_color:
@@ -168,7 +168,7 @@ class OsxColorPicker(ColorPickerPlugin):
                 "red": r,
                 "green": g,
                 "blue": b,
-                "alpha": 1,
+                "alpha": 1, # OSX color picker doesn't support alpha, so fallback to 1
             }
         return None
 

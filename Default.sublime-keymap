@@ -25,6 +25,25 @@
             }
         ]
     },
+    // Insert/Replace Completions
+    {
+        "command": "lsp_commit_completion_with_opposite_insert_mode",
+        "keys": [
+            "alt+enter"
+        ],
+        "context": [
+            {
+                "key": "auto_complete_visible",
+                "operator": "equal",
+                "operand": true
+            },
+            {
+                "key": "lsp.session_with_capability",
+                "operator": "equal",
+                "operand": "completionProvider"
+            }
+        ]
+    },
     // Save all open files with lsp_save
     // {
     //     "command": "lsp_save_all",
@@ -174,7 +193,8 @@
     //     "args": {
     //         "side_by_side": false,
     //         "force_group": true,
-    //         "fallback": false
+    //         "fallback": false,
+    //         "group": -1
     //     },
     //     "keys": [
     //         "f12"
@@ -197,7 +217,8 @@
     //     "command": "lsp_symbol_type_definition",
     //     "args": {
     //         "side_by_side": false,
-    //         "force_group": true
+    //         "force_group": true,
+    //         "group": -1
     //     },
     //     "keys": [
     //         "UNBOUND"
@@ -220,7 +241,8 @@
     //     "command": "lsp_symbol_declaration",
     //     "args": {
     //         "side_by_side": false,
-    //         "force_group": true
+    //         "force_group": true,
+    //         "group": -1
     //     },
     //     "keys": [
     //         "UNBOUND"
@@ -243,7 +265,8 @@
     //     "command": "lsp_symbol_implementation",
     //     "args": {
     //         "side_by_side": false,
-    //         "force_group": true
+    //         "force_group": true,
+    //         "group": -1
     //     },
     //     "keys": [
     //         "UNBOUND"

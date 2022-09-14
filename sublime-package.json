@@ -101,9 +101,163 @@
               "type": "object",
               "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
             },
+            "DisabledCapability": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "default": {}
+                },
+                {
+                  "type": "boolean",
+                  "default": true
+                }
+              ],
+            },
             "ClientDisabledCapabilities": {
               "type": "object",
-              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.\n\nTo figure out exactly which _provider_ you need to disable here is an advanced topic. You'll have to study the official specification to see what particular providers exist. Here are a few common provider names that might do what you want:\n\n- hoverProvider\n- completionProvider\n- colorProvider\n- documentHighlightProvider\n- signatureHelpProvider\n- codeLensProvider\n- codeActionProvider"
+              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
+              "properties": {
+                "callHierarchyProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability",
+                },
+                "codeActionProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "codeLensProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "colorProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "completionProvider": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "triggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ],
+                },
+                "declarationProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "definitionProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "diagnosticProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "documentFormattingProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "documentHighlightProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "documentLinkProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "documentOnTypeFormattingProvider": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstTriggerCharacter": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "moreTriggerCharacter": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ]
+                },
+                "documentRangeFormattingProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "documentSymbolProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "executeCommandProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "foldingRangeProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "hoverProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "implementationProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "inlayHintProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "inlineValueProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "linkedEditingRangeProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "monikerProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "referencesProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "renameProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "selectionRangeProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "semanticTokensProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "signatureHelpProvider": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "triggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "retriggerCharacters": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  ]
+                },
+                "typeDefinitionProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "typeHierarchyProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                },
+                "workspaceSymbolProvider": {
+                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                }
+              }
             },
             "ClientEnv": {
               "type": "object",
@@ -452,6 +606,12 @@
               "default": true,
               "markdownDescription": "Disable Sublime Text's word completions. \"word\" completion means Sublime Text's internal completer that takes words from the current buffer you're editing and presents them in the auto-complete widget."
             },
+            "completion_insert_mode": {
+              "type": "string",
+              "default": "insert",
+              "enum": ["insert", "replace"],
+              "markdownDescription": "The mode used for inserting completions:\n\n - `insert` would insert the completion text in a middle of the word\n\n - `replace` would replace the existing word with a new completion text\n\n An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`\n can be used to insert completion using the opposite mode to the one selected here.\n\n Note: Must be supported by the language server."
+            },
             "show_references_in_quick_panel": {
               "type": "boolean",
               "default": false,
@@ -484,6 +644,7 @@
               "oneOf": [
                 {
                   "type": "array",
+                  "default": ["panel"],
                   "items": {
                     "type": "string",
                     "enum": [
@@ -499,7 +660,7 @@
                   "deprecationMessage": "Use an array instead."
                 }
               ],
-              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Language Servers output panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
+              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Log Panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
             },
             "log_max_size": {
               "type": "integer",

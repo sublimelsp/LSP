@@ -1,6 +1,7 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
-from .core.logging import debug
+from .core.open import open_file_uri
+from .core.open import open_in_browser
 from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
@@ -37,12 +38,9 @@ from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
-from urllib.parse import unquote, urlparse
 import functools
 import html
-import re
 import sublime
-import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
@@ -145,7 +143,7 @@ class LspHoverCommand(LspTextCommand):
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point))
+                    functools.partial(self.handle_code_actions, listener, hover_point), manual=False)
 
         sublime.set_timeout_async(run_async)
 
@@ -330,13 +328,7 @@ class LspHoverCommand(LspTextCommand):
         elif href.startswith("file:"):
             window = self.view.window()
             if window:
-                decoded = unquote(href)  # decode percent-encoded characters
-                parsed = urlparse(decoded)
-                filepath = parsed.path
-                if sublime.platform() == "windows":
-                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
-                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
-                window.open_file(fn, flags=sublime.ENCODED_POSITION)
+                open_file_uri(window, href)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             actions = self._actions_by_config[config_name]
@@ -360,11 +352,7 @@ class LspHoverCommand(LspTextCommand):
                 r = {"start": position, "end": position}  # type: RangeLsp
                 sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
         else:
-            # NOTE: Remove this check when on py3.8.
-            if not (href.lower().startswith("http://") or href.lower().startswith("https://")):
-                href = "http://" + href
-            if not webbrowser.open(href):
-                debug("failed to open:", href)
+            open_in_browser(href)
 
     def handle_code_action_select(self, config_name: str, index: int) -> None:
         if index > -1:

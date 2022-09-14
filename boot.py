@@ -17,11 +17,13 @@ from .plugin.core.css import load as load_css
 from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
 from .plugin.core.panels import destroy_output_panels
+from .plugin.core.panels import is_panel_open
 from .plugin.core.panels import LspClearLogPanelCommand
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateLogPanelCommand
+from .plugin.core.panels import PanelName
 from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
@@ -180,6 +182,8 @@ class Listener(sublime_plugin.EventListener):
             view = window.active_view()
             if view:
                 view.run_command("lsp_hover", {"only_diagnostics": True})
+        elif command_name == "show_panel" and args and args.get("panel") == "output.{}".format(PanelName.Diagnostics):
+            sublime.set_timeout_async(windows.lookup(window).update_diagnostics_panel_async)
 
 
 class LspOpenLocationCommand(sublime_plugin.TextCommand):

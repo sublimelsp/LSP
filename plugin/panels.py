@@ -8,7 +8,7 @@ from sublime_plugin import WindowCommand
 
 def toggle_output_panel(window: Window, panel_type: str) -> None:
     panel_name = "output.{}".format(panel_type)
-    command = "{}_panel".format("hide" if is_panel_open(window, panel_type) else "show")
+    command = "hide_panel" if is_panel_open(window, panel_type) else "show_panel"
     window.run_command(command, {"panel": panel_name})
 
 

@@ -14,6 +14,8 @@ from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
+from .panels import is_panel_open
+from .panels import PanelName
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
@@ -1683,7 +1685,8 @@ class Session(TransportCallbacks):
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         self.diagnostics_manager.add_diagnostics_async(uri, params["diagnostics"])
-        mgr.update_diagnostics_panel_async()
+        if is_panel_open(self.window, PanelName.Diagnostics):
+            mgr.update_diagnostics_panel_async()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))

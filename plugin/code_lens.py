@@ -86,11 +86,11 @@ class CodeLensView:
         return self._init
 
     def _clear_annotations(self) -> None:
-        for index, _ in enumerate(self._flat_iteration()):
-            self.view.erase_regions(self._region_key(index))
+        for index, lens in enumerate(self._flat_iteration()):
+            self.view.erase_regions(self._region_key(lens.session_name, index))
 
-    def _region_key(self, index: int) -> str:
-        return '{0}.{1}'.format(self.CODE_LENS_KEY, index)
+    def _region_key(self, session_name: str, index: int) -> str:
+        return '{0}.{1}.{2}'.format(self.CODE_LENS_KEY, session_name, index)
 
     def clear_view(self) -> None:
         self._phantom.update([])
@@ -161,9 +161,11 @@ class CodeLensView:
                 phantoms.append(sublime.Phantom(phantom_region, html, sublime.LAYOUT_BELOW))
             self._phantom.update(phantoms)
         else:  # 'annotation'
+            self._clear_annotations()
             accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
             for index, lens in enumerate(self._flat_iteration()):
-                self.view.add_regions(self._region_key(index), [lens.region], "", "", 0, [lens.small_html], accent)
+                self.view.add_regions(
+                    self._region_key(lens.session_name, index), [lens.region], "", "", 0, [lens.small_html], accent)
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         region = self.view.line(region)

@@ -1,3 +1,4 @@
+from LSP.plugin.core.panels import PanelName
 from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.protocol import DiagnosticTag
 from LSP.plugin.core.protocol import PublishDiagnosticsParams
@@ -5,6 +6,7 @@ from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import sublime
+import time
 
 
 class ServerNotifications(TextDocumentTestCase):
@@ -51,6 +53,9 @@ class ServerNotifications(TextDocumentTestCase):
         self.assertEqual(info[0], sublime.Region(4, 5))
 
         # Testing whether the popup with the diagnostic moves along with next_result
+
+        self.view.window().run_command("show_panel", {"panel": "output.{}".format(PanelName.Diagnostics)})
+        time.sleep(0.1)  # Give Diagnostics panel a bit of time to update its content (on async thread)
 
         self.view.window().run_command("next_result")
         yield self.view.is_popup_visible

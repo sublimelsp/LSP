@@ -1,5 +1,5 @@
 from LSP.plugin.core.protocol import Point, Position, Range, RangeLsp, Request, Notification
-from LSP.plugin.core.transports import JsonRpcProcessor
+from LSP.plugin.core.transports import encode_payload, decode_payload
 import unittest
 
 
@@ -129,9 +129,9 @@ class RangeTests(unittest.TestCase):
 
 class EncodingTests(unittest.TestCase):
     def test_encode(self) -> None:
-        encoded = JsonRpcProcessor._encode({"text": "😃"})
+        encoded = encode_payload({"text": "😃"})
         self.assertEqual(encoded, b'{"text":"\xF0\x9F\x98\x83"}')
-        decoded = JsonRpcProcessor._decode(encoded)
+        decoded = decode_payload(encoded)
         self.assertEqual(decoded, {"text": "😃"})
 
 

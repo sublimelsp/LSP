@@ -1,4 +1,3 @@
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
@@ -58,7 +57,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         self.view.run_command("expand_selection", {"to": "smart"})
 
     def _smallest_containing(self, region: sublime.Region, param: Dict[str, Any]) -> Tuple[int, int]:
-        r = range_to_region(Range.from_lsp(param["range"]), self.view)
+        r = range_to_region(param["range"], self.view)
         # Test for *strict* containment
         if r.contains(region) and (r.a < region.a or r.b > region.b):
             return r.a, r.b

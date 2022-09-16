@@ -32,7 +32,7 @@ from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
 from .protocol import FileEvent
 from .protocol import Notification
-from .protocol import RangeLsp
+from .protocol import Range
 from .protocol import Request
 from .protocol import Response
 from .protocol import SemanticTokenModifiers
@@ -1467,7 +1467,7 @@ class Session(TransportCallbacks):
     def open_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[RangeLsp] = None,
+        r: Optional[Range] = None,
         flags: int = 0,
         group: int = -1
     ) -> Promise[Optional[sublime.View]]:
@@ -1489,7 +1489,7 @@ class Session(TransportCallbacks):
     def _open_file_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[RangeLsp] = None,
+        r: Optional[Range] = None,
         flags: int = 0,
         group: int = -1
     ) -> Promise[Optional[sublime.View]]:
@@ -1507,7 +1507,7 @@ class Session(TransportCallbacks):
         self,
         plugin: AbstractPlugin,
         uri: DocumentUri,
-        r: Optional[RangeLsp],
+        r: Optional[Range],
         flags: int,
         group: int,
     ) -> Promise[Optional[sublime.View]]:

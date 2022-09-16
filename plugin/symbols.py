@@ -1,5 +1,5 @@
 import weakref
-from .core.protocol import Request, Range, DocumentSymbol, SymbolInformation, SymbolTag
+from .core.protocol import Request, DocumentSymbol, SymbolInformation, SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
@@ -182,8 +182,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def process_document_symbol_recursive(self, quick_panel_items: List[sublime.QuickPanelItem], item: DocumentSymbol,
                                           names: List[str]) -> None:
         lsp_kind = item["kind"]
-        self.regions.append((range_to_region(Range.from_lsp(item['range']), self.view),
-                             range_to_region(Range.from_lsp(item['selectionRange']), self.view),
+        self.regions.append((range_to_region(item['range'], self.view),
+                             range_to_region(item['selectionRange'], self.view),
                              get_symbol_scope_from_lsp_kind(lsp_kind)))
         name = item['name']
         with _additional_name(names, name):
@@ -210,7 +210,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def process_symbol_informations(self, items: List[SymbolInformation]) -> List[sublime.QuickPanelItem]:
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         for item in items:
-            self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view),
+            self.regions.append((range_to_region(item['location']['range'], self.view),
                                  None, get_symbol_scope_from_lsp_kind(item['kind'])))
             quick_panel_item = symbol_information_to_quick_panel_item(item, show_file_name=False)
             quick_panel_items.append(quick_panel_item)

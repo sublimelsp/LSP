@@ -21,7 +21,6 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Position
 from .protocol import Range
-from .protocol import RangeLsp
 from .protocol import Request
 from .protocol import SymbolKind
 from .protocol import TextDocumentIdentifier
@@ -315,14 +314,20 @@ def position(view: sublime.View, offset: int) -> Position:
 
 
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(point_to_offset(range.start, view), point_to_offset(range.end, view))
+    start = Point.from_lsp(range['start'])
+    end = Point.from_lsp(range['end'])
+    return sublime.Region(point_to_offset(start, view), point_to_offset(end, view))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
-    return Range(
-        offset_to_point(view, region.begin()),
-        offset_to_point(view, region.end())
-    )
+    return {
+        'start': offset_to_point(view, region.begin()).to_lsp(),
+        'end': offset_to_point(view, region.end()).to_lsp(),
+    }
+
+
+def is_range_equal(lhs: Range, rhs: Range) -> bool:
+    return lhs['start'] == rhs['start'] and lhs['end'] == rhs['end']
 
 
 def to_encoded_filename(path: str, position: Position) -> str:
@@ -330,7 +335,7 @@ def to_encoded_filename(path: str, position: Position) -> str:
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
 
 
-def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, RangeLsp]:
+def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Range]:
     if "targetUri" in location:
         location = cast(LocationLink, location)
         uri = location["targetUri"]
@@ -428,7 +433,7 @@ def text_document_range_params(view: sublime.View, location: int,
     return {
         "textDocument": text_document_identifier(view),
         "position": position(view, location),
-        "range": region_to_range(view, region).to_lsp()
+        "range": region_to_range(view, region)
     }
 
 
@@ -533,7 +538,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     return Request("textDocument/rangeFormatting", {
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
-        "range": region_to_range(view, region).to_lsp()
+        "range": region_to_range(view, region)
     }, view, progress=True)
 
 
@@ -559,7 +564,7 @@ def text_document_code_action_params(
         context["only"] = on_save_actions
     return {
         "textDocument": text_document_identifier(view),
-        "range": region_to_range(view, region).to_lsp(),
+        "range": region_to_range(view, region),
         "context": context
     }
 
@@ -783,7 +788,7 @@ def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
 
 
 def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
-    region = range_to_region(Range.from_lsp(color_info['range']), view)
+    region = range_to_region(color_info['range'], view)
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
 
 

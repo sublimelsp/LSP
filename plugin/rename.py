@@ -2,7 +2,6 @@ from .core.edit import parse_workspace_edit
 from .core.edit import TextEditTuple
 from .core.panels import ensure_panel
 from .core.panels import PanelName
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
@@ -150,7 +149,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         else:
             placeholder = self.view.substr(self.view.word(pos))
             r = response
-        region = range_to_region(Range.from_lsp(r), self.view)
+        region = range_to_region(r, self.view)
         args = {"placeholder": placeholder, "position": region.a, "event": self.event}
         self.view.run_command("lsp_symbol_rename", args)
 

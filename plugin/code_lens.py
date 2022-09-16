@@ -1,4 +1,4 @@
-from .core.protocol import CodeLens, Error, Range
+from .core.protocol import CodeLens, Error
 from .core.typing import List, Tuple, Dict, Iterable, Generator, Union
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -20,7 +20,7 @@ class CodeLensData:
 
     def __init__(self, data: CodeLens, view: sublime.View, session_name: str) -> None:
         self.data = data
-        self.region = range_to_region(Range.from_lsp(data['range']), view)
+        self.region = range_to_region(data['range'], view)
         self.session_name = session_name
         self.annotation = '...'
         self.resolve_annotation()
@@ -63,7 +63,7 @@ class CodeLensData:
             self.annotation = html_escape(str(code_lens_or_error))
             return
         self.data = code_lens_or_error
-        self.region = range_to_region(Range.from_lsp(code_lens_or_error['range']), view)
+        self.region = range_to_region(code_lens_or_error['range'], view)
         self.resolve_annotation()
 
 

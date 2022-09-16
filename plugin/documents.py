@@ -13,7 +13,6 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
@@ -692,7 +691,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             response = []
         kind2regions = {}  # type: Dict[Tuple[int, bool], List[sublime.Region]]
         for highlight in response:
-            r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
+            r = range_to_region(highlight["range"], self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Text)
             kind2regions.setdefault((kind, len(self.view.split_by_newlines(r)) > 1), []).append(r)
 

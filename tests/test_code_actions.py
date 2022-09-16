@@ -16,7 +16,14 @@ TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 
 
 def edit_to_lsp(edit: Tuple[str, Range]) -> Dict[str, Any]:
-    return {"newText": edit[0], "range": edit[1].to_lsp()}
+    return {"newText": edit[0], "range": edit[1]}
+
+
+def range_from_points(start: Point, end: Point) -> Range:
+    return {
+        'start': start.to_lsp(),
+        'end': end.to_lsp()
+    }
 
 
 def create_code_action_edit(view: sublime.View, version: int, edits: List[Tuple[str, Range]]) -> Dict[str, Any]:
@@ -75,7 +82,7 @@ def create_test_diagnostics(diagnostics: List[Tuple[str, Range]]) -> Dict:
         message, range = diagnostic
         return {
             "message": message,
-            "range": range.to_lsp()
+            "range": range
         }
     return {
         "uri": TEST_FILE_URI,
@@ -107,7 +114,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(
             self.view,
             self.view.change_count(),
-            [(';', Range(Point(0, 11), Point(0, 11)))],
+            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
@@ -123,7 +130,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(
             self.view,
             self.view.change_count(),
-            [(';', Range(Point(0, 11), Point(0, 11)))],
+            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
@@ -141,7 +148,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([
-                ('Missing semicolon', Range(Point(0, 11), Point(0, 11))),
+                ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
             ])
         )
         code_action_kind = 'source.fixAll'
@@ -152,7 +159,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
                     create_test_code_action(
                         self.view,
                         initial_change_count,
-                        [(';', Range(Point(0, 11), Point(0, 11)))],
+                        [(';', range_from_points(Point(0, 11), Point(0, 11)))],
                         code_action_kind
                     )
                 ]
@@ -163,7 +170,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
                     create_test_code_action(
                         self.view,
                         initial_change_count + 1,
-                        [('\nAnd again!', Range(Point(0, 12), Point(0, 12)))],
+                        [('\nAnd again!', range_from_points(Point(0, 12), Point(0, 12)))],
                         code_action_kind
                     )
                 ]
@@ -180,7 +187,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(
             self.view,
             self.view.change_count(),
-            [(';', Range(Point(0, 11), Point(0, 11)))],
+            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
@@ -204,7 +211,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(
             self.view,
             self.view.change_count(),
-            [(';', Range(Point(0, 11), Point(0, 11)))],
+            [(';', range_from_points(Point(0, 11), Point(0, 11)))],
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
@@ -218,7 +225,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([
-                ('Missing semicolon', Range(Point(0, 11), Point(0, 11))),
+                ('Missing semicolon', range_from_points(Point(0, 11), Point(0, 11))),
             ])
         )
 
@@ -265,9 +272,9 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         initial_content = 'a\nb\nc'
         self.insert_characters(initial_content)
         yield from self.await_message('textDocument/didChange')
-        range_a = Range(Point(0, 0), Point(0, 1))
-        range_b = Range(Point(1, 0), Point(1, 1))
-        range_c = Range(Point(2, 0), Point(2, 1))
+        range_a = range_from_points(Point(0, 0), Point(0, 1))
+        range_b = range_from_points(Point(1, 0), Point(1, 1))
+        range_c = range_from_points(Point(2, 0), Point(2, 1))
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
@@ -292,8 +299,8 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         initial_content = 'a\nb\nc'
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
-        range_a = Range(Point(0, 0), Point(0, 1))
-        range_b = Range(Point(1, 0), Point(1, 1))
+        range_a = range_from_points(Point(0, 0), Point(0, 1))
+        range_b = range_from_points(Point(1, 0), Point(1, 1))
         code_action1 = create_test_code_action(self.view, 0, [("A", range_a)])
         code_action2 = create_test_code_action(self.view, 0, [("B", range_b)])
         self.set_response('textDocument/codeAction', [code_action1, code_action2])
@@ -317,7 +324,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action = create_disabled_code_action(
             self.view,
             self.view.change_count(),
-            [(';', Range(Point(0, 0), Point(0, 1)))]
+            [(';', range_from_points(Point(0, 0), Point(0, 1)))]
         )
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a
@@ -332,8 +339,8 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([
-                ('diagnostic word', Range(Point(0, 2), Point(0, 12))),
-                ('all content', Range(Point(0, 0), Point(0, 12))),
+                ('diagnostic word', range_from_points(Point(0, 2), Point(0, 12))),
+                ('all content', range_from_points(Point(0, 0), Point(0, 12))),
             ])
         )
         self.view.run_command('lsp_selection_set', {"regions": [(0, 5)]})
@@ -361,8 +368,8 @@ class CodeActionsTestCase(TextDocumentTestCase):
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
             create_test_diagnostics([
-                ('issue a', Range(Point(0, 0), Point(0, 1))),
-                ('issue b', Range(Point(1, 0), Point(1, 1)))
+                ('issue a', range_from_points(Point(0, 0), Point(0, 1))),
+                ('issue b', range_from_points(Point(1, 0), Point(1, 1)))
             ])
         )
         params = yield from self.await_message('textDocument/codeAction')
@@ -374,8 +381,8 @@ class CodeActionsTestCase(TextDocumentTestCase):
 
     def test_applies_code_action_with_matching_document_version(self) -> Generator:
         code_action = create_test_code_action(self.view, 3, [
-            ("c", Range(Point(0, 0), Point(0, 1))),
-            ("d", Range(Point(1, 0), Point(1, 1))),
+            ("c", range_from_points(Point(0, 0), Point(0, 1))),
+            ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
         self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")
@@ -387,8 +394,8 @@ class CodeActionsTestCase(TextDocumentTestCase):
     def test_does_not_apply_with_nonmatching_document_version(self) -> Generator:
         initial_content = 'a\nb'
         code_action = create_test_code_action(self.view, 0, [
-            ("c", Range(Point(0, 0), Point(0, 1))),
-            ("d", Range(Point(1, 0), Point(1, 1))),
+            ("c", range_from_points(Point(0, 0), Point(0, 1))),
+            ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
@@ -399,8 +406,8 @@ class CodeActionsTestCase(TextDocumentTestCase):
         code_action = create_test_code_action2("dosomethinguseful", ["1", 0, {"hello": "there"}])
         resolved_code_action = deepcopy(code_action)
         resolved_code_action["edit"] = create_code_action_edit(self.view, 3, [
-            ("c", Range(Point(0, 0), Point(0, 1))),
-            ("d", Range(Point(1, 0), Point(1, 1))),
+            ("c", range_from_points(Point(0, 0), Point(0, 1))),
+            ("d", range_from_points(Point(1, 0), Point(1, 1))),
         ])
         self.set_response('codeAction/resolve', resolved_code_action)
         self.set_response('workspace/executeCommand', {"reply": "OK done"})
@@ -418,7 +425,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.insert_characters('🕵️hi')
         yield from self.await_message("textDocument/didChange")
         code_action = create_test_code_action(self.view, self.view.change_count(), [
-            ("bye", Range(Point(0, 3), Point(0, 5))),
+            ("bye", range_from_points(Point(0, 3), Point(0, 5))),
         ])
         yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), '🕵️bye')

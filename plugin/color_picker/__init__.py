@@ -65,7 +65,7 @@ class LinuxColorPicker(ColorPickerPlugin):
         self.process = None
 
 
-if sublime.platform() == "windows":
+if sys.platform == "win32":
     import ctypes
 
     class CHOOSECOLOR(ctypes.Structure):

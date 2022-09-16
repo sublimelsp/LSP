@@ -775,7 +775,7 @@ COLOR_BOX_HTML = """
     }}
 
     #lsp-color-box a {{
-        font-size: 1rem;
+        font-size: 1.7rem; /** HACK - make the font bigger to make the whole color box clickable. */
         text-decoration: none;
         color: #00000001;
     }}

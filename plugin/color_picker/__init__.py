@@ -3,11 +3,12 @@ from ..core.typing import Callable, Optional, List, Any
 from ..core.views import lsp_color_to_hex
 from ..formatting import apply_text_edits_to_view
 from abc import ABCMeta
+import os
 import sublime
 import sublime_plugin
 import subprocess
+import sys
 import threading
-import os
 
 OnPickCallback = Callable[[Optional[Color]], None]
 

@@ -352,9 +352,9 @@ class SessionBuffer:
                 Request.documentColor(document_color_params(view), view),
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
-
     def _on_color_boxes_async(self, view: sublime.View, response: List[ColorInformation]) -> None:
-        self.color_phantoms.update([lsp_color_to_phantom(view, color_information) for color_information in response])
+        color_infos = response if response else []
+        self.color_phantoms.update([lsp_color_to_phantom(view, color_information) for color_information in color_infos])
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 

@@ -24,46 +24,47 @@ class ColorPickerPlugin(metaclass=ABCMeta):
         ...
 
 
-class LinuxColorPicker(ColorPickerPlugin):
-    process = None  # type: Optional[subprocess.Popen]
+if sublime.platform() == 'linux':
+    class LinuxColorPicker(ColorPickerPlugin):
+        process = None  # type: Optional[subprocess.Popen]
 
-    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
-        self.close()
-        t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
-        t.start()
+        def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+            self.close()
+            t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
+            t.start()
 
-    def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
-        preselect_color_arg = ""
-        if color:
-            preselect_color_arg = "{},{},{},{}".format(
-                color['red'], color['green'], color['blue'], color['alpha']
-            )
-        picker_cmd = [
-            os.path.join(sublime.packages_path(), "LSP", "plugin", "color_picker", "linux_executable.py"),
-            preselect_color_arg
-        ]
-        self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
-        output = self.process.communicate()[0].strip().decode('utf-8')
-        on_pick(self.normalize_color(output))
+        def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
+            preselect_color_arg = ""
+            if color:
+                preselect_color_arg = "{},{},{},{}".format(
+                    color['red'], color['green'], color['blue'], color['alpha']
+                )
+            picker_cmd = [
+                os.path.join(sublime.packages_path(), "LSP", "plugin", "color_picker", "linux_executable.py"),
+                preselect_color_arg
+            ]
+            self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE)
+            output = self.process.communicate()[0].strip().decode('utf-8')
+            on_pick(self.normalize_color(output))
 
-    def normalize_color(self, color: Any) -> Optional[Color]:
-        if color and isinstance(color, str):
-            r, g, b, a = map(float, color.split(','))
-            return {
-                "red": r,
-                "green": g,
-                "blue": b,
-                "alpha": a,
-            }
-        return None
+        def normalize_color(self, color: Any) -> Optional[Color]:
+            if color and isinstance(color, str):
+                r, g, b, a = map(float, color.split(','))
+                return {
+                    "red": r,
+                    "green": g,
+                    "blue": b,
+                    "alpha": a,
+                }
+            return None
 
-    def close(self) -> None:
-        if self.process:
-            try:
-                self.process.kill()
-            except:
-                pass
-        self.process = None
+        def close(self) -> None:
+            if self.process:
+                try:
+                    self.process.kill()
+                except:
+                    pass
+            self.process = None
 
 
 if sys.platform == "win32":
@@ -139,50 +140,51 @@ if sys.platform == "win32":
             pass # on windows, the color picker will block until a color is choosen 
 
 
-class OsxColorPicker(ColorPickerPlugin):
-    process = None  # type: Optional[subprocess.Popen]
-    script = '''
-    function run(argv) {{
-        var app = Application.currentApplication();
-        app.includeStandardAdditions = true;
-        var color = app.chooseColor({{defaultColor: [{red}, {green}, {blue}]}});
-        console.log(JSON.stringify(color));
-    }}
-    '''
+if sublime.platform() == 'osx':
+    class OsxColorPicker(ColorPickerPlugin):
+        process = None  # type: Optional[subprocess.Popen]
+        script = '''
+        function run(argv) {{
+            var app = Application.currentApplication();
+            app.includeStandardAdditions = true;
+            var color = app.chooseColor({{defaultColor: [{red}, {green}, {blue}]}});
+            console.log(JSON.stringify(color));
+        }}
+        '''
 
-    def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
-        self.close()
-        t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
-        t.start()
+        def pick(self, on_pick: OnPickCallback, preselect_color: Optional[Color] = None) -> None:
+            self.close()
+            t = threading.Thread(target=self._open_picker, args=(on_pick, preselect_color))
+            t.start()
 
-    def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
-        script = self.script.format(red=0, green=0, blue=0)
-        if color:
-            script = self.script.format(red=color['red'], green=color['green'], blue=color['blue'])
-        picker_cmd = ["/usr/bin/osascript", "-l", "JavaScript", "-e", script]
-        self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output = self.process.communicate()[0].strip().decode('ascii')
-        on_pick(self.normalize_color(output))
+        def _open_picker(self, on_pick: OnPickCallback, color: Optional[Color] = None) -> None:
+            script = self.script.format(red=0, green=0, blue=0)
+            if color:
+                script = self.script.format(red=color['red'], green=color['green'], blue=color['blue'])
+            picker_cmd = ["/usr/bin/osascript", "-l", "JavaScript", "-e", script]
+            self.process = subprocess.Popen(picker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = self.process.communicate()[0].strip().decode('ascii')
+            on_pick(self.normalize_color(output))
 
-    def normalize_color(self, color: Any) -> Optional[Color]:
-        print('OSX output contains a warning:', color)
-        if color and isinstance(color, list):
-            r, g, b = 1, 1, 1 # hardcoded
-            return {
-                "red": r,
-                "green": g,
-                "blue": b,
-                "alpha": 1, # OSX color picker doesn't support alpha, so fallback to 1
-            }
-        return None
+        def normalize_color(self, color: Any) -> Optional[Color]:
+            print('OSX output contains a warning:', color)
+            if color and isinstance(color, list):
+                r, g, b = 1, 1, 1 # hardcoded
+                return {
+                    "red": r,
+                    "green": g,
+                    "blue": b,
+                    "alpha": 1, # OSX color picker doesn't support alpha, so fallback to 1
+                }
+            return None
 
-    def close(self) -> None:
-        if self.process:
-            try:
-                self.process.kill()
-            except:
-                pass
-        self.process = None
+        def close(self) -> None:
+            if self.process:
+                try:
+                    self.process.kill()
+                except:
+                    pass
+            self.process = None
 
 
 def get_color_picker() -> Optional[ColorPickerPlugin]:

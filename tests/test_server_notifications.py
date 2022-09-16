@@ -56,6 +56,9 @@ class ServerNotifications(TextDocumentTestCase):
 
         self.view.window().run_command("show_panel", {"panel": "output.{}".format(PanelName.Diagnostics)})
         time.sleep(0.1)  # Give Diagnostics panel a bit of time to update its content (on async thread)
+        # Make sure diagnostics panel has focus, so that "next_result" & "prev_result" commands don't
+        # navigate between build results, find results, or find references
+        self.view.window().focus_view(self.view.window().find_output_panel(PanelName.Diagnostics))
 
         self.view.window().run_command("next_result")
         yield self.view.is_popup_visible

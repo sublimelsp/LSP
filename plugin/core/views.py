@@ -327,7 +327,8 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
 
 
 def is_range_equal(lhs: Range, rhs: Range) -> bool:
-    return lhs['start'] == rhs['start'] and lhs['end'] == rhs['end']
+    return lhs['start']['line'] == rhs['start']['line'] and lhs['start']['character'] == rhs['start']['character'] and \
+        lhs['end']['line'] == rhs['end']['line'] and lhs['end']['character'] == rhs['end']['character']
 
 
 def to_encoded_filename(path: str, position: Position) -> str:

@@ -1,6 +1,17 @@
 import os
+import sys
 import sublime
 import sublime_plugin
+
+# Clear module cache to force reloading all modules of this package.
+prefix = __package__ + "."  # don't clear the base package
+for module_name in [
+    module_name
+    for module_name in sys.modules
+    if module_name.startswith(prefix) and module_name != __name__
+]:
+    del sys.modules[module_name]
+prefix = None
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand

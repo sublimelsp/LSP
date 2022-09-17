@@ -4,7 +4,6 @@ from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import InlayHintParams
 from .core.protocol import InlayHintResponse
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
@@ -25,6 +24,7 @@ from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
+from .core.views import is_range_equal
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -370,7 +370,7 @@ class SessionBuffer:
         if self.document_links and userprefs().link_highlight_style == "underline":
             view.add_regions(
                 "lsp_document_link",
-                [range_to_region(Range.from_lsp(link["range"]), view) for link in self.document_links],
+                [range_to_region(link["range"], view) for link in self.document_links],
                 scope="markup.underline.link.lsp",
                 flags=DOCUMENT_LINK_FLAGS)
         else:
@@ -378,15 +378,15 @@ class SessionBuffer:
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         for link in self.document_links:
-            if range_to_region(Range.from_lsp(link["range"]), view).contains(point):
+            if range_to_region(link["range"], view).contains(point):
                 return link
         else:
             return None
 
     def update_document_link(self, new_link: DocumentLink) -> None:
-        new_link_range = Range.from_lsp(new_link["range"])
+        new_link_range = new_link["range"]
         for link in self.document_links:
-            if Range.from_lsp(link["range"]) == new_link_range:
+            if is_range_equal(link["range"], new_link_range):
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break
@@ -408,7 +408,7 @@ class SessionBuffer:
             diagnostics_version = version
             diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
             for diagnostic in raw_diagnostics:
-                region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
+                region = range_to_region(diagnostic["range"], view)
                 severity = diagnostic_severity(diagnostic)
                 key = (severity, len(view.split_by_newlines(region)) > 1)
                 data = data_per_severity.get(key)
@@ -514,7 +514,7 @@ class SessionBuffer:
         self.semantic_tokens.view_change_count = view.change_count()
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
         if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
-            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
@@ -528,7 +528,7 @@ class SessionBuffer:
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
-            params["range"] = entire_content_range(view).to_lsp()
+            params["range"] = entire_content_range(view)
             request = Request.semanticTokensRange(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
@@ -645,7 +645,7 @@ class SessionBuffer:
             return
         params = {
             "textDocument": text_document_identifier(view),
-            "range": entire_content_range(view).to_lsp()
+            "range": entire_content_range(view)
         }  # type: InlayHintParams
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 

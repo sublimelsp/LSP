@@ -161,7 +161,7 @@ Position = TypedDict('Position', {
     'character': int
 })
 
-RangeLsp = TypedDict('RangeLsp', {
+Range = TypedDict('Range', {
     'start': Position,
     'end': Position
 })
@@ -178,7 +178,7 @@ TextDocumentPositionParams = TypedDict('TextDocumentPositionParams', {
 ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangeParams', {
     'textDocument': TextDocumentIdentifier,
     'position': Position,
-    'range': RangeLsp,
+    'range': Range,
 }, total=True)
 
 CodeDescription = TypedDict('CodeDescription', {
@@ -205,7 +205,7 @@ CodeActionDisabledInformation = TypedDict('CodeActionDisabledInformation', {
 
 
 CodeLens = TypedDict('CodeLens', {
-    'range': RangeLsp,
+    'range': Range,
     'command': Optional[Command],
     'data': Any,
     # Custom property to bring along the name of the session
@@ -244,7 +244,7 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
 
 Location = TypedDict('Location', {
     'uri': DocumentUri,
-    'range': RangeLsp
+    'range': Range
 }, total=True)
 
 DocumentSymbol = TypedDict('DocumentSymbol', {
@@ -253,8 +253,8 @@ DocumentSymbol = TypedDict('DocumentSymbol', {
     'kind': int,
     'tags': Optional[List[int]],
     'deprecated': Optional[bool],
-    'range': RangeLsp,
-    'selectionRange': RangeLsp,
+    'range': Range,
+    'selectionRange': Range,
     'children': Optional[List[Any]]  # mypy doesn't support recurive types like Optional[List['DocumentSymbol']]
 }, total=True)
 
@@ -268,10 +268,10 @@ SymbolInformation = TypedDict('SymbolInformation', {
 }, total=True)
 
 LocationLink = TypedDict('LocationLink', {
-    'originSelectionRange': Optional[RangeLsp],
+    'originSelectionRange': Optional[Range],
     'targetUri': DocumentUri,
-    'targetRange': RangeLsp,
-    'targetSelectionRange': RangeLsp
+    'targetRange': Range,
+    'targetSelectionRange': Range
 }, total=False)
 
 DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
@@ -280,7 +280,7 @@ DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
 }, total=False)
 
 Diagnostic = TypedDict('Diagnostic', {
-    'range': RangeLsp,
+    'range': Range,
     'severity': int,
     'code': Union[int, str],
     'codeDescription': CodeDescription,
@@ -309,13 +309,13 @@ CodeActionContext = TypedDict('CodeActionContext', {
 
 CodeActionParams = TypedDict('CodeActionParams', {
     'textDocument': TextDocumentIdentifier,
-    'range': RangeLsp,
+    'range': Range,
     'context': CodeActionContext,
 }, total=True)
 
 TextEdit = TypedDict('TextEdit', {
     'newText': str,
-    'range': RangeLsp
+    'range': Range
 }, total=True)
 
 CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
@@ -325,8 +325,8 @@ CompletionItemLabelDetails = TypedDict('CompletionItemLabelDetails', {
 
 InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
     'newText': str,
-    'insert': RangeLsp,
-    'replace': RangeLsp
+    'insert': Range,
+    'replace': Range
 }, total=True)
 
 CompletionItem = TypedDict('CompletionItem', {
@@ -356,7 +356,7 @@ CompletionList = TypedDict('CompletionList', {
 }, total=True)
 
 DocumentLink = TypedDict('DocumentLink', {
-    'range': RangeLsp,
+    'range': Range,
     'target': DocumentUri,
     'tooltip': str,
     'data': Any
@@ -368,7 +368,7 @@ MarkupContent = Dict[str, str]
 
 Hover = TypedDict('Hover', {
     'contents': Union[MarkedString, MarkupContent, List[MarkedString]],
-    'range': RangeLsp,
+    'range': Range,
 }, total=False)
 
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
@@ -389,7 +389,7 @@ DidChangeWatchedFilesRegistrationOptions = TypedDict('DidChangeWatchedFilesRegis
 
 InlayHintParams = TypedDict('InlayHintParams', {
     'textDocument': TextDocumentIdentifier,
-    'range': RangeLsp,
+    'range': Range,
 }, total=True)
 
 InlayHintLabelPart = TypedDict('InlayHintLabelPart', {
@@ -672,54 +672,6 @@ class Point(object):
         }
 
 
-class Range(object):
-    def __init__(self, start: Point, end: Point) -> None:
-        self.start = start
-        self.end = end
-
-    def __repr__(self) -> str:
-        return "({} {})".format(self.start, self.end)
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Range):
-            raise NotImplementedError()
-
-        return self.start == other.start and self.end == other.end
-
-    @classmethod
-    def from_lsp(cls, range: RangeLsp) -> 'Range':
-        return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
-
-    def to_lsp(self) -> RangeLsp:
-        return {
-            'start': self.start.to_lsp(),
-            'end': self.end.to_lsp()
-        }
-
-    def contains(self, point: Point) -> bool:
-        return self.start.row <= point.row <= self.end.row and \
-            (self.end.row > point.row or self.start.col <= point.col <= self.end.col)
-
-    def intersects(self, rge: 'Range') -> bool:
-        return self.contains(rge.start) or self.contains(rge.end) or \
-            rge.contains(self.start) or rge.contains(self.end)
-
-    def extend(self, rge: 'Range') -> 'Range':
-        """
-        Extends current range to fully include another range. If another range is already fully
-        enclosed within the current range then nothing changes.
-
-        :param    rge: The region to extend current with
-
-        :returns: The extended region (itself)
-        """
-        if rge.contains(self.start):
-            self.start = rge.start
-        if rge.contains(self.end):
-            self.end = rge.end
-        return self
-
-
 class WorkspaceFolder:
 
     __slots__ = ('name', 'path')
@@ -754,3 +706,8 @@ class WorkspaceFolder:
 
     def includes_uri(self, uri: str) -> bool:
         return uri.startswith(self.uri())
+
+
+# Temporary for backward compatibility with LSP packages.
+
+RangeLsp = Range

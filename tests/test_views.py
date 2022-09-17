@@ -1,7 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.protocol import Range
 from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
@@ -331,7 +330,7 @@ class ViewsTest(DeferrableTestCase):
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
         self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
-        self.assertEqual(phantom.region, range_to_region(Range.from_lsp(response[0]["range"]), self.view))
+        self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
 
     def test_document_color_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))

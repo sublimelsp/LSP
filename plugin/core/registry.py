@@ -169,7 +169,7 @@ class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
         sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))
 
 
-def navigate_diagnostics(view: sublime.View, point: Optional[int] = None, forward: bool = True) -> None:
+def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
     try:
         uri = uri_from_view(view)
     except MissingUriError:
@@ -177,7 +177,6 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int] = None, forwar
     window = view.window()
     if not window:
         return
-
     diagnostics = []  # type: List[Diagnostic]
     for session in windows.lookup(window).get_sessions():
         diagnostics.extend(session.diagnostics_manager.diagnostics_by_document_uri(uri))
@@ -185,16 +184,16 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int] = None, forwar
         return
     # Sort diagnostics by location
     diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']), reverse=not forward)
-    if not point:
+    if point is None:
         try:
             point = view.sel()[0].b
         except IndexError:
             point = 0
-    # Find next diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in this view
-    # after/before the cursor
+    # Find next/previous diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in
+    # this view after/before the cursor
+    op_func = operator.gt if forward else operator.lt
     for diagnostic in diagnostics:
         diag_pos = point_to_offset(Point.from_lsp(diagnostic['range']['start']), view)
-        op_func = operator.gt if forward else operator.lt
         if op_func(diag_pos, point):
             break
     else:

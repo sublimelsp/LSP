@@ -78,3 +78,10 @@ class ServerNotifications(TextDocumentTestCase):
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
+
+        # Testing to wrap around if there are no more diagnostics in the direction
+
+        self.view.window().run_command("lsp_prev_diagnostic")
+        yield self.view.is_popup_visible
+        self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
+        self.assertEqual(self.view.sel()[0].b, 4)

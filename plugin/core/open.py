@@ -3,7 +3,6 @@ from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import DocumentUri
 from .protocol import Range
-from .protocol import RangeLsp
 from .protocol import UINT_MAX
 from .typing import Dict, Tuple, Optional
 from .typing import cast
@@ -25,10 +24,10 @@ def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
 
-    def parse_fragment(fragment: str) -> Optional[RangeLsp]:
+    def parse_fragment(fragment: str) -> Optional[Range]:
         match = FRAGMENT_PATTERN.match(fragment)
         if match:
-            selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: RangeLsp
+            selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: Range
             # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
             # numbers for the LSP Position structure.
             start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
@@ -52,11 +51,11 @@ def open_file_uri(
     if parsed.fragment:
         selection = parse_fragment(parsed.fragment)
         if selection:
-            return open_promise.then(lambda view: _select_and_center(view, cast(RangeLsp, selection)))
+            return open_promise.then(lambda view: _select_and_center(view, cast(Range, selection)))
     return open_promise
 
 
-def _select_and_center(view: Optional[sublime.View], r: RangeLsp) -> Optional[sublime.View]:
+def _select_and_center(view: Optional[sublime.View], r: Range) -> Optional[sublime.View]:
     if view:
         return center_selection(view, r)
     return None
@@ -111,8 +110,8 @@ def open_file(
     return promise
 
 
-def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
-    selection = range_to_region(Range.from_lsp(r), v)
+def center_selection(v: sublime.View, r: Range) -> sublime.View:
+    selection = range_to_region(r, v)
     v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
     window = v.window()
     if window:

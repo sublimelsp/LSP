@@ -5,6 +5,7 @@ from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import sublime
+import time
 
 
 class ServerNotifications(TextDocumentTestCase):
@@ -53,16 +54,19 @@ class ServerNotifications(TextDocumentTestCase):
         # Testing whether the popup with the diagnostic moves along with lsp_next_diagnostic
 
         self.view.window().run_command("lsp_next_diagnostic")
+        time.sleep(0.25)
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
 
         self.view.window().run_command("lsp_next_diagnostic")
+        time.sleep(0.25)
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
         self.view.window().run_command("lsp_next_diagnostic")
+        time.sleep(0.25)
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 4)
@@ -70,15 +74,21 @@ class ServerNotifications(TextDocumentTestCase):
         # lsp_prev_diagnostic should work as well
 
         self.view.window().run_command("lsp_prev_diagnostic")
+        time.sleep(0.25)
+        yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
         self.view.window().run_command("lsp_prev_diagnostic")
+        time.sleep(0.25)
+        yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
 
         # Testing to wrap around if there are no more diagnostics in the direction
 
         self.view.window().run_command("lsp_prev_diagnostic")
+        time.sleep(0.25)
+        yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 4)

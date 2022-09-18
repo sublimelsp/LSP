@@ -301,6 +301,30 @@
     //         "shift+f8"
     //     ],
     // },
+    // Jump to next Diagnostic in Tab
+    // {
+    //     "command": "lsp_next_diagnostic",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //      "context": [
+    //          {
+    //              "key": "setting.lsp_active"
+    //          }
+    //      ]
+    // },
+    // Jump to previous Diagnostic in Tab
+    // {
+    //     "command": "lsp_prev_diagnostic",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //      "context": [
+    //          {
+    //              "key": "setting.lsp_active"
+    //          }
+    //      ]
+    // },
     // Rename
     // {
     //     "command": "lsp_symbol_rename",

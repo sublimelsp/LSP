@@ -23,8 +23,8 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Goto Type Definition | unbound | `lsp_symbol_type_definition`
 | Hover Popup | unbound | `lsp_hover`
 | Insert/Replace Completions | <kbd>alt</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
-| Next Diagnostic | <kbd>F4</kbd> | -
-| Previous Diagnostic | <kbd>shift</kbd> <kbd>F4</kbd> | -
+| Next Diagnostic | unbound | `lsp_next_diagnostic`
+| Previous Diagnostic | unbound | `lsp_prev_diagnostic`
 | Rename | unbound | `lsp_symbol_rename`
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`

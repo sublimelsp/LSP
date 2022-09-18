@@ -1,4 +1,3 @@
-from LSP.plugin.core.panels import PanelName
 from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.protocol import DiagnosticTag
 from LSP.plugin.core.protocol import PublishDiagnosticsParams
@@ -6,7 +5,6 @@ from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import sublime
-import time
 
 
 class ServerNotifications(TextDocumentTestCase):
@@ -52,37 +50,31 @@ class ServerNotifications(TextDocumentTestCase):
         self.assertEqual(len(info), 1)
         self.assertEqual(info[0], sublime.Region(4, 5))
 
-        # Testing whether the popup with the diagnostic moves along with next_result
+        # Testing whether the popup with the diagnostic moves along with lsp_next_diagnostic
 
-        self.view.window().run_command("show_panel", {"panel": "output.{}".format(PanelName.Diagnostics)})
-        time.sleep(0.1)  # Give Diagnostics panel a bit of time to update its content (on async thread)
-        # Make sure diagnostics panel has focus, so that "next_result" & "prev_result" commands don't
-        # navigate between build results, find results, or find references
-        self.view.window().focus_view(self.view.window().find_output_panel(PanelName.Diagnostics))
-
-        self.view.window().run_command("next_result")
+        self.view.window().run_command("lsp_next_diagnostic")
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
 
-        self.view.window().run_command("next_result")
+        self.view.window().run_command("lsp_next_diagnostic")
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
-        self.view.window().run_command("next_result")
+        self.view.window().run_command("lsp_next_diagnostic")
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 4)
 
-        # prev_result should work as well
+        # lsp_prev_diagnostic should work as well
 
-        self.view.window().run_command("prev_result")
+        self.view.window().run_command("lsp_prev_diagnostic")
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
-        self.view.window().run_command("prev_result")
+        self.view.window().run_command("lsp_prev_diagnostic")
         yield self.view.is_popup_visible
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)

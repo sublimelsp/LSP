@@ -91,11 +91,14 @@ KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
 KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
 KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
+KIND_ERROR = (sublime.KIND_ID_COLOR_REDISH, "e", "Error")
+KIND_WARNING = (sublime.KIND_ID_COLOR_YELLOWISH, "w", "Warning")
+KIND_INFORMATION = (sublime.KIND_ID_COLOR_BLUISH, "i", "Information")
+KIND_HINT = (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint")
+
 KIND_QUICKFIX = (sublime.KIND_ID_COLOR_YELLOWISH, "f", "QuickFix")
 KIND_REFACTOR = (sublime.KIND_ID_COLOR_CYANISH, "r", "Refactor")
 KIND_SOURCE = (sublime.KIND_ID_COLOR_PURPLISH, "s", "Source")
-
-KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
 
 COMPLETION_KINDS = {
     CompletionItemKind.Text: KIND_TEXT,
@@ -152,6 +155,13 @@ SYMBOL_KINDS = {
     SymbolKind.Event: KIND_EVENT,
     SymbolKind.Operator: KIND_OPERATOR,
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
+}
+
+DIAGNOSTIC_KINDS = {
+    DiagnosticSeverity.Error: KIND_ERROR,
+    DiagnosticSeverity.Warning: KIND_WARNING,
+    DiagnosticSeverity.Information: KIND_INFORMATION,
+    DiagnosticSeverity.Hint: KIND_HINT
 }
 
 CODE_ACTION_KINDS = {
@@ -975,7 +985,7 @@ def format_completion(
     lsp_filter_text = item.get('filterText') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
 
-    kind = COMPLETION_KINDS.get(item.get('kind', -1), KIND_UNSPECIFIED)
+    kind = COMPLETION_KINDS.get(item.get('kind', -1), sublime.KIND_AMBIGUOUS)
 
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):

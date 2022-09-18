@@ -5,6 +5,7 @@ from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable, List
+from .views import first_selection_region
 from .views import MissingUriError
 from .views import point_to_offset
 from .views import uri_from_view
@@ -186,10 +187,8 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     # Sort diagnostics by location
     diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']), reverse=not forward)
     if point is None:
-        try:
-            point = view.sel()[0].b
-        except IndexError:
-            point = 0
+        region = first_selection_region(view)
+        point = region.b if region is not None else 0
     # Find next/previous diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in
     # this view after/before the cursor
     op_func = operator.gt if forward else operator.lt

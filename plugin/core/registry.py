@@ -9,6 +9,7 @@ from .views import MissingUriError
 from .views import point_to_offset
 from .views import uri_from_view
 from .windows import WindowRegistry
+from functools import partial
 import operator
 import sublime
 import sublime_plugin
@@ -198,9 +199,17 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
             break
     else:
         diag_pos = point_to_offset(Point.from_lsp(diagnostics[0]['range']['start']), view)
-    view.show_at_center(diag_pos)
+    # If the new position is not contained in the current viewport, we need a small delay before showing the popup to
+    # wait for the scrolling animation to finish. Otherwise ST would immediately hide the popup for being out of bounds.
+    # Also it doesn't seem to work without the delay when scrolling upwards (regardless of the distance).
+    need_dalay = not forward or not view.visible_region().contains(diag_pos)
+    show_popup = partial(view.run_command, 'lsp_hover', {'only_diagnostics': True, 'point': diag_pos})
     view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
-    view.run_command('lsp_hover', {'only_diagnostics': True, 'point': diag_pos})
+    view.show_at_center(diag_pos)
+    if need_dalay:
+        sublime.set_timeout_async(show_popup, 200)
+    else:
+        show_popup()
 
 
 class LspNextDiagnosticCommand(LspTextCommand):

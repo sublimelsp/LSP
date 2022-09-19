@@ -766,22 +766,17 @@ COLOR_BOX_HTML = """
 <style>
     html {{padding: 0; background-color: transparent}}
 
-    #lsp-color-box {{
+    #lsp-color-box a {{
+        border: 1px solid color(var(--foreground) alpha(0.25));
+        background-color: {backgroundColor};
         margin-top: 0.1em;
         height: 1rem;
         width: 1rem;
-        border: 1px solid color(var(--foreground) alpha(0.25));
-        background-color: {backgroundColor};
-    }}
-
-    #lsp-color-box a {{
-        font-size: 1.7rem; /** HACK - make the font bigger to make the whole color box clickable. */
-        text-decoration: none;
-        color: #00000001;
+        display: block;
     }}
 </style>
 <body id='lsp-color-box'>
-    <a href="{command}">▬</a>
+    <a href="{command}"><img/></a>
 </body>"""
 
 

@@ -50,31 +50,32 @@ class ServerNotifications(TextDocumentTestCase):
         self.assertEqual(len(info), 1)
         self.assertEqual(info[0], sublime.Region(4, 5))
 
-        # Testing whether the popup with the diagnostic moves along with next_result
+        # Testing whether the cursor position moves along with lsp_next_diagnostic
 
-        self.view.window().run_command("next_result")
-        yield self.view.is_popup_visible
+        self.view.window().run_command("lsp_next_diagnostic")
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
 
-        self.view.window().run_command("next_result")
-        yield self.view.is_popup_visible
+        self.view.window().run_command("lsp_next_diagnostic")
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
-        self.view.window().run_command("next_result")
-        yield self.view.is_popup_visible
+        self.view.window().run_command("lsp_next_diagnostic")
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 4)
 
-        # prev_result should work as well
+        # lsp_prev_diagnostic should work as well
 
-        self.view.window().run_command("prev_result")
-        yield self.view.is_popup_visible
+        self.view.window().run_command("lsp_prev_diagnostic")
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 2)
 
-        self.view.window().run_command("prev_result")
-        yield self.view.is_popup_visible
+        self.view.window().run_command("lsp_prev_diagnostic")
         self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
         self.assertEqual(self.view.sel()[0].b, 0)
+
+        # Testing to wrap around if there are no more diagnostics in the direction
+
+        self.view.window().run_command("lsp_prev_diagnostic")
+        self.assertEqual(self.view.sel()[0].a, self.view.sel()[0].b)
+        self.assertEqual(self.view.sel()[0].b, 4)

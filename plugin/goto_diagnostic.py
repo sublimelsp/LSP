@@ -6,6 +6,7 @@ from .core.settings import userprefs
 from .core.types import ClientConfig
 from .core.typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
+from .core.views import DIAGNOSTIC_KINDS
 from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
 from .core.views import format_diagnostic_for_html
 from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
@@ -15,12 +16,7 @@ import functools
 import sublime
 import sublime_plugin
 
-DIAGNOSTIC_KIND = {
-    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", "Error"),
-    DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", "Warning"),
-    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", "Information"),
-    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint"),
-}
+
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
     .diagnostics a {color: var(--bluish)}
@@ -108,7 +104,7 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
             text = "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri))
             annotation = "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
                                                counts.get(DiagnosticSeverity.Warning, 0))
-            kind = DIAGNOSTIC_KIND[min(counts)]
+            kind = DIAGNOSTIC_KINDS[min(counts)]
             uri = unparse_uri(parsed_uri)
             if uri == self.uri:
                 selected = i  # restore selection after coming back from diagnostics list
@@ -185,7 +181,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
                     first_line += " …"
                 text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
                 annotation = format_diagnostic_source_and_code(diagnostic)
-                kind = DIAGNOSTIC_KIND[diagnostic_severity(diagnostic)]
+                kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
                 list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
         return list_items
 

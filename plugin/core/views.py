@@ -128,7 +128,7 @@ COMPLETION_KINDS = {
     CompletionItemKind.Event: KIND_EVENT,
     CompletionItemKind.Operator: KIND_OPERATOR,
     CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
-}  # type: Dict[CompletionItemKind, QuickPanelKind]
+}  # type: Dict[CompletionItemKind, SublimeKind]
 
 SYMBOL_KINDS = {
     SymbolKind.File: KIND_FILE,
@@ -157,20 +157,20 @@ SYMBOL_KINDS = {
     SymbolKind.Event: KIND_EVENT,
     SymbolKind.Operator: KIND_OPERATOR,
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
-}  # type: Dict[SymbolKind, QuickPanelKind]
+}  # type: Dict[SymbolKind, SublimeKind]
 
 DIAGNOSTIC_KINDS = {
     DiagnosticSeverity.Error: KIND_ERROR,
     DiagnosticSeverity.Warning: KIND_WARNING,
     DiagnosticSeverity.Information: KIND_INFORMATION,
     DiagnosticSeverity.Hint: KIND_HINT
-}  # type: Dict[DiagnosticSeverity, QuickPanelKind]
+}  # type: Dict[DiagnosticSeverity, SublimeKind]
 
 CODE_ACTION_KINDS = {
     CodeActionKind.QuickFix: KIND_QUICKFIX,
     CodeActionKind.Refactor: KIND_REFACTOR,
     CodeActionKind.Source: KIND_SOURCE
-}  # type: Dict[CodeActionKind, QuickPanelKind]
+}  # type: Dict[CodeActionKind, SublimeKind]
 
 SYMBOL_KIND_SCOPES = {
     SymbolKind.File: "string",

@@ -3,8 +3,8 @@ from .core.protocol import Request, DocumentSymbol, SymbolInformation, SymbolKin
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
-from .core.views import QuickPanelKind
 from .core.views import range_to_region
+from .core.views import SublimeKind
 from .core.views import SYMBOL_KIND_SCOPES
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
@@ -17,7 +17,7 @@ import sublime_plugin
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
 
-def unpack_lsp_kind(kind: SymbolKind) -> QuickPanelKind:
+def unpack_lsp_kind(kind: SymbolKind) -> SublimeKind:
     return SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
 
 

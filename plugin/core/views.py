@@ -42,7 +42,7 @@ import sublime_plugin
 import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
-QuickPanelKind = Tuple[int, str, str]
+SublimeKind = Tuple[int, str, str]
 
 DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 

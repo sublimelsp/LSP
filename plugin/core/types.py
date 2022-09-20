@@ -1,7 +1,7 @@
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import TextDocumentSyncKindNone
+from .protocol import TextDocumentSyncKind
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from .typing import cast
 from .url import filename_to_uri
@@ -538,9 +538,9 @@ class Capabilities(DottedDict):
     def should_notify_did_open(self) -> bool:
         return "textDocumentSync.didOpen" in self
 
-    def text_sync_kind(self) -> int:
-        value = self.get("textDocumentSync.change.syncKind")
-        return value if isinstance(value, int) else TextDocumentSyncKindNone
+    def text_sync_kind(self) -> TextDocumentSyncKind:
+        value = self.get("textDocumentSync.change.syncKind")  # type: TextDocumentSyncKind
+        return value if isinstance(value, int) else TextDocumentSyncKind.None_
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self

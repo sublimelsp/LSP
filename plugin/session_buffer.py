@@ -7,8 +7,7 @@ from .core.protocol import DocumentUri
 from .core.protocol import InlayHintParams
 from .core.protocol import InlayHintResponse
 from .core.protocol import Request
-from .core.protocol import TextDocumentSyncKindFull
-from .core.protocol import TextDocumentSyncKindNone
+from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -239,9 +238,9 @@ class SessionBuffer:
         value = self.get_capability(capability)
         return value is not False and value is not None
 
-    def text_sync_kind(self) -> int:
+    def text_sync_kind(self) -> TextDocumentSyncKind:
         value = self.capabilities.text_sync_kind()
-        return value if value > TextDocumentSyncKindNone else self.session.text_sync_kind()
+        return value if value != TextDocumentSyncKind.None_ else self.session.text_sync_kind()
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
@@ -286,9 +285,9 @@ class SessionBuffer:
     def purge_changes_async(self, view: sublime.View) -> None:
         if self.pending_changes is not None:
             sync_kind = self.text_sync_kind()
-            if sync_kind == TextDocumentSyncKindNone:
+            if sync_kind == TextDocumentSyncKind.None_:
                 return
-            if sync_kind == TextDocumentSyncKindFull:
+            if sync_kind == TextDocumentSyncKind.Full:
                 changes = None
                 version = view.change_count()
             else:

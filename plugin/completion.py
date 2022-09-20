@@ -1,6 +1,7 @@
 from .core.edit import parse_text_edit
 from .core.logging import debug
 from .core.protocol import InsertReplaceEdit, TextEdit, Range, Request, InsertTextFormat, CompletionItem
+from .core.protocol import MarkupContent, MarkedString, MarkupKind
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
 from .core.typing import List, Dict, Optional, Generator, Union, cast
@@ -49,7 +50,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
     def _format_documentation(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[MarkedString, MarkupContent, List[MarkedString]],
         language_map: Optional[MarkdownLangMap]
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
@@ -61,7 +62,7 @@ class LspResolveDocsCommand(LspTextCommand):
             detail = self._format_documentation(item.get('detail') or "", language_map)
             documentation = self._format_documentation(item.get("documentation") or "", language_map)
         if not documentation:
-            markdown = {"kind": "markdown", "value": "*No documentation available.*"}
+            markdown = {"kind": MarkupKind.Markdown, "value": "*No documentation available.*"}  # type: MarkupContent
             # No need for a language map here
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""

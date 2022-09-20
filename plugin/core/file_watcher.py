@@ -1,10 +1,10 @@
-from .protocol import FileChangeType, FileChangeTypeCreated, FileChangeTypeChanged, FileChangeTypeDeleted
-from .protocol import WatchKind, WatchKindCreate, WatchKindChange, WatchKindDelete
+from .protocol import FileChangeType
+from .protocol import WatchKind
 from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
 
-DEFAULT_KIND = WatchKindCreate | WatchKindChange | WatchKindDelete
+DEFAULT_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 
 FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
 FilePath = str
@@ -13,20 +13,20 @@ FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
 def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> List[FileWatcherEventType]:
     event_types = []  # type: List[FileWatcherEventType]
-    if kind & WatchKindCreate:
+    if kind & WatchKind.Create:
         event_types.append('create')
-    if kind & WatchKindChange:
+    if kind & WatchKind.Change:
         event_types.append('change')
-    if kind & WatchKindDelete:
+    if kind & WatchKind.Delete:
         event_types.append('delete')
     return event_types
 
 
 def file_watcher_event_type_to_lsp_file_change_type(kind: FileWatcherEventType) -> FileChangeType:
     return {
-        'create': FileChangeTypeCreated,
-        'change': FileChangeTypeChanged,
-        'delete': FileChangeTypeDeleted,
+        'create': FileChangeType.Created,
+        'change': FileChangeType.Changed,
+        'delete': FileChangeType.Deleted,
     }[kind]
 
 

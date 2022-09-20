@@ -50,7 +50,9 @@ class LspOpenLinkCommand(LspTextCommand):
             session.send_request_async(Request.resolveDocumentLink(link, self.view), self._on_resolved_async)
 
     def _on_resolved_async(self, response: DocumentLink) -> None:
-        self.open_target(response["target"])
+        target = response.get("target")
+        if target is not None:
+            self.open_target(target)
 
     def open_target(self, target: str) -> None:
         if target.startswith("file:"):

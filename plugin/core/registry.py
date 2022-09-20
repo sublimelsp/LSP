@@ -136,7 +136,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: str = None) -> None:
+    def run(self, edit: Any, config_name: Optional[str] = None) -> None:
         window = self.view.window()
         if not window:
             return

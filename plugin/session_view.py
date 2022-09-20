@@ -2,6 +2,7 @@ from .code_lens import CodeLensView
 from .core.progress import ViewProgressReporter
 from .core.promise import Promise
 from .core.protocol import CodeLens
+from .core.protocol import CodeLensExtended
 from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
@@ -386,7 +387,7 @@ class SessionView:
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
 
     def __str__(self) -> str:

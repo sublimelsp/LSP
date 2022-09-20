@@ -11,6 +11,7 @@ from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error
 from .core.protocol import Request
@@ -495,13 +496,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if manual or last_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
-            context_params = {}  # type: SignatureHelpContext
-            if manual:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked
-            else:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.TriggerCharacter
+            trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
+            context_params = {
+                'triggerKind': trigger_kind,
+                'isRetrigger': self._sighelp is not None,
+            }  # type: SignatureHelpContext
+            if not manual:
                 context_params["triggerCharacter"] = last_char
-            context_params["isRetrigger"] = self._sighelp is not None
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
             params = {
@@ -657,16 +658,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
-    def _highlights_key(self, kind: int, multiline: bool) -> str:
+    def _highlights_key(self, kind: DocumentHighlightKind, multiline: bool) -> str:
         return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             self.view.erase_regions(self._highlights_key(kind, False))
             self.view.erase_regions(self._highlights_key(kind, True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             regions = itertools.chain(
                 self.view.get_regions(self._highlights_key(kind, False)),
                 self.view.get_regions(self._highlights_key(kind, True))
@@ -686,10 +687,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
-    def _on_highlights(self, response: Optional[List]) -> None:
+    def _on_highlights(self, response: Optional[List[DocumentHighlight]]) -> None:
         if not isinstance(response, list):
             response = []
-        kind2regions = {}  # type: Dict[Tuple[int, bool], List[sublime.Region]]
+        kind2regions = {}  # type: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]]
         for highlight in response:
             r = range_to_region(highlight["range"], self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Text)

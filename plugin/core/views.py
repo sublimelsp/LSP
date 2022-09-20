@@ -1,5 +1,6 @@
 from .css import css as lsp_css
 from .protocol import CodeAction
+from .protocol import CodeActionKind
 from .protocol import CodeActionContext
 from .protocol import CodeActionParams
 from .protocol import CodeActionTriggerKind
@@ -41,6 +42,7 @@ import sublime_plugin
 import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
+QuickPanelKind = Tuple[int, str, str]
 
 DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
@@ -126,7 +128,7 @@ COMPLETION_KINDS = {
     CompletionItemKind.Event: KIND_EVENT,
     CompletionItemKind.Operator: KIND_OPERATOR,
     CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
-}
+}  # type: Dict[CompletionItemKind, QuickPanelKind]
 
 SYMBOL_KINDS = {
     SymbolKind.File: KIND_FILE,
@@ -155,20 +157,20 @@ SYMBOL_KINDS = {
     SymbolKind.Event: KIND_EVENT,
     SymbolKind.Operator: KIND_OPERATOR,
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
-}
+}  # type: Dict[SymbolKind, QuickPanelKind]
 
 DIAGNOSTIC_KINDS = {
     DiagnosticSeverity.Error: KIND_ERROR,
     DiagnosticSeverity.Warning: KIND_WARNING,
     DiagnosticSeverity.Information: KIND_INFORMATION,
     DiagnosticSeverity.Hint: KIND_HINT
-}
+}  # type: Dict[DiagnosticSeverity, QuickPanelKind]
 
 CODE_ACTION_KINDS = {
-    "quickfix": KIND_QUICKFIX,
-    "refactor": KIND_REFACTOR,
-    "source": KIND_SOURCE
-}
+    CodeActionKind.QuickFix: KIND_QUICKFIX,
+    CodeActionKind.Refactor: KIND_REFACTOR,
+    CodeActionKind.Source: KIND_SOURCE
+}  # type: Dict[CodeActionKind, QuickPanelKind]
 
 SYMBOL_KIND_SCOPES = {
     SymbolKind.File: "string",
@@ -197,19 +199,19 @@ SYMBOL_KIND_SCOPES = {
     SymbolKind.Event: "entity.name.function",
     SymbolKind.Operator: "keyword.operator",
     SymbolKind.TypeParameter: "variable.parameter.type"
-}
+}  # type: Dict[SymbolKind, str]
 
 DOCUMENT_HIGHLIGHT_KINDS = {
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
-}
+}  # type: Dict[DocumentHighlightKind, str]
 
 DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
-}
+}  # type: Dict[DocumentHighlightKind, str]
 
 SEMANTIC_TOKENS_MAP = {
     "namespace": "variable.other.namespace.lsp",
@@ -468,10 +470,10 @@ def did_change_text_document_params(view: sublime.View, version: int,
     content_changes = []  # type: List[Dict[str, Any]]
     result = {"textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes}
     if changes is None:
-        # TextDocumentSyncKindFull
+        # TextDocumentSyncKind.Full
         content_changes.append({"text": entire_content(view)})
     else:
-        # TextDocumentSyncKindIncremental
+        # TextDocumentSyncKind.Incremental
         for change in changes:
             content_changes.append(render_text_change(change))
     return result
@@ -564,7 +566,7 @@ def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
     diagnostics: List[Diagnostic],
-    on_save_actions: Optional[List[str]] = None,
+    on_save_actions: Optional[List[CodeActionKind]] = None,
     manual: bool = False
 ) -> CodeActionParams:
     context = {
@@ -813,7 +815,7 @@ def format_severity(severity: int) -> str:
     return "???"
 
 
-def diagnostic_severity(diagnostic: Diagnostic) -> int:
+def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
@@ -954,7 +956,7 @@ def format_diagnostic_for_html(
     ]
     code_description = diagnostic.get("codeDescription")
     if code_description:
-        code = make_link(code_description["href"], diagnostic["code"])  # type: Optional[str]
+        code = make_link(code_description["href"], diagnostic.get("code"))  # type: Optional[str]
     elif "code" in diagnostic:
         code = _with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))")
     else:
@@ -985,7 +987,8 @@ def format_completion(
     lsp_filter_text = item.get('filterText') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
 
-    kind = COMPLETION_KINDS.get(item.get('kind', -1), sublime.KIND_AMBIGUOUS)
+    completion_kind = item.get('kind')
+    kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
 
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):
@@ -1033,8 +1036,9 @@ def format_code_actions_for_quick_panel(
     items = []  # type: List[sublime.QuickPanelItem]
     selected_index = -1
     for idx, code_action in enumerate(code_actions):
-        lsp_kind = str(code_action.get("kind", ""))
-        kind = CODE_ACTION_KINDS.get(lsp_kind.split(".")[0], sublime.KIND_AMBIGUOUS)
+        lsp_kind = code_action.get("kind", "")
+        first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
+        kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
         items.append(sublime.QuickPanelItem(code_action["title"], kind=kind))
         if code_action.get('isPreferred', False):
             selected_index = idx

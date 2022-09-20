@@ -183,41 +183,40 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 
 class Settings:
 
-    # This is only for mypy
-    diagnostics_additional_delay_auto_complete_ms = None  # type: int
-    diagnostics_delay_ms = None  # type: int
-    diagnostics_gutter_marker = None  # type: str
-    diagnostics_highlight_style = None  # type: Union[str, Dict[str, str]]
-    diagnostics_panel_include_severity_level = None  # type: int
-    disabled_capabilities = None  # type: List[str]
-    document_highlight_style = None  # type: str
-    hover_highlight_style = None  # type: str
-    inhibit_snippet_completions = None  # type: bool
-    inhibit_word_completions = None  # type: bool
-    link_highlight_style = None  # type: str
-    completion_insert_mode = None  # type: str
-    log_debug = None  # type: bool
-    log_max_size = None  # type: int
-    log_server = None  # type: List[str]
-    lsp_code_actions_on_save = None  # type: Dict[str, bool]
-    lsp_format_on_save = None  # type: bool
-    on_save_task_timeout_ms = None  # type: int
-    only_show_lsp_completions = None  # type: bool
-    popup_max_characters_height = None  # type: int
-    popup_max_characters_width = None  # type: int
-    semantic_highlighting = None  # type: bool
-    show_code_actions = None  # type: str
-    show_code_lens = None  # type: str
-    show_inlay_hints = None  # type: bool
-    show_code_actions_in_hover = None  # type: bool
-    show_diagnostics_count_in_view_status = None  # type: bool
-    show_multiline_diagnostics_highlights = None  # type: bool
-    show_diagnostics_in_view_status = None  # type: bool
-    show_diagnostics_panel_on_save = None  # type: int
-    show_diagnostics_severity_level = None  # type: int
-    show_references_in_quick_panel = None  # type: bool
-    show_symbol_action_links = None  # type: bool
-    show_view_status = None  # type: bool
+    diagnostics_additional_delay_auto_complete_ms = cast(int, None)
+    diagnostics_delay_ms = cast(int, None)
+    diagnostics_gutter_marker = cast(str, None)
+    diagnostics_highlight_style = cast(Union[str, Dict[str, str]], None)
+    diagnostics_panel_include_severity_level = cast(int, None)
+    disabled_capabilities = cast(List[str], None)
+    document_highlight_style = cast(str, None)
+    hover_highlight_style = cast(str, None)
+    inhibit_snippet_completions = cast(bool, None)
+    inhibit_word_completions = cast(bool, None)
+    link_highlight_style = cast(str, None)
+    completion_insert_mode = cast(str, None)
+    log_debug = cast(bool, None)
+    log_max_size = cast(int, None)
+    log_server = cast(List[str], None)
+    lsp_code_actions_on_save = cast(Dict[str, bool], None)
+    lsp_format_on_save = cast(bool, None)
+    on_save_task_timeout_ms = cast(int, None)
+    only_show_lsp_completions = cast(bool, None)
+    popup_max_characters_height = cast(int, None)
+    popup_max_characters_width = cast(int, None)
+    semantic_highlighting = cast(bool, None)
+    show_code_actions = cast(str, None)
+    show_code_lens = cast(str, None)
+    show_inlay_hints = cast(bool, None)
+    show_code_actions_in_hover = cast(bool, None)
+    show_diagnostics_count_in_view_status = cast(bool, None)
+    show_multiline_diagnostics_highlights = cast(bool, None)
+    show_diagnostics_in_view_status = cast(bool, None)
+    show_diagnostics_panel_on_save = cast(int, None)
+    show_diagnostics_severity_level = cast(int, None)
+    show_references_in_quick_panel = cast(bool, None)
+    show_symbol_action_links = cast(bool, None)
+    show_view_status = cast(bool, None)
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)

@@ -135,6 +135,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
+    # @property
+    # def view(cls) -> sublime.View:
+    #     print(super().view)
+    #     return supert().view
+
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False

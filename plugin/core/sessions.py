@@ -591,7 +591,7 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
-    view = None  # type: sublime.View
+    view = cast(sublime.View, None)
 
     @abstractmethod
     def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:

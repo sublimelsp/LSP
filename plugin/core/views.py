@@ -776,7 +776,7 @@ COLOR_BOX_HTML = """
     }}
 </style>
 <body id='lsp-color-box'>
-    <a href="{command}"><img/></a>
+    <a href="{command}">&nbsp;</a>
 </body>"""
 
 

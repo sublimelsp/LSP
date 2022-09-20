@@ -32,7 +32,7 @@ from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import ErrorCode
+from .protocol import ErrorCodes
 from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
@@ -1971,7 +1971,7 @@ class Session(TransportCallbacks):
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
                 if handler is None:
-                    self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
+                    self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:
                     tup = (handler, result, req_id, "request", method)
                     return tup
@@ -2017,7 +2017,7 @@ class Session(TransportCallbacks):
     ) -> Tuple[Optional[Callable], Optional[str], Any, bool]:
         request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
-            error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
+            error = {"code": ErrorCodes.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, None, error, True)
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
@@ -2027,7 +2027,7 @@ class Session(TransportCallbacks):
         if "result" not in response and "error" in response:
             error = response["error"]
         else:
-            error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
+            error = {"code": ErrorCodes.InvalidParams, "message": "invalid response payload"}
         return (error_handler, request.method, error, True)
 
     def _get_handler(self, method: str) -> Optional[Callable]:

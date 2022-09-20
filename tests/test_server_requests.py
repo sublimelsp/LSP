@@ -1,4 +1,4 @@
-from LSP.plugin.core.protocol import ErrorCode
+from LSP.plugin.core.protocol import ErrorCodes
 from LSP.plugin.core.protocol import TextDocumentSyncKind
 from LSP.plugin.core.sessions import SessionBufferProtocol
 from LSP.plugin.core.types import ClientConfig
@@ -28,7 +28,7 @@ def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expec
 class ServerRequests(TextDocumentTestCase):
 
     def test_unknown_method(self) -> Generator:
-        yield from verify(self, "foobar/qux", {}, {"code": ErrorCode.MethodNotFound, "message": "foobar/qux"})
+        yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
 
     def test_m_workspace_workspaceFolders(self) -> Generator:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}

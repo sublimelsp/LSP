@@ -4,8 +4,8 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
-from .core.protocol import InlayHintResponse
 from .core.protocol import Request
 from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
@@ -15,7 +15,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -650,7 +650,7 @@ class SessionBuffer:
         }  # type: InlayHintParams
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
-    def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
+    def _on_inlay_hints_async(self, response: Union[List[InlayHint], None]) -> None:
         if response:
             view = self.some_view()
             if not view:

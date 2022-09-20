@@ -6084,7 +6084,5 @@ ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangePa
     'range': Range,
 })
 
-InlayHintResponse = Union[List[InlayHint], None]
-
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range

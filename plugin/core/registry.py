@@ -1,10 +1,9 @@
 from .configurations import ConfigManager
-from .protocol import Diagnostic
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Any, Generator, Iterable, List
+from .typing import Optional, Any, Generator, Iterable
 from .views import first_selection_region
 from .views import MissingUriError
 from .views import point_to_offset

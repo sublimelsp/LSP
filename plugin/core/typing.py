@@ -2,6 +2,7 @@ import sys
 
 if sys.version_info >= (3, 8, 0):
 
+    from enum import Enum, IntEnum, IntFlag
     from typing import Any
     from typing import Callable
     from typing import cast
@@ -21,9 +22,11 @@ if sys.version_info >= (3, 8, 0):
     from typing import Set
     from typing import Tuple
     from typing import Type
-    from typing import TypedDict
     from typing import TypeVar
     from typing import Union
+    from typing_extensions import NotRequired
+    from typing_extensions import Required
+    from typing_extensions import TypedDict
 
 else:
 
@@ -53,6 +56,15 @@ else:
     class TypedDict(Type, dict):  # type: ignore
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
+
+    class Enum(Type):  # type: ignore
+        pass
+
+    class IntEnum(Type):  # type: ignore
+        pass
+
+    class IntFlag(Type):  # type: ignore
+        pass
 
     class Any(Type):  # type: ignore
         pass
@@ -106,6 +118,12 @@ else:
         pass
 
     class Sequence(Type):  # type: ignore
+        pass
+
+    class Required(Type):  # type: ignore
+        pass
+
+    class NotRequired(Type):  # type: ignore
         pass
 
     def TypeVar(*args, **kwargs) -> Any:  # type: ignore

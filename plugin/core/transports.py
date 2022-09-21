@@ -263,8 +263,8 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             writer = process.stdin  # type: ignore
     if not reader or not writer:
         raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
-    return ProcessTransport(config.name, process, sock, reader, writer, process.stderr, json_rpc_processor,
-                            callback_object)
+    return ProcessTransport(
+        config.name, process, sock, reader, writer, process.stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
@@ -356,10 +356,10 @@ def _await_tcp_connection(
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
         thread.join()
-        reader = sock.makefile('rwb')  # type: IO[bytes]
+        reader = sock.makefile('rwb')  # type: ignore
         writer = reader
         assert data.process
-        return data.process, sock, reader, writer
+        return data.process, sock, reader, writer  # type: ignore
 
 
 def _connect_tcp(port: int) -> Optional[socket.socket]:

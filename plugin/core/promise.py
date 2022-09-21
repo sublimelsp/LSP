@@ -1,16 +1,16 @@
 from .typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
 import functools
-import sublime
 import threading
 
 T = TypeVar('T')
+S = TypeVar('S')
 TExecutor = TypeVar('TExecutor')
 T_contra = TypeVar('T_contra', contravariant=True)
 TResult = TypeVar('TResult')
 
 
 class ResolveFunc(Protocol[T_contra]):
-    def __call__(self, value: Union[T_contra, 'Promise[T_contra]']) -> None:
+    def __call__(self, resolve_value: T_contra) -> None:
         ...
 
 
@@ -64,8 +64,8 @@ class Promise(Generic[T]):
         Promise(do_work_async_1).then(do_more_work_async).then(process_value)
     """
 
-    @classmethod
-    def resolve(cls, resolve_value: T) -> 'Promise[T]':
+    @staticmethod
+    def resolve(resolve_value: S) -> 'Promise[S]':
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -74,23 +74,13 @@ class Promise(Generic[T]):
         Arguments:
             resolve_value: The value to resolve the promise with.
         """
-        def executor_func(resolve_fn: ResolveFunc[T]) -> None:
+        def executor_func(resolve_fn: ResolveFunc[S]) -> None:
             resolve_fn(resolve_value)
 
-        return cls(executor_func)
+        return Promise(executor_func)
 
-    @classmethod
-    def on_main_thread(cls, value: T) -> 'Promise[T]':
-        """Return a promise that resolves on the main thread."""
-        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
-
-    @classmethod
-    def on_async_thread(cls, value: T) -> 'Promise[T]':
-        """Return a promise that resolves on the worker thread."""
-        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
-
-    @classmethod
-    def packaged_task(cls) -> PackagedTask[T]:
+    @staticmethod
+    def packaged_task() -> PackagedTask[S]:
 
         class Executor(Generic[TExecutor]):
 
@@ -102,14 +92,14 @@ class Promise(Generic[T]):
             def __call__(self, resolver: ResolveFunc[TExecutor]) -> None:
                 self.resolver = resolver
 
-        executor = Executor()  # type: Executor[T]
-        promise = cls(executor)
+        executor = Executor()  # type: Executor[S]
+        promise = Promise(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
 
-    # Could also support passing plain T.
-    @classmethod
-    def all(cls, promises: List['Promise[T]']) -> 'Promise[List[T]]':
+    # Could also support passing plain S.
+    @staticmethod
+    def all(promises: List['Promise[S]']) -> 'Promise[List[S]]':
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
         gets resolved.
@@ -119,10 +109,10 @@ class Promise(Generic[T]):
         :returns:   A promise that gets resolved when all passed promises gets resolved.
                     Gets passed a list with all resolved values.
         """
-        def executor(resolve: ResolveFunc[List[T]]) -> None:
+        def executor(resolve: ResolveFunc[List[S]]) -> None:
             was_resolved = False
 
-            def recheck_resolve_status(_: T) -> None:
+            def recheck_resolve_status(_: S) -> None:
                 nonlocal was_resolved
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
@@ -150,7 +140,7 @@ class Promise(Generic[T]):
         self.resolved = False
         self.mutex = threading.Lock()
         self.callbacks = []  # type: List[ResolveFunc[T]]
-        executor_func(lambda value=None: self._do_resolve(value))
+        executor_func(lambda resolve_value=None: self._do_resolve(resolve_value))
 
     def __repr__(self) -> str:
         if self.resolved:

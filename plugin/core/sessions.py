@@ -19,7 +19,9 @@ from .panels import PanelName
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, CodeLens, InsertTextMode, Location, LocationLink
+from .protocol import ClientCapabilities
+from .protocol import CodeAction, CodeActionKind
+from .protocol import CodeLensExtended
 from .protocol import Command
 from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
@@ -30,9 +32,16 @@ from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import ErrorCode
+from .protocol import ErrorCodes
 from .protocol import ExecuteCommandParams
+from .protocol import FailureHandlingKind
 from .protocol import FileEvent
+from .protocol import GeneralClientCapabilities
+from .protocol import InsertTextMode
+from .protocol import Location
+from .protocol import LocationLink
+from .protocol import LSPObject
+from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import Range
 from .protocol import Request
@@ -41,7 +50,12 @@ from .protocol import SemanticTokenModifiers
 from .protocol import SemanticTokenTypes
 from .protocol import SymbolKind
 from .protocol import SymbolTag
-from .protocol import WorkspaceFolder
+from .protocol import TextDocumentClientCapabilities
+from .protocol import TextDocumentSyncKind
+from .protocol import TokenFormat
+from .protocol import WindowClientCapabilities
+from .protocol import WorkspaceClientCapabilities
+from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
 from .transports import Transport
@@ -55,7 +69,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -65,6 +79,7 @@ from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
 from .views import SEMANTIC_TOKENS_MAP
 from .workspace import is_subpath_of
+from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from weakref import WeakSet
@@ -74,8 +89,8 @@ import os
 import sublime
 import weakref
 
-
 InitCallback = Callable[['Session', bool], None]
+T = TypeVar('T')
 
 
 def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
@@ -198,17 +213,17 @@ def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
                           config: ClientConfig) -> dict:
-    completion_kinds = _enum_like_class_to_list(CompletionItemKind)
-    symbol_kinds = _enum_like_class_to_list(SymbolKind)
-    diagnostic_tag_value_set = _enum_like_class_to_list(DiagnosticTag)
-    completion_tag_value_set = _enum_like_class_to_list(CompletionItemTag)
-    symbol_tag_value_set = _enum_like_class_to_list(SymbolTag)
-    semantic_token_types = _enum_like_class_to_list(SemanticTokenTypes)
+    completion_kinds = cast(List[CompletionItemKind], _enum_like_class_to_list(CompletionItemKind))
+    symbol_kinds = cast(List[SymbolKind], _enum_like_class_to_list(SymbolKind))
+    diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_like_class_to_list(DiagnosticTag))
+    completion_tag_value_set = cast(List[CompletionItemTag], _enum_like_class_to_list(CompletionItemTag))
+    symbol_tag_value_set = cast(List[SymbolTag], _enum_like_class_to_list(SymbolTag))
+    semantic_token_types = cast(List[str], _enum_like_class_to_list(SemanticTokenTypes))
     if config.semantic_tokens is not None:
         for token_type in config.semantic_tokens.keys():
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-    semantic_token_modifiers = _enum_like_class_to_list(SemanticTokenModifiers)
+    semantic_token_modifiers = cast(List[str], _enum_like_class_to_list(SemanticTokenModifiers))
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -224,7 +239,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "parser": "Python-Markdown",
             "version": mdpopups.markdown.__version__  # type: ignore
         }
-    }
+    }  # type: GeneralClientCapabilities
     text_document_capabilities = {
         "synchronization": {
             "dynamicRegistration": True,  # exceptional
@@ -234,14 +249,14 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "hover": {
             "dynamicRegistration": True,
-            "contentFormat": ["markdown", "plaintext"]
+            "contentFormat": [MarkupKind.Markdown, MarkupKind.PlainText]
         },
         "completion": {
             "dynamicRegistration": True,
             "completionItem": {
                 "snippetSupport": True,
                 "deprecatedSupport": True,
-                "documentationFormat": ["markdown", "plaintext"],
+                "documentationFormat": [MarkupKind.Markdown, MarkupKind.PlainText],
                 "tagSupport": {
                     "valueSet": completion_tag_value_set
                 },
@@ -264,7 +279,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "contextSupport": True,
             "signatureInformation": {
                 "activeParameterSupport": True,
-                "documentationFormat": ["markdown", "plaintext"],
+                "documentationFormat": [MarkupKind.Markdown, MarkupKind.PlainText],
                 "parameterInformation": {
                     "labelOffsetSupport": True
                 }
@@ -317,12 +332,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "codeActionLiteralSupport": {
                 "codeActionKind": {
                     "valueSet": [
-                        "quickfix",
-                        "refactor",
-                        "refactor.extract",
-                        "refactor.inline",
-                        "refactor.rewrite",
-                        "source.organizeImports"
+                        CodeActionKind.QuickFix,
+                        CodeActionKind.Refactor,
+                        CodeActionKind.RefactorExtract,
+                        CodeActionKind.RefactorInline,
+                        CodeActionKind.RefactorRewrite,
+                        CodeActionKind.SourceOrganizeImports,
                     ]
                 }
             },
@@ -374,13 +389,13 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "tokenTypes": semantic_token_types,
             "tokenModifiers": semantic_token_modifiers,
             "formats": [
-                "relative"
+                TokenFormat.Relative
             ],
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
         }
-    }
+    }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {
         "applyEdit": True,
         "didChangeConfiguration": {
@@ -389,7 +404,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "executeCommand": {},
         "workspaceEdit": {
             "documentChanges": True,
-            "failureHandling": "abort",
+            "failureHandling": FailureHandlingKind.Abort,
         },
         "workspaceFolders": True,
         "symbol": {
@@ -411,7 +426,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "semanticTokens": {
             "refreshSupport": True
         }
-    }
+    }  # type: WorkspaceClientCapabilities
     window_capabilities = {
         "showDocument": {
             "support": True
@@ -422,15 +437,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             }
         },
         "workDoneProgress": True
-    }
+    }  # type: WindowClientCapabilities
     capabilities = {
         "general": general_capabilities,
         "textDocument": text_document_capabilities,
         "workspace": workspace_capabilites,
         "window": window_capabilities,
-    }
+    }  # type: ClientCapabilities
     if config.experimental_capabilities is not None:
-        capabilities['experimental'] = config.experimental_capabilities
+        capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
     if get_file_watcher_implementation():
         workspace_capabilites["didChangeWatchedFiles"] = {"dynamicRegistration": True}
     return {
@@ -498,7 +513,7 @@ class SessionViewProtocol(Protocol):
     def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
         ...
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         ...
 
     def start_code_lenses_async(self) -> None:
@@ -576,7 +591,7 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
-    view = None  # type: sublime.View
+    view = cast(sublime.View, None)
 
     @abstractmethod
     def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:
@@ -1276,7 +1291,7 @@ class Session(TransportCallbacks):
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()
 
-    def text_sync_kind(self) -> int:
+    def text_sync_kind(self) -> TextDocumentSyncKind:
         return self.capabilities.text_sync_kind()
 
     def should_notify_did_change_workspace_folders(self) -> bool:
@@ -1566,15 +1581,17 @@ class Session(TransportCallbacks):
         edit = code_action.get("edit")
         promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
         command = code_action.get("command")
-        if isinstance(command, dict):
+        if command is not None:
             execute_command = {
                 "command": command["command"],
-                "arguments": command.get("arguments"),
             }  # type: ExecuteCommandParams
+            arguments = command.get("arguments")
+            if arguments is not None:
+                execute_command['arguments'] = arguments
             return promise.then(lambda _: self.execute_command(execute_command, False))
         return promise
 
-    def apply_workspace_edit_async(self, edit: Dict[str, Any]) -> Promise[None]:
+    def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
@@ -1725,6 +1742,9 @@ class Session(TransportCallbacks):
                 file_watchers = []  # type: List[FileWatcher]
                 for config in capability_options.get("watchers", []):
                     pattern = config.get("globPattern", '')
+                    if not isinstance(pattern, str):
+                        print('LSP: Relative glob patterns are not supported in File Watcher yet.')
+                        continue
                     kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
                         ignores = self._get_global_ignore_globs(folder.path)
@@ -1951,7 +1971,7 @@ class Session(TransportCallbacks):
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
                 if handler is None:
-                    self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
+                    self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:
                     tup = (handler, result, req_id, "request", method)
                     return tup
@@ -1997,7 +2017,7 @@ class Session(TransportCallbacks):
     ) -> Tuple[Optional[Callable], Optional[str], Any, bool]:
         request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
-            error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
+            error = {"code": ErrorCodes.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, None, error, True)
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
@@ -2007,7 +2027,7 @@ class Session(TransportCallbacks):
         if "result" not in response and "error" in response:
             error = response["error"]
         else:
-            error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
+            error = {"code": ErrorCodes.InvalidParams, "message": "invalid response payload"}
         return (error_handler, request.method, error, True)
 
     def _get_handler(self, method: str) -> Optional[Callable]:

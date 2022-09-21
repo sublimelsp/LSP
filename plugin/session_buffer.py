@@ -4,11 +4,10 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
-from .core.protocol import InlayHintResponse
 from .core.protocol import Request
-from .core.protocol import TextDocumentSyncKindFull
-from .core.protocol import TextDocumentSyncKindNone
+from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -16,7 +15,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -239,9 +238,9 @@ class SessionBuffer:
         value = self.get_capability(capability)
         return value is not False and value is not None
 
-    def text_sync_kind(self) -> int:
+    def text_sync_kind(self) -> TextDocumentSyncKind:
         value = self.capabilities.text_sync_kind()
-        return value if value > TextDocumentSyncKindNone else self.session.text_sync_kind()
+        return value if value != TextDocumentSyncKind.None_ else self.session.text_sync_kind()
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
@@ -286,9 +285,9 @@ class SessionBuffer:
     def purge_changes_async(self, view: sublime.View) -> None:
         if self.pending_changes is not None:
             sync_kind = self.text_sync_kind()
-            if sync_kind == TextDocumentSyncKindNone:
+            if sync_kind == TextDocumentSyncKind.None_:
                 return
-            if sync_kind == TextDocumentSyncKindFull:
+            if sync_kind == TextDocumentSyncKind.Full:
                 changes = None
                 version = view.change_count()
             else:
@@ -651,7 +650,7 @@ class SessionBuffer:
         }  # type: InlayHintParams
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
-    def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
+    def _on_inlay_hints_async(self, response: Union[List[InlayHint], None]) -> None:
         if response:
             view = self.some_view()
             if not view:

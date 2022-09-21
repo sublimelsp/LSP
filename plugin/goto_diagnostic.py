@@ -85,7 +85,7 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
     def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
-        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[int]]
+        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
         self.first_locations = dict()  # type: Dict[ParsedUri, Tuple[Session, Location]]
         for session in get_sessions(self.window):
             for parsed_uri, severity in session.diagnostics_manager.filter_map_diagnostics_flat_async(
@@ -225,7 +225,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
 
 
 def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Location:
-    return dict(uri=unparse_uri(parsed_uri), range=diagnostic["range"])
+    return {
+        'uri': unparse_uri(parsed_uri),
+        'range': diagnostic["range"]
+    }
 
 
 def open_location(session: Session, location: Location, flags: int = 0, group: int = -1) -> sublime.View:

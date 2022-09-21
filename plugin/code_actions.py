@@ -1,5 +1,6 @@
 from .core.promise import Promise
 from .core.protocol import CodeAction
+from .core.protocol import CodeActionKind
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import Error
@@ -8,7 +9,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union
+from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, cast
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
@@ -143,7 +144,7 @@ class CodeActionsManager:
                             diagnostics = diags
                             break
                     if on_save_actions:
-                        supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
+                        supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]] # noqa
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
                             params = text_document_code_action_params(view, region, diagnostics, matching_kinds, manual)
@@ -162,7 +163,7 @@ class CodeActionsManager:
 
 def filtering_collector(
     config_name: str,
-    kinds: List[str],
+    kinds: List[CodeActionKind],
     actions_collector: CodeActionsCollector
 ) -> Tuple[Callable[[CodeActionsResponse], None], Callable[[Any], None]]:
     """
@@ -173,7 +174,7 @@ def filtering_collector(
     """
 
     def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
-        return [a for a in (actions or []) if a.get('kind') in kinds]  # type: ignore
+        return [a for a in (actions or []) if a.get('kind') in kinds]
 
     collector = actions_collector.create_collector(config_name)
     return (
@@ -185,7 +186,7 @@ def filtering_collector(
 actions_manager = CodeActionsManager()
 
 
-def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[str]) -> List[str]:
+def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[CodeActionKind]) -> List[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session actions
     are returned. Returned actions are those that are enabled and are not overridden by more
@@ -199,7 +200,7 @@ def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[str]
     matching_kinds = []
     for session_action in session_actions:
         enabled = False
-        action_parts = session_action.split('.')
+        action_parts = cast(str, session_action).split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
             user_value = user_actions.get(current_part, None)

@@ -1,5 +1,5 @@
 from .collections import DottedDict
-from .diagnostics_manager import DiagnosticsManager
+from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_edits
 from .edit import parse_workspace_edit
 from .edit import TextEditTuple
@@ -14,8 +14,6 @@ from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
-from .panels import is_panel_open
-from .panels import PanelName
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
@@ -43,6 +41,7 @@ from .protocol import LocationLink
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
+from .protocol import PublishDiagnosticsParams
 from .protocol import Range
 from .protocol import Request
 from .protocol import Response
@@ -153,6 +152,13 @@ class Manager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_sessions(self) -> 'Generator[Session, None, None]':
+        """
+        Iterate over all sessions stored in this manager.
+        """
+        pass
+
+    @abstractmethod
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
@@ -186,7 +192,7 @@ class Manager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_diagnostics_panel_async(self) -> None:
+    def on_diagnostics_updated(self) -> None:
         pass
 
     @abstractmethod
@@ -611,12 +617,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_session_shutdown_async(self, session: 'Session') -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_async(
-        self
-    ) -> Iterable[Tuple['SessionBufferProtocol', List[Tuple[Diagnostic, sublime.Region]]]]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1140,6 +1140,7 @@ class Session(TransportCallbacks):
         self.window = manager.window()
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
+        self.diagnostics = DiagnosticsStorage()
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
@@ -1155,7 +1156,6 @@ class Session(TransportCallbacks):
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
-        self.diagnostics_manager = DiagnosticsManager()
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
@@ -1692,21 +1692,21 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 
-    def m_textDocument_publishDiagnostics(self, params: Any) -> None:
+    def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-        uri = params["uri"]
         mgr = self.manager()
         if not mgr:
             return
+        uri = params["uri"]
         reason = mgr.should_present_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
-        self.diagnostics_manager.add_diagnostics_async(uri, params["diagnostics"])
-        if is_panel_open(self.window, PanelName.Diagnostics):
-            mgr.update_diagnostics_panel_async()
+        diagnostics = params["diagnostics"]
+        self.diagnostics.add_diagnostics_async(uri, diagnostics)
+        mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
+            sb.on_diagnostics_async(diagnostics, params.get("version"))
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

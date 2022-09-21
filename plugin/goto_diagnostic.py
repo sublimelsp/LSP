@@ -46,7 +46,10 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 uri = uri_from_view(view)
             except MissingUriError:
                 return False
-        return windows.lookup(self.window).diagnostics_manager.has_diagnostics(uri)
+        if uri:
+            parsed_uri = parse_uri(uri)
+            return any(parsed_uri in session.diagnostics for session in get_sessions(self.window))
+        return any(bool(session.diagnostics) for session in get_sessions(self.window))
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")

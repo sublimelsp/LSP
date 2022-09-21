@@ -1,9 +1,10 @@
 from .configurations import ConfigManager
+from .protocol import Diagnostic
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Any, Generator, Iterable
+from .typing import Optional, Any, Generator, Iterable, List
 from .views import first_selection_region
 from .views import MissingUriError
 from .views import point_to_offset
@@ -177,7 +178,9 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     window = view.window()
     if not window:
         return
-    diagnostics = windows.lookup(window).diagnostics_manager.diagnostics_by_document_uri(uri)
+    diagnostics = []  # type: List[Diagnostic]
+    for session in windows.lookup(window).get_sessions():
+        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:
         return
     # Sort diagnostics by location

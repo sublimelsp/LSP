@@ -152,13 +152,6 @@ class Manager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_sessions(self) -> 'Generator[Session, None, None]':
-        """
-        Iterate over all sessions stored in this manager.
-        """
-        pass
-
-    @abstractmethod
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.

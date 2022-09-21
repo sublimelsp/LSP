@@ -245,7 +245,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            print(sb.session.config.name, sb.diagnostics_version, change_count)
             if sb.diagnostics_version != change_count:
                 if throw_if_stale:
                     raise StaleDiagnosticsException()

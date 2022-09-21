@@ -48,13 +48,6 @@ class LspResolveDocsCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
-    def _format_documentation(
-        self,
-        content: Union[MarkedString, MarkupContent, List[MarkedString]],
-        language_map: Optional[MarkdownLangMap]
-    ) -> str:
-        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
-
     def _handle_resolve_response_async(self, language_map: Optional[MarkdownLangMap], item: CompletionItem) -> None:
         detail = ""
         documentation = ""
@@ -85,6 +78,13 @@ class LspResolveDocsCommand(LspTextCommand):
                     on_navigate=self._on_navigate)
 
         sublime.set_timeout(run_main)
+
+    def _format_documentation(
+        self,
+        content: Union[MarkedString, MarkupContent],
+        language_map: Optional[MarkdownLangMap]
+    ) -> str:
+        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
     def _on_navigate(self, url: str) -> None:
         webbrowser.open(url)

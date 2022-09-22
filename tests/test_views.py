@@ -359,7 +359,7 @@ class ViewsTest(DeferrableTestCase):
             view=self.view,
             region=sublime.Region(0, 1),
             diagnostics=[diagnostic],
-            on_save_actions=["refactor"]
+            only_kinds=["refactor"]
         )
         self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 

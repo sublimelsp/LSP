@@ -96,8 +96,8 @@ class CodeActionsManager:
             view,
             region,
             session_buffer_diagnostics,
-            False,
-            actions_handler,
+            only_with_diagnostics=False,
+            actions_handler=actions_handler,
             on_save_actions=None,
             only_kinds=only_kinds,
             manual=manual)

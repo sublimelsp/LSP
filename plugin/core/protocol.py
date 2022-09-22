@@ -5873,7 +5873,7 @@ class Request:
         return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
-    def codeAction(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def codeAction(cls, params: CodeActionParams, view: sublime.View) -> 'Request':
         return Request("textDocument/codeAction", params, view)
 
     @classmethod

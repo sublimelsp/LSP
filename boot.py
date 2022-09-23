@@ -5,6 +5,7 @@ import sublime_plugin
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_lens import LspCodeLensCommand
+from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionItemCommand

@@ -4,6 +4,8 @@ from .protocol import CodeActionKind
 from .protocol import CodeActionContext
 from .protocol import CodeActionParams
 from .protocol import CodeActionTriggerKind
+from .protocol import Color
+from .protocol import ColorInformation
 from .protocol import Command
 from .protocol import CompletionItem
 from .protocol import CompletionItemKind
@@ -781,28 +783,49 @@ class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
 
 
 COLOR_BOX_HTML = """
-<style>html {{padding: 0; background-color: transparent}}</style>
+<style>
+    html {{
+        padding: 0;
+        background-color: transparent;
+    }}
+    a {{
+        display: inline-block;
+        height: 0.8rem;
+        width: 0.8rem;
+        margin-top: 0.1em;
+        border: 1px solid color(var(--foreground) alpha(0.25));
+        background-color: {color};
+    }}
+</style>
 <body id='lsp-color-box'>
-<div style='padding: 0.4em;
-            margin-top: 0.2em;
-            border: 1px solid color(var(--foreground) alpha(0.25));
-            background-color: rgba({}, {}, {}, {})'>
-</div>
+    <a href='{command}'>&nbsp;</a>
 </body>"""
 
 
-def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
-    color = color_info['color']
-    red = color['red'] * 255
-    green = color['green'] * 255
-    blue = color['blue'] * 255
-    alpha = color['alpha']
-    return COLOR_BOX_HTML.format(red, green, blue, alpha)
+def color_to_hex(color: Color) -> str:
+    red = int(color['red'] * 255)
+    green = int(color['green'] * 255)
+    blue = int(color['blue'] * 255)
+    alpha_dec = color['alpha']
+    if alpha_dec < 1:
+        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, int(alpha_dec * 255))
+    return "#{:02x}{:02x}{:02x}".format(red, green, blue)
 
 
-def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
+def lsp_color_to_html(view: sublime.View, color_info: ColorInformation) -> str:
+    command = sublime.command_url('lsp_color_presentation', {
+        'params': {
+            'textDocument': text_document_identifier(view),
+            'color': color_info['color'],
+            'range': color_info['range']
+        }
+    })
+    return COLOR_BOX_HTML.format(command=command, color=color_to_hex(color_info['color']))
+
+
+def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
     region = range_to_region(color_info['range'], view)
-    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
+    return sublime.Phantom(region, lsp_color_to_html(view, color_info), sublime.LAYOUT_INLINE)
 
 
 def document_color_params(view: sublime.View) -> Dict[str, Any]:

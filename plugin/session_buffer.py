@@ -1,5 +1,6 @@
 from .core.panels import is_panel_open
 from .core.panels import PanelName
+from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
@@ -353,9 +354,8 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: Any) -> None:
-        color_infos = response if response else []
-        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in color_infos])
+    def _on_color_boxes_async(self, view: sublime.View, response: List[ColorInformation]) -> None:
+        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in response])
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 

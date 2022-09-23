@@ -813,13 +813,7 @@ def color_to_hex(color: Color) -> str:
 
 
 def lsp_color_to_html(view: sublime.View, color_info: ColorInformation) -> str:
-    command = sublime.command_url('lsp_color_presentation', {
-        'params': {
-            'textDocument': text_document_identifier(view),
-            'color': color_info['color'],
-            'range': color_info['range']
-        }
-    })
+    command = sublime.command_url('lsp_color_presentation', {'color_information': color_info})
     return COLOR_BOX_HTML.format(command=command, color=color_to_hex(color_info['color']))
 
 

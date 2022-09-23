@@ -1,10 +1,12 @@
 from .core.edit import parse_text_edit
+from .core.protocol import ColorInformation
 from .core.protocol import ColorPresentation
 from .core.protocol import ColorPresentationParams
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.typing import List
 from .core.views import range_to_region
+from .core.views import text_document_identifier
 import sublime
 
 
@@ -12,11 +14,16 @@ class LspColorPresentationCommand(LspTextCommand):
 
     capability = 'colorProvider'
 
-    def run(self, edit: sublime.Edit, params: ColorPresentationParams) -> None:
+    def run(self, edit: sublime.Edit, color_information: ColorInformation) -> None:
         session = self.best_session(self.capability)
         if session:
             self._version = self.view.change_count()
-            self._range = params['range']
+            self._range = color_information['range']
+            params = {
+                'textDocument': text_document_identifier(self.view),
+                'color': color_information['color'],
+                'range': self._range
+            }  # type: ColorPresentationParams
             session.send_request_async(Request.colorPresentation(params, self.view), self._handle_response_async)
 
     def want_event(self) -> bool:

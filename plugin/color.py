@@ -3,7 +3,7 @@ from .core.protocol import ColorPresentation
 from .core.protocol import ColorPresentationParams
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional
+from .core.typing import List
 from .core.views import range_to_region
 import sublime
 
@@ -12,12 +12,15 @@ class LspColorPresentationCommand(LspTextCommand):
 
     capability = 'colorProvider'
 
-    def run(self, edit: sublime.Edit, params: ColorPresentationParams, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, params: ColorPresentationParams) -> None:
         session = self.best_session(self.capability)
         if session:
             self._version = self.view.change_count()
             self._range = params['range']
             session.send_request_async(Request.colorPresentation(params, self.view), self._handle_response_async)
+
+    def want_event(self) -> bool:
+        return False
 
     def _handle_response_async(self, response: List[ColorPresentation]) -> None:
         if not response:

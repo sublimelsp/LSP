@@ -41,10 +41,11 @@ class LspColorPresentationCommand(LspTextCommand):
             elif item['label'] == old_text:
                 continue
             self._filtered_response.append(item)
-        window.show_quick_panel(
-            [sublime.QuickPanelItem(item['label']) for item in self._filtered_response],
-            self._on_select,
-            placeholder="Change color format")
+        if self._filtered_response:
+            window.show_quick_panel(
+                [sublime.QuickPanelItem(item['label']) for item in self._filtered_response],
+                self._on_select,
+                placeholder="Change color format")
 
     def _on_select(self, index: int) -> None:
         if index > -1:

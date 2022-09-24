@@ -566,15 +566,15 @@ def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
     diagnostics: List[Diagnostic],
-    on_save_actions: Optional[List[CodeActionKind]] = None,
+    only_kinds: Optional[List[CodeActionKind]] = None,
     manual: bool = False
 ) -> CodeActionParams:
     context = {
         "diagnostics": diagnostics,
         "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
     }  # type: CodeActionContext
-    if on_save_actions:
-        context["only"] = on_save_actions
+    if only_kinds:
+        context["only"] = only_kinds
     return {
         "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region),

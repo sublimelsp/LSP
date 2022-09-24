@@ -176,7 +176,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
-        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
+        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -284,7 +284,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()
         if userprefs().show_code_actions:
-            self._do_code_actions()
+            self._do_code_actions_async()
         self._update_diagnostic_in_status_bar_async()
         window = self.view.window()
         is_active_view = window and window.active_view() == self.view
@@ -369,7 +369,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                                           after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             if userprefs().show_code_actions:
-                self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                self._when_selection_remains_stable_async(self._do_code_actions_async, current_region,
                                                           after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
             self._resolve_visible_code_lenses_async()
@@ -590,13 +590,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions(self) -> None:
+    def _do_code_actions_async(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        actions_manager.request_for_region_async(
-            self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
+        actions_manager \
+            .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
+            .then(self._on_code_actions)
 
-    def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
-        action_count = sum(map(len, responses.values()))
+    def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
+        # flatten list
+        action_lists = [actions for _, actions in responses if len(actions)]
+        all_actions = [action for actions in action_lists for action in actions]
+        action_count = len(all_actions)
         if action_count == 0:
             return
         regions = [sublime.Region(self._stored_region.b, self._stored_region.a)]
@@ -614,7 +618,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = next(itertools.chain.from_iterable(responses.values()))['title']
+                title = all_actions[0]['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
             code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
@@ -628,26 +632,30 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            actions = self._actions_by_config[config_name]
+            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    items, selected_index = format_code_actions_for_quick_panel(
+                        map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
                         items,
-                        lambda i: self.handle_code_action_select(config_name, i),
+                        lambda i: self.handle_code_action_select(config_name, actions, i),
                         selected_index=selected_index,
                         placeholder="Code actions")
             else:
-                self.handle_code_action_select(config_name, 0)
+                self.handle_code_action_select(config_name, actions, 0)
 
-    def handle_code_action_select(self, config_name: str, index: int) -> None:
-        if index > -1:
-            def run_async() -> None:
-                session = self.session_by_name(config_name)
-                if session:
-                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
-            sublime.set_timeout_async(run_async)
+    def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
+        if index == -1:
+            return
+
+        def run_async() -> None:
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(actions[index], progress=True)
+
+        sublime.set_timeout_async(run_async)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

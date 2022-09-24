@@ -25,6 +25,7 @@ if sys.version_info >= (3, 11, 0):
     from typing import Tuple
     from typing import Type
     from typing import TypedDict
+    from typing import TypeGuard
     from typing import TypeVar
     from typing import Union
 
@@ -56,6 +57,9 @@ else:
     class TypedDict(Type, dict):  # type: ignore
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
+
+    class TypeGuard(Type):  # type: ignore
+        pass
 
     class Enum(Type):  # type: ignore
         pass

@@ -59,11 +59,6 @@ import weakref
 import webbrowser
 
 
-class StaleDiagnosticsException(Exception):
-    def __init__(self) -> None:
-        super().__init__('Stale diagnostics')
-
-
 SUBLIME_WORD_MASK = 515
 
 Flags = int
@@ -162,7 +157,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
-        self._re_evaluate_if_toggle_diagnostics_panel = False
+        self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -241,15 +236,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session.config.erase_view_status(self.view)
 
     def _diagnostics_async(
-        self, throw_if_stale: bool = False
+        self, allow_stale: bool = False
     ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            if sb.diagnostics_version != change_count:
-                if throw_if_stale:
-                    raise StaleDiagnosticsException()
-                continue
-            yield sb, sb.diagnostics
+            if sb.diagnostics_version == change_count or allow_stale:
+                yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(
         self,
@@ -294,8 +286,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
-        if self._re_evaluate_if_toggle_diagnostics_panel:
-            self._re_evaluate_if_toggle_diagnostics_panel = False
+        if self.view.change_count() == self._change_count_on_last_save:
             self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
@@ -398,6 +389,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
+        self._change_count_on_last_save = self.view.change_count()
         self._toggle_diagnostics_panel_if_needed_async()
 
     def _toggle_diagnostics_panel_if_needed_async(self) -> None:
@@ -408,16 +400,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not window or not self._manager:
             return
         has_relevant_diagnostcs = False
-        try:
-            for _, diagnostics in self._diagnostics_async(throw_if_stale=True):
-                if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
-                    has_relevant_diagnostcs = True
-                    break
-        except StaleDiagnosticsException:
-            # Don't make decision if there are stale diagnostics (which there usually are after saving changes).
-            # Re-evaluate next time diagnostics are updated.
-            self._re_evaluate_if_toggle_diagnostics_panel = True
-            return
+        for _, diagnostics in self._diagnostics_async(allow_stale=True):
+            if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
+                has_relevant_diagnostcs = True
+                break
         if is_panel_open(window, PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
                 self._manager.hide_diagnostics_panel_async()

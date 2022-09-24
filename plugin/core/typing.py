@@ -1,6 +1,6 @@
 import sys
 
-if sys.version_info >= (3, 8, 0):
+if sys.version_info >= (3, 11, 0):
 
     from enum import Enum, IntEnum, IntFlag
     from typing import Any
@@ -16,17 +16,17 @@ if sys.version_info >= (3, 8, 0):
     from typing import List
     from typing import Literal
     from typing import Mapping
+    from typing import NotRequired
     from typing import Optional
     from typing import Protocol
+    from typing import Required
     from typing import Sequence
     from typing import Set
     from typing import Tuple
     from typing import Type
+    from typing import TypedDict
     from typing import TypeVar
     from typing import Union
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
-    from typing_extensions import TypedDict
 
 else:
 

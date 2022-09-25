@@ -795,6 +795,7 @@ COLOR_BOX_HTML = """
         margin-top: 0.1em;
         border: 1px solid color(var(--foreground) alpha(0.25));
         background-color: {color};
+        text-decoration: none;
     }}
 </style>
 <body id='lsp-color-box'>

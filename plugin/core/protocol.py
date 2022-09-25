@@ -5881,6 +5881,10 @@ class Request:
         return Request('textDocument/documentColor', params, view)
 
     @classmethod
+    def colorPresentation(cls, params: ColorPresentationParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/colorPresentation', params, view)
+
+    @classmethod
     def willSaveWaitUntil(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/willSaveWaitUntil", params, view)
 

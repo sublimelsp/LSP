@@ -803,12 +803,12 @@ COLOR_BOX_HTML = """
 
 
 def color_to_hex(color: Color) -> str:
-    red = int(color['red'] * 255)
-    green = int(color['green'] * 255)
-    blue = int(color['blue'] * 255)
+    red = round(color['red'] * 255)
+    green = round(color['green'] * 255)
+    blue = round(color['blue'] * 255)
     alpha_dec = color['alpha']
     if alpha_dec < 1:
-        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, int(alpha_dec * 255))
+        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, round(alpha_dec * 255))
     return "#{:02x}{:02x}{:02x}".format(red, green, blue)
 
 

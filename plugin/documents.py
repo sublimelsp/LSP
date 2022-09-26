@@ -406,9 +406,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 break
         if is_panel_open(window, PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
+                self._change_count_on_last_save = -1
                 self._manager.hide_diagnostics_panel_async()
         else:
             if has_relevant_diagnostcs:
+                self._change_count_on_last_save = -1
                 self._manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:

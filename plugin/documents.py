@@ -157,6 +157,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
+        self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -234,13 +235,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
 
-    def diagnostics_async(
-        self
+    def _diagnostics_async(
+        self, allow_stale: bool = False
     ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            # do not provide stale diagnostics
-            if sb.diagnostics_version == change_count:
+            if sb.diagnostics_version == change_count or allow_stale:
                 yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(
@@ -249,7 +249,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
         result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another
@@ -268,7 +268,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
         result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 severity = diagnostic_severity(diagnostic)
@@ -286,6 +286,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
+        if self.view.change_count() == self._change_count_on_last_save:
+            self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -387,19 +389,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
-        window = self.view.window()
-        if window and userprefs().show_diagnostics_panel_on_save > 0 and is_panel_open(window, PanelName.Diagnostics):
-            self._hide_diagnostics_panel_if_empty()
+        self._change_count_on_last_save = self.view.change_count()
+        self._toggle_diagnostics_panel_if_needed_async()
 
-    def _hide_diagnostics_panel_if_empty(self) -> None:
+    def _toggle_diagnostics_panel_if_needed_async(self) -> None:
         severity_threshold = userprefs().show_diagnostics_panel_on_save
-        hide_panel = True
-        for _, diagnostics in self.diagnostics_async():
+        if severity_threshold == 0:
+            return
+        window = self.view.window()
+        if not window or not self._manager:
+            return
+        has_relevant_diagnostcs = False
+        for _, diagnostics in self._diagnostics_async(allow_stale=True):
             if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
-                hide_panel = False
+                has_relevant_diagnostcs = True
                 break
-        if hide_panel and self._manager:
-            self._manager.hide_diagnostics_panel_async()
+        if is_panel_open(window, PanelName.Diagnostics):
+            if not has_relevant_diagnostcs:
+                self._manager.hide_diagnostics_panel_async()
+        else:
+            if has_relevant_diagnostcs:
+                self._manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:

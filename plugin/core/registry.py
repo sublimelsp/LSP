@@ -180,7 +180,7 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
         return
     diagnostics = []  # type: List[Diagnostic]
     for session in windows.lookup(window).get_sessions():
-        diagnostics.extend(session.diagnostics_manager.diagnostics_by_document_uri(uri))
+        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:
         return
     # Sort diagnostics by location

@@ -1,4 +1,4 @@
-from .core.diagnostics_manager import ParsedUri, is_severity_included
+from .core.diagnostics_storage import ParsedUri, is_severity_included
 from .core.protocol import Diagnostic, DocumentUri, DiagnosticSeverity, Location
 from .core.registry import windows
 from .core.sessions import Session
@@ -48,8 +48,8 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 return False
         if uri:
             parsed_uri = parse_uri(uri)
-            return any(parsed_uri in session.diagnostics_manager for session in get_sessions(self.window))
-        return any(bool(session.diagnostics_manager) for session in get_sessions(self.window))
+            return any(parsed_uri in session.diagnostics for session in get_sessions(self.window))
+        return any(bool(session.diagnostics) for session in get_sessions(self.window))
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")
@@ -88,12 +88,12 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
         severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
         self.first_locations = dict()  # type: Dict[ParsedUri, Tuple[Session, Location]]
         for session in get_sessions(self.window):
-            for parsed_uri, severity in session.diagnostics_manager.filter_map_diagnostics_flat_async(
+            for parsed_uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
                 severities_per_path.setdefault(parsed_uri, []).append(severity)
                 if parsed_uri not in self.first_locations:
                     severities_per_path.move_to_end(parsed_uri)
-                    diagnostics = session.diagnostics_manager.diagnostics_by_parsed_uri(parsed_uri)
+                    diagnostics = session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
                     if diagnostics:
                         self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
         # build items
@@ -174,7 +174,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),
-                                     session.diagnostics_manager.diagnostics_by_parsed_uri(self.parsed_uri)):
+                                     session.diagnostics.diagnostics_by_parsed_uri(self.parsed_uri)):
                 lines = diagnostic["message"].splitlines()
                 first_line = lines[0] if lines else ""
                 if len(lines) > 1:

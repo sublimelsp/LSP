@@ -40,7 +40,7 @@ class MockManager(Manager):
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         pass
 
-    def update_diagnostics_panel_async(self) -> None:
+    def on_diagnostics_updated(self) -> None:
         pass
 
     def show_diagnostics_panel_async(self) -> None:

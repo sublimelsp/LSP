@@ -2,7 +2,6 @@ from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import InlayHint
@@ -113,9 +112,6 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
         self.last_text_change_time = 0.0
-        self.total_errors = 0
-        self.total_warnings = 0
-        self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.document_links = []  # type: List[DocumentLink]
@@ -130,7 +126,7 @@ class SessionBuffer:
     def __del__(self) -> None:
         mgr = self.session.manager()
         if mgr and is_panel_open(mgr.window(), PanelName.Diagnostics):
-            mgr.update_diagnostics_panel_async()
+            mgr.on_diagnostics_updated()
         self.color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
@@ -324,10 +320,6 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes_async(view)
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
-        if self.should_show_diagnostics_panel:
-            mgr = self.session.manager()
-            if mgr:
-                mgr.show_diagnostics_panel_async()
 
     def some_view(self) -> Optional[sublime.View]:
         for sv in self.session_views:
@@ -399,9 +391,6 @@ class SessionBuffer:
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
-        total_errors = 0
-        total_warnings = 0
-        should_show_diagnostics_panel = False
         view = self.some_view()
         if view is None:
             return
@@ -426,40 +415,17 @@ class SessionBuffer:
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))
-                if severity == DiagnosticSeverity.Error:
-                    total_errors += 1
-                elif severity == DiagnosticSeverity.Warning:
-                    total_warnings += 1
-                if severity <= userprefs().show_diagnostics_panel_on_save:
-                    should_show_diagnostics_panel = True
-            self._publish_diagnostics_to_session_views(
-                diagnostics_version,
-                diagnostics,
-                data_per_severity,
-                total_errors,
-                total_warnings,
-                should_show_diagnostics_panel
-            )
+            self._publish_diagnostics_to_session_views(diagnostics_version, diagnostics, data_per_severity)
 
     def _publish_diagnostics_to_session_views(
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-        total_errors: int,
-        total_warnings: int,
-        should_show_diagnostics_panel: bool
     ) -> None:
 
         def present() -> None:
-            self._present_diagnostics_async(
-                diagnostics_version,
-                diagnostics,
-                data_per_severity,
-                total_errors,
-                total_warnings,
-                should_show_diagnostics_panel
-            )
+            self._present_diagnostics_async(diagnostics_version, diagnostics, data_per_severity)
 
         self.diagnostics_debouncer.cancel_pending()
 
@@ -489,17 +455,11 @@ class SessionBuffer:
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-        total_errors: int,
-        total_warnings: int,
-        should_show_diagnostics_panel: bool
     ) -> None:
         self.diagnostics_version = diagnostics_version
         self.diagnostics = diagnostics
         self.data_per_severity = data_per_severity
         self.diagnostics_are_visible = bool(diagnostics)
-        self.total_errors = total_errors
-        self.total_warnings = total_warnings
-        self.should_show_diagnostics_panel = should_show_diagnostics_panel
         for sv in self.session_views:
             sv.present_diagnostics_async()
 
@@ -566,7 +526,7 @@ class SessionBuffer:
                 return
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_error_async(self, error: dict) -> None:
+    def _on_semantic_tokens_error_async(self, _: dict) -> None:
         self.semantic_tokens.pending_response = None
         self.semantic_tokens.result_id = None
 

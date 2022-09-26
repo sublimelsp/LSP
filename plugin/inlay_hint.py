@@ -10,6 +10,12 @@ import sublime
 import uuid
 
 
+class LspToggleCapabilityCommand(LspWindowCommand):
+    def run(self, capability: str) -> None:
+        if capability == "inlayHintProvider":
+            self.window.run_command('lsp_toggle_inlay_hints')
+
+
 class LspToggleInlayHintsCommand(LspWindowCommand):
     capability = 'inlayHintProvider'
 

@@ -391,7 +391,10 @@
     // },
     // Toggle inlay hints
     // {
-    //     "command": "lsp_toggle_inlay_hints",
+    //     "command": "lsp_toggle_capability",
+    //     "args": {
+    //         "capability": "inlayHintProvider"
+    //     },
     //     "keys": [
     //         "UNBOUND"
     //     ],

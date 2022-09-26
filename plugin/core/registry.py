@@ -1,9 +1,16 @@
 from .configurations import ConfigManager
+from .protocol import Diagnostic
+from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Any, Generator, Iterable
+from .typing import Optional, Any, Generator, Iterable, List
+from .views import first_selection_region
+from .views import MissingUriError
+from .views import point_to_offset
+from .views import uri_from_view
 from .windows import WindowRegistry
+import operator
 import sublime
 import sublime_plugin
 
@@ -129,7 +136,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: str = None) -> None:
+    def run(self, edit: Any, config_name: Optional[str] = None) -> None:
         window = self.view.window()
         if not window:
             return
@@ -161,3 +168,49 @@ class LspRestartServerCommand(LspTextCommand):
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
     def run(self, config_name: Optional[str] = None) -> None:
         sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))
+
+
+def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
+    try:
+        uri = uri_from_view(view)
+    except MissingUriError:
+        return
+    window = view.window()
+    if not window:
+        return
+    diagnostics = []  # type: List[Diagnostic]
+    for session in windows.lookup(window).get_sessions():
+        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
+    if not diagnostics:
+        return
+    # Sort diagnostics by location
+    diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']), reverse=not forward)
+    if point is None:
+        region = first_selection_region(view)
+        point = region.b if region is not None else 0
+    # Find next/previous diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in
+    # this view after/before the cursor
+    op_func = operator.gt if forward else operator.lt
+    for diagnostic in diagnostics:
+        diag_pos = point_to_offset(Point.from_lsp(diagnostic['range']['start']), view)
+        if op_func(diag_pos, point):
+            break
+    else:
+        diag_pos = point_to_offset(Point.from_lsp(diagnostics[0]['range']['start']), view)
+    view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
+    view.show_at_center(diag_pos)
+    # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would
+    # immediately hide the popup.
+    sublime.set_timeout_async(lambda: view.run_command('lsp_hover', {'only_diagnostics': True, 'point': diag_pos}), 200)
+
+
+class LspNextDiagnosticCommand(LspTextCommand):
+
+    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+        navigate_diagnostics(self.view, point, forward=True)
+
+
+class LspPrevDiagnosticCommand(LspTextCommand):
+
+    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+        navigate_diagnostics(self.view, point, forward=False)

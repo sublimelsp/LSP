@@ -10,7 +10,6 @@ from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import Range
-from .core.protocol import RangeLsp
 from .core.protocol import Request
 from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
@@ -227,7 +226,7 @@ class LspHoverCommand(LspTextCommand):
             contents.append('<a href="{}">{}</a>'.format(html.escape(target), html.escape(title)))
         if len(contents) > 1:
             link_has_standard_tooltip = False
-        link_range = range_to_region(Range.from_lsp(links[0]["range"]), self.view) if links else None
+        link_range = range_to_region(links[0]["range"], self.view) if links else None
         self._document_link = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip, link_range)
         self.show_hover(listener, point, only_diagnostics=False)
 
@@ -272,7 +271,7 @@ class LspHoverCommand(LspTextCommand):
         for hover, _ in self._hover_responses:
             hover_range = hover.get('range')
             if hover_range:
-                return range_to_region(Range.from_lsp(hover_range), self.view)
+                return range_to_region(hover_range, self.view)
         else:
             return None
 
@@ -349,7 +348,7 @@ class LspHoverCommand(LspTextCommand):
             session = self.session_by_name(session_name)
             if session:
                 position = {"line": row, "character": col_utf16}  # type: Position
-                r = {"start": position, "end": position}  # type: RangeLsp
+                r = {"start": position, "end": position}  # type: Range
                 sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
         else:
             open_in_browser(href)

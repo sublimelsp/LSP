@@ -5,6 +5,7 @@ import sublime_plugin
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_lens import LspCodeLensCommand
+from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionItemCommand
@@ -22,10 +23,13 @@ from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateLogPanelCommand
+from .plugin.core.panels import PanelName
 from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
 from .plugin.core.protocol import LocationLink
+from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
@@ -176,10 +180,8 @@ class Listener(sublime_plugin.EventListener):
                     break
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name in ("next_result", "prev_result"):
-            view = window.active_view()
-            if view:
-                view.run_command("lsp_hover", {"only_diagnostics": True})
+        if command_name == "show_panel" and args and args.get("panel") == "output.{}".format(PanelName.Diagnostics):
+            sublime.set_timeout_async(windows.lookup(window).update_diagnostics_panel_async)
 
 
 class LspOpenLocationCommand(sublime_plugin.TextCommand):

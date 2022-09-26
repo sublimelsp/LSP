@@ -51,7 +51,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         args = {
             "session_name": session_name,
             "command_name": command["command"],
-            "command_args": command["arguments"]
+            "command_args": command.get("arguments")
         }
         self.view.run_command("lsp_execute", args)
 
@@ -136,7 +136,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'label_part': label_part
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
-        value += html.escape(label_part.get('value') or "")
+        value += html.escape(label_part['value'])
         if is_clickable:
             value += "</a>"
         # InlayHintLabelPart.location is not supported

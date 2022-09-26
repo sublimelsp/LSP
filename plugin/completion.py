@@ -1,6 +1,7 @@
 from .core.edit import parse_text_edit
 from .core.logging import debug
-from .core.protocol import InsertReplaceEdit, TextEdit, RangeLsp, Request, InsertTextFormat, Range, CompletionItem
+from .core.protocol import InsertReplaceEdit, TextEdit, Range, Request, InsertTextFormat, CompletionItem
+from .core.protocol import MarkupContent, MarkedString, MarkupKind
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
 from .core.typing import List, Dict, Optional, Generator, Union, cast
@@ -17,7 +18,7 @@ import webbrowser
 SessionName = str
 
 
-def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> RangeLsp:
+def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
@@ -47,13 +48,6 @@ class LspResolveDocsCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
-    def _format_documentation(
-        self,
-        content: Union[str, Dict[str, str]],
-        language_map: Optional[MarkdownLangMap]
-    ) -> str:
-        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
-
     def _handle_resolve_response_async(self, language_map: Optional[MarkdownLangMap], item: CompletionItem) -> None:
         detail = ""
         documentation = ""
@@ -61,7 +55,7 @@ class LspResolveDocsCommand(LspTextCommand):
             detail = self._format_documentation(item.get('detail') or "", language_map)
             documentation = self._format_documentation(item.get("documentation") or "", language_map)
         if not documentation:
-            markdown = {"kind": "markdown", "value": "*No documentation available.*"}
+            markdown = {"kind": MarkupKind.Markdown, "value": "*No documentation available.*"}  # type: MarkupContent
             # No need for a language map here
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
@@ -85,6 +79,13 @@ class LspResolveDocsCommand(LspTextCommand):
 
         sublime.set_timeout(run_main)
 
+    def _format_documentation(
+        self,
+        content: Union[MarkedString, MarkupContent],
+        language_map: Optional[MarkdownLangMap]
+    ) -> str:
+        return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
+
     def _on_navigate(self, url: str) -> None:
         webbrowser.open(url)
 
@@ -103,7 +104,7 @@ class LspSelectCompletionItemCommand(LspTextCommand):
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(Range.from_lsp(get_text_edit_range(text_edit)), self.view)
+            edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

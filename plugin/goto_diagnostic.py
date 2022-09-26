@@ -1,4 +1,4 @@
-from .core.diagnostics_manager import ParsedUri, is_severity_included
+from .core.diagnostics_storage import ParsedUri, is_severity_included
 from .core.protocol import Diagnostic, DocumentUri, DiagnosticSeverity, Location
 from .core.registry import windows
 from .core.sessions import Session
@@ -6,6 +6,7 @@ from .core.settings import userprefs
 from .core.types import ClientConfig
 from .core.typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
+from .core.views import DIAGNOSTIC_KINDS
 from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
 from .core.views import format_diagnostic_for_html
 from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
@@ -15,12 +16,7 @@ import functools
 import sublime
 import sublime_plugin
 
-DIAGNOSTIC_KIND = {
-    DiagnosticSeverity.Error: (sublime.KIND_ID_COLOR_REDISH, "e", "Error"),
-    DiagnosticSeverity.Warning: (sublime.KIND_ID_COLOR_YELLOWISH, "w", "Warning"),
-    DiagnosticSeverity.Information: (sublime.KIND_ID_COLOR_BLUISH, "i", "Information"),
-    DiagnosticSeverity.Hint: (sublime.KIND_ID_COLOR_BLUISH, "h", "Hint"),
-}
+
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
     .diagnostics a {color: var(--bluish)}
@@ -52,8 +48,8 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 return False
         if uri:
             parsed_uri = parse_uri(uri)
-            return any(parsed_uri in session.diagnostics_manager for session in get_sessions(self.window))
-        return any(bool(session.diagnostics_manager) for session in get_sessions(self.window))
+            return any(parsed_uri in session.diagnostics for session in get_sessions(self.window))
+        return any(bool(session.diagnostics) for session in get_sessions(self.window))
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")
@@ -89,15 +85,15 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
     def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
-        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[int]]
+        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
         self.first_locations = dict()  # type: Dict[ParsedUri, Tuple[Session, Location]]
         for session in get_sessions(self.window):
-            for parsed_uri, severity in session.diagnostics_manager.filter_map_diagnostics_flat_async(
+            for parsed_uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
                 severities_per_path.setdefault(parsed_uri, []).append(severity)
                 if parsed_uri not in self.first_locations:
                     severities_per_path.move_to_end(parsed_uri)
-                    diagnostics = session.diagnostics_manager.diagnostics_by_parsed_uri(parsed_uri)
+                    diagnostics = session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
                     if diagnostics:
                         self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
         # build items
@@ -108,7 +104,7 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
             text = "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri))
             annotation = "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
                                                counts.get(DiagnosticSeverity.Warning, 0))
-            kind = DIAGNOSTIC_KIND[min(counts)]
+            kind = DIAGNOSTIC_KINDS[min(counts)]
             uri = unparse_uri(parsed_uri)
             if uri == self.uri:
                 selected = i  # restore selection after coming back from diagnostics list
@@ -178,14 +174,14 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),
-                                     session.diagnostics_manager.diagnostics_by_parsed_uri(self.parsed_uri)):
+                                     session.diagnostics.diagnostics_by_parsed_uri(self.parsed_uri)):
                 lines = diagnostic["message"].splitlines()
                 first_line = lines[0] if lines else ""
                 if len(lines) > 1:
                     first_line += " …"
                 text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
                 annotation = format_diagnostic_source_and_code(diagnostic)
-                kind = DIAGNOSTIC_KIND[diagnostic_severity(diagnostic)]
+                kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
                 list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
         return list_items
 
@@ -229,7 +225,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
 
 
 def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Location:
-    return dict(uri=unparse_uri(parsed_uri), range=diagnostic["range"])
+    return {
+        'uri': unparse_uri(parsed_uri),
+        'range': diagnostic["range"]
+    }
 
 
 def open_location(session: Session, location: Location, flags: int = 0, group: int = -1) -> sublime.View:

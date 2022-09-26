@@ -1,11 +1,11 @@
-import sublime
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.typing import List, Optional, Any
 from .core.views import first_selection_region
-from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier
+from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier, text_document_position_params  # noqa: E501
+import sublime
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -87,7 +87,9 @@ class LspExecuteCommand(LspTextCommand):
                 elif arg in ["$position", "${position}"]:
                     command_args[i] = offset_to_point(view, region.b).to_lsp()
                 elif arg in ["$range", "${range}"]:
-                    command_args[i] = region_to_range(view, region).to_lsp()
+                    command_args[i] = region_to_range(view, region)
+                elif arg in ["$text_document_position", "${text_document_position}"]:
+                    command_args[i] = text_document_position_params(view, region.b)
         window = view.window()
         window_variables = window.extract_variables() if window else {}
         return sublime.expand_variables(command_args, window_variables)

@@ -2,11 +2,14 @@ from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import ensure_diagnostics_panel
-from .diagnostics_manager import is_severity_included
+from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
+from .panels import ensure_log_panel
+from .panels import is_panel_open
 from .panels import log_server_message
+from .panels import PanelName
 from .promise import Promise
 from .protocol import DocumentUri
 from .protocol import Error
@@ -28,8 +31,8 @@ from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
-from collections import OrderedDict
 from collections import deque
+from collections import OrderedDict
 from subprocess import CalledProcessError
 from time import time
 from weakref import ref
@@ -77,11 +80,11 @@ class WindowManager(Manager):
         self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
-        self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
+        ensure_log_panel(window)
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
@@ -409,21 +412,27 @@ class WindowManager(Manager):
     def handle_show_message(self, session: Session, params: Any) -> None:
         sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
 
-    def update_diagnostics_panel_async(self) -> None:
-        to_render = []  # type: List[str]
+    def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0
         self.total_warning_count = 0
-        listeners = list(self._listeners)
+        for session in self._sessions:
+            local_errors, local_warnings = session.diagnostics.sum_total_errors_and_warnings_async()
+            self.total_error_count += local_errors
+            self.total_warning_count += local_warnings
+        for listener in list(self._listeners):
+            set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
+        if is_panel_open(self._window, PanelName.Diagnostics):
+            self.update_diagnostics_panel_async()
+
+    def update_diagnostics_panel_async(self) -> None:
+        to_render = []  # type: List[str]
         prephantoms = []  # type: List[Tuple[int, int, str, str]]
         row = 0
         max_severity = userprefs().diagnostics_panel_include_severity_level
         contributions = OrderedDict(
         )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
         for session in self._sessions:
-            local_errors, local_warnings = session.diagnostics_manager.sum_total_errors_and_warnings_async()
-            self.total_error_count += local_errors
-            self.total_warning_count += local_warnings
-            for (_, path), contribution in session.diagnostics_manager.filter_map_diagnostics_async(
+            for (_, path), contribution in session.diagnostics.filter_map_diagnostics_async(
                     is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
                 seen = path in contributions
                 contributions.setdefault(path, []).extend(contribution)
@@ -439,8 +448,6 @@ class WindowManager(Manager):
                 row += content.count("\n") + 1
             to_render.append("")  # add spacing between filenames
             row += 1
-        for listener in listeners:
-            set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)
         if not characters:
             characters = _NO_DIAGNOSTICS_PLACEHOLDER
@@ -463,6 +470,10 @@ class WindowManager(Manager):
     def show_diagnostics_panel_async(self) -> None:
         if self._window.active_panel() is None:
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
+
+    def hide_diagnostics_panel_async(self) -> None:
+        if is_panel_open(self._window, PanelName.Diagnostics):
+            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 class WindowRegistry(object):

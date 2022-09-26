@@ -81,9 +81,18 @@
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "fill", "underline", "stippled", or "".
+  // Valid values are "background", "underline", "stippled", or "".
   // When set to the empty string (""), no document highlighting is requested.
+  // See https://lsp.sublimetext.io/customization/#document-highlights for how to
+  // customize the color.
   "document_highlight_style": "underline",
+
+  // Highlight style of the word or range for which a hover popup is shown.
+  // Valid values are "background", "underline", "stippled", or "".
+  // When set to the empty string (""), no highlighting is applied.
+  // See https://lsp.sublimetext.io/customization/#hover-highlights for how to
+  // customize the color.
+  "hover_highlight_style": "",
 
   // Highlight style of code diagnostics.
   // Can be a string, or a mapping of string->string for severity-based styling.
@@ -154,6 +163,14 @@
   // sorting algorithm and instead uses the sorting defined by the relevant language server.
   "inhibit_word_completions": true,
 
+  // The mode used for inserting completions:
+  // - `insert` would insert the completion text in a middle of the word
+  // - `replace` would replace the existing word with a new completion text
+  // An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`
+  // can be used to insert completion using the opposite mode to the one selected here.
+  // Note: Must be supported by the language server.
+  "completion_insert_mode": "insert",
+
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 
@@ -168,7 +185,7 @@
 
   // Log communication from and to language servers.
   // Set to an array of values:
-  // - "panel" - log to the LSP Language Servers output panel
+  // - "panel" - log to the LSP Log Panel
   // - "remote" - start a local websocket server on port 9981. Can be connected to with
   //              a websocket client to receive the log messages in real time.
   // For backward-compatibility, when set to "true", enables the "panel" logger and when
@@ -176,7 +193,7 @@
   // This output panel can be toggled from the command palette with the
   // command "LSP: Toggle Log Panel".
   "log_server": [
-    // "panel",
+    "panel",
     // "remote",
   ],
 

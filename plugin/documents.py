@@ -3,15 +3,17 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
+from .core.panels import is_panel_open
+from .core.panels import PanelName
 from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
@@ -20,6 +22,7 @@ from .core.registry import best_session
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
@@ -33,6 +36,7 @@ from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
@@ -153,6 +157,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
+        self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -230,22 +235,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
 
-    def diagnostics_async(
-        self
-    ) -> Generator[Tuple[SessionBuffer, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
+    def _diagnostics_async(
+        self, allow_stale: bool = False
+    ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            # do not provide stale diagnostics
-            if sb.diagnostics_version == change_count:
+            if sb.diagnostics_version == change_count or allow_stale:
                 yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another
@@ -261,10 +265,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
-        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 severity = diagnostic_severity(diagnostic)
@@ -282,6 +286,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
+        if self.view.change_count() == self._change_count_on_last_save:
+            self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -383,6 +389,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
+        self._change_count_on_last_save = self.view.change_count()
+        self._toggle_diagnostics_panel_if_needed_async()
+
+    def _toggle_diagnostics_panel_if_needed_async(self) -> None:
+        severity_threshold = userprefs().show_diagnostics_panel_on_save
+        if severity_threshold == 0:
+            return
+        window = self.view.window()
+        if not window or not self._manager:
+            return
+        has_relevant_diagnostcs = False
+        for _, diagnostics in self._diagnostics_async(allow_stale=True):
+            if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
+                has_relevant_diagnostcs = True
+                break
+        if is_panel_open(window, PanelName.Diagnostics):
+            if not has_relevant_diagnostcs:
+                self._manager.hide_diagnostics_panel_async()
+        else:
+            if has_relevant_diagnostcs:
+                self._manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -479,13 +506,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if manual or last_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
-            context_params = {}  # type: SignatureHelpContext
-            if manual:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked
-            else:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.TriggerCharacter
+            trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
+            context_params = {
+                'triggerKind': trigger_kind,
+                'isRetrigger': self._sighelp is not None,
+            }  # type: SignatureHelpContext
+            if not manual:
                 context_params["triggerCharacter"] = last_char
-            context_params["isRetrigger"] = self._sighelp is not None
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
             params = {
@@ -563,7 +590,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_actions(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
+        actions_manager.request_for_region_async(
+            self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))
@@ -598,12 +626,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            titles = [command["title"] for command in self._actions_by_config[config_name]]
-            if len(titles) > 1:
+            actions = self._actions_by_config[config_name]
+            if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
-                                            placeholder="Code actions")
+                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    window.show_quick_panel(
+                        items,
+                        lambda i: self.handle_code_action_select(config_name, i),
+                        selected_index=selected_index,
+                        placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, 0)
 
@@ -636,16 +668,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
-    def _highlights_key(self, kind: int, multiline: bool) -> str:
+    def _highlights_key(self, kind: DocumentHighlightKind, multiline: bool) -> str:
         return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             self.view.erase_regions(self._highlights_key(kind, False))
             self.view.erase_regions(self._highlights_key(kind, True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             regions = itertools.chain(
                 self.view.get_regions(self._highlights_key(kind, False)),
                 self.view.get_regions(self._highlights_key(kind, True))
@@ -665,18 +697,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
-    def _on_highlights(self, response: Optional[List]) -> None:
+    def _on_highlights(self, response: Optional[List[DocumentHighlight]]) -> None:
         if not isinstance(response, list):
             response = []
-        kind2regions = {}  # type: Dict[Tuple[int, bool], List[sublime.Region]]
+        kind2regions = {}  # type: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]]
         for highlight in response:
-            r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
+            r = range_to_region(highlight["range"], self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Text)
             kind2regions.setdefault((kind, len(self.view.split_by_newlines(r)) > 1), []).append(r)
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
-            flags_multi, flags_single = userprefs().document_highlight_style_region_flags()
+            prefs = userprefs()
+            flags_multi, flags_single = prefs.highlight_style_region_flags(prefs.document_highlight_style)
             for tup, regions in kind2regions.items():
                 if not regions:
                     continue

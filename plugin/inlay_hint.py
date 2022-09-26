@@ -80,7 +80,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         args = {
             "session_name": session_name,
             "command_name": command["command"],
-            "command_args": command["arguments"]
+            "command_args": command.get("arguments")
         }
         self.view.run_command("lsp_execute", args)
 
@@ -130,9 +130,9 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
 
 def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> str:
     if isinstance(tooltip, str):
-        return tooltip
+        return html.escape(tooltip)
     if isinstance(tooltip, dict):  # MarkupContent
-        return tooltip.get('value') or ""
+        return html.escape(tooltip.get('value') or "")
     return ""
 
 
@@ -165,7 +165,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'label_part': label_part
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
-        value += html.escape(label_part.get('value') or "")
+        value += html.escape(label_part['value'])
         if is_clickable:
             value += "</a>"
         # InlayHintLabelPart.location is not supported

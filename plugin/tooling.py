@@ -287,7 +287,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         view.set_read_only(True)
 
 
-class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallbacks):
+class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:
         window = self.window

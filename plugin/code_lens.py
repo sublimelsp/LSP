@@ -1,5 +1,5 @@
-from .core.protocol import CodeLens, Error, Range
-from .core.typing import List, Tuple, Dict, Iterable, Generator, Union
+from .core.protocol import CodeLens, CodeLensExtended, Error
+from .core.typing import List, Tuple, Dict, Iterable, Generator, Union, cast
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.views import make_command_link
@@ -20,7 +20,7 @@ class CodeLensData:
 
     def __init__(self, data: CodeLens, view: sublime.View, session_name: str) -> None:
         self.data = data
-        self.region = range_to_region(Range.from_lsp(data['range']), view)
+        self.region = range_to_region(data['range'], view)
         self.session_name = session_name
         self.annotation = '...'
         self.resolve_annotation()
@@ -33,8 +33,8 @@ class CodeLensData:
         """A code lens is considered resolved if the inner data contains the 'command' key."""
         return 'command' in self.data or self.is_resolve_error
 
-    def to_lsp(self) -> CodeLens:
-        copy = self.data.copy()
+    def to_lsp(self) -> CodeLensExtended:
+        copy = cast(CodeLensExtended, self.data.copy())
         copy['session_name'] = self.session_name
         return copy
 
@@ -63,7 +63,7 @@ class CodeLensData:
             self.annotation = html_escape(str(code_lens_or_error))
             return
         self.data = code_lens_or_error
-        self.region = range_to_region(Range.from_lsp(code_lens_or_error['range']), view)
+        self.region = range_to_region(code_lens_or_error['range'], view)
         self.resolve_annotation()
 
 
@@ -165,7 +165,7 @@ class CodeLensView:
             for index, lens in enumerate(self._flat_iteration()):
                 self.view.add_regions(self._region_key(index), [lens.region], "", "", 0, [lens.small_html], accent)
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         region = self.view.line(region)
         for lens in self._flat_iteration():
             if lens.is_resolved() and lens.region.intersects(region):
@@ -178,19 +178,21 @@ class LspCodeLensCommand(LspTextCommand):
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
-        code_lenses = []  # type: List[CodeLens]
+        code_lenses = []  # type: List[CodeLensExtended]
         for region in self.view.sel():
             for sv in listener.session_views_async():
                 code_lenses.extend(sv.get_resolved_code_lenses_for_region(region))
         if not code_lenses:
             return
         elif len(code_lenses) == 1:
-            command = code_lenses[0]["command"]
+            command = code_lenses[0].get("command")
             assert command
+            if not command:
+                return
             args = {
                 "session_name": code_lenses[0]["session_name"],
                 "command_name": command["command"],
-                "command_args": command["arguments"]
+                "command_args": command.get("arguments")
             }
             self.view.run_command("lsp_execute", args)
         else:
@@ -199,16 +201,18 @@ class LspCodeLensCommand(LspTextCommand):
                 lambda i: self.on_select(code_lenses, i)
             )
 
-    def on_select(self, code_lenses: List[CodeLens], index: int) -> None:
+    def on_select(self, code_lenses: List[CodeLensExtended], index: int) -> None:
         try:
             code_lens = code_lenses[index]
         except IndexError:
             return
-        command = code_lens["command"]
+        command = code_lens.get("command")
         assert command
+        if not command:
+            return
         args = {
             "session_name": code_lens["session_name"],
             "command_name": command["command"],
-            "command_args": command["arguments"]
+            "command_args": command.get("arguments")
         }
         self.view.run_command("lsp_execute", args)

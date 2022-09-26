@@ -1,13 +1,13 @@
+from .core.panels import is_panel_open
+from .core.panels import PanelName
+from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
-from .core.protocol import InlayHintResponse
-from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import TextDocumentSyncKindFull
-from .core.protocol import TextDocumentSyncKindNone
+from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -15,7 +15,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple
+from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -25,6 +25,7 @@ from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
+from .core.views import is_range_equal
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -112,9 +113,6 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
         self.last_text_change_time = 0.0
-        self.total_errors = 0
-        self.total_warnings = 0
-        self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.document_links = []  # type: List[DocumentLink]
@@ -128,8 +126,8 @@ class SessionBuffer:
 
     def __del__(self) -> None:
         mgr = self.session.manager()
-        if mgr:
-            mgr.update_diagnostics_panel_async()
+        if mgr and is_panel_open(mgr.window(), PanelName.Diagnostics):
+            mgr.on_diagnostics_updated()
         self.color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
@@ -238,9 +236,9 @@ class SessionBuffer:
         value = self.get_capability(capability)
         return value is not False and value is not None
 
-    def text_sync_kind(self) -> int:
+    def text_sync_kind(self) -> TextDocumentSyncKind:
         value = self.capabilities.text_sync_kind()
-        return value if value > TextDocumentSyncKindNone else self.session.text_sync_kind()
+        return value if value != TextDocumentSyncKind.None_ else self.session.text_sync_kind()
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
@@ -285,9 +283,9 @@ class SessionBuffer:
     def purge_changes_async(self, view: sublime.View) -> None:
         if self.pending_changes is not None:
             sync_kind = self.text_sync_kind()
-            if sync_kind == TextDocumentSyncKindNone:
+            if sync_kind == TextDocumentSyncKind.None_:
                 return
-            if sync_kind == TextDocumentSyncKindFull:
+            if sync_kind == TextDocumentSyncKind.Full:
                 changes = None
                 version = view.change_count()
             else:
@@ -323,10 +321,6 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes_async(view)
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
-        if self.should_show_diagnostics_panel:
-            mgr = self.session.manager()
-            if mgr:
-                mgr.show_diagnostics_panel_async()
 
     def some_view(self) -> Optional[sublime.View]:
         for sv in self.session_views:
@@ -353,9 +347,11 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: Any) -> None:
-        color_infos = response if response else []
-        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in color_infos])
+    def _on_color_boxes_async(self, view: sublime.View, response: List[ColorInformation]) -> None:
+        if response is None:  # Guard against spec violation from certain language servers
+            self.color_phantoms.update([])
+            return
+        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in response])
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -371,7 +367,7 @@ class SessionBuffer:
         if self.document_links and userprefs().link_highlight_style == "underline":
             view.add_regions(
                 "lsp_document_link",
-                [range_to_region(Range.from_lsp(link["range"]), view) for link in self.document_links],
+                [range_to_region(link["range"], view) for link in self.document_links],
                 scope="markup.underline.link.lsp",
                 flags=DOCUMENT_LINK_FLAGS)
         else:
@@ -379,15 +375,15 @@ class SessionBuffer:
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
         for link in self.document_links:
-            if range_to_region(Range.from_lsp(link["range"]), view).contains(point):
+            if range_to_region(link["range"], view).contains(point):
                 return link
         else:
             return None
 
     def update_document_link(self, new_link: DocumentLink) -> None:
-        new_link_range = Range.from_lsp(new_link["range"])
+        new_link_range = new_link["range"]
         for link in self.document_links:
-            if Range.from_lsp(link["range"]) == new_link_range:
+            if is_range_equal(link["range"], new_link_range):
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break
@@ -396,9 +392,6 @@ class SessionBuffer:
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
-        total_errors = 0
-        total_warnings = 0
-        should_show_diagnostics_panel = False
         view = self.some_view()
         if view is None:
             return
@@ -409,7 +402,7 @@ class SessionBuffer:
             diagnostics_version = version
             diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
             for diagnostic in raw_diagnostics:
-                region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
+                region = range_to_region(diagnostic["range"], view)
                 severity = diagnostic_severity(diagnostic)
                 key = (severity, len(view.split_by_newlines(region)) > 1)
                 data = data_per_severity.get(key)
@@ -423,40 +416,17 @@ class SessionBuffer:
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))
-                if severity == DiagnosticSeverity.Error:
-                    total_errors += 1
-                elif severity == DiagnosticSeverity.Warning:
-                    total_warnings += 1
-                if severity <= userprefs().show_diagnostics_panel_on_save:
-                    should_show_diagnostics_panel = True
-            self._publish_diagnostics_to_session_views(
-                diagnostics_version,
-                diagnostics,
-                data_per_severity,
-                total_errors,
-                total_warnings,
-                should_show_diagnostics_panel
-            )
+            self._publish_diagnostics_to_session_views(diagnostics_version, diagnostics, data_per_severity)
 
     def _publish_diagnostics_to_session_views(
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-        total_errors: int,
-        total_warnings: int,
-        should_show_diagnostics_panel: bool
     ) -> None:
 
         def present() -> None:
-            self._present_diagnostics_async(
-                diagnostics_version,
-                diagnostics,
-                data_per_severity,
-                total_errors,
-                total_warnings,
-                should_show_diagnostics_panel
-            )
+            self._present_diagnostics_async(diagnostics_version, diagnostics, data_per_severity)
 
         self.diagnostics_debouncer.cancel_pending()
 
@@ -486,17 +456,11 @@ class SessionBuffer:
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-        total_errors: int,
-        total_warnings: int,
-        should_show_diagnostics_panel: bool
     ) -> None:
         self.diagnostics_version = diagnostics_version
         self.diagnostics = diagnostics
         self.data_per_severity = data_per_severity
         self.diagnostics_are_visible = bool(diagnostics)
-        self.total_errors = total_errors
-        self.total_warnings = total_warnings
-        self.should_show_diagnostics_panel = should_show_diagnostics_panel
         for sv in self.session_views:
             sv.present_diagnostics_async()
 
@@ -515,7 +479,7 @@ class SessionBuffer:
         self.semantic_tokens.view_change_count = view.change_count()
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
         if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
-            params["range"] = region_to_range(view, view.visible_region()).to_lsp()
+            params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
@@ -529,7 +493,7 @@ class SessionBuffer:
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
-            params["range"] = entire_content_range(view).to_lsp()
+            params["range"] = entire_content_range(view)
             request = Request.semanticTokensRange(params, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
@@ -563,7 +527,7 @@ class SessionBuffer:
                 return
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_error_async(self, error: dict) -> None:
+    def _on_semantic_tokens_error_async(self, _: dict) -> None:
         self.semantic_tokens.pending_response = None
         self.semantic_tokens.result_id = None
 
@@ -647,11 +611,11 @@ class SessionBuffer:
             return
         params = {
             "textDocument": text_document_identifier(view),
-            "range": entire_content_range(view).to_lsp()
+            "range": entire_content_range(view)
         }  # type: InlayHintParams
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
-    def _on_inlay_hints_async(self, response: InlayHintResponse) -> None:
+    def _on_inlay_hints_async(self, response: Union[List[InlayHint], None]) -> None:
         if response:
             view = self.some_view()
             if not view:

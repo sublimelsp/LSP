@@ -9,7 +9,8 @@ ParsedUri = Tuple[str, str]
 T = TypeVar('T')
 
 
-class DiagnosticsManager(OrderedDict):
+# NOTE: OrderedDict can only be properly typed in Python >=3.8.
+class DiagnosticsStorage(OrderedDict):
     # From the specs:
     #
     #   When a file changes it is the server’s responsibility to re-compute
@@ -34,8 +35,9 @@ class DiagnosticsManager(OrderedDict):
         self[uri] = diagnostics
         self.move_to_end(uri)  # maintain incoming order
 
-    def filter_map_diagnostics_async(self, pred: Callable[[Diagnostic], bool],
-                                     f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[Tuple[ParsedUri, List[T]]]:
+    def filter_map_diagnostics_async(
+        self, pred: Callable[[Diagnostic], bool], f: Callable[[ParsedUri, Diagnostic], T]
+    ) -> Iterator[Tuple[ParsedUri, List[T]]]:
         """
         Yields `(uri, results)` items with `results` being a list of `f(diagnostic)` for each
         diagnostic for this `uri` with `pred(diagnostic) == True`, filtered by `bool(f(diagnostic))`.

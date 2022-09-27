@@ -9,6 +9,7 @@ from .views import MarkdownLangMap
 from .views import minihtml
 import functools
 import html
+import re
 import sublime
 
 
@@ -115,7 +116,8 @@ class SigHelp:
                     # route relies on the client being smart enough to figure where the parameter is inside of
                     # the signature label. The above case where the label is a tuple of (start, end) positions is much
                     # more robust.
-                    start = label[prev:].find(rawlabel)
+                    label_match = re.search(r"\b{}\b".format(rawlabel), label[prev:])
+                    start = label_match.start() if label_match else -1
                     if start == -1:
                         debug("no match found for {}".format(rawlabel))
                         continue

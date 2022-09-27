@@ -287,7 +287,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
         if self.view.change_count() == self._change_count_on_last_save:
-            self._toggle_diagnostics_panel_if_needed_async()
+            window = self.view.window()
+            if window and window.active_view() == self.view:
+                self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -406,11 +408,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 break
         if is_panel_open(window, PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
-                self._change_count_on_last_save = -1
                 self._manager.hide_diagnostics_panel_async()
         else:
             if has_relevant_diagnostcs:
-                self._change_count_on_last_save = -1
                 self._manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:

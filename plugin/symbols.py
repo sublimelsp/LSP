@@ -221,9 +221,6 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
     def want_event(self) -> bool:
         return False
 
-    def validate(self, txt: str) -> bool:
-        return txt != ""
-
     def placeholder(self) -> str:
         return "Symbol"
 
@@ -236,14 +233,13 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         return SymbolQueryInput()
 
     def run(self, edit: sublime.Edit, symbol_query_input: str) -> None:
-        if symbol_query_input:
-            session = self.best_session(self.capability)
-            if session:
-                params = {"query": symbol_query_input}
-                request = Request("workspace/symbol", params, None, progress=True)
-                self.weaksession = weakref.ref(session)
-                session.send_request(request, lambda r: self._handle_response(
-                    symbol_query_input, r), self._handle_error)
+        session = self.best_session(self.capability)
+        if session:
+            params = {"query": symbol_query_input}
+            request = Request("workspace/symbol", params, None, progress=True)
+            self.weaksession = weakref.ref(session)
+            session.send_request(request, lambda r: self._handle_response(
+                symbol_query_input, r), self._handle_error)
 
     def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
         if index != -1:

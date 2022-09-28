@@ -246,8 +246,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">"parameters"</span>
             <span style="color: #\w{6}">, </span>
             <span style="color: #\w{6}">\.\.\.</span>
-            <span style="color: #\w{6}"> </span>
-            <span style="color: #\w{6}">\]</span>
+            <span style="color: #\w{6}"> \]</span>
             </pre></div>
             '''
         )

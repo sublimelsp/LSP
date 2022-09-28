@@ -231,7 +231,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
         return SymbolQueryInput()
 
-    def run(self, edit: sublime.Edit, symbol_query_input: str) -> None:
+    def run(self, edit: sublime.Edit, symbol_query_input: str, event: Optional[Any] = None) -> None:
         session = self.best_session(self.capability)
         if session:
             self.weaksession = weakref.ref(session)

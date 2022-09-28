@@ -100,9 +100,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:
-            params = {"textDocument": text_document_identifier(self.view)}
             session.send_request(
-                Request("textDocument/documentSymbol", params, self.view, progress=True),
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
                 lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
@@ -222,7 +221,7 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
         return False
 
     def placeholder(self) -> str:
-        return "Symbol"
+        return "Enter symbol name"
 
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
@@ -235,11 +234,11 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, symbol_query_input: str) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = {"query": symbol_query_input}
-            request = Request("workspace/symbol", params, None, progress=True)
             self.weaksession = weakref.ref(session)
-            session.send_request(request, lambda r: self._handle_response(
-                symbol_query_input, r), self._handle_error)
+            session.send_request(
+                Request.workspaceSymbol({"query": symbol_query_input}),
+                lambda r: self._handle_response(symbol_query_input, r),
+                self._handle_error)
 
     def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
         if index != -1:
@@ -256,7 +255,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
                     list(map(symbol_information_to_quick_panel_item, matches)),
                     lambda i: self._open_file(matches, i))
         else:
-            sublime.message_dialog("No matches found for query string: '{}'".format(query))
+            sublime.message_dialog("No matches found for query: '{}'".format(query))
 
     def _handle_error(self, error: Dict[str, Any]) -> None:
         reason = error.get("message", "none provided by server :(")

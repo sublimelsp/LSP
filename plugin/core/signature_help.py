@@ -116,10 +116,8 @@ class SigHelp:
                     # route relies on the client being smart enough to figure where the parameter is inside of
                     # the signature label. The above case where the label is a tuple of (start, end) positions is much
                     # more robust.
-                    label_match = re.search(r"\W{}\W".format(re.escape(rawlabel)), label[prev:])
-                    start = -1
-                    if label_match:
-                        start = label_match.start() + 1  # skip the first matched \W by adding + 1
+                    label_match = re.search(r"\b{}\b".format(re.escape(rawlabel)), label[prev:])
+                    start = label_match.start() if label_match else label[prev:].find(rawlabel)
                     if start == -1:
                         debug("no match found for {}".format(rawlabel))
                         continue

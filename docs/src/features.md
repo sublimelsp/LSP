@@ -152,6 +152,8 @@ This package presents Code Lenses as a greenish clickable annotation positioned 
 
 Sublime Text has no concept of Code Lenses.
 
+![code-lens](./images/code-lens.png)
+
 ## Inlay Hints
 
 Inlay hints are short textual annotations that show parameter names and type hints for servers that support that feature.

@@ -45,6 +45,10 @@
         "command": "lsp_document_symbols"
       },
       {
+        "caption": "LSP: Goto Symbol In Project…",
+        "command": "lsp_workspace_symbols"
+      },
+      {
         "caption": "LSP: Goto Definition…",
         "command": "lsp_symbol_definition"
       },

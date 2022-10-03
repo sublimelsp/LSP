@@ -152,12 +152,15 @@ This package presents Code Lenses as a greenish clickable annotation positioned 
 
 Sublime Text has no concept of Code Lenses.
 
-![code-lens](./images/code-lens-annotation.png)
+<figure markdown>
+  ![code-lens](./images/code-lens-annotation.png)
+  <figcaption>"show_code_lens" is set to "annotation"</figcaption>
+</figure>
 
-> `"show_code_lens"` is set to `"annotation"`
-
-![code-lens](./images/code-lens-phantom.png)
-> `"show_code_lens"` is set to `"phantom"`
+<figure markdown>
+  ![code-lens](./images/code-lens-phantom.png)
+  <figcaption>"show_code_lens" is set to "phantom"</figcaption>
+</figure>
 
 ## Inlay Hints
 

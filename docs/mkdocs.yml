@@ -29,6 +29,8 @@ markdown_extensions:
   # add tip, warning info boxes
   - admonition
 
+  - md_in_html
+
   # show # after each header
   - toc:
       permalink: '#'

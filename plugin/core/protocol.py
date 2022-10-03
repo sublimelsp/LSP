@@ -5889,8 +5889,8 @@ class Request:
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
-    def documentSymbols(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
-        return Request("textDocument/documentSymbol", params, view)
+    def documentSymbols(cls, params: DocumentSymbolParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/documentSymbol", params, view, progress=True)
 
     @classmethod
     def documentHighlight(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
@@ -5927,6 +5927,10 @@ class Request:
     @classmethod
     def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
         return Request('inlayHint/resolve', params, view)
+
+    @classmethod
+    def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> 'Request':
+        return Request("workspace/symbol", params, None, progress=True)
 
     @classmethod
     def shutdown(cls) -> 'Request':

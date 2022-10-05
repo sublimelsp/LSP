@@ -17,6 +17,7 @@ from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
+from functools import partial
 import sublime
 
 ConfigName = str
@@ -137,8 +138,9 @@ class CodeActionsManager:
         for session in listener.sessions_async('codeActionProvider'):
             request = request_factory(session)
             if request:
+                response_handler = partial(on_response, session)
                 task = session.send_request_task(request)  # type: Promise[Optional[List[CodeActionOrCommand]]]
-                tasks.append(task.then(lambda response: on_response(session, response)))
+                tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks).then(lambda sessions: list(filter(lambda session: len(session[1]), sessions)))
 

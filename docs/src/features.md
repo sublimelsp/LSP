@@ -136,7 +136,9 @@ Code Actions are an umbrella term for "Quick Fixes" and "Refactorings". They are
 
 Formatting is different from Code Actions, because Formatting is supposed to _not_ mutate the abstract syntax tree of the file, only move around white space. Any Code Action will mutate the abstract syntax tree.
 
-This package presents Code Actions as a bluish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as a light bulb in the Gutter Area.
+This package presents "Quick Fix" Code Actions as a bluish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as a light bulb in the Gutter Area.
+
+Other types of Code Actions can be invoked from the "Edit" main menu or from the context menu.
 
 Sublime Text has no concept of Code Actions.
 

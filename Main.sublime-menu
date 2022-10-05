@@ -17,6 +17,15 @@
       {
         "caption": "LSP: Format Selection",
         "command": "lsp_format_document_range"
+      },
+      {
+        "caption": "LSP: Code Action…",
+        "command": "lsp_code_actions"
+      },
+      {
+        "caption": "LSP: Source Action…",
+        "command": "lsp_code_actions",
+        "args": {"only_kinds": ["source"]}
       }
     ]
   },

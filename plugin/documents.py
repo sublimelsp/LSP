@@ -6,6 +6,7 @@ from .core.logging import debug
 from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.promise import Promise
+from .core.protocol import CodeActionKind
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
@@ -596,7 +597,24 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
-        action_count = sum(map(len, responses.values()))
+
+        def is_quickfix(kind: str) -> bool:
+            if kind == CodeActionKind.QuickFix:
+                return True
+            if len(kind) > len(CodeActionKind.QuickFix):
+                return kind.startswith(CodeActionKind.QuickFix) and kind[len(CodeActionKind.QuickFix)] == '.'
+            return False
+
+        # Only quickfix actions should be shown in the view
+        filtered_responses = {}
+        for config in responses:
+            # If no code action kind is given, we can assume that it is 'quickfix'
+            # (see https://github.com/microsoft/language-server-protocol/issues/1554#issuecomment-1266512306)
+            quickfix_actions = [action for action in responses[config]
+                                if is_quickfix(action.get('kind', CodeActionKind.QuickFix))]
+            if quickfix_actions:
+                filtered_responses[config] = quickfix_actions
+        action_count = sum(map(len, filtered_responses.values()))
         if action_count == 0:
             return
         regions = [sublime.Region(self._stored_region.b, self._stored_region.a)]
@@ -609,14 +627,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
-            self._actions_by_config = responses
+            self._actions_by_config = filtered_responses
         else:  # 'annotation'
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = next(itertools.chain.from_iterable(responses.values()))['title']
+                title = next(itertools.chain.from_iterable(filtered_responses.values()))['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": filtered_responses})
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

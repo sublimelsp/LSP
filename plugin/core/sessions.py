@@ -1508,6 +1508,11 @@ class Session(TransportCallbacks):
         def handle_continuation(view: Optional[sublime.View]) -> None:
             if view and r:
                 center_selection(view, r)
+            elif view:
+                window = view.window()
+                if window:
+                    window.focus_view(view)
+
             sublime.set_timeout_async(lambda: result[1](view))
 
         sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))

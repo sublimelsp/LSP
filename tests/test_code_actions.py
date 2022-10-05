@@ -1,5 +1,5 @@
 from copy import deepcopy
-from LSP.plugin.code_actions import get_matching_kinds
+from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple, Optional
 from LSP.plugin.core.url import filename_to_uri
@@ -232,22 +232,22 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
 
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
-        actual = get_matching_kinds({'a.x': True}, ['a.b'])
+        actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
         expected = []  # type: List[str]
         self.assertEquals(actual, expected)
 
     def test_matches_exact_action(self) -> None:
-        actual = get_matching_kinds({'a.b': True}, ['a.b'])
+        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b'])
         expected = ['a.b']
         self.assertEquals(actual, expected)
 
     def test_matches_more_specific_action(self) -> None:
-        actual = get_matching_kinds({'a.b': True}, ['a.b.c'])
+        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b.c'])
         expected = ['a.b.c']
         self.assertEquals(actual, expected)
 
     def test_does_not_match_disabled_action(self) -> None:
-        actual = get_matching_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
+        actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected = []  # type: List[str]
         self.assertEquals(actual, expected)
 

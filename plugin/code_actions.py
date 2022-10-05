@@ -154,9 +154,13 @@ def get_matching_on_save_kinds(session: Session, user_actions: Dict[str, bool]) 
     (for example user's a.b matching session's a.b.c), then the more specific (a.b.c) must be
     returned as servers must receive only kinds that they advertise support for.
     """
-    session_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]] # noqa: E501
+    session_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
     if not session_kinds:
         return []
+    return get_matching_kinds(user_actions, session_kinds)
+
+
+def get_matching_kinds(user_actions: Dict[str, bool], session_kinds: List[CodeActionKind]) -> List[CodeActionKind]:
     matching_kinds = []
     for session_kind in session_kinds:
         enabled = False

@@ -74,7 +74,8 @@ class CodeActionsManager:
             if only_kinds:
                 return [a for a in actions if not is_command(a) and is_kinds_include_kind(only_kinds, a.get('kind'))]
             return [
-                a for a in actions if is_command(a) or is_kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
+                a for a in actions
+                if is_command(a) or not a.get('kind') or is_kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
             ]
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)

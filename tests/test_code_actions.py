@@ -45,7 +45,7 @@ def create_command(command_name: str, command_args: Optional[List[Any]] = None) 
 
 
 def create_test_code_action(view: sublime.View, version: int, edits: List[Tuple[str, Range]],
-                            kind: str = None) -> Dict[str, Any]:
+                            kind: Optional[str] = None) -> Dict[str, Any]:
     action = {
         "title": "Fix errors",
         "edit": create_code_action_edit(view, version, edits)
@@ -56,7 +56,7 @@ def create_test_code_action(view: sublime.View, version: int, edits: List[Tuple[
 
 
 def create_test_code_action2(command_name: str, command_args: Optional[List[Any]] = None,
-                             kind: str = None) -> Dict[str, Any]:
+                             kind: Optional[str] = None) -> Dict[str, Any]:
     action = {
         "title": "Fix errors",
         "command": create_command(command_name, command_args)

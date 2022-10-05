@@ -167,7 +167,7 @@ def get_matching_on_save_kinds(
     matching_kinds = []
     for session_kind in session_kinds:
         enabled = False
-        action_parts = cast(str, session_kind).split('.')
+        action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
             user_value = user_actions.get(current_part, None)
@@ -185,7 +185,7 @@ def is_kinds_include_kind(kinds: List[CodeActionKind], kind: Optional[CodeAction
     """
     if not kind:
         return False
-    kind_parts = cast(str, kind).split('.')
+    kind_parts = kind.split('.')
     return any(part for part in kind_parts if part in kinds)
 
 

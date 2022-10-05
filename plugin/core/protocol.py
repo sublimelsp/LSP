@@ -327,7 +327,7 @@ class DocumentHighlightKind(IntEnum):
     """ Write-access of a symbol, like writing to a variable. """
 
 
-class CodeActionKind(Enum, str):
+class CodeActionKind(str, Enum):
     """ A set of predefined code action kinds """
     Empty = ''
     """ Empty kind. """

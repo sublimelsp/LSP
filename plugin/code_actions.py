@@ -92,7 +92,8 @@ class CodeActionsManager:
         session_buffer_diagnostics, _ = listener.diagnostics_intersecting_region_async(region)
 
         def request_factory(session: Session) -> Optional[Request]:
-            matching_kinds = get_matching_on_save_kinds(session, on_save_actions)
+            session_kinds = get_session_kinds(session)
+            matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
             if not matching_kinds:
                 return None
             diagnostics = []  # type: List[Diagnostic]
@@ -107,7 +108,8 @@ class CodeActionsManager:
             # Filter actions returned from the session so that only matching kinds are collected.
             # Since older servers don't support the "context.only" property, those will return all
             # actions that need to be then manually filtered.
-            matching_kinds = get_matching_on_save_kinds(session, on_save_actions)
+            session_kinds = get_session_kinds(session)
+            matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
             return [a for a in actions if a.get('kind') in matching_kinds]
 
         return self._collect_code_actions_async(listener, request_factory, response_filter)
@@ -143,7 +145,14 @@ class CodeActionsManager:
 actions_manager = CodeActionsManager()
 
 
-def get_matching_on_save_kinds(session: Session, user_actions: Dict[str, bool]) -> List[CodeActionKind]:
+def get_session_kinds(session: Session) -> List[CodeActionKind]:
+    session_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
+    return session_kinds or []
+
+
+def get_matching_on_save_kinds(
+    user_actions: Dict[str, bool], session_kinds: List[CodeActionKind]
+) -> List[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session kinds
     are returned. Returned kinds are those that are enabled and are not overridden by more
@@ -154,13 +163,6 @@ def get_matching_on_save_kinds(session: Session, user_actions: Dict[str, bool]) 
     (for example user's a.b matching session's a.b.c), then the more specific (a.b.c) must be
     returned as servers must receive only kinds that they advertise support for.
     """
-    session_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
-    if not session_kinds:
-        return []
-    return get_matching_kinds(user_actions, session_kinds)
-
-
-def get_matching_kinds(user_actions: Dict[str, bool], session_kinds: List[CodeActionKind]) -> List[CodeActionKind]:
     matching_kinds = []
     for session_kind in session_kinds:
         enabled = False

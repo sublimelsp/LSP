@@ -254,9 +254,12 @@ class CodeActionMatchingTestCase(unittest.TestCase):
     def test_kind_matching(self) -> None:
         self.assertTrue(kinds_include_kind(['a'], 'a.b'))
         self.assertFalse(kinds_include_kind(['a'], 'b.a'))
+        self.assertFalse(kinds_include_kind(['a.b'], 'b'))
         self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
         self.assertFalse(kinds_include_kind(['a.b'], 'a'))
         self.assertFalse(kinds_include_kind(['aa'], 'a'))
+        self.assertFalse(kinds_include_kind(['aa.b'], 'a'))
+        self.assertFalse(kinds_include_kind(['aa.b'], 'b'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):

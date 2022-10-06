@@ -1,5 +1,5 @@
 from copy import deepcopy
-from LSP.plugin.code_actions import get_matching_on_save_kinds
+from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple, Optional
 from LSP.plugin.core.url import filename_to_uri
@@ -250,6 +250,13 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected = []  # type: List[str]
         self.assertEquals(actual, expected)
+
+    def test_kind_matching(self) -> None:
+        self.assertTrue(kinds_include_kind(['a'], 'a.b'))
+        self.assertFalse(kinds_include_kind(['a'], 'b.a'))
+        self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
+        self.assertFalse(kinds_include_kind(['a.b'], 'a'))
+        self.assertFalse(kinds_include_kind(['aa'], 'a'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):

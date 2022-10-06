@@ -18,6 +18,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 from functools import partial
+import re
 import sublime
 
 ConfigName = str
@@ -73,10 +74,10 @@ class CodeActionsManager:
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
-                return [a for a in actions if not is_command(a) and is_kinds_include_kind(only_kinds, a.get('kind'))]
+                return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
             return [
                 a for a in actions
-                if is_command(a) or not a.get('kind') or is_kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
+                if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
             ]
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
@@ -180,15 +181,22 @@ def get_matching_on_save_kinds(
     return matching_kinds
 
 
-def is_kinds_include_kind(kinds: List[CodeActionKind], kind: Optional[CodeActionKind]) -> bool:
+def kinds_include_kind(kinds: List[CodeActionKind], kind: Optional[CodeActionKind]) -> bool:
     """
-    The "kinds" list includes "kind" if any of the "kinds" matches "kind" exactly or the "kind" prefix matches one
-    of the "kinds".
+    The "kinds" include "kind" if "kind" matches one of the "kinds" exactly or one of the "kinds" is a prefix
+    of the whole "kind" (where prefix must be followed by a dot).
     """
     if not kind:
         return False
-    kind_parts = kind.split('.')
-    return any(part for part in kind_parts if part in kinds)
+    for kinds_item in kinds:
+        if kinds_item == kind:
+            return True
+        kind_dots = re.finditer(r'\.', kind)
+        for dot in kind_dots:
+            kind_prefix = kind[0:dot.start()]
+            if kind_prefix == kinds_item:
+                return True
+    return False
 
 
 class CodeActionOnSaveTask(SaveTask):
@@ -278,10 +286,15 @@ class LspCodeActionsCommand(LspTextCommand):
         actions = []  # type: List[Tuple[ConfigName, CodeActionOrCommand]]
         for config_name, session_actions in response:
             actions.extend([(config_name, action) for action in session_actions])
-        if len(actions) == 1 and run_first:
-            self._handle_select(0, actions)
+        if actions:
+            if len(actions) == 1 and run_first:
+                self._handle_select(0, actions)
+            else:
+                self._show_code_actions(actions)
         else:
-            self._show_code_actions(actions)
+            window = self.view.window()
+            if window:
+                window.status_message("No code actions available")
 
     def _show_code_actions(self, actions: List[Tuple[ConfigName, CodeActionOrCommand]]) -> None:
         window = self.view.window()

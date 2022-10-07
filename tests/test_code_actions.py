@@ -252,10 +252,13 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         self.assertEquals(actual, expected)
 
     def test_kind_matching(self) -> None:
+        # Positive
         self.assertTrue(kinds_include_kind(['a'], 'a.b'))
+        self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
+        self.assertTrue(kinds_include_kind(['a.b', 'b'], 'b.c'))
+        # Negative
         self.assertFalse(kinds_include_kind(['a'], 'b.a'))
         self.assertFalse(kinds_include_kind(['a.b'], 'b'))
-        self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
         self.assertFalse(kinds_include_kind(['a.b'], 'a'))
         self.assertFalse(kinds_include_kind(['aa'], 'a'))
         self.assertFalse(kinds_include_kind(['aa.b'], 'a'))

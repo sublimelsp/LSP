@@ -27,7 +27,7 @@ CodeActionsByConfigName = Tuple[ConfigName, List[CodeActionOrCommand]]
 
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
-    return 'command' in action
+    return isinstance(action.get('command'), str)
 
 
 class CodeActionsManager:

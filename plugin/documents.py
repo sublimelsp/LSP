@@ -620,7 +620,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             else:
                 title = all_actions[0]['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            code_actions_link = make_command_link('lsp_code_actions', title, {"code_actions_by_config": responses})
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

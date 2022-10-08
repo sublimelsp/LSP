@@ -84,14 +84,16 @@ def code_actions_content(actions_by_config: List[CodeActionsByConfigName]) -> st
     formatted = []
     for config_name, actions in actions_by_config:
         action_count = len(actions)
-        if action_count > 0:
-            href = "{}:{}".format('code-actions', config_name)
-            if action_count > 1:
-                text = "choose code action ({} available)".format(action_count)
-            else:
-                text = actions[0].get('title', 'code action')
-            formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                config_name, make_link(href, text)))
+        if action_count == 0:
+            continue
+        if action_count > 1:
+            text = "choose ({} available)".format(action_count)
+        else:
+            text = actions[0].get('title', 'code action')
+        href = "{}:{}".format('code-actions', config_name)
+        link = make_link(href, text)
+        formatted.append(
+            '<div class="actions">Quick Fix: {} <span class="color-muted">{}</span></div>'.format(link, config_name))
     return "".join(formatted)
 
 

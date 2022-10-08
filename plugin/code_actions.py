@@ -74,7 +74,13 @@ class CodeActionsManager:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
-            return actions
+            if manual:
+                return actions
+            # On implicit (selection change) request, only return commands and quick fix kinds.
+            return [
+                a for a in actions
+                if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
+            ]
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
         if location_cache_key:

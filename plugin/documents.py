@@ -593,9 +593,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_actions_async(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        only_kinds = [CodeActionKind.QuickFix]
         actions_manager \
-            .request_for_region_async(self.view, covering, diagnostics_by_config, only_kinds, manual=False) \
+            .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:

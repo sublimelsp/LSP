@@ -6,7 +6,6 @@ from .core.logging import debug
 from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.promise import Promise
-from .core.protocol import CodeActionKind
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList

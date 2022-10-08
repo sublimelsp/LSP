@@ -74,10 +74,7 @@ class CodeActionsManager:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
-            return [
-                a for a in actions
-                if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
-            ]
+            return actions
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
         if location_cache_key:
@@ -191,7 +188,7 @@ def kinds_include_kind(kinds: List[CodeActionKind], kind: Optional[CodeActionKin
         if kinds_item == kind:
             return True
         kinds_item_len = len(kinds_item)
-        if kind.startswith(kinds_item) and kind[kinds_item_len] == '.':
+        if len(kind) > kinds_item_len and kind.startswith(kinds_item) and kind[kinds_item_len] == '.':
             return True
     return False
 

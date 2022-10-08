@@ -18,7 +18,6 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 from functools import partial
-import re
 import sublime
 
 ConfigName = str
@@ -191,11 +190,9 @@ def kinds_include_kind(kinds: List[CodeActionKind], kind: Optional[CodeActionKin
     for kinds_item in kinds:
         if kinds_item == kind:
             return True
-        kind_dots = re.finditer(r'\.', kind)
-        for dot in kind_dots:
-            kind_prefix = kind[0:dot.start()]
-            if kind_prefix == kinds_item:
-                return True
+        kinds_item_len = len(kinds_item)
+        if kind.startswith(kinds_item) and kind[kinds_item_len] == '.':
+            return True
     return False
 
 

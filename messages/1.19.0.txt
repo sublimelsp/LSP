@@ -1,0 +1,43 @@
+=> 1.19.0
+
+# UPDATE WARNING
+
+Upgrading to a new LSP release typically requires a Sublime Text restart for everything to work properly
+Make sure to do that before reporting any issues.
+
+# Features
+
+- (Completions) Add insert-replace support for completions (#1809) (Предраг Николић)
+- (Code Actions) Add support for triggerKind in code action requests (#2042) (Rafał Chłodnicki)
+- (Code Actions) Add icons and isPreferred support for code actions (#2040) (jwortmann)
+- (Color Boxes) Request color presentations when clicking on a color box (#2065) (jwortmann)
+- (Diagnostics Panel) Automatically hide the diagnostics panel on save (#2037) (Tristan Daniel)
+- (Log Panel) Custom context menu and "Clear log panel" item (#2045) (Предраг Николић)
+- (Log Panel) Add context menu entry for toggling lines limit (#2047) (Rafał Chłodnicki)
+- (API) Add group argument for LspGotoCommand (#2031) (Justin Lam)
+- (API) Add template variable `$text_document_position` in execute command (#2061) (Ayoub Benali)
+
+# Fixes and Improvements
+
+- (Signature Help) Improve highlighting of parameters when labels are of type string (#2072) (Предраг Николић)
+- (Workspace Symbols) Allow empty string for request (#2071) (Предраг Николић)
+- (Code Actions) Ensure "Source Actions..." request includes the "source" kind (#2064) (Rafał Chłodnicki)
+- (Diagnostics Panel) Fix issues with toggling on save (#2063) (Rafał Chłodnicki)
+- (Diagnostics Panel) Only update content of diagnostics panel when visible (#2054) (jwortmann)
+- (JSON Schema) Add json suggestions for disabled capabilities (#2050) (Предраг Николић)
+- (Document Link, API) Parse position or selection from link fragment (#2049) (jwortmann)
+- (Settings) Change "log_server" default value to  ["panel"] (Предраг Николић)
+- (Dev) Various improvements for type checking during development (use of NotRequired) (#2058) (Rafał Chłodnicki)
+- (Docs) Add code lens image (#2074) (Предраг Николић)
+
+# Breaking changes for LSP-* developers
+
+For developers working on LSP-* packages and using LSP-pyright for type-checking, it's now necessary
+to tell pyright explicitly which version of Python to check against.
+Do that by adding a `pyrightconfig.json` configuration file in the root of the LSP-* package:
+
+```json
+{
+    "pythonVersion": "3.11"
+}
+```

@@ -1,5 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
+from .code_actions import CodeActionsByConfigName
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
@@ -79,18 +80,20 @@ link_kinds = [
 ]
 
 
-def code_actions_content(actions_by_config: Dict[str, List[CodeActionOrCommand]]) -> str:
+def code_actions_content(actions_by_config: List[CodeActionsByConfigName]) -> str:
     formatted = []
-    for config_name, actions in actions_by_config.items():
+    for config_name, actions in actions_by_config:
         action_count = len(actions)
-        if action_count > 0:
-            href = "{}:{}".format('code-actions', config_name)
-            if action_count > 1:
-                text = "choose code action ({} available)".format(action_count)
-            else:
-                text = actions[0].get('title', 'code action')
-            formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                config_name, make_link(href, text)))
+        if action_count == 0:
+            continue
+        if action_count > 1:
+            text = "choose ({} available)".format(action_count)
+        else:
+            text = actions[0].get('title', 'code action')
+        href = "{}:{}".format('code-actions', config_name)
+        link = make_link(href, text)
+        formatted.append(
+            '<div class="actions">Quick Fix: {} <span class="color-muted">{}</span></div>'.format(link, config_name))
     return "".join(formatted)
 
 
@@ -122,7 +125,7 @@ class LspHoverCommand(LspTextCommand):
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._document_link = ('', False, None)  # type: Tuple[str, bool, Optional[sublime.Region]]
-        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
+        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
@@ -140,9 +143,9 @@ class LspHoverCommand(LspTextCommand):
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
-                actions_manager.request_for_region_async(
-                    self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point), manual=False)
+                actions_manager \
+                    .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
+                    .then(lambda results: self._handle_code_actions(listener, hover_point, results))
 
         sublime.set_timeout_async(run_async)
 
@@ -230,11 +233,11 @@ class LspHoverCommand(LspTextCommand):
         self._document_link = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip, link_range)
         self.show_hover(listener, point, only_diagnostics=False)
 
-    def handle_code_actions(
+    def _handle_code_actions(
         self,
         listener: AbstractViewListener,
         point: int,
-        responses: Dict[str, List[CodeActionOrCommand]]
+        responses: List[CodeActionsByConfigName]
     ) -> None:
         self._actions_by_config = responses
         self.show_hover(listener, point, only_diagnostics=False)
@@ -329,20 +332,21 @@ class LspHoverCommand(LspTextCommand):
             if window:
                 open_file_uri(window, href)
         elif href.startswith('code-actions:'):
-            _, config_name = href.split(":")
-            actions = self._actions_by_config[config_name]
             self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
+            _, config_name = href.split(":")
+            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    items, selected_index = format_code_actions_for_quick_panel(
+                        map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
                         items,
-                        lambda i: self.handle_code_action_select(config_name, i),
+                        lambda i: self.handle_code_action_select(config_name, actions, i),
                         selected_index=selected_index,
                         placeholder="Code actions")
             else:
-                self.handle_code_action_select(config_name, 0)
+                self.handle_code_action_select(config_name, actions, 0)
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
             session = self.session_by_name(session_name)
@@ -353,12 +357,13 @@ class LspHoverCommand(LspTextCommand):
         else:
             open_in_browser(href)
 
-    def handle_code_action_select(self, config_name: str, index: int) -> None:
-        if index > -1:
+    def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
+        if index == -1:
+            return
 
-            def run_async() -> None:
-                session = self.session_by_name(config_name)
-                if session:
-                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
+        def run_async() -> None:
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(actions[index], progress=True)
 
-            sublime.set_timeout_async(run_async)
+        sublime.set_timeout_async(run_async)

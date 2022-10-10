@@ -2,7 +2,7 @@ import sys
 
 if sys.version_info >= (3, 11, 0):
 
-    from enum import Enum, IntEnum, IntFlag
+    from enum import Enum, IntEnum, IntFlag, StrEnum
     from typing import Any
     from typing import Callable
     from typing import cast
@@ -25,6 +25,7 @@ if sys.version_info >= (3, 11, 0):
     from typing import Tuple
     from typing import Type
     from typing import TypedDict
+    from typing import TypeGuard
     from typing import TypeVar
     from typing import Union
 
@@ -57,6 +58,9 @@ else:
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
 
+    class TypeGuard(Type):  # type: ignore
+        pass
+
     class Enum(Type):  # type: ignore
         pass
 
@@ -64,6 +68,9 @@ else:
         pass
 
     class IntFlag(Type):  # type: ignore
+        pass
+
+    class StrEnum(Type):  # type: ignore
         pass
 
     class Any(Type):  # type: ignore

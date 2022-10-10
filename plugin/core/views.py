@@ -1069,15 +1069,15 @@ def format_completion(
 
 
 def format_code_actions_for_quick_panel(
-    code_actions: List[Union[CodeAction, Command]]
+    session_actions: Iterable[Tuple[str, Union[CodeAction, Command]]]
 ) -> Tuple[List[sublime.QuickPanelItem], int]:
     items = []  # type: List[sublime.QuickPanelItem]
     selected_index = -1
-    for idx, code_action in enumerate(code_actions):
+    for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")
         first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
         kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
-        items.append(sublime.QuickPanelItem(code_action["title"], kind=kind))
+        items.append(sublime.QuickPanelItem(code_action["title"], annotation=config_name, kind=kind))
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index

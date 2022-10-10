@@ -1,4 +1,4 @@
-from .typing import Enum, IntEnum, IntFlag
+from .typing import Enum, IntEnum, IntFlag, StrEnum
 from .typing import Any, Dict, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, Union
 import sublime
 
@@ -327,7 +327,7 @@ class DocumentHighlightKind(IntEnum):
     """ Write-access of a symbol, like writing to a variable. """
 
 
-class CodeActionKind(Enum):
+class CodeActionKind(StrEnum):
     """ A set of predefined code action kinds """
     Empty = ''
     """ Empty kind. """

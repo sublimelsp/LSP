@@ -84,7 +84,9 @@
     {
         "caption": "LSP: Goto Diagnostic",
         "command": "lsp_goto_diagnostic",
-        "args": {"uri": "$view_uri"}
+        "args": {
+            "uri": "$view_uri"
+        }
     },
     {
         "caption": "LSP: Goto Diagnostic in Project",
@@ -107,11 +109,20 @@
         "command": "lsp_symbol_rename"
     },
     {
-        "caption": "LSP: Run Code Action",
+        "caption": "LSP: Code Action…",
         "command": "lsp_code_actions"
     },
     {
-        "caption": "LSP: Run Source Action",
+        "caption": "LSP: Refactor…",
+        "command": "lsp_code_actions",
+        "args": {
+            "only_kinds": [
+                "refactor"
+            ]
+        },
+    },
+    {
+        "caption": "LSP: Source Action…",
         "command": "lsp_code_actions",
         "args": {
             "only_kinds": [

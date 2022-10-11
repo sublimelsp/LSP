@@ -21,6 +21,7 @@ from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
+from .settings import client_configs
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
@@ -478,11 +479,12 @@ class WindowManager(Manager):
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
-class WindowRegistry(object):
-    def __init__(self, configs: ConfigManager) -> None:
+class WindowRegistry:
+    def __init__(self) -> None:
         self._enabled = False
         self._windows = {}  # type: Dict[int, WindowManager]
-        self._configs = configs
+        self._configs = ConfigManager(client_configs.all)
+        client_configs.set_listener(self._configs.update)
 
     def enable(self) -> None:
         self._enabled = True
@@ -504,7 +506,7 @@ class WindowRegistry(object):
     def lookup(self, window: Optional[sublime.Window]) -> Optional[WindowManager]:
         if not self._enabled or not window or not window.is_valid():
             return None
-        self.clear_invalid_windows_workaround()
+        self._clear_invalid_windows_workaround()
         wm = self._windows.get(window.id())
         if wm:
             return wm
@@ -522,9 +524,9 @@ class WindowRegistry(object):
 
     def discard(self, window: sublime.Window) -> None:
         self._windows.pop(window.id(), None)
-        self.clear_invalid_windows_workaround()
+        self._clear_invalid_windows_workaround()
 
-    def clear_invalid_windows_workaround(self) -> None:
+    def _clear_invalid_windows_workaround(self) -> None:
         # Due to "on_pre_close_window" not working currently (https://github.com/sublimehq/sublime_text/issues/5148)
         # we'll check for invalid (closed) Windows and remove them from the list.
         for key in list(self._windows.keys()):

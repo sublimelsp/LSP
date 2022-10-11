@@ -1,9 +1,7 @@
-from .configurations import ConfigManager
 from .protocol import Diagnostic
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
-from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable, List
 from .views import first_selection_region
 from .views import MissingUriError
@@ -17,6 +15,9 @@ import sublime
 import sublime_plugin
 
 
+windows = WindowRegistry()
+
+
 def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
     if point is None:
         try:
@@ -27,11 +28,6 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: Optiona
         return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))  # type: ignore
     except ValueError:
         return None
-
-
-configs = ConfigManager(client_configs.all)
-client_configs.set_listener(configs.update)
-windows = WindowRegistry(configs)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[int]:

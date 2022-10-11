@@ -90,6 +90,12 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
             _preprocess_properties(translations, child_properties)
 
 
+def _enum_to_str(value: Any) -> str:
+    if isinstance(value, str):
+        return '"{}"'.format(value)
+    return str(value)
+
+
 class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
 
     def initial_text(self) -> str:
@@ -185,7 +191,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             has_default = "default" in v
             default = v.get("default")
             if isinstance(enum, list):
-                self.writeline4('// possible values: {}'.format(", ".join(enum)))
+                self.writeline4('// possible values: {}'.format(", ".join(map(_enum_to_str, enum))))
             if has_default:
                 value = default
             else:

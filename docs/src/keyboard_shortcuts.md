@@ -26,6 +26,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
 | Run Code Lens | unbound | `lsp_code_lens`
+| Run Refactor Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["refactor"]}`)
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`

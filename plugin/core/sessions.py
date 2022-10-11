@@ -150,21 +150,21 @@ class Manager(metaclass=ABCMeta):
         """
         Get the window associated with this manager.
         """
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> Optional[str]:
         """
         Get the project path for the given file.
         """
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
@@ -183,19 +183,19 @@ class Manager(metaclass=ABCMeta):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def on_diagnostics_updated(self) -> None:
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def show_diagnostics_panel_async(self) -> None:
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def hide_diagnostics_panel_async(self) -> None:
-        ...
+        raise NotImplementedError()
 
     # Event callbacks
 
@@ -204,7 +204,7 @@ class Manager(metaclass=ABCMeta):
         """
         The given Session has stopped with the given exit code.
         """
-        ...
+        raise NotImplementedError()
 
 
 def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:

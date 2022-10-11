@@ -146,25 +146,25 @@ class Manager(metaclass=ABCMeta):
     # Observers
 
     @abstractproperty
-    def window(self) -> sublime.Window:  # type: ignore
+    def window(self) -> sublime.Window:
         """
         Get the window associated with this manager.
         """
-        pass
+        ...
 
     @abstractmethod
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
-        pass
+        ...
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> Optional[str]:
         """
         Get the project path for the given file.
         """
-        pass
+        ...
 
     @abstractmethod
     def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
@@ -183,19 +183,19 @@ class Manager(metaclass=ABCMeta):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
-        pass
+        ...
 
     @abstractmethod
     def on_diagnostics_updated(self) -> None:
-        pass
+        ...
 
     @abstractmethod
     def show_diagnostics_panel_async(self) -> None:
-        pass
+        ...
 
     @abstractmethod
     def hide_diagnostics_panel_async(self) -> None:
-        pass
+        ...
 
     # Event callbacks
 
@@ -204,7 +204,7 @@ class Manager(metaclass=ABCMeta):
         """
         The given Session has stopped with the given exit code.
         """
-        pass
+        ...
 
 
 def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:

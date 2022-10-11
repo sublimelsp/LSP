@@ -81,6 +81,7 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
+from abc import abstractproperty
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -144,8 +145,8 @@ class Manager(metaclass=ABCMeta):
 
     # Observers
 
-    @abstractmethod
-    def window(self) -> sublime.Window:
+    @abstractproperty
+    def window(self) -> sublime.Window:  # type: ignore
         """
         Get the window associated with this manager.
         """
@@ -1130,7 +1131,7 @@ class Session(TransportCallbacks):
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self.config = config
         self.manager = weakref.ref(manager)
-        self.window = manager.window()
+        self.window = manager.window
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()

@@ -6,6 +6,7 @@ from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
+from .panels import destroy_output_panels
 from .panels import ensure_log_panel
 from .panels import is_panel_open
 from .panels import log_server_message
@@ -85,6 +86,10 @@ class WindowManager(Manager):
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         ensure_log_panel(window)
+
+    @property
+    def window(self) -> sublime.Window:
+        return self._window
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
@@ -192,9 +197,6 @@ class WindowManager(Manager):
                 except Exception as ex:
                     message = "failed to register session {} to listener {}".format(session.config.name, listener)
                     exception_log(message, ex)
-
-    def window(self) -> sublime.Window:
-        return self._window
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         inside_workspace = self._workspace.contains(view)
@@ -478,27 +480,57 @@ class WindowManager(Manager):
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigManager) -> None:
+        self._enabled = False
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
 
-    def lookup(self, window: sublime.Window) -> WindowManager:
+    def enable(self) -> None:
+        self._enabled = True
+        # Initialize manually at plugin_loaded as we'll miss out on "on_new_window_async" events.
+        for window in sublime.windows():
+            self.lookup(window)
+
+    def disable(self) -> None:
+        self._enabled = False
+        for manager in self._windows.values():
+            try:
+                manager.plugin_unloaded()
+            except Exception as ex:
+                exception_log("failed to unload window", ex)
+        for manager in self._windows.values():
+            destroy_output_panels(manager.window)
+        self._windows = {}
+
+    def lookup(self, window: Optional[sublime.Window]) -> Optional[WindowManager]:
+        if not self._enabled or not window or not window.is_valid():
+            return None
+        self.clear_invalid_windows_workaround()
         wm = self._windows.get(window.id())
         if wm:
             return wm
         workspace = ProjectFolders(window)
         window_configs = self._configs.for_window(window)
-        state = WindowManager(window=window, workspace=workspace, configs=window_configs)
-        self._windows[window.id()] = state
-        return state
+        manager = WindowManager(window, workspace, window_configs)
+        self._windows[window.id()] = manager
+        return manager
 
     def listener_for_view(self, view: sublime.View) -> Optional[AbstractViewListener]:
-        w = view.window()
-        if not w:
+        manager = self.lookup(view.window())
+        if not manager:
             return None
-        return self.lookup(w).listener_for_view(view)
+        return manager.listener_for_view(view)
 
     def discard(self, window: sublime.Window) -> None:
         self._windows.pop(window.id(), None)
+        self.clear_invalid_windows_workaround()
+
+    def clear_invalid_windows_workaround(self) -> None:
+        # Due to "on_pre_close_window" not working currently (https://github.com/sublimehq/sublime_text/issues/5148)
+        # we'll check for invalid (closed) Windows and remove them from the list.
+        for key in list(self._windows.keys()):
+            window = self._windows[key].window
+            if not window.is_valid():
+                self.discard(window)
 
 
 class PanelLogger(Logger):

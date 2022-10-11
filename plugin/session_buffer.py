@@ -125,7 +125,7 @@ class SessionBuffer:
 
     def __del__(self) -> None:
         mgr = self.session.manager()
-        if mgr and is_panel_open(mgr.window(), PanelName.Diagnostics):
+        if mgr and is_panel_open(mgr.window, PanelName.Diagnostics):
             mgr.on_diagnostics_updated()
         self.color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point

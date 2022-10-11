@@ -203,7 +203,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             new_window = self.view.window()
             if not new_window:
                 return
-            old_window = self._manager.window()
+            old_window = self._manager.window
             if new_window.id() == old_window.id():
                 return
             self._manager.unregister_listener_async(self)
@@ -854,10 +854,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self._registered = True
         if not self._manager:
-            window = self.view.window()
-            if not window:
-                return
-            self._manager = windows.lookup(window)
+            self._manager = windows.lookup(self.view.window())
+        if not self._manager:
+            return
         self._manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):

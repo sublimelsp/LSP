@@ -157,14 +157,11 @@ class LspSymbolRenameCommand(LspTextCommand):
         sublime.error_message("Rename error: {}".format(error["message"]))
 
     def _get_relative_path(self, file_path: str) -> str:
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return file_path
-        base_dir = windows.lookup(window).get_project_path(file_path)
-        if base_dir:
-            return os.path.relpath(file_path, base_dir)
-        else:
-            return file_path
+        base_dir = wm.get_project_path(file_path)
+        return os.path.relpath(file_path, base_dir) if base_dir else file_path
 
     def _render_rename_panel(
         self,
@@ -172,10 +169,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         total_changes: int,
         file_count: int
     ) -> None:
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
-        panel = ensure_rename_panel(window)
+        panel = ensure_rename_panel(wm.window)
         if not panel:
             return
         to_render = []  # type: List[str]
@@ -188,16 +185,16 @@ class LspSymbolRenameCommand(LspTextCommand):
             for edit in changes:
                 start = edit[0]
                 if scheme == "file":
-                    line_content = get_line(window, file, start[0])
+                    line_content = get_line(wm.window, file, start[0])
                 else:
                     line_content = '<no preview available>'
                 to_render.append(" {:>4}:{:<4} {}".format(start[0] + 1, start[1] + 1, line_content))
             to_render.append("")  # this adds a spacing between filenames
         characters = "\n".join(to_render)
-        base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
+        base_dir = wm.get_project_path(self.view.file_name() or "")
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.rename"})
+        wm.window.run_command("show_panel", {"panel": "output.rename"})
         fmt = "{} changes across {} files.\n\n{}"
         panel.run_command('append', {
             'characters': fmt.format(total_changes, file_count, characters),

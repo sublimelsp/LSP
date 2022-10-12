@@ -55,7 +55,7 @@ DIAGNOSTIC_SEVERITY = [
     ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
     ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
     ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
 ]  # type: List[Tuple[str, str, str, str, int, int]]
 
 # sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem

@@ -2,6 +2,7 @@ from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import InlayHint
@@ -68,7 +69,7 @@ class DiagnosticSeverityData:
         self.annotations = []  # type: List[str]
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = userprefs().diagnostics_gutter_marker
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class SemanticTokensData:

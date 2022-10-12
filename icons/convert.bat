@@ -1,0 +1,12 @@
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 16 -h 16 --export-filename=error.png error.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 32 -h 32 --export-filename=error@2x.png error.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 48 -h 48 --export-filename=error@3x.png error.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 16 -h 16 --export-filename=info.png info.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 32 -h 32 --export-filename=info@2x.png info.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 48 -h 48 --export-filename=info@3x.png info.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 16 -h 16 --export-filename=lightbulb.png lightbulb.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 32 -h 32 --export-filename=lightbulb@2x.png lightbulb.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 48 -h 48 --export-filename=lightbulb@3x.png lightbulb.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 16 -h 16 --export-filename=warning.png warning.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 32 -h 32 --export-filename=warning@2x.png warning.svg
+inkscape --export-type=png --export-area=-1:-1:17:17 -w 48 -h 48 --export-filename=warning@3x.png warning.svg

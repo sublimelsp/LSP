@@ -42,12 +42,12 @@ class ClientConfigs:
             # Each plugin is loaded 100 milliseconds after the previous plugin.
             # Therefore, we get a sequence of calls to `register_plugin` from all LSP-* helper packages, separated
             # in time intervals of 100 milliseconds.
-            # When calling self._notify_listener, we are calling ConfigManager.update.
+            # When calling self._notify_listener, we are calling WindowConfigManager.update.
             # That object, in turn, calls WindowConfigManager.update for each window.
             # In turn, each window starts iterating all of its attached views for language servers to attach.
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
-            # operation. To ensure that this dance is done only once, we delay notifying the ConfigManager until all
-            # plugins have done their `register_plugin` call.
+            # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
+            # all plugins have done their `register_plugin` call.
             debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
         return True
 

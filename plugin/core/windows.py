@@ -1,5 +1,4 @@
 from ...third_party import WebsocketServer  # type: ignore
-from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics_storage import is_severity_included
 from .logging import debug
@@ -65,10 +64,10 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
 
 class WindowManager(Manager):
 
-    def __init__(self, window: sublime.Window, workspace: ProjectFolders, configs: WindowConfigManager) -> None:
+    def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._destroyed = False
         self._window = window
-        self._configs = configs
+        self._config_manager = config_manager
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace
         self._pending_listeners = deque()  # type: Deque[AbstractViewListener]
@@ -93,14 +92,14 @@ class WindowManager(Manager):
         return log
 
     def get_config_manager(self) -> WindowConfigManager:
-        return self._configs
+        return self._config_manager
 
     def get_sessions(self) -> Generator[Session, None, None]:
         yield from self._sessions
 
     def on_load_project_async(self) -> None:
         self.update_workspace_folders_async()
-        self._configs.update()
+        self._config_manager.update()
 
     def on_post_save_project_async(self) -> None:
         self.on_load_project_async()
@@ -112,10 +111,10 @@ class WindowManager(Manager):
                 session.update_folders(workspace_folders)
 
     def enable_config_async(self, config_name: str) -> None:
-        self._configs.enable_config(config_name)
+        self._config_manager.enable_config(config_name)
 
     def disable_config_async(self, config_name: str) -> None:
-        self._configs.disable_config(config_name)
+        self._config_manager.disable_config(config_name)
 
     def open_location_async(
         self,
@@ -224,7 +223,7 @@ class WindowManager(Manager):
         return None
 
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
-        configs = self._configs.match_view(view)
+        configs = self._config_manager.match_view(view)
         handled = False
         file_name = view.file_name()
         inside = self._workspace.contains(view)
@@ -260,7 +259,7 @@ class WindowManager(Manager):
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = "cannot start {}: {}".format(config.name, cannot_start_reason)
-                    self._configs.disable_config(config.name, only_for_session=True)
+                    self._config_manager.disable_config(config.name, only_for_session=True)
                     # Continue with handling pending listeners
                     self._new_session = None
                     sublime.set_timeout_async(self._dequeue_listener_async)
@@ -293,7 +292,7 @@ class WindowManager(Manager):
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
-            self._configs.disable_config(config.name, only_for_session=True)
+            self._config_manager.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
             sublime.message_dialog(message)
             # Continue with handling pending listeners
@@ -394,7 +393,7 @@ class WindowManager(Manager):
                 for listener in self._listeners:
                     self.register_listener_async(listener)
             else:
-                self._configs.disable_config(config.name, only_for_session=True)
+                self._config_manager.disable_config(config.name, only_for_session=True)
 
     def destroy(self) -> None:
         """
@@ -498,8 +497,12 @@ class WindowRegistry:
     def __init__(self) -> None:
         self._enabled = False
         self._windows = {}  # type: Dict[int, WindowManager]
-        self._configs = ConfigManager(client_configs.all)
-        client_configs.set_listener(self._configs.update)
+        self._client_configs = client_configs
+        client_configs.set_listener(self._on_client_config_updated)
+
+    def _on_client_config_updated(self, config_name: Optional[str] = None) -> None:
+        for wm in self._windows.values():
+            wm.get_config_manager().update(config_name)
 
     def enable(self) -> None:
         self._enabled = True
@@ -524,8 +527,8 @@ class WindowRegistry:
         if wm:
             return wm
         workspace = ProjectFolders(window)
-        window_configs = self._configs.for_window(window)
-        manager = WindowManager(window, workspace, window_configs)
+        window_config_manager = WindowConfigManager(window, self._client_configs.all)
+        manager = WindowManager(window, workspace, window_config_manager)
         self._windows[window.id()] = manager
         return manager
 

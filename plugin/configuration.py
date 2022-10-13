@@ -25,7 +25,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        self._items = [config.name for config in wm._configs.all.values() if not config.enabled]
+        self._items = [config.name for config in wm.get_config_manager().all.values() if not config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, partial(self._on_done, wm))
         else:
@@ -62,7 +62,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        self._items = [config.name for config in wm._configs.all.values() if config.enabled]
+        self._items = [config.name for config in wm.get_config_manager().all.values() if config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, partial(self._on_done, wm))
         else:

@@ -54,7 +54,6 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             return
         config_name = self._items[index]
         client_configs.disable(config_name)
-        sublime.set_timeout_async(lambda: wm._end_sessions_async(config_name))
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):

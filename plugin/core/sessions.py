@@ -189,14 +189,6 @@ class Manager(metaclass=ABCMeta):
     def on_diagnostics_updated(self) -> None:
         raise NotImplementedError()
 
-    @abstractmethod
-    def show_diagnostics_panel_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def hide_diagnostics_panel_async(self) -> None:
-        raise NotImplementedError()
-
     # Event callbacks
 
     @abstractmethod

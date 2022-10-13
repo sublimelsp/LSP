@@ -1,15 +1,14 @@
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
-from .diagnostics import ensure_diagnostics_panel
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .panels import destroy_output_panels
-from .panels import ensure_log_panel
-from .panels import is_panel_open
-from .panels import log_server_message
+from .panels import LOG_LINES_LIMIT_SETTING_NAME
+from .panels import MAX_LOG_LINES_LIMIT_OFF
+from .panels import MAX_LOG_LINES_LIMIT_ON
+from .panels import PanelManager
 from .panels import PanelName
 from .promise import Promise
 from .protocol import DocumentUri
@@ -66,15 +65,9 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
 
 class WindowManager(Manager):
 
-    DIAGNOSTIC_PHANTOM_KEY = "lsp_diagnostic_phantom"
-
-    def __init__(
-        self,
-        window: sublime.Window,
-        workspace: ProjectFolders,
-        configs: WindowConfigManager,
-    ) -> None:
+    def __init__(self, window: sublime.Window, workspace: ProjectFolders, configs: WindowConfigManager) -> None:
         self._window = window
+        self._destroyed = False
         self._configs = configs
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace
@@ -83,14 +76,21 @@ class WindowManager(Manager):
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
+        self._server_log = []  # type: List[Tuple[str, str]]
+        self.panel_manager = PanelManager(self._window)
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
-        ensure_log_panel(window)
+        self.panel_manager.ensure_log_panel()
 
     @property
     def window(self) -> sublime.Window:
         return self._window
+
+    def get_and_clear_server_log(self) -> List[Tuple[str, str]]:
+        log = self._server_log
+        self._server_log = []
+        return log
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
@@ -396,21 +396,44 @@ class WindowManager(Manager):
             else:
                 self._configs.disable_config(config.name, only_for_session=True)
 
-    def plugin_unloaded(self) -> None:
+    def destroy(self) -> None:
         """
         This is called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
         from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful
         """
+        self._destroyed = True
         self._end_sessions_async()
+        self.panel_manager.destroy_output_panels()
 
-    def handle_server_message(self, server_name: str, message: str) -> None:
-        sublime.set_timeout(lambda: log_server_message(self._window, server_name, message))
+    def is_panel_open(self, panel_name: str) -> bool:
+        return self.panel_manager.is_panel_open(panel_name)
 
     def handle_log_message(self, session: Session, params: Any) -> None:
-        self.handle_server_message(session.config.name, extract_message(params))
+        self.handle_server_message_async(session.config.name, extract_message(params))
 
     def handle_stderr_log(self, session: Session, message: str) -> None:
-        self.handle_server_message(session.config.name, message)
+        self.handle_server_message_async(session.config.name, message)
+
+    def handle_server_message_async(self, server_name: str, message: str) -> None:
+        sublime.set_timeout(lambda: self.log_server_message(server_name, message))
+
+    def log_server_message(self, prefix: str, message: str) -> None:
+        if self._destroyed:
+            return
+        self._server_log.append((prefix, message))
+        list_len = len(self._server_log)
+        max_lines = self.get_log_lines_limit()
+        if list_len >= max_lines:
+            # Trim leading items in the list, leaving only the max allowed count.
+            del self._server_log[:list_len - max_lines]
+        self.panel_manager.update_log_panel()
+
+    def get_log_lines_limit(self) -> int:
+        return MAX_LOG_LINES_LIMIT_ON if self.is_log_lines_limit_enabled() else MAX_LOG_LINES_LIMIT_OFF
+
+    def is_log_lines_limit_enabled(self) -> bool:
+        panel = self.panel_manager.get_panel(PanelName.Log)
+        return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
     def handle_show_message(self, session: Session, params: Any) -> None:
         sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
@@ -424,7 +447,7 @@ class WindowManager(Manager):
             self.total_warning_count += local_warnings
         for listener in list(self._listeners):
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
-        if is_panel_open(self._window, PanelName.Diagnostics):
+        if self.is_panel_open(PanelName.Diagnostics):
             self.update_diagnostics_panel_async()
 
     def update_diagnostics_panel_async(self) -> None:
@@ -457,7 +480,7 @@ class WindowManager(Manager):
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, characters, prephantoms))
 
     def _update_panel_main_thread(self, characters: str, prephantoms: List[Tuple[int, int, str, str]]) -> None:
-        panel = ensure_diagnostics_panel(self._window)
+        panel = self.panel_manager.ensure_diagnostics_panel()
         if not panel or not panel.is_valid():
             return
         panel.run_command("lsp_update_panel", {"characters": characters})
@@ -469,14 +492,6 @@ class WindowManager(Manager):
             region = sublime.Region(point, point)
             phantoms.append(sublime.Phantom(region, make_link(href, code), sublime.LAYOUT_INLINE))
         self._panel_code_phantoms.update(phantoms)
-
-    def show_diagnostics_panel_async(self) -> None:
-        if self._window.active_panel() is None:
-            self._window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-    def hide_diagnostics_panel_async(self) -> None:
-        if is_panel_open(self._window, PanelName.Diagnostics):
-            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 class WindowRegistry:
@@ -494,13 +509,11 @@ class WindowRegistry:
 
     def disable(self) -> None:
         self._enabled = False
-        for manager in self._windows.values():
+        for wm in self._windows.values():
             try:
-                manager.plugin_unloaded()
+                wm.destroy()
             except Exception as ex:
-                exception_log("failed to unload window", ex)
-        for manager in self._windows.values():
-            destroy_output_panels(manager.window)
+                exception_log("failed to destroy window", ex)
         self._windows = {}
 
     def lookup(self, window: Optional[sublime.Window]) -> Optional[WindowManager]:
@@ -523,7 +536,9 @@ class WindowRegistry:
         return manager.listener_for_view(view)
 
     def discard(self, window: sublime.Window) -> None:
-        self._windows.pop(window.id(), None)
+        wm = self._windows.pop(window.id(), None)
+        if wm:
+            wm.destroy()
         self._clear_invalid_windows_workaround()
 
     def _clear_invalid_windows_workaround(self) -> None:
@@ -558,7 +573,7 @@ class PanelLogger(Logger):
             message = "{}: {}".format(message, params_str)
             manager = self._manager()
             if manager is not None:
-                manager.handle_server_message(":", message)
+                manager.handle_server_message_async(":", message)
 
         sublime.set_timeout_async(run_on_async_worker_thread)
 

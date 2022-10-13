@@ -1,5 +1,3 @@
-from .core.panels import is_panel_open
-from .core.panels import PanelName
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
@@ -123,18 +121,6 @@ class SessionBuffer:
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
-    def __del__(self) -> None:
-        mgr = self.session.manager()
-        if mgr and is_panel_open(mgr.window, PanelName.Diagnostics):
-            mgr.on_diagnostics_updated()
-        self.color_phantoms.update([])
-        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
-        # in unregistering ourselves from the session.
-        if not self.session.exiting:
-            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            self._check_did_close()
-            self.session.unregister_session_buffer_async(self)
-
     @property
     def session(self) -> Session:
         return self._session
@@ -194,7 +180,20 @@ class SessionBuffer:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
-            self.remove_all_inlay_hints()
+            self._on_before_destroy()
+
+    def _on_before_destroy(self) -> None:
+        self.remove_all_inlay_hints()
+        wm = self.session.manager()
+        if wm:
+            wm.on_diagnostics_updated()
+        self.color_phantoms.update([])
+        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
+        # in unregistering ourselves from the session.
+        if not self.session.exiting:
+            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
+            self._check_did_close()
+            self.session.unregister_session_buffer_async(self)
 
     def register_capability_async(
         self,

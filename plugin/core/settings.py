@@ -9,9 +9,6 @@ import os
 import sublime
 
 
-PLUGIN_NAME = 'LSP'
-
-
 class ClientConfigs:
 
     def __init__(self) -> None:

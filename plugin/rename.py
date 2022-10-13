@@ -1,14 +1,10 @@
 from .core.edit import parse_workspace_edit
 from .core.edit import TextEditTuple
-from .core.panels import ensure_panel
-from .core.panels import PanelName
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
-from .core.types import PANEL_FILE_REGEX
-from .core.types import PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
 from .core.url import parse_uri
 from .core.views import first_selection_region
@@ -172,7 +168,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        panel = ensure_rename_panel(wm.window)
+        panel = wm.panel_manager.ensure_rename_panel()
         if not panel:
             return
         to_render = []  # type: List[str]
@@ -201,13 +197,3 @@ class LspSymbolRenameCommand(LspTextCommand):
             'force': True,
             'scroll_to_end': False
         })
-
-
-def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(
-        window=window,
-        name=PanelName.Rename,
-        result_file_regex=PANEL_FILE_REGEX,
-        result_line_regex=PANEL_LINE_REGEX,
-        syntax="Packages/LSP/Syntaxes/References.sublime-syntax"
-    )

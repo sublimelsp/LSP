@@ -167,9 +167,13 @@ class LspRestartServerCommand(LspTextCommand):
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
     def run(self, config_name: Optional[str] = None) -> None:
-        wm = windows.lookup(self.window)
-        if wm:
-            sublime.set_timeout_async(lambda: wm.restart_sessions_async(config_name))
+
+        def run_async() -> None:
+            wm = windows.lookup(self.window)
+            if wm:
+                wm.restart_sessions_async(config_name)
+
+        sublime.set_timeout_async(run_async)
 
 
 def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:

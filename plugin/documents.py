@@ -3,7 +3,6 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
-from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.promise import Promise
 from .core.protocol import CompletionItem
@@ -398,20 +397,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         severity_threshold = userprefs().show_diagnostics_panel_on_save
         if severity_threshold == 0:
             return
-        window = self.view.window()
-        if not window or not self._manager:
+        if not self._manager:
             return
         has_relevant_diagnostcs = False
         for _, diagnostics in self._diagnostics_async(allow_stale=True):
             if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
                 has_relevant_diagnostcs = True
                 break
-        if is_panel_open(window, PanelName.Diagnostics):
+        if self._manager.is_panel_open(PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
-                self._manager.hide_diagnostics_panel_async()
+                self._manager.panel_manager.hide_diagnostics_panel_async()
         else:
             if has_relevant_diagnostcs:
-                self._manager.show_diagnostics_panel_async()
+                self._manager.panel_manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:

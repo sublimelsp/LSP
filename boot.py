@@ -16,13 +16,7 @@ from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
-from .plugin.core.panels import LspClearLogPanelCommand
-from .plugin.core.panels import LspClearPanelCommand
-from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
-from .plugin.core.panels import LspUpdatePanelCommand
-from .plugin.core.panels import LspUpdateLogPanelCommand
 from .plugin.core.panels import PanelName
-from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
 from .plugin.core.protocol import LocationLink
@@ -56,8 +50,13 @@ from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
+from .plugin.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.panels import LspToggleServerPanelCommand
+from .plugin.panels import LspUpdateLogPanelCommand
+from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveAllCommand
@@ -175,10 +174,14 @@ class Listener(sublime_plugin.EventListener):
                     break
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name == "show_panel" and args and args.get("panel") == "output.{}".format(PanelName.Diagnostics):
-            manager = windows.lookup(window)
-            if manager:
-                sublime.set_timeout_async(manager.update_diagnostics_panel_async)
+        if command_name == "show_panel":
+            wm = windows.lookup(window)
+            if not wm:
+                return
+            if wm.is_panel_open(PanelName.Diagnostics):
+                sublime.set_timeout_async(wm.update_diagnostics_panel_async)
+            elif wm.is_panel_open(PanelName.Log):
+                sublime.set_timeout(wm.panel_manager.update_log_panel)
 
 
 class LspOpenLocationCommand(sublime_plugin.TextCommand):

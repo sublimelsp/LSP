@@ -66,8 +66,8 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
 class WindowManager(Manager):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, configs: WindowConfigManager) -> None:
-        self._window = window
         self._destroyed = False
+        self._window = window
         self._configs = configs
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace

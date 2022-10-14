@@ -529,7 +529,7 @@
                 "sign",
                 ""
               ],
-              "default": "dot",
+              "default": "sign",
               "markdownDescription": "Gutter marker for code diagnostics."
             },
             "link_highlight_style": {

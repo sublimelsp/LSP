@@ -112,7 +112,7 @@
 
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
-  "diagnostics_gutter_marker": "dot",
+  "diagnostics_gutter_marker": "sign",
 
   // Highlight style of links to internal or external resources, like another text document
   // or a web site. Link navigation is implemented via the popup on mouse hover.

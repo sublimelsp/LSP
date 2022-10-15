@@ -46,10 +46,16 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 uri = uri_from_view(view)
             except MissingUriError:
                 return False
+        max_severity = userprefs().diagnostics_panel_include_severity_level
         if uri:
             parsed_uri = parse_uri(uri)
-            return any(parsed_uri in session.diagnostics for session in get_sessions(self.window))
-        return any(bool(session.diagnostics) for session in get_sessions(self.window))
+            return any(diagnostic for session in get_sessions(self.window)
+                       for diagnostic in session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
+                       if is_severity_included(max_severity)(diagnostic))
+        return any(diagnostic for session in get_sessions(self.window)
+                   for diagnostics in session.diagnostics.values()
+                   for diagnostic in diagnostics
+                   if is_severity_included(max_severity)(diagnostic))
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")

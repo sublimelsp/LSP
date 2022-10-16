@@ -86,6 +86,10 @@ class LspExecuteCommand(LspTextCommand):
                     command_args[i] = region.end()
                 elif arg in ["$position", "${position}"]:
                     command_args[i] = offset_to_point(view, region.b).to_lsp()
+                elif arg in ["$line", "${line}"]:
+                    command_args[i] = offset_to_point(view, region.b).row
+                elif arg in ["$character", "${character}"]:
+                    command_args[i] = offset_to_point(view, region.b).col
                 elif arg in ["$range", "${range}"]:
                     command_args[i] = region_to_range(view, region)
                 elif arg in ["$text_document_position", "${text_document_position}"]:

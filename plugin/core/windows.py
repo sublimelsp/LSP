@@ -497,7 +497,6 @@ class WindowRegistry:
     def __init__(self) -> None:
         self._enabled = False
         self._windows = {}  # type: Dict[int, WindowManager]
-        self._client_configs = client_configs
         client_configs.set_listener(self._on_client_config_updated)
 
     def _on_client_config_updated(self, config_name: Optional[str] = None) -> None:
@@ -526,7 +525,7 @@ class WindowRegistry:
         if wm:
             return wm
         workspace = ProjectFolders(window)
-        window_config_manager = WindowConfigManager(window, self._client_configs.all)
+        window_config_manager = WindowConfigManager(window, client_configs.all)
         manager = WindowManager(window, workspace, window_config_manager)
         self._windows[window.id()] = manager
         return manager

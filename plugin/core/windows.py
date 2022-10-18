@@ -522,7 +522,6 @@ class WindowRegistry:
     def lookup(self, window: Optional[sublime.Window]) -> Optional[WindowManager]:
         if not self._enabled or not window or not window.is_valid():
             return None
-        self._clear_invalid_windows_workaround()
         wm = self._windows.get(window.id())
         if wm:
             return wm
@@ -542,15 +541,6 @@ class WindowRegistry:
         wm = self._windows.pop(window.id(), None)
         if wm:
             wm.destroy()
-        self._clear_invalid_windows_workaround()
-
-    def _clear_invalid_windows_workaround(self) -> None:
-        # Due to "on_pre_close_window" not working currently (https://github.com/sublimehq/sublime_text/issues/5148)
-        # we'll check for invalid (closed) Windows and remove them from the list.
-        for key in list(self._windows.keys()):
-            window = self._windows[key].window
-            if not window.is_valid():
-                self.discard(window)
 
 
 class PanelLogger(Logger):

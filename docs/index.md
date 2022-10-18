@@ -1,3 +1,6 @@
+!!! warning
+    This documentation is for an outdated version of LSP for Sublime Text 3. Please go to [Sublime Text LSP Documentation](https://lsp.sublimetext.io/) to see the up-to-date documentation.
+
 ## Getting started
 
 1. Install a language server from the list below, ensuring it can be started from the command line (is in your PATH).

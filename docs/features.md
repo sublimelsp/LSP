@@ -1,3 +1,5 @@
+!!! warning
+    This documentation is for an outdated version of LSP for Sublime Text 3. Please go to [Sublime Text LSP Documentation](https://lsp.sublimetext.io/) to see the up-to-date documentation.
 
 ## Commands and shortcuts
 

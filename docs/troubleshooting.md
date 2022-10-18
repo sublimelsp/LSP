@@ -1,3 +1,6 @@
+!!! warning
+    This documentation is for an outdated version of LSP for Sublime Text 3. Please go to [Sublime Text LSP Documentation](https://lsp.sublimetext.io/) to see the up-to-date documentation.
+
 ## Self-help instructions
 
 Enable LSP logging: In LSP Settings enable the `log_debug` setting and `log_payloads` if needed.

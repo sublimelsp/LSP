@@ -1,5 +1,7 @@
 site_name: Sublime Text Language Server Protocol Documentation
 theme: readthedocs
+markdown_extensions:
+  - admonition
 
 nav:
     - Home: 'index.md'

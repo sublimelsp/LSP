@@ -28,8 +28,11 @@ class LspToggleServerPanelCommand(WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        wm.panel_manager.ensure_log_panel()
-        wm.panel_manager.toggle_output_panel(PanelName.Log)
+        panel_manager = wm.panel_manager
+        if not panel_manager:
+            return
+        panel_manager.ensure_log_panel()
+        panel_manager.toggle_output_panel(PanelName.Log)
 
 
 class LspShowDiagnosticsPanelCommand(WindowCommand):
@@ -37,8 +40,11 @@ class LspShowDiagnosticsPanelCommand(WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        wm.panel_manager.ensure_diagnostics_panel()
-        wm.panel_manager.toggle_output_panel(PanelName.Diagnostics)
+        panel_manager = wm.panel_manager
+        if not panel_manager:
+            return
+        panel_manager.ensure_diagnostics_panel()
+        panel_manager.toggle_output_panel(PanelName.Diagnostics)
 
 
 class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
@@ -59,7 +65,7 @@ class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        panel = wm.panel_manager.get_panel(PanelName.Log)
+        panel = wm.panel_manager and wm.panel_manager.get_panel(PanelName.Log)
         if panel:
             settings = panel.settings()
             settings.set(LOG_LINES_LIMIT_SETTING_NAME, not self.is_limit_enabled(wm.window))
@@ -123,6 +129,6 @@ class LspClearLogPanelCommand(sublime_plugin.TextCommand):
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        panel = wm.panel_manager.ensure_log_panel()
+        panel = wm.panel_manager and wm.panel_manager.ensure_log_panel()
         if panel:
             panel.run_command("lsp_clear_panel")

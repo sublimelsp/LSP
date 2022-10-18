@@ -399,17 +399,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if not self._manager:
             return
+        panel_manager = self._manager.panel_manager
+        if not panel_manager:
+            return
         has_relevant_diagnostcs = False
         for _, diagnostics in self._diagnostics_async(allow_stale=True):
             if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
                 has_relevant_diagnostcs = True
                 break
-        if self._manager.is_panel_open(PanelName.Diagnostics):
+        if panel_manager.is_panel_open(PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
-                self._manager.panel_manager.hide_diagnostics_panel_async()
+                panel_manager.hide_diagnostics_panel_async()
         else:
             if has_relevant_diagnostcs:
-                self._manager.panel_manager.show_diagnostics_panel_async()
+                panel_manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:

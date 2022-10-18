@@ -96,7 +96,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         wm = windows.lookup(session.window)
         if not wm:
             return
-        panel = wm.panel_manager.ensure_references_panel()
+        panel = wm.panel_manager and wm.panel_manager.ensure_references_panel()
         if not panel:
             return
         base_dir = wm.get_project_path(self.view.file_name() or "")

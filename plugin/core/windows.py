@@ -76,7 +76,7 @@ class WindowManager(Manager):
         self._new_session = None  # type: Optional[Session]
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self._server_log = []  # type: List[Tuple[str, str]]
-        self.panel_manager = PanelManager(self._window)
+        self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
@@ -402,10 +402,9 @@ class WindowManager(Manager):
         """
         self._destroyed = True
         self._end_sessions_async()
-        self.panel_manager.destroy_output_panels()
-
-    def is_panel_open(self, panel_name: str) -> bool:
-        return self.panel_manager.is_panel_open(panel_name)
+        if self.panel_manager:
+            self.panel_manager.destroy_output_panels()
+            self.panel_manager = None
 
     def handle_log_message(self, session: Session, params: Any) -> None:
         self.handle_server_message_async(session.config.name, extract_message(params))
@@ -425,13 +424,14 @@ class WindowManager(Manager):
         if list_len >= max_lines:
             # Trim leading items in the list, leaving only the max allowed count.
             del self._server_log[:list_len - max_lines]
-        self.panel_manager.update_log_panel()
+        if self.panel_manager:
+            self.panel_manager.update_log_panel()
 
     def get_log_lines_limit(self) -> int:
         return MAX_LOG_LINES_LIMIT_ON if self.is_log_lines_limit_enabled() else MAX_LOG_LINES_LIMIT_OFF
 
     def is_log_lines_limit_enabled(self) -> bool:
-        panel = self.panel_manager.get_panel(PanelName.Log)
+        panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
     def handle_show_message(self, session: Session, params: Any) -> None:
@@ -446,7 +446,7 @@ class WindowManager(Manager):
             self.total_warning_count += local_warnings
         for listener in list(self._listeners):
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
-        if self.is_panel_open(PanelName.Diagnostics):
+        if self.panel_manager and self.panel_manager.is_panel_open(PanelName.Diagnostics):
             self.update_diagnostics_panel_async()
 
     def update_diagnostics_panel_async(self) -> None:
@@ -479,7 +479,7 @@ class WindowManager(Manager):
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, characters, prephantoms))
 
     def _update_panel_main_thread(self, characters: str, prephantoms: List[Tuple[int, int, str, str]]) -> None:
-        panel = self.panel_manager.ensure_diagnostics_panel()
+        panel = self.panel_manager and self.panel_manager.ensure_diagnostics_panel()
         if not panel or not panel.is_valid():
             return
         panel.run_command("lsp_update_panel", {"characters": characters})

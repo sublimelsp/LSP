@@ -168,7 +168,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        panel = wm.panel_manager.ensure_rename_panel()
+        panel = wm.panel_manager and wm.panel_manager.ensure_rename_panel()
         if not panel:
             return
         to_render = []  # type: List[str]

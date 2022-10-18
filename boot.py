@@ -178,10 +178,13 @@ class Listener(sublime_plugin.EventListener):
             wm = windows.lookup(window)
             if not wm:
                 return
-            if wm.is_panel_open(PanelName.Diagnostics):
+            panel_manager = wm.panel_manager
+            if not panel_manager:
+                return
+            if panel_manager.is_panel_open(PanelName.Diagnostics):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
-            elif wm.is_panel_open(PanelName.Log):
-                sublime.set_timeout(wm.panel_manager.update_log_panel)
+            elif panel_manager.is_panel_open(PanelName.Log):
+                sublime.set_timeout(panel_manager.update_log_panel)
 
 
 class LspOpenLocationCommand(sublime_plugin.TextCommand):

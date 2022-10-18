@@ -117,8 +117,6 @@ def plugin_unloaded() -> None:
     unload_settings()
 
 
-wl = []  # type: List[int]
-
 class Listener(sublime_plugin.EventListener):
 
     def on_exit(self) -> None:

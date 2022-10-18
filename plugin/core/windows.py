@@ -65,7 +65,6 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
 class WindowManager(Manager):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
-        self._destroyed = False
         self._window = window
         self._config_manager = config_manager
         self._sessions = WeakSet()  # type: WeakSet[Session]
@@ -400,7 +399,6 @@ class WindowManager(Manager):
         This is called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
         from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful
         """
-        self._destroyed = True
         self._end_sessions_async()
         if self.panel_manager:
             self.panel_manager.destroy_output_panels()
@@ -416,8 +414,6 @@ class WindowManager(Manager):
         sublime.set_timeout(lambda: self.log_server_message(server_name, message))
 
     def log_server_message(self, prefix: str, message: str) -> None:
-        if self._destroyed:
-            return
         self._server_log.append((prefix, message))
         list_len = len(self._server_log)
         max_lines = self.get_log_lines_limit()

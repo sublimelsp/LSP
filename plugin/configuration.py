@@ -45,11 +45,11 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             return
         self._items = [config.name for config in client_configs.all.values() if config.enabled]
         if len(self._items) > 0:
-            self.window.show_quick_panel(self._items, partial(self._on_done, wm))
+            self.window.show_quick_panel(self._items, self._on_done)
         else:
             self.window.status_message("No config available to disable")
 
-    def _on_done(self, wm: WindowManager, index: int) -> None:
+    def _on_done(self, index: int) -> None:
         if index == -1:
             return
         config_name = self._items[index]

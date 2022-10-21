@@ -94,7 +94,6 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         super().__init__(view)
         self.old_regions = []  # type: List[sublime.Region]
         self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region], str]]
-        self.is_first_selection = False
 
     def run(self, edit: sublime.Edit, event: Optional[Dict[str, Any]] = None) -> None:
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
@@ -109,13 +108,22 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
         window = self.view.window()
         if window and isinstance(response, list) and len(response) > 0:
+            panel_items = self.process_symbols(response)
             self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
-            self.is_first_selection = True
+            # Find region that is either intersecting or before to the current selection end.
+            selected_index = 0
+            if len(self.old_regions):
+                first_selection = self.old_regions[0]
+                for i, (r, _, _) in enumerate(self.regions):
+                    if r.begin() <= first_selection.b:
+                        selected_index = i
+                    else:
+                        break
             window.show_quick_panel(
-                self.process_symbols(response),
+                panel_items,
                 self.on_symbol_selected,
                 sublime.KEEP_OPEN_ON_FOCUS_LOST,
-                0,
+                selected_index,
                 self.on_highlighted)
             self.view.run_command("lsp_selection_clear")
 
@@ -146,9 +154,6 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.regions.clear()
 
     def on_highlighted(self, index: int) -> None:
-        if self.is_first_selection:
-            self.is_first_selection = False
-            return
         region = self.region(index)
         self.view.show_at_center(region.a)
         self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)

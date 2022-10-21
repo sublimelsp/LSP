@@ -7,24 +7,6 @@ import sublime
 import urllib.parse
 
 
-class ConfigManager(object):
-    """Distributes language client configuration between windows"""
-
-    def __init__(self, global_configs: Dict[str, ClientConfig]) -> None:
-        self._configs = global_configs
-        self._managers = {}  # type: Dict[int, WindowConfigManager]
-
-    def for_window(self, window: sublime.Window) -> 'WindowConfigManager':
-        window_configs = WindowConfigManager(window, self._configs)
-        self._managers[window.id()] = window_configs
-        return window_configs
-
-    def update(self, config_name: Optional[str] = None) -> None:
-        for window in sublime.windows():
-            if window.id() in self._managers:
-                self._managers[window.id()].update(config_name)
-
-
 class WindowConfigManager(object):
     def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window

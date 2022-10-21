@@ -1,15 +1,12 @@
-from .core.panels import ensure_panel
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.sessions import Session
-from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.types import PANEL_FILE_REGEX
-from .core.types import PANEL_LINE_REGEX
 from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_uri_and_position_from_location
@@ -19,11 +16,6 @@ import functools
 import linecache
 import os
 import sublime
-
-
-def ensure_references_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
-                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -101,17 +93,16 @@ class LspSymbolReferencesCommand(LspTextCommand):
         LocationPicker(self.view, session, locations, side_by_side)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
-        window = session.window
-        panel = ensure_references_panel(window)
+        wm = windows.lookup(session.window)
+        if not wm:
+            return
+        panel = wm.panel_manager and wm.panel_manager.ensure_references_panel()
         if not panel:
             return
-        manager = session.manager()
-        if not manager:
-            return
-        base_dir = manager.get_project_path(self.view.file_name() or "")
+        base_dir = wm.get_project_path(self.view.file_name() or "")
         to_render = []  # type: List[str]
         references_count = 0
-        references_by_file = _group_locations_by_uri(window, session.config, locations)
+        references_by_file = _group_locations_by_uri(wm.window, session.config, locations)
         for file, references in references_by_file.items():
             to_render.append('{}:'.format(_get_relative_path(base_dir, file)))
             for reference in references:
@@ -122,7 +113,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         characters = "\n".join(to_render)
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.references"})
+        wm.window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
             'characters': "{} references for '{}'\n\n{}".format(references_count, word, characters),
             'force': True,

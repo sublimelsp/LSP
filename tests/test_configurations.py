@@ -1,4 +1,3 @@
-from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import WindowConfigManager
 from test_mocks import DISABLED_CONFIG
 from test_mocks import TEST_CONFIG
@@ -10,21 +9,18 @@ import unittest
 class GlobalConfigManagerTests(unittest.TestCase):
 
     def test_empty_configs(self):
-        manager = ConfigManager({})
-        window_mgr = manager.for_window(sublime.active_window())
+        window_mgr = WindowConfigManager(sublime.active_window(), {})
         self.assertNotIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_global_config(self):
-        manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
-        window_mgr = manager.for_window(sublime.active_window())
+        window_mgr = WindowConfigManager(sublime.active_window(), {TEST_CONFIG.name: TEST_CONFIG})
         self.assertIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_override_config(self):
-        manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
         self.assertTrue(TEST_CONFIG.enabled)
         win = sublime.active_window()
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
-        window_mgr = manager.for_window(win)
+        window_mgr = WindowConfigManager(win, {TEST_CONFIG.name: TEST_CONFIG})
         self.assertFalse(list(window_mgr.all.values())[0].enabled)
 
 

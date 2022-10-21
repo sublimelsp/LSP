@@ -9,9 +9,6 @@ import os
 import sublime
 
 
-PLUGIN_NAME = 'LSP'
-
-
 class ClientConfigs:
 
     def __init__(self) -> None:
@@ -45,12 +42,12 @@ class ClientConfigs:
             # Each plugin is loaded 100 milliseconds after the previous plugin.
             # Therefore, we get a sequence of calls to `register_plugin` from all LSP-* helper packages, separated
             # in time intervals of 100 milliseconds.
-            # When calling self._notify_listener, we are calling ConfigManager.update.
+            # When calling self._notify_listener, we are calling WindowConfigManager.update.
             # That object, in turn, calls WindowConfigManager.update for each window.
             # In turn, each window starts iterating all of its attached views for language servers to attach.
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
-            # operation. To ensure that this dance is done only once, we delay notifying the ConfigManager until all
-            # plugins have done their `register_plugin` call.
+            # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
+            # all plugins have done their `register_plugin` call.
             debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
         return True
 
@@ -118,9 +115,6 @@ client_configs = ClientConfigs()
 
 
 def _on_sublime_settings_changed() -> None:
-    global _settings_obj
-    global _settings
-    global client_configs
     if _settings_obj is None or _settings is None:
         return
     _settings.update(_settings_obj)
@@ -132,30 +126,29 @@ def load_settings() -> None:
     global _settings_obj
     global _settings
     global _settings_registration
-    if _settings_obj is None:
+    if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
+    if _settings_obj is None:
         _settings_obj = sublime.load_settings("LSP.sublime-settings")
         _settings = Settings(_settings_obj)
         _settings_registration = SettingsRegistration(_settings_obj, _on_sublime_settings_changed)
 
 
 def unload_settings() -> None:
-    global _global_settings
     global _settings_obj
+    global _settings
     global _settings_registration
     if _settings_obj is not None:
-        _global_settings = None
         _settings_registration = None
-        _settings_obj = None
+        _settings_obj = sublime.load_settings("")
+        _settings = Settings(_settings_obj)
 
 
 def userprefs() -> Settings:
-    global _settings
     return _settings  # type: ignore
 
 
 def globalprefs() -> sublime.Settings:
-    global _global_settings
     return _global_settings  # type: ignore
 
 

@@ -3,7 +3,6 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
-from .core.panels import is_panel_open
 from .core.panels import PanelName
 from .core.promise import Promise
 from .core.protocol import CompletionItem
@@ -203,7 +202,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             new_window = self.view.window()
             if not new_window:
                 return
-            old_window = self._manager.window()
+            old_window = self._manager.window
             if new_window.id() == old_window.id():
                 return
             self._manager.unregister_listener_async(self)
@@ -398,20 +397,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         severity_threshold = userprefs().show_diagnostics_panel_on_save
         if severity_threshold == 0:
             return
-        window = self.view.window()
-        if not window or not self._manager:
+        if not self._manager:
+            return
+        panel_manager = self._manager.panel_manager
+        if not panel_manager:
             return
         has_relevant_diagnostcs = False
         for _, diagnostics in self._diagnostics_async(allow_stale=True):
             if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
                 has_relevant_diagnostcs = True
                 break
-        if is_panel_open(window, PanelName.Diagnostics):
+        if panel_manager.is_panel_open(PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
-                self._manager.hide_diagnostics_panel_async()
+                panel_manager.hide_diagnostics_panel_async()
         else:
             if has_relevant_diagnostcs:
-                self._manager.show_diagnostics_panel_async()
+                panel_manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -862,10 +863,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self._registered = True
         if not self._manager:
-            window = self.view.window()
-            if not window:
-                return
-            self._manager = windows.lookup(window)
+            self._manager = windows.lookup(self.view.window())
+        if not self._manager:
+            return
         self._manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):

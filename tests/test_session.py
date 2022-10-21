@@ -43,12 +43,6 @@ class MockManager(Manager):
     def on_diagnostics_updated(self) -> None:
         pass
 
-    def show_diagnostics_panel_async(self) -> None:
-        pass
-
-    def hide_diagnostics_panel_async(self) -> None:
-        pass
-
 
 class MockLogger(Logger):
 

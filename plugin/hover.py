@@ -117,11 +117,10 @@ class LspHoverCommand(LspTextCommand):
                 temp_point = region.begin()
         if temp_point is None:
             return
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
         hover_point = temp_point
-        wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._document_link = ('', False, None)  # type: Tuple[str, bool, Optional[sublime.Region]]

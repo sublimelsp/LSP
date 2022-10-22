@@ -55,7 +55,7 @@ DIAGNOSTIC_SEVERITY = [
     ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
     ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
     ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
 ]  # type: List[Tuple[str, str, str, str, int, int]]
 
 # sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem
@@ -813,14 +813,14 @@ def color_to_hex(color: Color) -> str:
     return "#{:02x}{:02x}{:02x}".format(red, green, blue)
 
 
-def lsp_color_to_html(view: sublime.View, color_info: ColorInformation) -> str:
+def lsp_color_to_html(color_info: ColorInformation) -> str:
     command = sublime.command_url('lsp_color_presentation', {'color_information': color_info})
     return COLOR_BOX_HTML.format(command=command, color=color_to_hex(color_info['color']))
 
 
 def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
     region = range_to_region(color_info['range'], view)
-    return sublime.Phantom(region, lsp_color_to_html(view, color_info), sublime.LAYOUT_INLINE)
+    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
 
 
 def document_color_params(view: sublime.View) -> Dict[str, Any]:

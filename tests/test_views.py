@@ -329,7 +329,7 @@ class ViewsTest(DeferrableTestCase):
             }
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
-        self.assertEqual(phantom.content, lsp_color_to_html(self.view, response[0]))
+        self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
         self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
 
     def test_document_color_params(self) -> None:

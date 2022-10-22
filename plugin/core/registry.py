@@ -1,18 +1,21 @@
-from .configurations import ConfigManager
 from .protocol import Diagnostic
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
-from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable, List
 from .views import first_selection_region
 from .views import MissingUriError
 from .views import point_to_offset
 from .views import uri_from_view
+from .windows import WindowManager
 from .windows import WindowRegistry
+from functools import partial
 import operator
 import sublime
 import sublime_plugin
+
+
+windows = WindowRegistry()
 
 
 def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
@@ -25,11 +28,6 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: Optiona
         return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))  # type: ignore
     except ValueError:
         return None
-
-
-configs = ConfigManager(client_configs.all)
-client_configs.set_listener(configs.update)
-windows = WindowRegistry(configs)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[int]:
@@ -63,7 +61,10 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return self.session() is not None
 
     def session(self) -> Optional[Session]:
-        for session in windows.lookup(self.window).get_sessions():
+        wm = windows.lookup(self.window)
+        if not wm:
+            return None
+        for session in wm.get_sessions():
             if self.capability and not session.has_capability(self.capability):
                 continue
             if self.session_name and session.config.name != self.session_name:
@@ -137,37 +138,38 @@ class LspTextCommand(sublime_plugin.TextCommand):
 class LspRestartServerCommand(LspTextCommand):
 
     def run(self, edit: Any, config_name: Optional[str] = None) -> None:
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
         if not self._config_names:
             return
-        self._wm = windows.lookup(window)
         if len(self._config_names) == 1:
-            self.restart_server(0)
+            self.restart_server(wm, 0)
         else:
-            window.show_quick_panel(self._config_names, self.restart_server)
+            wm.window.show_quick_panel(self._config_names, partial(self.restart_server, wm))
 
-    def restart_server(self, index: int) -> None:
-        if index < 0:
+    def restart_server(self, wm: WindowManager, index: int) -> None:
+        if index == -1:
             return
 
         def run_async() -> None:
             config_name = self._config_names[index]
-            if not config_name:
-                return
-            self._wm._end_sessions_async(config_name)
-            listener = windows.listener_for_view(self.view)
-            if listener:
-                self._wm.register_listener_async(listener)
+            if config_name:
+                wm.restart_sessions_async(config_name)
 
         sublime.set_timeout_async(run_async)
 
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
     def run(self, config_name: Optional[str] = None) -> None:
-        sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))
+
+        def run_async() -> None:
+            wm = windows.lookup(self.window)
+            if wm:
+                wm.restart_sessions_async(config_name)
+
+        sublime.set_timeout_async(run_async)
 
 
 def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
@@ -175,11 +177,11 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
         uri = uri_from_view(view)
     except MissingUriError:
         return
-    window = view.window()
-    if not window:
+    wm = windows.lookup(view.window())
+    if not wm:
         return
     diagnostics = []  # type: List[Diagnostic]
-    for session in windows.lookup(window).get_sessions():
+    for session in wm.get_sessions():
         diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:
         return

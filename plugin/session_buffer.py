@@ -1,7 +1,6 @@
-from .core.panels import is_panel_open
-from .core.panels import PanelName
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import InlayHint
@@ -68,7 +67,7 @@ class DiagnosticSeverityData:
         self.annotations = []  # type: List[str]
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = userprefs().diagnostics_gutter_marker
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class SemanticTokensData:
@@ -122,18 +121,6 @@ class SessionBuffer:
         self.inlay_hints_needs_refresh = False
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
-
-    def __del__(self) -> None:
-        mgr = self.session.manager()
-        if mgr and is_panel_open(mgr.window(), PanelName.Diagnostics):
-            mgr.on_diagnostics_updated()
-        self.color_phantoms.update([])
-        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
-        # in unregistering ourselves from the session.
-        if not self.session.exiting:
-            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            self._check_did_close()
-            self.session.unregister_session_buffer_async(self)
 
     @property
     def session(self) -> Session:
@@ -194,7 +181,20 @@ class SessionBuffer:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
-            self.remove_all_inlay_hints()
+            self._on_before_destroy()
+
+    def _on_before_destroy(self) -> None:
+        self.remove_all_inlay_hints()
+        wm = self.session.manager()
+        if wm:
+            wm.on_diagnostics_updated()
+        self.color_phantoms.update([])
+        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
+        # in unregistering ourselves from the session.
+        if not self.session.exiting:
+            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
+            self._check_did_close()
+            self.session.unregister_session_buffer_async(self)
 
     def register_capability_async(
         self,
@@ -350,7 +350,8 @@ class SessionBuffer:
         if response is None:  # Guard against spec violation from certain language servers
             self.color_phantoms.update([])
             return
-        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in response])
+        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
+        sublime.set_timeout(lambda: self.color_phantoms.update(phantoms))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 

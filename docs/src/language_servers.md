@@ -28,7 +28,7 @@ Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LS
 
 ## C/C++
 
-See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
+Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/LSP-clangd).
 
 ## C\#
 
@@ -555,37 +555,7 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 
 ## Terraform
 
-1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
-
-    For `terraform-ls`:
-
-    ```json
-    {
-        "clients": {
-            "terraform": {
-                "enabled": true,
-                "command": ["terraform-ls", "serve"],
-                "selector": "source.terraform"
-            }
-        }
-    }
-    ```
-
-    For `terraform-lsp`:
-
-    ```json
-    {
-        "clients": {
-            "terraform": {
-                "enabled": true,
-                "command": ["terraform-lsp"],
-                "selector": "source.terraform"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-terraform](https://github.com/sublimelsp/LSP-terraform).
 
 ## Vue
 

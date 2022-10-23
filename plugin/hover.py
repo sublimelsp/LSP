@@ -206,8 +206,6 @@ class LspHoverCommand(LspTextCommand):
                     lambda link: self._on_resolved_link(sv.session_buffer, link)))
         if link_promises:
             Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
-        else:
-            self.document_links = []
 
     def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> DocumentLink:
         session_buffer.update_document_link(link)
@@ -216,7 +214,7 @@ class LspHoverCommand(LspTextCommand):
     def _on_all_document_links_resolved(
         self, listener: AbstractViewListener, point: int, links: List[DocumentLink]
     ) -> None:
-        self.document_links = links
+        self._document_links = links
         self.show_hover(listener, point, only_diagnostics=False)
 
     def _handle_code_actions(
@@ -236,16 +234,16 @@ class LspHoverCommand(LspTextCommand):
         return " | ".join(actions) if actions else ""
 
     def link_content_and_range(self) -> Tuple[str, Optional[sublime.Region]]:
-        if len(self.document_links) > 1:
-            combined_region = range_to_region(self.document_links[0]["range"], self.view)
-            for link in self.document_links[1:]:
+        if len(self._document_links) > 1:
+            combined_region = range_to_region(self._document_links[0]["range"], self.view)
+            for link in self._document_links[1:]:
                 combined_region = combined_region.cover(range_to_region(link["range"], self.view))
-            if all(link.get("target") for link in self.document_links):
+            if all(link.get("target") for link in self._document_links):
                 return '<a href="quick-panel:DocumentLink">Follow Link…</a>', combined_region
             else:
                 return "Follow Link…", combined_region
-        elif len(self.document_links) == 1:
-            link = self.document_links[0]
+        elif len(self._document_links) == 1:
+            link = self._document_links[0]
             target = link.get("target")
             label = "Follow Link" if link.get("target", "file:").startswith("file:") else "Open in Browser"
             title = link.get("tooltip")
@@ -354,7 +352,7 @@ class LspHoverCommand(LspTextCommand):
         elif href == "quick-panel:DocumentLink":
             window = self.view.window()
             if window:
-                targets = [link["target"] for link in self.document_links]  # pyright: ignore
+                targets = [link["target"] for link in self._document_links]  # pyright: ignore
 
                 def on_select(targets: List[str], idx: int) -> None:
                     if idx > -1:

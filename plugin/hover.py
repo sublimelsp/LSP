@@ -247,7 +247,7 @@ class LspHoverCommand(LspTextCommand):
             target = link.get("target")
             label = "Follow Link" if link.get("target", "file:").startswith("file:") else "Open in Browser"
             title = link.get("tooltip")
-            tooltip = 'title="{}"'.format(html.escape(title)) if title else ""
+            tooltip = ' title="{}"'.format(html.escape(title)) if title else ""
             region = range_to_region(link["range"], self.view)
             return '<a href="{}"{}>{}</a>'.format(html.escape(target), tooltip, label) if target else label, region
         else:

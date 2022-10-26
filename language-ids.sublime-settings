@@ -91,6 +91,7 @@
     "source.yaml.yarn": "yaml", // https://github.com/SublimeText/AFileIcon
     "text.advanced_csv": "csv", // https://github.com/SublimeText/AFileIcon
     "text.html.basic": "html",
+    "text.html.elixir": "html",  // https://github.com/elixir-editors/elixir-tmbundle
     "text.html.markdown.academicmarkdown": "markdown", // https://github.com/mangecoeur/AcademicMarkdown
     "text.html.markdown.license": "markdown", // https://github.com/SublimeText/AFileIcon
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r

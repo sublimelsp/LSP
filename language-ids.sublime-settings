@@ -95,6 +95,7 @@
     "text.html.markdown.license": "markdown", // https://github.com/SublimeText/AFileIcon
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
     "text.html.ngx": "html", // https://github.com/princemaple/ngx-html-syntax
+    "text.jinja": "html", // https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "txt",
     "text.plain.buildpacks": "txt", // https://github.com/SublimeText/AFileIcon
     "text.plain.eslint": "txt", // https://github.com/SublimeText/AFileIcon

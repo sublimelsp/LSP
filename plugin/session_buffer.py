@@ -322,9 +322,15 @@ class SessionBuffer:
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
 
     def some_view(self) -> Optional[sublime.View]:
+        if not self.session_views:
+            return None
+        # Prefer active view if possible
+        active_view = self.session.window.active_view()
+        for sv in self.session_views:
+            if sv.view == active_view:
+                return active_view
         for sv in self.session_views:
             return sv.view
-        return None
 
     def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
         """

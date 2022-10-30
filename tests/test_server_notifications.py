@@ -36,22 +36,19 @@ class ServerNotifications(TextDocumentTestCase):
             ]
         }  # type: PublishDiagnosticsParams
         yield from self.await_client_notification("textDocument/publishDiagnostics", params)
-        yield lambda: len(self.view.get_regions("lspTESTds1_icon")) > 0
-        yield lambda: len(self.view.get_regions("lspTESTds1_underline")) > 0
-        yield lambda: len(self.view.get_regions("lspTESTds2_icon")) > 0
-        yield lambda: len(self.view.get_regions("lspTESTds2_underline")) > 0
-        yield lambda: len(self.view.get_regions("lspTESTds3_icon")) > 0
-        yield lambda: len(self.view.get_regions("lspTESTds3_underline")) > 0
+        errors_icon_regions = self.view.get_regions("lspTESTds1_icon")
+        errors_underline_regions = self.view.get_regions("lspTESTds1_underline")
+        warnings_icon_regions = self.view.get_regions("lspTESTds2_icon")
+        warnings_underline_regions = self.view.get_regions("lspTESTds2_underline")
+        info_icon_regions = self.view.get_regions("lspTESTds3_icon")
+        info_underline_regions = self.view.get_regions("lspTESTds3_underline")
+        yield lambda: len(errors_icon_regions) == len(errors_underline_regions) == 1
+        yield lambda: len(warnings_icon_regions) == len(warnings_underline_regions) == 1
+        yield lambda: len(info_icon_regions) == len(info_underline_regions) == 1
         yield lambda: len(self.view.get_regions("lspTESTds3_tags")) == 0
-        errors = self.view.get_regions("lspTESTds1")
-        warnings = self.view.get_regions("lspTESTds2")
-        info = self.view.get_regions("lspTESTds3")
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0], sublime.Region(0, 1))
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0], sublime.Region(2, 3))
-        self.assertEqual(len(info), 1)
-        self.assertEqual(info[0], sublime.Region(4, 5))
+        self.assertEqual(errors_underline_regions[0], sublime.Region(0, 1))
+        self.assertEqual(warnings_underline_regions[0], sublime.Region(2, 3))
+        self.assertEqual(info_underline_regions[0], sublime.Region(4, 5))
 
         # Testing whether the cursor position moves along with lsp_next_diagnostic
 

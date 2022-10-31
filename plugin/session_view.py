@@ -11,7 +11,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import debounced
-from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
+from .core.typing import Any, Iterable, List, Set, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
 from .session_buffer import SessionBuffer
@@ -270,7 +270,7 @@ class SessionView:
                 return 'markup.{}.lsp'.format(k.lower())
         return None
 
-    def present_diagnostics_async(self) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
@@ -279,7 +279,7 @@ class SessionView:
             self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], True)
         listener = self.listener()
         if listener:
-            listener.on_diagnostics_updated_async()
+            listener.on_diagnostics_updated_async(is_view_visible)
 
     def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE

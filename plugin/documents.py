@@ -280,9 +280,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 result.append((sb, intersections))
         return result, covering
 
-    def on_diagnostics_updated_async(self) -> None:
+    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         self._clear_code_actions_annotation()
-        if userprefs().show_code_actions:
+        if is_view_visible and userprefs().show_code_actions:
             self._do_code_actions_async()
         self._update_diagnostic_in_status_bar_async()
         window = self.view.window()
@@ -341,22 +341,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_load_async(self) -> None:
         if not self._registered and is_regular_view(self.view):
             self._register_async()
+            return
+        self.on_activated_async()
 
     def on_activated_async(self) -> None:
-        if not self.view.is_loading() and is_regular_view(self.view):
-            if not self._registered:
-                self._register_async()
-            for sv in self.session_views_async():
-                if sv.code_lenses_needs_refresh:
-                    sv.set_code_lenses_pending_refresh(False)
-                    sv.start_code_lenses_async()
-            for sb in self.session_buffers_async():
-                if sb.semantic_tokens.needs_refresh:
-                    sb.set_semantic_tokens_pending_refresh(False)
-                    sb.do_semantic_tokens_async(self.view)
-                if sb.inlay_hints_needs_refresh:
-                    sb.set_inlay_hints_pending_refresh(False)
-                    sb.do_inlay_hints_async(self.view)
+        if self.view.is_loading() or not is_regular_view(self.view):
+            return
+        if not self._registered:
+            self._register_async()
+        if userprefs().show_code_actions:
+            self._do_code_actions_async()
+        for sv in self.session_views_async():
+            if sv.code_lenses_needs_refresh:
+                sv.set_code_lenses_pending_refresh(False)
+                sv.start_code_lenses_async()
+        for sb in self.session_buffers_async():
+            if sb.semantic_tokens.needs_refresh:
+                sb.set_semantic_tokens_pending_refresh(False)
+                sb.do_semantic_tokens_async(self.view)
+            if sb.inlay_hints_needs_refresh:
+                sb.set_inlay_hints_pending_refresh(False)
+                sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()

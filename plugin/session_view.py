@@ -80,8 +80,10 @@ class SessionView:
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions(self.diagnostics_key(severity, False))
-            self.view.erase_regions(self.diagnostics_key(severity, True))
+            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, False)))
+            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, False)))
+            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, True)))
+            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, True)))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
         listener = self.listener()
@@ -137,7 +139,10 @@ class SessionView:
         self.view.add_regions("lsp_document_link", r)
         for severity in range(1, 5):
             for mode in line_modes:
-                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+                self.view.add_regions("lsp{}d{}{}_icon".format(self.session.config.name, mode, severity), r)
+        for severity in range(4, 0, -1):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}_underline".format(self.session.config.name, mode, severity), r)
         if document_highlight_style in ("underline", "stippled"):
             for kind in document_highlight_kinds:
                 for mode in line_modes:
@@ -280,6 +285,7 @@ class SessionView:
             listener.on_diagnostics_updated_async()
 
     def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
+        ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         key = self.diagnostics_key(severity, multiline)
         key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
         for key_tag in key_tags.values():
@@ -294,9 +300,11 @@ class SessionView:
                     self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags)
+            self.view.add_regions("{}_icon".format(key), non_tag_regions, data.scope, data.icon, ICON_FLAGS)
+            self.view.add_regions("{}_underline".format(key), non_tag_regions, data.scope, "", flags)
         else:
-            self.view.erase_regions(key)
+            self.view.erase_regions("{}_icon".format(key))
+            self.view.erase_regions("{}_underline".format(key))
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request

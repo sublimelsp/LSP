@@ -893,7 +893,7 @@ def location_to_human_readable(
     config: ClientConfig,
     base_dir: Optional[str],
     location: Union[Location, LocationLink]
-) -> sublime.QuickPanelItem:
+) -> str:
     """
     Format an LSP Location (or LocationLink) into a string suitable for a human to read
     """
@@ -911,8 +911,7 @@ def location_to_human_readable(
         # https://tools.ietf.org/html/rfc5147
         fmt = "{}#line={}"
         pathname = uri
-    return sublime.QuickPanelItem(
-        fmt.format(pathname, position["line"] + 1), annotation=config.name, kind=SYMBOL_KINDS[SymbolKind.File])
+    return fmt.format(pathname, position["line"] + 1)
 
 
 def location_to_href(config: ClientConfig, location: Union[Location, LocationLink]) -> str:

@@ -5,6 +5,7 @@ from .core.sessions import Session
 from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
+from .core.views import SYMBOL_KINDS, SymbolKind
 from .core.views import to_encoded_filename
 from urllib.request import url2pathname
 import functools
@@ -77,8 +78,14 @@ class LocationPicker:
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
         self._window.focus_group(group)
+        config_name = session.config.name
+        kind = SYMBOL_KINDS[SymbolKind.File]
         self._window.show_quick_panel(
-            items=[location_to_human_readable(session.config, base_dir, location) for location in locations],
+            items=[
+                sublime.QuickPanelItem(
+                    location_to_human_readable(session.config, base_dir, location), annotation=config_name, kind=kind)
+                for location in locations
+            ],
             on_select=self._select_entry,
             on_highlight=self._highlight_entry,
             flags=sublime.KEEP_OPEN_ON_FOCUS_LOST

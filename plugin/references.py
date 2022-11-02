@@ -11,6 +11,7 @@ from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
+from .core.views import word
 from .locationpicker import LocationPicker
 import functools
 import linecache
@@ -54,7 +55,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 request,
                 functools.partial(
                     self._handle_response_async,
-                    self.view.substr(self.view.word(pos)),
+                    word(self.view, pos),
                     session,
                     side_by_side,
                     fallback
@@ -73,7 +74,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
     ) -> None:
         if response:
             if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(session, response, side_by_side)
+                self._show_references_in_quick_panel(word, session, response, side_by_side)
             else:
                 self._show_references_in_output_panel(word, session, response)
         else:
@@ -88,9 +89,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
         else:
             window.status_message("No references found")
 
-    def _show_references_in_quick_panel(self, session: Session, locations: List[Location], side_by_side: bool) -> None:
+    def _show_references_in_quick_panel(
+            self, word: str, session: Session, locations: List[Location], side_by_side: bool
+        ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-        LocationPicker(self.view, session, locations, side_by_side)
+        LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
         wm = windows.lookup(session.window)

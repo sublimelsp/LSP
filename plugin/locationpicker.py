@@ -62,7 +62,8 @@ class LocationPicker:
         session: Session,
         locations: Union[List[Location], List[LocationLink]],
         side_by_side: bool,
-        group: int = -1
+        group: int = -1,
+        placeholder: str = ""
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -88,7 +89,8 @@ class LocationPicker:
             ],
             on_select=self._select_entry,
             on_highlight=self._highlight_entry,
-            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST
+            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+            placeholder=placeholder
         )
 
     def _unpack(self, index: int) -> Tuple[Optional[Session], Union[Location, LocationLink], DocumentUri, Position]:

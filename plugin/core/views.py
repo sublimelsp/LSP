@@ -327,6 +327,10 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
+def word(view: sublime.View, offset: int) -> str:
+    return view.substr(view.expand_by_class(offset, sublime.CLASS_WORD_START | sublime.CLASS_WORD_END, "[]{}()<>:."))
+
+
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
     start = Point.from_lsp(range['start'])
     end = Point.from_lsp(range['end'])

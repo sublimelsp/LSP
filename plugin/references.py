@@ -91,7 +91,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def _show_references_in_quick_panel(
             self, word: str, session: Session, locations: List[Location], side_by_side: bool
-        ) -> None:
+    ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
         LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word)
 

@@ -378,6 +378,8 @@ class WindowManager(Manager):
                 for pattern in folder.get('folder_exclude_patterns', []):
                     if pattern.startswith('//'):
                         patterns.append(sublime_pattern_to_glob(pattern, True, folder['path']))
+                    elif pattern.startswith('/'):
+                        patterns.append(sublime_pattern_to_glob(pattern, True))
                     else:
                         patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder['path']))
                         patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder['path']))

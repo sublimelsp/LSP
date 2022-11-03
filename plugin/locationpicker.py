@@ -5,6 +5,7 @@ from .core.sessions import Session
 from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
+from .core.views import SublimeKind
 from .core.views import to_encoded_filename
 from urllib.request import url2pathname
 import functools
@@ -62,7 +63,8 @@ class LocationPicker:
         locations: Union[List[Location], List[LocationLink]],
         side_by_side: bool,
         group: int = -1,
-        placeholder: str = ""
+        placeholder: str = "",
+        kind: SublimeKind = sublime.KIND_AMBIGUOUS
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -82,7 +84,7 @@ class LocationPicker:
         self._window.show_quick_panel(
             items=[
                 sublime.QuickPanelItem(
-                    location_to_human_readable(session.config, base_dir, location), annotation=config_name)
+                    location_to_human_readable(session.config, base_dir, location), annotation=config_name, kind=kind)
                 for location in locations
             ],
             on_select=self._select_entry,

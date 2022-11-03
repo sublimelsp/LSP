@@ -9,6 +9,7 @@ from .core.settings import userprefs
 from .core.types import ClientConfig
 from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
+from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
 from .core.views import word
@@ -58,23 +59,36 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     word(self.view, pos),
                     session,
                     side_by_side,
-                    fallback
+                    fallback,
+                    pos
                 )
             )
         else:
             self._handle_no_results(fallback, side_by_side)
 
     def _handle_response_async(
-        self, word: str, session: Session, side_by_side: bool, fallback: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        fallback: bool,
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
-        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, fallback, response))
+        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, fallback, position, response))
 
     def _handle_response(
-        self, word: str, session: Session, side_by_side: bool, fallback: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        fallback: bool,
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
         if response:
             if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(word, session, response, side_by_side)
+                self._show_references_in_quick_panel(word, session, response, side_by_side, position)
             else:
                 self._show_references_in_output_panel(word, session, response)
         else:
@@ -90,10 +104,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
             window.status_message("No references found")
 
     def _show_references_in_quick_panel(
-            self, word: str, session: Session, locations: List[Location], side_by_side: bool
+            self, word: str, session: Session, locations: List[Location], side_by_side: bool, position: int
     ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-        LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word)
+        kind = get_symbol_kind_from_scope(self.view.scope_name(position))
+        LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word, kind=kind)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
         wm = windows.lookup(session.window)

@@ -5,6 +5,7 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.sessions import Session, method_to_capability
 from .core.typing import List, Optional, Union
+from .core.views import get_symbol_kind_from_scope
 from .core.views import text_document_position_params
 from .core.views import word
 from .locationpicker import LocationPicker
@@ -74,8 +75,9 @@ class LspGotoCommand(LspTextCommand):
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 placeholder = self.placeholder_text + " " + word(self.view, position)
+                kind = get_symbol_kind_from_scope(self.view.scope_name(position))
                 sublime.set_timeout(
-                    partial(LocationPicker, self.view, session, response, side_by_side, group, placeholder)
+                    partial(LocationPicker, self.view, session, response, side_by_side, group, placeholder, kind)
                 )
         else:
             self._handle_no_results(fallback, side_by_side)

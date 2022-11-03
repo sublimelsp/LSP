@@ -338,14 +338,6 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
-def word(view: sublime.View, offset: int) -> str:
-    candidate = view.substr(
-        view.expand_by_class(offset, sublime.CLASS_WORD_START | sublime.CLASS_WORD_END, "[]{}()<>:."))
-    if " " in candidate:
-        return view.substr(view.word(offset))
-    return candidate
-
-
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0

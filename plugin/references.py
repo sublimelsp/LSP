@@ -12,7 +12,6 @@ from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
-from .core.views import word
 from .locationpicker import LocationPicker
 import functools
 import linecache
@@ -56,7 +55,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 request,
                 functools.partial(
                     self._handle_response_async,
-                    word(self.view, pos),
+                    self.view.substr(self.view.word(pos)),
                     session,
                     side_by_side,
                     fallback,

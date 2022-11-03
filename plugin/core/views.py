@@ -328,7 +328,11 @@ def position(view: sublime.View, offset: int) -> Position:
 
 
 def word(view: sublime.View, offset: int) -> str:
-    return view.substr(view.expand_by_class(offset, sublime.CLASS_WORD_START | sublime.CLASS_WORD_END, "[]{}()<>:."))
+    candidate = view.substr(
+        view.expand_by_class(offset, sublime.CLASS_WORD_START | sublime.CLASS_WORD_END, "[]{}()<>:."))
+    if " " in candidate:
+        return view.substr(view.word(offset))
+    return candidate
 
 
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:

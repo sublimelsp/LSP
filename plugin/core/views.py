@@ -175,15 +175,15 @@ CODE_ACTION_KINDS = {
 }  # type: Dict[CodeActionKind, SublimeKind]
 
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
-SYMBOL_SCOPE_KINDS = {
-    "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language": sublime.KIND_KEYWORD,  # noqa: E501
-    "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class": sublime.KIND_TYPE,  # noqa: E501
-    "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function": sublime.KIND_FUNCTION,  # noqa: E501
-    "entity.name.module | entity.name.namespace | support.module | support.namespace": sublime.KIND_NAMESPACE,
-    "entity.name.definition | entity.name.label | entity.name.section": sublime.KIND_NAVIGATION,
-    "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html": sublime.KIND_MARKUP,
-    "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member": sublime.KIND_VARIABLE  # noqa: E501
-}  # type: Dict[str, SublimeKind]
+SUBLIME_KIND_SCOPES = {
+    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
+    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
+    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501
+    sublime.KIND_NAMESPACE: "entity.name.module | entity.name.namespace | support.module | support.namespace",
+    sublime.KIND_NAVIGATION: "entity.name.definition | entity.name.label | entity.name.section",
+    sublime.KIND_MARKUP: "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html",
+    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
+}  # type: Dict[SublimeKind, str]
 
 SYMBOL_KIND_SCOPES = {
     SymbolKind.File: "string",
@@ -341,7 +341,7 @@ def position(view: sublime.View, offset: int) -> Position:
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0
-    for selector, kind in SYMBOL_SCOPE_KINDS.items():
+    for kind, selector in SUBLIME_KIND_SCOPES.items():
         score = sublime.score_selector(scope_name, selector)
         if score > best_kind_score:
             best_kind = kind

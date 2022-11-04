@@ -103,7 +103,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             window.status_message("No references found")
 
     def _show_references_in_quick_panel(
-            self, word: str, session: Session, locations: List[Location], side_by_side: bool, position: int
+        self, word: str, session: Session, locations: List[Location], side_by_side: bool, position: int
     ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))

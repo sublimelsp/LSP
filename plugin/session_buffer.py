@@ -24,7 +24,6 @@ from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
-from .core.views import is_range_equal
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -389,7 +388,7 @@ class SessionBuffer:
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
         for link in self.document_links:
-            if is_range_equal(link["range"], new_link_range):
+            if link["range"] == new_link_range:
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break

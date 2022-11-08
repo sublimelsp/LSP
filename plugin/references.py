@@ -51,15 +51,16 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 'context': {"includeDeclaration": False},
             }
             request = Request("textDocument/references", params, self.view, progress=True)
+            word_range = self.view.word(pos)
             session.send_request(
                 request,
                 functools.partial(
                     self._handle_response_async,
-                    self.view.substr(self.view.word(pos)),
+                    self.view.substr(word_range),
                     session,
                     side_by_side,
                     fallback,
-                    pos
+                    word_range.begin()
                 )
             )
         else:

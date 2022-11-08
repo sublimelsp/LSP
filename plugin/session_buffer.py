@@ -395,7 +395,9 @@ class SessionBuffer:
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(
+        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+    ) -> None:
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         view = self.some_view()
         if view is None:
@@ -421,17 +423,24 @@ class SessionBuffer:
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))
-            self._publish_diagnostics_to_session_views(diagnostics_version, diagnostics, data_per_severity)
+            self._publish_diagnostics_to_session_views(
+                diagnostics_version, diagnostics, data_per_severity, visible_session_views)
 
     def _publish_diagnostics_to_session_views(
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
+        visible_session_views: Set[SessionViewProtocol],
     ) -> None:
 
         def present() -> None:
-            self._present_diagnostics_async(diagnostics_version, diagnostics, data_per_severity)
+            self.diagnostics_version = diagnostics_version
+            self.diagnostics = diagnostics
+            self.data_per_severity = data_per_severity
+            self.diagnostics_are_visible = bool(diagnostics)
+            for sv in self.session_views:
+                sv.present_diagnostics_async(sv in visible_session_views)
 
         self.diagnostics_debouncer.cancel_pending()
 
@@ -455,19 +464,6 @@ class SessionBuffer:
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
                     async_thread=True
                 )
-
-    def _present_diagnostics_async(
-        self,
-        diagnostics_version: int,
-        diagnostics: List[Tuple[Diagnostic, sublime.Region]],
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-    ) -> None:
-        self.diagnostics_version = diagnostics_version
-        self.diagnostics = diagnostics
-        self.data_per_severity = data_per_severity
-        self.diagnostics_are_visible = bool(diagnostics)
-        for sv in self.session_views:
-            sv.present_diagnostics_async()
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

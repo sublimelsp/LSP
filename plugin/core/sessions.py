@@ -68,7 +68,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -494,7 +494,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -552,7 +552,9 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(
+        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+    ) -> None:
         ...
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
@@ -633,7 +635,7 @@ class AbstractViewListener(metaclass=ABCMeta):
             return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
-    def on_diagnostics_updated_async(self) -> None:
+    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1598,12 +1600,12 @@ class Session(TransportCallbacks):
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
-    def session_views_by_visibility(self) -> Tuple[List[SessionViewProtocol], List[SessionViewProtocol]]:
-        visible_session_views = []  # type: List[SessionViewProtocol]
-        not_visible_session_views = []  # type: List[SessionViewProtocol]
-        selected_sheets = []
+    def session_views_by_visibility(self) -> Tuple[Set[SessionViewProtocol], Set[SessionViewProtocol]]:
+        visible_session_views = set()  # type: Set[SessionViewProtocol]
+        not_visible_session_views = set()  # type: Set[SessionViewProtocol]
+        selected_sheets = set()  # type: Set[sublime.Sheet]
         for group in range(self.window.num_groups()):
-            selected_sheets.extend(self.window.selected_sheets_in_group(group))
+            selected_sheets = selected_sheets.union(self.window.selected_sheets_in_group(group))
         for sheet in self.window.sheets():
             view = sheet.view()
             if not view:
@@ -1612,9 +1614,9 @@ class Session(TransportCallbacks):
             if not sv:
                 continue
             if sheet in selected_sheets:
-                visible_session_views.append(sv)
+                visible_session_views.add(sv)
             else:
-                not_visible_session_views.append(sv)
+                not_visible_session_views.add(sv)
         return visible_session_views, not_visible_session_views
 
     # --- server request handlers --------------------------------------------------------------------------------------
@@ -1693,7 +1695,8 @@ class Session(TransportCallbacks):
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            sb.on_diagnostics_async(diagnostics, params.get("version"))
+            visible_session_views, _ = self.session_views_by_visibility()
+            sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

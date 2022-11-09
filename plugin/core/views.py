@@ -340,11 +340,6 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     }
 
 
-def is_range_equal(lhs: Range, rhs: Range) -> bool:
-    return lhs['start']['line'] == rhs['start']['line'] and lhs['start']['character'] == rhs['start']['character'] and \
-        lhs['end']['line'] == rhs['end']['line'] and lhs['end']['character'] == rhs['end']['character']
-
-
 def to_encoded_filename(path: str, position: Position) -> str:
     # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)

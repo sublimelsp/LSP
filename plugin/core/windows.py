@@ -24,6 +24,7 @@ from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
+from .types import sublime_pattern_to_glob
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
 from .url import parse_uri
 from .views import extract_variables
@@ -370,7 +371,19 @@ class WindowManager(Manager):
             return "matches a pattern in binary_file_patterns"
         if matches_pattern(path, settings.get("file_exclude_patterns")):
             return "matches a pattern in file_exclude_patterns"
-        if matches_pattern(path, settings.get("folder_exclude_patterns")):
+        patterns = [sublime_pattern_to_glob(pattern, True) for pattern in settings.get("folder_exclude_patterns") or []]
+        project_data = self.window.project_data()
+        if project_data:
+            for folder in project_data.get('folders', []):
+                for pattern in folder.get('folder_exclude_patterns', []):
+                    if pattern.startswith('//'):
+                        patterns.append(sublime_pattern_to_glob(pattern, True, folder['path']))
+                    elif pattern.startswith('/'):
+                        patterns.append(sublime_pattern_to_glob(pattern, True))
+                    else:
+                        patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder['path']))
+                        patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder['path']))
+        if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
         return None
 

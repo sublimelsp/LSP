@@ -89,11 +89,11 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
     Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
 
-    Subclasses of PreselectedListInputHandler must implement the _list_items() method, i.e. just prepend the regular
-    list_items() with an underscore.
+    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `_list_items`,
+    i.e. just prepend an underscore to the regular `list_items`.
 
     When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
-    An optional second argument initial_value can be provided to preselect a value.
+    An optional second argument `initial_value` can be provided to preselect a value.
     """
 
     _window = None  # type: Optional[sublime.Window]

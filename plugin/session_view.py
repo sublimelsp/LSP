@@ -88,7 +88,7 @@ class SessionView:
         self.session_buffer.remove_session_view(self)
         listener = self.listener()
         if listener:
-            listener.on_diagnostics_updated_async()
+            listener.on_diagnostics_updated_async(False)
 
     @property
     def session(self) -> Session:

@@ -69,9 +69,9 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
         if uri == "$view_uri":
             try:
                 uri = uri_from_view(view)
-                return DiagnosticUriInputHandler(self.window, view, uri)
             except MissingUriError:
                 return None
+            return DiagnosticUriInputHandler(self.window, view, uri)
         if not diagnostic:
             return DiagnosticInputHandler(self.window, view, uri)
         return None
@@ -89,36 +89,34 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
     Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
 
-    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `_list_items`,
-    i.e. just prepend an underscore to the regular `list_items`.
+    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
+    i.e. just prepend `get_` to the regular `list_items` method.
 
     When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
     An optional second argument `initial_value` can be provided to preselect a value.
     """
 
-    _window = None  # type: Optional[sublime.Window]
-    _initial_value = None  # type: Optional[Union[str, sublime.ListInputItem]]
-    _preselect = False
-
     def __init__(
         self, window: sublime.Window, initial_value: Optional[Union[str, sublime.ListInputItem]] = None
     ) -> None:
         super().__init__()
-        if initial_value is not None:
-            self._window = window
-            self._initial_value = initial_value
-            self._preselect = True
+        self._window = window
+        self._initial_value = initial_value
 
     def list_items(self) -> ListItemsReturn:
-        if self._preselect and self._initial_value is not None and self._window is not None:
-            self._preselect = False
-            sublime.set_timeout(functools.partial(self._window.run_command, 'select'))
+        if self._initial_value is not None:
+            sublime.set_timeout(self._select_and_reset)
             return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
         else:
-            return self._list_items()
+            return self.get_list_items()
+
+    def _select_and_reset(self) -> None:
+        self._initial_value = None
+        if self._window.is_valid():
+            self._window.run_command('select')
 
     @abstractmethod
-    def _list_items(self) -> ListItemsReturn:
+    def get_list_items(self) -> ListItemsReturn:
         raise NotImplementedError()
 
 
@@ -134,7 +132,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def name(self) -> str:
         return "uri"
 
-    def _list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
         severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]

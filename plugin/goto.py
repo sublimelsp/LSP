@@ -5,16 +5,18 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.sessions import Session, method_to_capability
 from .core.typing import List, Optional, Union
+from .core.views import get_symbol_kind_from_scope
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from .locationpicker import open_location_async
-import functools
+from functools import partial
 import sublime
 
 
 class LspGotoCommand(LspTextCommand):
 
     method = ''
+    placeholder_text = ''
     fallback_command = ''
 
     def is_enabled(
@@ -45,9 +47,7 @@ class LspGotoCommand(LspTextCommand):
             request = Request(self.method, params, self.view, progress=True)
             session.send_request(
                 request,
-                functools.partial(
-                    self._handle_response_async, session, side_by_side, force_group, fallback, group
-                ),
+                partial(self._handle_response_async, session, side_by_side, force_group, fallback, group, position)
             )
         else:
             self._handle_no_results(fallback, side_by_side)
@@ -59,6 +59,7 @@ class LspGotoCommand(LspTextCommand):
         force_group: bool,
         fallback: bool,
         group: int,
+        position: int,
         response: Union[None, Location, List[Location], List[LocationLink]]
     ) -> None:
         if isinstance(response, dict):
@@ -72,8 +73,10 @@ class LspGotoCommand(LspTextCommand):
                 open_location_async(session, response[0], side_by_side, force_group, group)
             else:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
+                placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
+                kind = get_symbol_kind_from_scope(self.view.scope_name(position))
                 sublime.set_timeout(
-                    functools.partial(LocationPicker, self.view, session, response, side_by_side, group)
+                    partial(LocationPicker, self.view, session, response, side_by_side, group, placeholder, kind)
                 )
         else:
             self._handle_no_results(fallback, side_by_side)
@@ -93,19 +96,23 @@ class LspGotoCommand(LspTextCommand):
 class LspSymbolDefinitionCommand(LspGotoCommand):
     method = "textDocument/definition"
     capability = method_to_capability(method)[0]
+    placeholder_text = "Definitions of"
     fallback_command = "goto_definition"
 
 
 class LspSymbolTypeDefinitionCommand(LspGotoCommand):
     method = "textDocument/typeDefinition"
     capability = method_to_capability(method)[0]
+    placeholder_text = "Type Definitions of"
 
 
 class LspSymbolDeclarationCommand(LspGotoCommand):
     method = "textDocument/declaration"
     capability = method_to_capability(method)[0]
+    placeholder_text = "Declarations of"
 
 
 class LspSymbolImplementationCommand(LspGotoCommand):
     method = "textDocument/implementation"
     capability = method_to_capability(method)[0]
+    placeholder_text = "Implementations of"

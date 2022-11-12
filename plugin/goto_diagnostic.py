@@ -15,6 +15,7 @@ from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
+import os
 import sublime
 import sublime_plugin
 
@@ -203,7 +204,8 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def _project_path(self, parsed_uri: ParsedUri) -> str:
         scheme, path = parsed_uri
         if scheme == "file":
-            path = str(project_path(map(Path, self.window.folders()), Path(path))) or path
+            relative_path = project_path(map(Path, self.window.folders()), Path(path))
+            return str(relative_path) if relative_path else os.path.basename(path)
         return path
 
 

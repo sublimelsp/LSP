@@ -4,15 +4,18 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from .core.typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
 from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
 from .core.views import format_diagnostic_for_html
 from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
+import os
 import sublime
 import sublime_plugin
 
@@ -69,6 +72,7 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 uri = uri_from_view(view)
             except MissingUriError:
                 return None
+            return DiagnosticUriInputHandler(self.window, view, uri)
         if not diagnostic:
             return DiagnosticInputHandler(self.window, view, uri)
         return None
@@ -77,18 +81,59 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
         return "Goto Diagnostic"
 
 
-class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
+ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
+                        List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
+
+
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+    """
+    Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
+    Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
+
+    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
+    i.e. just prepend `get_` to the regular `list_items` method.
+
+    When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
+    An optional second argument `initial_value` can be provided to preselect a value.
+    """
+
+    def __init__(
+        self, window: sublime.Window, initial_value: Optional[Union[str, sublime.ListInputItem]] = None
+    ) -> None:
+        super().__init__()
+        self._window = window
+        self._initial_value = initial_value
+
+    def list_items(self) -> ListItemsReturn:
+        if self._initial_value is not None:
+            sublime.set_timeout(self._select_and_reset)
+            return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
+        else:
+            return self.get_list_items()
+
+    def _select_and_reset(self) -> None:
+        self._initial_value = None
+        if self._window.is_valid():
+            self._window.run_command('select')
+
+    @abstractmethod
+    def get_list_items(self) -> ListItemsReturn:
+        raise NotImplementedError()
+
+
+class DiagnosticUriInputHandler(PreselectedListInputHandler):
     _preview = None  # type: Optional[sublime.View]
     uri = None  # Optional[DocumentUri]
 
-    def __init__(self, window: sublime.Window, view: sublime.View) -> None:
+    def __init__(self, window: sublime.Window, view: sublime.View, initial_value: Optional[DocumentUri] = None) -> None:
+        super().__init__(window, initial_value)
         self.window = window
         self.view = view
 
     def name(self) -> str:
         return "uri"
 
-    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
         severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
@@ -141,7 +186,7 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
         self.window.focus_view(self.view)
 
     def preview(self, value: Optional[DocumentUri]) -> str:
-        if not value:
+        if not value or not hasattr(self, 'first_locations'):
             return ""
         parsed_uri = parse_uri(value)
         session, location = self.first_locations[parsed_uri]
@@ -159,7 +204,8 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
     def _project_path(self, parsed_uri: ParsedUri) -> str:
         scheme, path = parsed_uri
         if scheme == "file":
-            path = str(project_path(map(Path, self.window.folders()), Path(path))) or path
+            relative_path = project_path(map(Path, self.window.folders()), Path(path))
+            return str(relative_path) if relative_path else os.path.basename(path)
         return path
 
 

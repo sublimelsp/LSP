@@ -837,8 +837,8 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def diagnostic_source(diagnostic: Diagnostic) -> str:
-    return diagnostic.get("source", "unknown-source")
+def diagnostic_source(diagnostic: Diagnostic) -> Optional[str]:
+    return diagnostic.get("source")
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
@@ -980,7 +980,8 @@ def format_diagnostic_for_html(
     else:
         code = None
     source = diagnostic_source(diagnostic)
-    formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
+    if source is not None:
+        formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
     if code:
         formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
     related_infos = diagnostic.get("relatedInformation")

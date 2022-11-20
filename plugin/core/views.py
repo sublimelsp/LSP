@@ -868,25 +868,23 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     if href is None or code is None:
         return formatted
-    return formatted + code
+    return formatted + "(" + code + ")"
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
-    formatted = []
-    source = diagnostic.get("source")
-    if source is not None:
-        formatted = [source]
+    formatted = diagnostic.get("source")
+    if formatted is None:
+        formatted = ""
     href = None
     code = diagnostic.get("code")
     if code is not None:
         code = str(code)
-        formatted.append(":")
         code_description = diagnostic.get("codeDescription")
         if code_description:
             href = code_description["href"]
         else:
-            formatted.append(code)
-    return "".join(formatted), code, href
+            formatted += "(" + code + ")"
+    return formatted, code, href
 
 
 def location_to_human_readable(

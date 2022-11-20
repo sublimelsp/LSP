@@ -872,9 +872,7 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
-    formatted = diagnostic.get("source")
-    if formatted is None:
-        formatted = ""
+    formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
     if code is not None:

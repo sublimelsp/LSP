@@ -855,7 +855,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
         format_severity(diagnostic_severity(diagnostic)),
         lines[0]
     )
-    if formatted != "":
+    if formatted != "" or code != "":
         # \u200B is the zero-width space
         result += " \u200B{}".format(formatted)
     offset = len(result) if href else None

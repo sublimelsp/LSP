@@ -970,7 +970,7 @@ def format_diagnostic_for_html(
     ]
     code_description = diagnostic.get("codeDescription")
     if "code" in diagnostic:
-        code = [_with_color("(", "color(var(--foreground) alpha(0.6))")]  # type: Optional[List[str]]
+        code = [_with_color("(", "color(var(--foreground) alpha(0.6))")]
         if code_description:
             code.append(make_link(code_description["href"], diagnostic.get("code")))
         else:

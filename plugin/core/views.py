@@ -975,9 +975,9 @@ def format_diagnostic_for_html(
     else:
         code = None
     source = diagnostic.get("source")
-    if source is not None or code:
+    if source or code:
         formatted.extend(" ")
-    if source is not None:
+    if source:
         formatted.extend(_with_color(source, "color(var(--foreground) alpha(0.6))"))
     if code:
         formatted.extend(code)

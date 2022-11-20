@@ -837,10 +837,6 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def diagnostic_source(diagnostic: Diagnostic) -> Optional[str]:
-    return diagnostic.get("source")
-
-
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
     """
     Turn an LSP diagnostic into a string suitable for an output panel.
@@ -877,7 +873,7 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
     formatted = []
-    source = diagnostic_source(diagnostic)
+    source = diagnostic.get("source")
     if source is not None:
         formatted = [source]
     href = None
@@ -983,7 +979,7 @@ def format_diagnostic_for_html(
         code = _with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))")
     else:
         code = None
-    source = diagnostic_source(diagnostic)
+    source = diagnostic.get("source")
     if source is not None:
         formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
     if code:

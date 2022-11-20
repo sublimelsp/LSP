@@ -971,17 +971,22 @@ def format_diagnostic_for_html(
         text2html(diagnostic["message"])
     ]
     code_description = diagnostic.get("codeDescription")
-    if code_description:
-        code = make_link(code_description["href"], diagnostic.get("code"))  # type: Optional[str]
-    elif "code" in diagnostic:
-        code = _with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))")
+    if "code" in diagnostic:
+        code = [_with_color("(", "color(var(--foreground) alpha(0.6))")]  # type: Optional[List[str]]
+        if code_description:
+            code.append(make_link(code_description["href"], diagnostic.get("code")))
+        else:
+            code.append(_with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))"))
+        code.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
     else:
         code = None
     source = diagnostic.get("source")
+    if source is not None or code:
+        formatted.extend(" ")
     if source is not None:
-        formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
+        formatted.extend(_with_color(source, "color(var(--foreground) alpha(0.6))"))
     if code:
-        formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
+        formatted.extend(code)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         formatted.append('<pre class="related_info">')

@@ -976,9 +976,9 @@ def format_diagnostic_for_html(
         code = None
     source = diagnostic.get("source")
     if source or code:
-        formatted.extend(" ")
+        formatted.append(" ")
     if source:
-        formatted.extend(_with_color(source, "color(var(--foreground) alpha(0.6))"))
+        formatted.append(_with_color(source, "color(var(--foreground) alpha(0.6))"))
     if code:
         formatted.extend(code)
     related_infos = diagnostic.get("relatedInformation")

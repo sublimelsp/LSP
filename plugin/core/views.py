@@ -868,7 +868,7 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     if href is None or code is None:
         return formatted
-    return formatted + "(" + code + ")"
+    return formatted + "({})".format(code)
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
@@ -881,7 +881,7 @@ def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[st
         if code_description:
             href = code_description["href"]
         else:
-            formatted += "(" + code + ")"
+            formatted += "({})".format(code)
     return formatted, code, href
 
 

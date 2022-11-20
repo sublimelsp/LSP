@@ -853,7 +853,6 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     lines = diagnostic["message"].splitlines() or [""]
-    # \u200B is the zero-width space
     result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
@@ -861,6 +860,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
         lines[0]
     )
     if formatted != "":
+        # \u200B is the zero-width space
         result += " \u200B{}".format(formatted)
     offset = len(result) if href else None
     for line in itertools.islice(lines, 1, None):

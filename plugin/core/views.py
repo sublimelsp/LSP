@@ -952,10 +952,6 @@ def _with_color(text: Any, hexcolor: str) -> str:
     return '<span style="color: {};">{}</span>'.format(hexcolor, text)
 
 
-def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
-    return _with_color(text, view.style_for_scope(scope)["foreground"])
-
-
 def format_diagnostic_for_html(
     view: sublime.View,
     config: ClientConfig,

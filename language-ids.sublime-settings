@@ -90,6 +90,7 @@
     "source.yaml.sublime.syntax": "yaml", // https://github.com/SublimeText/PackageDev
     "source.yaml.yarn": "yaml", // https://github.com/SublimeText/AFileIcon
     "text.advanced_csv": "csv", // https://github.com/SublimeText/AFileIcon
+    "text.django": "html", // https://github.com/willstott101/django-sublime-syntax
     "text.html.basic": "html",
     "text.html.elixir": "html",  // https://github.com/elixir-editors/elixir-tmbundle
     "text.html.markdown.academicmarkdown": "markdown", // https://github.com/mangecoeur/AcademicMarkdown

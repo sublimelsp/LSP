@@ -22,7 +22,7 @@
 
 <p align="center">Like an IDE, except it's the good parts. <a href="https://lsp.sublimetext.io">Learn more</a>.</p>
 
-<p align="center"><img src="docs/src/images/showcase.gif" alt="TypeScript Server Example"></img></p>
+<p align="center"><img src="docs/src/assets/images/showcase.gif" alt="TypeScript Server Example"></img></p>
 
 ## Installation
 

@@ -7,11 +7,15 @@ site_url: https://sublimelsp.github.io/LSP/
 
 repo_name: sublimelsp/LSP
 repo_url: https://github.com/sublimelsp/LSP/
-edit_uri: blob/main/docs/src/
+edit_uri: blob/main/docs/src/markdown
 
-docs_dir: 'src'
+docs_dir: 'src/markdown'
 
 plugins:
+  - redirects:
+      redirect_maps:
+        'guides/cplusplus.md': 'https://github.com/sublimelsp/LSP-clangd#readme'
+        'guides/client_configuration.md': 'client_configuration.md'
   - search:
       lang: en
   - social:
@@ -21,6 +25,7 @@ plugins:
 
 theme:
   name: material
+  custom_dir: theme
   language: en
   icon:
     logo: fontawesome/solid/book-open
@@ -57,7 +62,7 @@ theme:
     - toc.integrate
 
 extra_css:
-  - stylesheets/extra.css
+  - css/extra.css
 
 markdown_extensions:
   - markdown.extensions.admonition

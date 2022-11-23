@@ -4,17 +4,37 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
+      - '.github/workflows/docs.yml'
+      - 'docs/**'
 jobs:
   deploy:
+    name: Builds docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.x
-      - run: pip install mkdocs-material mkdocs-redirects
-      - run: |
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Python 3 is installed by default
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip setuptools build
+          python3 -m pip install -r ./docs/src/requirements.txt
+
+      - name: Build docs with MkDocs
+        run: |
           cd docs
-          mkdocs gh-deploy --force
+          mkdocs build --clean --strict
+
+      - name: Deploy to GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v3
+        with:
+          build_dir: ./site
+          fqdn: lsp.sublimetext.io
+          # keep_history: false
+          # target_branch: gh-pages
+          jekyll: false
+          # verbose: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

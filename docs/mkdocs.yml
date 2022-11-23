@@ -1,58 +1,93 @@
+%YAML 1.2
+---
 site_name: LSP for Sublime Text
+site_description: Client implementation of the Language Server Protocol for Sublime Text
+site_author: Sublime Text user community
 site_url: https://sublimelsp.github.io/LSP/
+
+repo_name: sublimelsp/LSP
 repo_url: https://github.com/sublimelsp/LSP/
-edit_uri: edit/main/docs/src/
+edit_uri: blob/main/docs/src/
+
 docs_dir: 'src'
 
 plugins:
-  - search
-  - redirects:
-      redirect_maps:
-        'guides/cplusplus.md': 'https://github.com/sublimelsp/LSP-clangd'
-        'guides/client_configuration.md': 'client_configuration.md'
+  - search:
+      lang: en
+  - social:
+      cards_color:
+        fill: '#ff9100'
+        text: '#000'
 
 theme:
   name: material
-  palette:
-    scheme: slate
-    accent: orange
-    primary: orange
-
+  language: en
   icon:
     logo: fontawesome/solid/book-open
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: orange
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: orange
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - announce.dismiss
+    - content.tabs.link
+    - header.autohide
+    - navigation.expand
+    - navigation.indexes
+    - navigation.instant
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - toc.integrate
 
-# override css
 extra_css:
   - stylesheets/extra.css
 
 markdown_extensions:
-  # tabs for ST4 and ST3 content
-  - pymdownx.tabbed
-
-  # higlight code block
+  - markdown.extensions.admonition
+  - markdown.extensions.md_in_html
+  - markdown.extensions.toc:
+      permalink: '#'
   - pymdownx.highlight
   - pymdownx.superfences
-
-  # add tip, warning info boxes
-  - admonition
-
-  - md_in_html
-
-  # show # after each header
-  - toc:
-      permalink: '#'
+  - pymdownx.tabbed:
+      alternate_style: true
 
 nav:
-    - Getting Started: index.md
-    - Language Servers: language_servers.md
-    - Features: features.md
-    - Commands: commands.md
-    - Keyboard Shortcuts: keyboard_shortcuts.md
-    - Customization: customization.md
-    - Client Configuration: client_configuration.md
-    - Troubleshooting: troubleshooting.md
+  - Getting Started: index.md
+  - Language Servers: language_servers.md
+  - Features: features.md
+  - Commands: commands.md
+  - Keyboard Shortcuts: keyboard_shortcuts.md
+  - Customization: customization.md
+  - Client Configuration: client_configuration.md
+  - Troubleshooting: troubleshooting.md
 
 extra:
+  generator: false
   social:
-    - icon: fontawesome/brands/discord
+    - name: Discord
+      icon: fontawesome/brands/discord
       link: https://discordapp.com/channels/280102180189634562/645268178397560865
+    - name: Sublime LSP
+      icon: fontawesome/brands/github
+      link: https://github.com/sublimelsp
+    - name: Sublime Text Documentation
+      icon: simple/sublimetext
+      link: https//www.sublimetext.com/docs/index.html

@@ -42,12 +42,7 @@
                 "caption": "Source Action…"
             },
             {
-                "command": "lsp_format_document",
-                "caption": "Format File"
-            },
-            {
-                "command": "lsp_format_document_range",
-                "caption": "Format Selection"
+                "command": "lsp_format"
             },
             {
                 "command": "lsp_expand_selection",

@@ -431,6 +431,11 @@ def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:
         return None
 
 
+def has_single_nonempty_selection(view: sublime.View) -> bool:
+    selections = view.sel()
+    return len(selections) == 1 and not selections[0].empty()
+
+
 def entire_content_region(view: sublime.View) -> sublime.Region:
     return sublime.Region(0, view.size())
 

@@ -18,10 +18,6 @@ plugins:
         'guides/client_configuration.md': 'client_configuration.md'
   - search:
       lang: en
-  - social:
-      cards_color:
-        fill: '#ff9100'
-        text: '#000'
 
 theme:
   name: material

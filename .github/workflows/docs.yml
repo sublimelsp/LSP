@@ -17,10 +17,6 @@ jobs:
 
       # Python 3 is installed by default
 
-      - name: "Install dependencies for mkdocs-material's social plugin"
-        run: |
-          apt-get install libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
-
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip setuptools build

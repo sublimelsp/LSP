@@ -153,12 +153,12 @@ This package presents Code Lenses as a greenish clickable annotation positioned 
 Sublime Text has no concept of Code Lenses.
 
 <figure markdown>
-  ![code-lens](./../assets/images/code-lens-annotation.png)
+  ![code-lens](../assets/images/code-lens-annotation.png)
   <figcaption>"show_code_lens" is set to "annotation"</figcaption>
 </figure>
 
 <figure markdown>
-  ![code-lens](./../assets/images/code-lens-phantom.png)
+  ![code-lens](../assets/images/code-lens-phantom.png)
   <figcaption>"show_code_lens" is set to "phantom"</figcaption>
 </figure>
 
@@ -166,7 +166,7 @@ Sublime Text has no concept of Code Lenses.
 
 Inlay hints are short textual annotations that show parameter names and type hints for servers that support that feature.
 
-![inlay-hints](./../assets/images/inlay-hints.png)
+![inlay-hints](../assets/images/inlay-hints.png)
 
 To enable inlay hints, enable the `show_inlay_hints` setting through `Preferences: LSP Settings`.
 

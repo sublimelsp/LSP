@@ -56,6 +56,12 @@ python3 -m pip install --upgrade pip setuptools build
 python3 -m pip install -r ./docs/src/requirements.txt
 ```
 
+Commands:
+
+- `mkdocs serve` - Start the live-reloading docs server.
+- `mkdocs build` - Build the documentation site.
+- `mkdocs -h` - Print help message and exit.
+
 Docs layout:
 
 ```text

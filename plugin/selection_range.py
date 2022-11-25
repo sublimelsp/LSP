@@ -17,10 +17,15 @@ class LspExpandSelectionCommand(LspTextCommand):
         self._regions = []  # type: List[sublime.Region]
         self._change_count = 0
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = True) -> bool:
+        return fallback or super().is_enabled(event, point)
+
+    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = True) -> bool:
+        if event is not None and 'x' in event:
+            return self.is_enabled(event, point, fallback)
         return True
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None, fallback: bool = True) -> None:
         position = get_position(self.view, event)
         if position is None:
             return
@@ -30,7 +35,7 @@ class LspExpandSelectionCommand(LspTextCommand):
             self._regions.extend(self.view.sel())
             self._change_count = self.view.change_count()
             session.send_request(Request(self.method, params), self.on_result, self.on_error)
-        else:
+        elif fallback:
             self._run_builtin_expand_selection("No {} found".format(self.capability))
 
     def on_result(self, params: Any) -> None:

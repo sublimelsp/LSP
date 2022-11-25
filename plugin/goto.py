@@ -30,6 +30,19 @@ class LspGotoCommand(LspTextCommand):
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
+    def is_visible(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        force_group: bool = True,
+        fallback: bool = False,
+        group: int = -1
+    ) -> bool:
+        if event is not None and 'x' in event:
+            return self.is_enabled(event, point, side_by_side, force_group, fallback, group)
+        return True
+
     def run(
         self,
         _: sublime.Edit,

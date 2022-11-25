@@ -256,6 +256,16 @@ class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
+    def is_visible(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        only_kinds: Optional[List[CodeActionKind]] = None
+    ) -> bool:
+        if event is not None and 'x' in event:
+            return self.is_enabled(event, point)
+        return True
+
     def run(
         self,
         edit: sublime.Edit,

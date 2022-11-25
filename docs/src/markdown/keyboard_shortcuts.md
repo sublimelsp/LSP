@@ -1,4 +1,5 @@
-Below is a list of supported commands and the corresponding keyboard shortcut (if assigned). Most of those are also available from the Command Palette, the main menu and the mouse context menu.
+Below is a list of supported commands and the corresponding keyboard shortcut (if assigned).
+Most of those are also available from the Command Palette, the main menu and the mouse context menu.
 
 Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bindings) on how to modify or assign shortcuts to them.
 

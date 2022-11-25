@@ -1,0 +1,19 @@
+:root > * {
+  --md-code-hl-color: rgb(255, 255, 255, 0.05);
+}
+
+.md-banner .discord {
+    margin-inline-start: 0.2em;
+}
+
+.md-typeset :is(.twemoji) {
+    display: inline-flex;
+    height: px2em(18px);
+    vertical-align: text-top;
+}
+
+.md-typeset svg {
+      width: px2em(18px);
+      max-height: 100%;
+      fill: currentcolor;
+}

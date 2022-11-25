@@ -40,3 +40,38 @@ Before you submit your pull request, please review the following:
 
 I will try to help you get the PR in mergeable shape within a reasonable time, but it may take a few days.
 It is best if you check your GitHub notifications in the meantime!
+
+## Building docs locally
+
+Documentation is built using:
+
+- <https://www.mkdocs.org/#installing-mkdocs>
+- <https://squidfunk.github.io/mkdocs-material/getting-started/#installation>
+- <https://github.com/mkdocs/mkdocs-redirects>
+
+Quick build via:
+
+```bash
+python3 -m pip install --upgrade pip setuptools build
+python3 -m pip install -r ./docs/src/requirements.txt
+```
+
+Commands:
+
+- `mkdocs serve` - Start the live-reloading docs server.
+- `mkdocs build` - Build the documentation site.
+- `mkdocs -h` - Print help message and exit.
+
+Docs layout:
+
+```text
+docs/
+    mkdocs.yml                          # The configuration file
+    src/
+        assets/
+            images/
+                ...                     # images
+        markdown/
+            index.md                    # The documentation homepage.
+            ...                         # Other markdown pages, images and other files.
+```

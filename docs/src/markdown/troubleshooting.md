@@ -51,7 +51,7 @@ Another solution could be (at least on Linux) to update the server `PATH` using 
   - `<your_language_server_name>` is the server name
   - `<added_path>` is the directory needed for the server to behave correctly
 
-```json
+```jsonc
 "<your_language_server_name>":
 {
     // ...

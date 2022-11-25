@@ -14,7 +14,7 @@ If your language server is missing or not configured correctly, you need to add/
 
 Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```js
+```jsonc
 {
   // General settings
   "show_diagnostics_panel_on_save": 0,
@@ -40,7 +40,7 @@ Below is an example of the `LSP.sublime-settings` file with configurations for t
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
 | initializationOptions | options to send to the server at startup (rarely used) |
-| selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/3/selectors.html |
+| selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/selectors.html |
 | priority_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "feature_selector" to `text.html` for HTML server and `source.php` to PHP server. Note: when the "feature_selector" is missing, it will be the same as the "document_selector".
 | tcp_port | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
@@ -78,7 +78,7 @@ The port number can be inserted into the server's startup `command` in your clie
 
 Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
 
-```json
+```jsonc
 {
   "folders":
   [
@@ -96,7 +96,7 @@ Also global language server settings can be added or overridden per-project by a
 
 > **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
-```json
+```jsonc
 {
   "folders":
   [

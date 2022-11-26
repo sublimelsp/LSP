@@ -859,10 +859,6 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def diagnostic_source(diagnostic: Diagnostic) -> str:
-    return diagnostic.get("source", "unknown-source")
-
-
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
     """
     Turn an LSP diagnostic into a string suitable for an output panel.
@@ -875,14 +871,15 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     lines = diagnostic["message"].splitlines() or [""]
-    # \u200B is the zero-width space
-    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
+    result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
         format_severity(diagnostic_severity(diagnostic)),
-        lines[0],
-        formatted
+        lines[0]
     )
+    if formatted != "" or code is not None:
+        # \u200B is the zero-width space
+        result += " \u200B{}".format(formatted)
     offset = len(result) if href else None
     for line in itertools.islice(lines, 1, None):
         result += "\n" + 18 * " " + line
@@ -893,22 +890,21 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     if href is None or code is None:
         return formatted
-    return formatted + code
+    return formatted + "({})".format(code)
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
-    formatted = [diagnostic_source(diagnostic)]
+    formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
     if code is not None:
         code = str(code)
-        formatted.append(":")
         code_description = diagnostic.get("codeDescription")
         if code_description:
             href = code_description["href"]
         else:
-            formatted.append(code)
-    return "".join(formatted), code, href
+            formatted += "({})".format(code)
+    return formatted, code, href
 
 
 def location_to_human_readable(
@@ -978,10 +974,6 @@ def _with_color(text: Any, hexcolor: str) -> str:
     return '<span style="color: {};">{}</span>'.format(hexcolor, text)
 
 
-def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
-    return _with_color(text, view.style_for_scope(scope)["foreground"])
-
-
 def format_diagnostic_for_html(
     view: sublime.View,
     config: ClientConfig,
@@ -995,16 +987,22 @@ def format_diagnostic_for_html(
         text2html(diagnostic["message"])
     ]
     code_description = diagnostic.get("codeDescription")
-    if code_description:
-        code = make_link(code_description["href"], diagnostic.get("code"))  # type: Optional[str]
-    elif "code" in diagnostic:
-        code = _with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))")
+    if "code" in diagnostic:
+        code = [_with_color("(", "color(var(--foreground) alpha(0.6))")]
+        if code_description:
+            code.append(make_link(code_description["href"], diagnostic.get("code")))
+        else:
+            code.append(_with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))"))
+        code.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
     else:
         code = None
-    source = diagnostic_source(diagnostic)
-    formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
+    source = diagnostic.get("source")
+    if source or code:
+        formatted.append(" ")
+    if source:
+        formatted.append(_with_color(source, "color(var(--foreground) alpha(0.6))"))
     if code:
-        formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
+        formatted.extend(code)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         formatted.append('<pre class="related_info">')

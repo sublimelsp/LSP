@@ -32,6 +32,17 @@ class LspSymbolReferencesCommand(LspTextCommand):
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
+    def is_visible(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        fallback: bool = False,
+    ) -> bool:
+        if self.applies_to_context_menu(event):
+            return self.is_enabled(event, point, side_by_side, fallback)
+        return True
+
     def run(
         self,
         _: sublime.Edit,

@@ -56,6 +56,18 @@ class LspSymbolRenameCommand(LspTextCommand):
             return True
         return super().is_enabled(event, point)
 
+    def is_visible(
+        self,
+        new_name: str = "",
+        placeholder: str = "",
+        position: Optional[int] = None,
+        event: Optional[dict] = None,
+        point: Optional[int] = None
+    ) -> bool:
+        if self.applies_to_context_menu(event):
+            return self.is_enabled(new_name, placeholder, position, event, point)
+        return True
+
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:
             placeholder = args.get("placeholder", "")

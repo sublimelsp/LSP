@@ -39,7 +39,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1
     ) -> bool:
-        if event is not None and 'x' in event:
+        if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, force_group, fallback, group)
         return True
 

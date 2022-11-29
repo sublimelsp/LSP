@@ -21,7 +21,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         return fallback or super().is_enabled(event, point)
 
     def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = True) -> bool:
-        if event is not None and 'x' in event:
+        if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, fallback)
         return True
 

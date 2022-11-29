@@ -39,7 +39,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         fallback: bool = False,
     ) -> bool:
-        if event is not None and 'x' in event:
+        if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, fallback)
         return True
 

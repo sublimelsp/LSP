@@ -64,7 +64,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> bool:
-        if event is not None and 'x' in event:
+        if self.applies_to_context_menu(event):
             return self.is_enabled(new_name, placeholder, position, event, point)
         return True
 

@@ -262,7 +262,7 @@ class LspCodeActionsCommand(LspTextCommand):
         point: Optional[int] = None,
         only_kinds: Optional[List[CodeActionKind]] = None
     ) -> bool:
-        if event is not None and 'x' in event:
+        if self.applies_to_context_menu(event):
             return self.is_enabled(event, point)
         return True
 

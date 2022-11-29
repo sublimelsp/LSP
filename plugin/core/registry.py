@@ -108,6 +108,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def want_event(self) -> bool:
         return True
 
+    @staticmethod
+    def applies_to_context_menu(event: Optional[dict]) -> bool:
+        return event is not None and 'x' in event
+
     def get_listener(self) -> Optional[AbstractViewListener]:
         return windows.listener_for_view(self.view)
 

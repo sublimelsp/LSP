@@ -837,6 +837,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def purge_changes_async(self) -> None:
         for sv in self.session_views_async():
             sv.purge_changes_async()
+            break
 
     def trigger_on_pre_save_async(self) -> None:
         for sv in self.session_views_async():

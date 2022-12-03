@@ -99,23 +99,20 @@ class LspSymbolRenameCommand(LspTextCommand):
         listener = self.get_listener()
         if listener:
             listener.purge_changes_async()
-        location = self._get_location(position, event, point)
+        location = position if position is not None else get_position(self.view, event, point)
         prepare_provider_session = self.best_session("renameProvider.prepareProvider")
         if new_name or placeholder or not prepare_provider_session:
-            if location and new_name:
+            if location is not None and new_name:
                 self._do_rename(location, new_name)
                 return
             # Trigger InputHandler manually.
             raise TypeError("required positional argument")
-        if not location:
+        if location is None:
             return
         params = text_document_position_params(self.view, location)
         request = Request("textDocument/prepareRename", params, self.view, progress=True)
         prepare_provider_session.send_request(
             request, partial(self._on_prepare_result, location), self._on_prepare_error)
-
-    def _get_location(self, position: Optional[int], event: Optional[dict], point: Optional[int]) -> Optional[int]:
-        return position or get_position(self.view, event, point)
 
     def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)

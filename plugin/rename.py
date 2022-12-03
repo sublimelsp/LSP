@@ -18,8 +18,10 @@ import os
 import sublime
 import sublime_plugin
 
+
 def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
     return 'start' in result
+
 
 # The flow of this command is fairly complicated so it deserves some documentation.
 #
@@ -71,8 +73,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             return None
         prepare_provider_session = self.best_session("renameProvider.prepareProvider")
         if prepare_provider_session and "placeholder" not in args:
-             # Defer to "run" and trigger "prepare" request.
-             return None
+            # Defer to "run" and trigger "prepare" request.
+            return None
         placeholder = args.get("placeholder", "")
         if not placeholder:
             point = args.get("point")

@@ -328,13 +328,13 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
 [Markmark](https://github.com/nikku/markmark) is a language server for Markdown files, supporting go to definition / references [and more](https://github.com/nikku/markmark#features).
 
 1. [Install Markmark](https://github.com/nikku/markmark#installation) (requires `Node >= 16`)
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark-language-server"` client configuration to the `"clients"`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark"` client configuration to the `"clients"`:
 
 
     ```json
     {
         "clients": {
-            "markmark-language-server": {
+            "markmark": {
                 "enabled": true,
 		"command": [
 			"markmark-lsp",

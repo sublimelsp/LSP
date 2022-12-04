@@ -323,6 +323,30 @@ Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-
 
 Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
+### markmark
+
+[Markmark](https://github.com/nikku/markmark) is a language server for Markdown files, supporting go to definition / references [and more](https://github.com/nikku/markmark#features).
+
+1. [Install Markmark](https://github.com/nikku/markmark#installation) (requires `Node >= 16`)
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark-language-server"` client configuration to the `"clients"`:
+
+
+    ```json
+    {
+        "clients": {
+            "markmark-language-server": {
+                "enabled": true,
+		"command": [
+			"markmark-lsp",
+			"--stdio"
+		],
+		"selector": "text.html.markdown"
+            }
+        }
+    }
+    ```
+
+
 ## OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.

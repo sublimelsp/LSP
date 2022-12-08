@@ -866,14 +866,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
+    def on_workspace_configuration(self, params: Dict, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
         :param      params:         A ConfigurationItem for which configuration is requested.
-        :param      configuration:  The resolved configuration for given params.
+        :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
+
+        :returns The resolved configuration for given params.
         """
-        pass
+        return configuration
 
     def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
         """
@@ -1644,8 +1646,9 @@ class Session(TransportCallbacks):
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
             if self._plugin:
-                self._plugin.on_workspace_configuration(requested_item, configuration)
-            items.append(configuration)
+                items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
+            else:
+                items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:

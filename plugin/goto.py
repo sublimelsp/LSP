@@ -89,7 +89,8 @@ class LspGotoCommand(LspTextCommand):
                 placeholder = self.placeholder_text + " " + self.view.substr(self.view.word(position))
                 kind = get_symbol_kind_from_scope(self.view.scope_name(position))
                 sublime.set_timeout(
-                    partial(LocationPicker, self.view, session, response, side_by_side, group, placeholder, kind)
+                    partial(LocationPicker,
+                            self.view, session, response, side_by_side, force_group, group, placeholder, kind)
                 )
         else:
             self._handle_no_results(fallback, side_by_side)

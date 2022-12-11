@@ -41,6 +41,7 @@ from .protocol import LocationLink
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
+from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PublishDiagnosticsParams
 from .protocol import Range
 from .protocol import Request
@@ -345,7 +346,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "rename": {
             "dynamicRegistration": True,
-            "prepareSupport": True
+            "prepareSupport": True,
+            "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
         },
         "colorProvider": {
             "dynamicRegistration": True  # exceptional
@@ -598,6 +600,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def session_views_async(self) -> Iterable['SessionViewProtocol']:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def purge_changes_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod

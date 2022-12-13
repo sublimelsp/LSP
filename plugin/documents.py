@@ -18,6 +18,7 @@ from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
 from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
+from .core.registry import get_position
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
@@ -447,6 +448,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             )
         elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
+        elif key == "lsp.link_available" and operator == sublime.OP_EQUAL:
+            position = get_position(self.view)
+            if position is None:
+                return not operand
+            session = self.session_async('documentLinkProvider', position)
+            if not session:
+                return not operand
+            session_view = session.session_view_for_view_async(self.view)
+            if not session_view:
+                return not operand
+            return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:

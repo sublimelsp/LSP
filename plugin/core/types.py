@@ -138,7 +138,7 @@ class DebouncerNonThreadSafe:
     Debouncer for delaying execution of a function until specified timeout time.
 
     When calling `debouce()` multiple times, with time span between calls being shorter than the specified `timeout_ms`,
-    the specified callback function will only be called once, after a period of `timeout_ms` since last call.
+    the specified callback function will only be called once, after a period of `timeout_ms` since the last call.
 
     This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
     was choosen during initialization through the `async_thread` argument.

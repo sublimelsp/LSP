@@ -12,7 +12,7 @@ from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
 from .core.types import debounced
-from .core.types import Debouncer
+from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -110,7 +110,7 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
         self.last_text_change_time = 0.0
-        self.diagnostics_debouncer = Debouncer()
+        self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.document_links = []  # type: List[DocumentLink]
         self.semantic_tokens = SemanticTokensData()
@@ -423,10 +423,10 @@ class SessionBuffer:
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))
-            self._publish_diagnostics_to_session_views(
+            self._publish_diagnostics_to_session_views_async(
                 diagnostics_version, diagnostics, data_per_severity, visible_session_views)
 
-    def _publish_diagnostics_to_session_views(
+    def _publish_diagnostics_to_session_views_async(
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
@@ -442,7 +442,7 @@ class SessionBuffer:
             for sv in self.session_views:
                 sv.present_diagnostics_async(sv in visible_session_views)
 
-        self.diagnostics_debouncer.cancel_pending()
+        self.diagnostics_debouncer_async.cancel_pending()
 
         if self.diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
@@ -458,11 +458,10 @@ class SessionBuffer:
             if delay_in_seconds <= 0.0:
                 present()
             else:
-                self.diagnostics_debouncer.debounce(
+                self.diagnostics_debouncer_async.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
-                    async_thread=True
                 )
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------

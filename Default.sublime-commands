@@ -70,27 +70,47 @@
         "command": "lsp_restart_server",
     },
     {
-        "caption": "LSP: Goto Symbol",
+        "caption": "LSP: Goto Symbol…",
         "command": "lsp_document_symbols",
     },
     {
-        "caption": "LSP: Goto Implementation",
-        "command": "lsp_symbol_implementation",
+        "caption": "LSP: Goto Symbol In Project…",
+        "command": "lsp_workspace_symbols"
     },
     {
-        "caption": "LSP: Goto Declaration",
+        "caption": "LSP: Goto Definition…",
+        "command": "lsp_symbol_definition"
+    },
+    {
+        "caption": "LSP: Goto Type Definition…",
+        "command": "lsp_symbol_type_definition"
+    },
+    {
+        "caption": "LSP: Goto Declaration…",
         "command": "lsp_symbol_declaration",
     },
     {
-        "caption": "LSP: Goto Diagnostic",
+        "caption": "LSP: Goto Implementation…",
+        "command": "lsp_symbol_implementation",
+    },
+    {
+        "caption": "LSP: Goto Diagnostic…",
         "command": "lsp_goto_diagnostic",
         "args": {
             "uri": "$view_uri"
         }
     },
     {
-        "caption": "LSP: Goto Diagnostic in Project",
+        "caption": "LSP: Goto Diagnostic in Project…",
         "command": "lsp_goto_diagnostic"
+    },
+    {
+        "caption": "LSP: Find References",
+        "command": "lsp_symbol_references"
+    },
+    {
+        "caption": "LSP: Follow Link",
+        "command": "lsp_open_link"
     },
     {
         "caption": "LSP: Toggle Log Panel",
@@ -99,10 +119,6 @@
     {
         "caption": "LSP: Toggle Diagnostics Panel",
         "command": "lsp_show_diagnostics_panel"
-    },
-    {
-        "caption": "LSP: Goto Symbol In Project",
-        "command": "lsp_workspace_symbols"
     },
     {
         "caption": "LSP: Rename",
@@ -134,8 +150,4 @@
         "caption": "LSP: Run Code Lens",
         "command": "lsp_code_lens"
     },
-    {
-        "caption": "LSP: Find References",
-        "command": "lsp_symbol_references"
-    }
 ]

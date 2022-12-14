@@ -6,7 +6,6 @@ from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Un
 from .typing import cast
 from .url import filename_to_uri
 from .url import parse_uri
-from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR

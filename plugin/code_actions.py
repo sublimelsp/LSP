@@ -34,6 +34,7 @@ class CodeActionsManager:
 
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]]
+        self.refactor_actions_cache = []  # type: List[Tuple[str, CodeAction]]
 
     def request_for_region_async(
         self,
@@ -49,6 +50,7 @@ class CodeActionsManager:
         """
         listener = windows.listener_for_view(view)
         if not listener:
+            self.refactor_actions_cache.clear()
             return Promise.resolve([])
         location_cache_key = None
         use_cache = not manual
@@ -71,6 +73,9 @@ class CodeActionsManager:
             return Request.codeAction(params, view)
 
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
+            self.refactor_actions_cache.extend(
+                [(session.config.name, cast(CodeAction, a)) for a in actions
+                    if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))])
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
@@ -82,6 +87,7 @@ class CodeActionsManager:
                 if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
             ]
 
+        self.refactor_actions_cache.clear()
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
         if location_cache_key:
             self._response_cache = (location_cache_key, task)
@@ -329,6 +335,46 @@ class LspCodeActionsCommand(LspTextCommand):
                     .then(lambda response: self._handle_response_async(config_name, response))
 
         sublime.set_timeout_async(run_async)
+
+    def _handle_response_async(self, session_name: str, response: Any) -> None:
+        if isinstance(response, Error):
+            sublime.error_message("{}: {}".format(session_name, str(response)))
+
+
+class LspRefactorCommand(LspTextCommand):
+
+    capability = 'codeActionProvider'
+
+    def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        return len(actions_manager.refactor_actions_cache) > id
+
+    def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
+        if self.is_visible(id):
+            return actions_manager.refactor_actions_cache[id][1]['title']
+
+    def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+        sublime.set_timeout_async(partial(self.run_async, id))
+
+    def _is_cache_valid(self) -> bool:
+        v = self.view
+        if actions_manager._response_cache is None:
+            return False
+        region = first_selection_region(v)
+        if region is None:
+            return False
+        listener = windows.listener_for_view(v)
+        if not listener:
+            return False
+        _, covering = listener.diagnostics_intersecting_async(region)
+        return actions_manager._response_cache[0] == "{}#{}:{}".format(v.buffer_id(), v.change_count(), covering)
+
+    def run_async(self, id: int) -> None:
+        if self._is_cache_valid():
+            config_name, action = actions_manager.refactor_actions_cache[id]
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(action, progress=True) \
+                    .then(lambda response: self._handle_response_async(config_name, response))
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):

@@ -11,6 +11,31 @@
         "command": "lsp_symbol_rename"
       },
       {
+        "caption": "LSP: Refactor",
+        "children": [
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 0}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 1}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 2}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 3}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 4}
+          }
+        ]
+      },
+      {
         "caption": "LSP: Format File",
         "command": "lsp_format_document"
       },

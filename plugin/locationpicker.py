@@ -62,6 +62,7 @@ class LocationPicker:
         session: Session,
         locations: Union[List[Location], List[LocationLink]],
         side_by_side: bool,
+        force_group: bool = True,
         group: int = -1,
         placeholder: str = "",
         kind: SublimeKind = sublime.KIND_AMBIGUOUS
@@ -74,6 +75,7 @@ class LocationPicker:
         self._window = window
         self._weaksession = weakref.ref(session)
         self._side_by_side = side_by_side
+        self._force_group = force_group
         self._group = group
         self._items = locations
         self._highlighted_view = None  # type: Optional[sublime.View]
@@ -116,7 +118,8 @@ class LocationPicker:
                         self._window.status_message("Unable to open {}".format(uri))
             else:
                 sublime.set_timeout_async(
-                    functools.partial(open_location_async, session, location, self._side_by_side, True, self._group))
+                    functools.partial(
+                        open_location_async, session, location, self._side_by_side, self._force_group, self._group))
         else:
             self._window.focus_view(self._view)
             # When a group was specified close the current highlighted

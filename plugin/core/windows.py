@@ -388,7 +388,10 @@ class WindowManager(Manager):
                     else:
                         patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder_path))
                         patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder_path))
+        print('URI', uri)
+        print('PATTERNS', patterns)
         if matches_pattern(path, patterns):
+            print('MATCHES')
             return "matches a pattern in folder_exclude_patterns"
         return None
 

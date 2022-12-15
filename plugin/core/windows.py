@@ -26,7 +26,9 @@ from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
+from .url import filename_to_uri
 from .url import parse_uri
+from .url import uri_to_filename
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
 from .views import make_link
@@ -380,6 +382,8 @@ class WindowManager(Manager):
                 if not os.path.isabs(folder_path):
                     project_file_directory = os.path.dirname(self.window.project_file_name())
                     folder_path = os.path.abspath(os.path.join(project_file_directory, folder_path))
+                    # Normalize path
+                    folder_path = uri_to_filename(filename_to_uri(folder_path))
                 for pattern in folder.get('folder_exclude_patterns', []):
                     if pattern.startswith('//'):
                         patterns.append(sublime_pattern_to_glob(pattern, True, folder_path))
@@ -388,7 +392,7 @@ class WindowManager(Manager):
                     else:
                         patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder_path))
                         patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder_path))
-        print('URI', uri)
+        print('PATH', path)
         print('PATTERNS', patterns)
         if matches_pattern(path, patterns):
             print('MATCHES')

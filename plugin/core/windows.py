@@ -40,6 +40,7 @@ from weakref import ref
 from weakref import WeakSet
 import functools
 import json
+import os
 import sublime
 import threading
 import urllib.parse
@@ -375,14 +376,18 @@ class WindowManager(Manager):
         project_data = self.window.project_data()
         if project_data:
             for folder in project_data.get('folders', []):
+                folder_path = folder['path']
+                if not os.path.isabs(folder_path):
+                    project_file_directory = os.path.dirname(self.window.project_file_name())
+                    folder_path = os.path.abspath(os.path.join(project_file_directory, folder_path))
                 for pattern in folder.get('folder_exclude_patterns', []):
                     if pattern.startswith('//'):
-                        patterns.append(sublime_pattern_to_glob(pattern, True, folder['path']))
+                        patterns.append(sublime_pattern_to_glob(pattern, True, folder_path))
                     elif pattern.startswith('/'):
                         patterns.append(sublime_pattern_to_glob(pattern, True))
                     else:
-                        patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder['path']))
-                        patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder['path']))
+                        patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder_path))
+                        patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder_path))
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
         return None

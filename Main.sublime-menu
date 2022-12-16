@@ -7,12 +7,12 @@
         "caption": "-"
       },
       {
-        "caption": "LSP: Rename…",
-        "command": "lsp_symbol_rename"
-      },
-      {
         "caption": "LSP: Refactor",
         "children": [
+          {
+            "caption": "Rename…",
+            "command": "lsp_symbol_rename"
+          },
           {
             "command": "lsp_refactor",
             "args": {"id": 0}

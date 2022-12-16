@@ -134,7 +134,7 @@ Some language servers provide _global_ rename functionality as well. This packag
 
 Code Actions are an umbrella term for "Quick Fixes" and "Refactorings". They are actions that change the file (or more than one file) to resolve a diagnostic or apply a standard refactor technique. For instance, extracting a block of code into a separate method is usually called "Extract Method" and is a "Refactoring". Whereas "add a missing semicolon" would resolve a diagnostic that warns about a missing semicolon.
 
-Formatting is different from Code Actions, because Formatting is supposed to _not_ mutate the abstract syntax tree of the file, only move around white space. Any Code Action will mutate the abstract syntax tree.
+Formatting is different from Code Actions because Formatting is supposed to _not_ mutate the abstract syntax tree of the file, only move around white space. Any Code Action will mutate the abstract syntax tree.
 
 This package presents "Quick Fix" Code Actions as a bluish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as a light bulb in the Gutter Area.
 
@@ -184,8 +184,8 @@ A language server may itself also expose settings that you can use to customize 
 
 ## Server Initialization Options
 
-Initialization Options are like [Server Settings](concepts.md#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
+Initialization Options are like [Server Settings](#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
 
 ## Subprocesses
 
-A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](guides/client_configuration.md) matches, a subprocess is started that will then serve you language smartness.
+A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](client_configuration.md) matches, a subprocess is started that will then serve you language smartness.

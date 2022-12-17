@@ -65,17 +65,17 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
     ```json
     {
-    	"clients": {
-    		"serve-d": {
-    			"enabled": true,
-    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
-    			"selector": "source.d",
-    			"settings": {
-    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
-	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
-    			}
-    		}
-    	}
+        "clients": {
+            "serve-d": {
+                "enabled": true,
+                "command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+                "selector": "source.d",
+                "settings": {
+                    "d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+                    "d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+                }
+            }
+        }
     }
     ```
 
@@ -336,11 +336,8 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
         "clients": {
             "markmark": {
                 "enabled": true,
-		"command": [
-			"markmark-lsp",
-			"--stdio"
-		],
-		"selector": "text.html.markdown"
+                "command": ["markmark-lsp", "--stdio"],
+                "selector": "text.html.markdown"
             }
         }
     }

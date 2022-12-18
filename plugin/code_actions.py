@@ -80,9 +80,13 @@ class CodeActionsManager:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 if manual and only_kinds == [CodeActionKind.Refactor]:
+                    refactor_actions = [
+                        cast(CodeAction, a) for a in actions
+                        if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))
+                    ]
                     self.refactor_actions_cache.extend(
-                        [(session.config.name, cast(CodeAction, a)) for a in actions
-                            if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))])
+                        [(session.config.name, a) for a in refactor_actions] if len(refactor_actions) <= 10 else
+                        [(session.config.name, a) for a in refactor_actions if not a.get('disabled')])
                 return [
                     a for a in actions
                     if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')

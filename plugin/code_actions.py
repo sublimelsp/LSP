@@ -51,7 +51,7 @@ class CodeActionsManager:
         """
         listener = windows.listener_for_view(view)
         if not listener:
-            self.refactor_actions_cache.clear()
+            self.refactor_actions_key = None
             return Promise.resolve([])
         location_cache_key = None
         use_cache = not manual
@@ -65,6 +65,7 @@ class CodeActionsManager:
                     self._response_cache = None
         elif only_kinds == [CodeActionKind.Refactor]:
             self.refactor_actions_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), region)
+            self.refactor_actions_cache.clear()
 
         def request_factory(session: Session) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
@@ -76,21 +77,25 @@ class CodeActionsManager:
             return Request.codeAction(params, view)
 
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
-            self.refactor_actions_cache.extend(
-                [(session.config.name, cast(CodeAction, a)) for a in actions
-                    if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))])
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
-                return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
+                if manual and only_kinds == [CodeActionKind.Refactor]:
+                    self.refactor_actions_cache.extend(
+                        [(session.config.name, cast(CodeAction, a)) for a in actions
+                            if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))])
+                return [
+                    a for a in actions
+                    if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')
+                ]
             if manual:
-                return actions
+                return [a for a in actions if not a.get('disabled')]
             # On implicit (selection change) request, only return commands and quick fix kinds.
             return [
                 a for a in actions
-                if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
+                if is_command(a) or not a.get('disabled') and
+                kinds_include_kind([CodeActionKind.QuickFix], a.get('kind', CodeActionKind.QuickFix))
             ]
 
-        self.refactor_actions_cache.clear()
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
         if location_cache_key:
             self._response_cache = (location_cache_key, task)
@@ -124,7 +129,7 @@ class CodeActionsManager:
             # actions that need to be then manually filtered.
             session_kinds = get_session_kinds(session)
             matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
-            return [a for a in actions if a.get('kind') in matching_kinds]
+            return [a for a in actions if a.get('kind') in matching_kinds and not a.get('disabled')]
 
         return self._collect_code_actions_async(listener, request_factory, response_filter)
 
@@ -138,12 +143,9 @@ class CodeActionsManager:
         def on_response(
             session: Session, response: Union[Error, Optional[List[CodeActionOrCommand]]]
         ) -> CodeActionsByConfigName:
-            if isinstance(response, Error):
-                actions = []
-            else:
-                actions = [action for action in (response or []) if not action.get('disabled')]
-                if actions and response_filter:
-                    actions = response_filter(session, actions)
+            actions = []
+            if response and not isinstance(response, Error) and response_filter:
+                actions = response_filter(session, response)
             return (session.config.name, actions)
 
         tasks = []  # type: List[Promise[CodeActionsByConfigName]]
@@ -348,9 +350,16 @@ class LspRefactorCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
+    def is_enabled(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if not super().is_enabled(event, point):
+            return False
+        return id > -1 and len(actions_manager.refactor_actions_cache) > id and \
+            not bool(actions_manager.refactor_actions_cache[id][1].get('disabled'))
+
     def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if id == -1:
-            sublime.set_timeout_async(self._request_refactor_actions_async)
+            if super().is_enabled(event, point):
+                sublime.set_timeout_async(self._request_refactor_actions_async)
             return False
         return len(actions_manager.refactor_actions_cache) > id and self._is_cache_valid()
 

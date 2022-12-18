@@ -364,9 +364,7 @@ class LspRefactorCommand(LspTextCommand):
         return len(actions_manager.refactor_actions_cache) > id and self._is_cache_valid()
 
     def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
-        if id == -1:
-            return None
-        if len(actions_manager.refactor_actions_cache) > id:
+        if id > -1 and len(actions_manager.refactor_actions_cache) > id:
             return actions_manager.refactor_actions_cache[id][1]['title']
 
     def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:

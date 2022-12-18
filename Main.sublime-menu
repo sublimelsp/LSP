@@ -36,6 +36,26 @@
           {
             "command": "lsp_refactor",
             "args": {"id": 4}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 5}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 6}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 7}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 8}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"id": 9}
           }
         ]
       },

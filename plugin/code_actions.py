@@ -34,6 +34,7 @@ class CodeActionsManager:
 
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]]
+        self.refactor_actions_key = None  # type: Optional[str]
         self.refactor_actions_cache = []  # type: List[Tuple[str, CodeAction]]
 
     def request_for_region_async(
@@ -62,6 +63,8 @@ class CodeActionsManager:
                     return task
                 else:
                     self._response_cache = None
+        elif only_kinds == [CodeActionKind.Refactor]:
+            self.refactor_actions_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), region)
 
         def request_factory(session: Session) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
@@ -346,27 +349,19 @@ class LspRefactorCommand(LspTextCommand):
     capability = 'codeActionProvider'
 
     def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        return len(actions_manager.refactor_actions_cache) > id
+        if id == -1:
+            sublime.set_timeout_async(self._request_refactor_actions_async)
+            return False
+        return len(actions_manager.refactor_actions_cache) > id and self._is_cache_valid()
 
     def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
-        if self.is_visible(id):
+        if id == -1:
+            return None
+        if len(actions_manager.refactor_actions_cache) > id:
             return actions_manager.refactor_actions_cache[id][1]['title']
 
     def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         sublime.set_timeout_async(partial(self.run_async, id))
-
-    def _is_cache_valid(self) -> bool:
-        v = self.view
-        if actions_manager._response_cache is None:
-            return False
-        region = first_selection_region(v)
-        if region is None:
-            return False
-        listener = windows.listener_for_view(v)
-        if not listener:
-            return False
-        _, covering = listener.diagnostics_intersecting_async(region)
-        return actions_manager._response_cache[0] == "{}#{}:{}".format(v.buffer_id(), v.change_count(), covering)
 
     def run_async(self, id: int) -> None:
         if self._is_cache_valid():
@@ -379,3 +374,16 @@ class LspRefactorCommand(LspTextCommand):
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
             sublime.error_message("{}: {}".format(session_name, str(response)))
+
+    def _is_cache_valid(self) -> bool:
+        v = self.view
+        region = first_selection_region(v)
+        if region is None:
+            return False
+        return actions_manager.refactor_actions_key == "{}#{}:{}".format(v.buffer_id(), v.change_count(), region)
+
+    def _request_refactor_actions_async(self) -> None:
+        region = first_selection_region(self.view)
+        if region is None:
+            return
+        actions_manager.request_for_region_async(self.view, region, [], [CodeActionKind.Refactor], True)

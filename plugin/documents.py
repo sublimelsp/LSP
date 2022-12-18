@@ -27,6 +27,7 @@ from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
+from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
@@ -158,6 +159,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
+        self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -317,6 +319,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes)
+        self._code_lenses_debouncer_async.debounce(
+            self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         if not different:
             return
         self._clear_highlight_regions()
@@ -324,8 +328,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
-        self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
-                                                  after_ms=self.code_lenses_debounce_time)
 
     def get_uri(self) -> str:
         return self._uri

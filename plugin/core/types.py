@@ -6,7 +6,6 @@ from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Un
 from .typing import cast
 from .url import filename_to_uri
 from .url import parse_uri
-from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -134,41 +133,46 @@ class SettingsRegistration:
         self._settings.clear_on_change("LSP")
 
 
-class Debouncer:
+class DebouncerNonThreadSafe:
+    """
+    Debouncer for delaying execution of a function until specified timeout time.
 
-    def __init__(self) -> None:
+    When calling `debounce()` multiple times, if the time span between calls is shorter than the specified `timeout_ms`,
+    the callback function will only be called once, after `timeout_ms` since the last call.
+
+    This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
+    was choosen during initialization through the `async_thread` argument.
+    """
+
+    def __init__(self, async_thread: bool) -> None:
+        self._async_thread = async_thread
         self._current_id = -1
         self._next_id = 0
-        self._current_id_lock = RLock()
 
-    def debounce(self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
-                 async_thread: bool = False) -> None:
+    def debounce(
+        self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
+    ) -> None:
         """
-        Possibly run a function at a later point in time, either on the async thread or on the main thread.
+        Possibly run a function at a later point in time on the thread chosen during initialization.
 
         :param      f:             The function to possibly run
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
         :param      condition:     The condition that must evaluate to True in order to run the funtion
-        :param      async_thread:  If true, run the function on the async worker thread, otherwise run
-                                   the function on the main thread
         """
 
         def run(debounce_id: int) -> None:
-            with self._current_id_lock:
-                if debounce_id != self._current_id:
-                    return
+            if debounce_id != self._current_id:
+                return
             if condition():
                 f()
 
-        runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
-        with self._current_id_lock:
-            current_id = self._current_id = self._next_id
+        runner = sublime.set_timeout_async if self._async_thread else sublime.set_timeout
+        current_id = self._current_id = self._next_id
         self._next_id += 1
         runner(lambda: run(current_id), timeout_ms)
 
     def cancel_pending(self) -> None:
-        with self._current_id_lock:
-            self._current_id = -1
+        self._current_id = -1
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:

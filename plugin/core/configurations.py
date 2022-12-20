@@ -81,7 +81,7 @@ class WindowConfigManager(object):
             disable_in_project(self._window, config_name)
         self.update(config_name)
 
-    def record_crash(self, config_name: str) -> bool:
+    def record_crash(self, config_name: str, exit_code: int, exception: Optional[Exception]) -> bool:
         """
         Signal that a session has crashed.
 
@@ -95,10 +95,10 @@ class WindowConfigManager(object):
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
         msg = "".join((
-            "session for config {} crashed. ",
-            "({} / {} times in the last {} seconds)"
-        )).format(config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds())
-        debug(msg)
+            "session for config {} crashed ",
+            "({} / {} times in the last {} seconds), ",
+            "exit code {}, exception: {}",
+        )).format(config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception)
         printf(msg)
         return crash_count < RETRY_MAX_COUNT
 

@@ -393,7 +393,7 @@ class WindowManager(Manager):
             listener.on_session_shutdown_async(session)
         if exit_code != 0 or exception:
             config = session.config
-            restart = self._config_manager.record_crash(config.name)
+            restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
                 msg = "".join((
                     "{0} exited with status code {1}. ",

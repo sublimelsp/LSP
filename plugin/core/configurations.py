@@ -93,19 +93,8 @@ class WindowConfigManager(object):
         self._crashes[config_name].append(now)
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
-        msg = "".join((
-            "session for config {} crashed ",
-            "({} / {} times in the last {} seconds), ",
-            "exit code {}, exception: {}",
-        )).format(
-            config_name,
-            crash_count,
-            RETRY_MAX_COUNT,
-            RETRY_COUNT_TIMEDELTA.total_seconds(),
-            exit_code,
-            exception
-        )
-        printf(msg)
+        printf("{} crashed ({} / {} times in the last {} seconds), exit code {}, exception: {}".format(
+            config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception))
         return crash_count < RETRY_MAX_COUNT
 
     def _disable_for_session(self, config_name: str) -> None:

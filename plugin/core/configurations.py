@@ -85,8 +85,6 @@ class WindowConfigManager(object):
         Signal that a session has crashed.
 
         Returns True if the session should be restarted automatically.
-        Returns False if the session should not be restarted automatically,
-        in this case the counter is reset.
         """
         now = datetime.now()
         if config_name not in self._crashes:

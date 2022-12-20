@@ -951,7 +951,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
         If the session hasn't crashed, a shutdown message will be send immediately
         after this method returns. In this case exit_code and exception are None.
-        If the session has crashed, the exit_code or the exception is not None.
+        If the session has crashed, the exit_code and an optional exception are provided.
 
         This API is triggered on async thread.
         """

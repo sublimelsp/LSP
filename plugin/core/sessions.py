@@ -943,15 +943,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_session_end_async(self, exit_code: int, exception: Optional[Exception]) -> None:
+    def on_session_end_async(self, exit_code: Optional[int], exception: Optional[Exception]) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
         any stored state or delete references to the session or plugin instance that would otherwise prevent the
-        instance from being garbage-collected. If the plugin hasn't crashed, a shutdown message will be send immediately
-        after this method returns.
-        This API is triggered on async thread.
+        instance from being garbage-collected.
 
-        If the session ended with an error, the exit_code is not zero or the exception is not None.
+        If the session hasn't crashed, a shutdown message will be send immediately
+        after this method returns. In this case exit_code and exception are None.
+        If the session has crashed, the exit_code is not zero or the exception is not None.
+
+        This API is triggered on async thread.
         """
         pass
 
@@ -1851,7 +1853,7 @@ class Session(TransportCallbacks):
             return
         self.exiting = True
         if self._plugin:
-            self._plugin.on_session_end_async(0, None)
+            self._plugin.on_session_end_async(None, None)
             self._plugin = None
         for sv in self.session_views_async():
             for status_key in self._status_messages.keys():

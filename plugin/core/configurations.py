@@ -87,11 +87,10 @@ class WindowConfigManager(object):
 
         Returns True if the session should be restarted automatically.
         """
-        now = datetime.now()
         if config_name not in self._crashes:
-            self._crashes[config_name] = deque([now], maxlen=RETRY_MAX_COUNT)
-        else:
-            self._crashes[config_name].append(now)
+            self._crashes[config_name] = deque(maxlen=RETRY_MAX_COUNT)
+        now = datetime.now()
+        self._crashes[config_name].append(now)
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
         msg = "".join((

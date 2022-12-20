@@ -100,11 +100,7 @@ class WindowConfigManager(object):
             "({} / {} times in the last {} seconds)"
         )).format(config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds())
         debug(msg)
-        if crash_count >= RETRY_MAX_COUNT:
-            # CRASH_MAX_COUNT crashes in _CRASH_COUNT_TIMEDELTA
-            del self._crashes[config_name]
-            return False
-        return True
+        return crash_count < RETRY_MAX_COUNT
 
     def _disable_for_session(self, config_name: str) -> None:
         self._disabled_for_session.add(config_name)

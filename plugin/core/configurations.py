@@ -98,7 +98,14 @@ class WindowConfigManager(object):
             "session for config {} crashed ",
             "({} / {} times in the last {} seconds), ",
             "exit code {}, exception: {}",
-        )).format(config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception)
+        )).format(
+            config_name,
+            crash_count,
+            RETRY_MAX_COUNT,
+            RETRY_COUNT_TIMEDELTA.total_seconds(),
+            exit_code,
+            exception
+        )
         printf(msg)
         return crash_count < RETRY_MAX_COUNT
 

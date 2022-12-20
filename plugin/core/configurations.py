@@ -1,10 +1,16 @@
 from .logging import debug
 from .logging import exception_log
 from .types import ClientConfig
-from .typing import Generator, List, Optional, Set, Dict
+from .typing import Generator, List, Optional, Set, Dict, Deque
 from .workspace import enable_in_project, disable_in_project
 import sublime
 import urllib.parse
+from datetime import datetime, timedelta
+from collections import deque
+
+
+RETRY_MAX_COUNT = 5
+RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 
 
 class WindowConfigManager(object):
@@ -12,6 +18,7 @@ class WindowConfigManager(object):
         self._window = window
         self._global_configs = global_configs
         self._disabled_for_session = set()  # type: Set[str]
+        self._crashes = {}  # type: Dict[str, Deque[datetime]]
         self.all = {}  # type: Dict[str, ClientConfig]
         self.update()
 
@@ -72,6 +79,32 @@ class WindowConfigManager(object):
         else:
             disable_in_project(self._window, config_name)
         self.update(config_name)
+
+    def record_crash(self, config_name: str) -> bool:
+        """
+        Signal that a session has crashed.
+
+        Returns True if the session should be restarted automatically.
+        Returns False if the session should not be restarted automatically,
+        in this case the counter is reset.
+        """
+        now = datetime.now()
+        if config_name not in self._crashes:
+            self._crashes[config_name] = deque([now], maxlen=RETRY_MAX_COUNT)
+        else:
+            self._crashes[config_name].append(now)
+        timeout = now - RETRY_COUNT_TIMEDELTA
+        crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
+        msg = "".join((
+            "session for config {} crashed. ",
+            "({} / {} times in the last {} seconds)"
+        )).format(config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds())
+        debug(msg)
+        if crash_count >= RETRY_MAX_COUNT:
+            # CRASH_MAX_COUNT crashes in _CRASH_COUNT_TIMEDELTA
+            del self._crashes[config_name]
+            return False
+        return True
 
     def _disable_for_session(self, config_name: str) -> None:
         self._disabled_for_session.add(config_name)

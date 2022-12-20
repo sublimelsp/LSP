@@ -393,15 +393,18 @@ class WindowManager(Manager):
             listener.on_session_shutdown_async(session)
         if exit_code != 0 or exception:
             config = session.config
-            msg = "".join((
-                "{0} exited with status code {1}. ",
-                "Do you want to restart it? If you choose Cancel, it will be disabled for this window for the ",
-                "duration of the current session. ",
-                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-            )).format(config.name, exit_code)
-            if exception:
-                msg += "\n\n--- Error: ---\n{}".format(str(exception))
-            if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
+            restart = self._config_manager.record_crash(config.name)
+            if not restart:
+                msg = "".join((
+                    "{0} exited with status code {1}. ",
+                    "Do you want to restart it? If you choose Cancel, it will be disabled for this window for the ",
+                    "duration of the current session. ",
+                    "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
+                )).format(config.name, exit_code)
+                if exception:
+                    msg += "\n\n--- Error: ---\n{}".format(str(exception))
+                restart = sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name))
+            if restart:
                 for listener in self._listeners:
                     self.register_listener_async(listener)
             else:

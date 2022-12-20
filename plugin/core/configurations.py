@@ -3,10 +3,10 @@ from .logging import exception_log
 from .types import ClientConfig
 from .typing import Generator, List, Optional, Set, Dict, Deque
 from .workspace import enable_in_project, disable_in_project
+from collections import deque
+from datetime import datetime, timedelta
 import sublime
 import urllib.parse
-from datetime import datetime, timedelta
-from collections import deque
 
 
 RETRY_MAX_COUNT = 5

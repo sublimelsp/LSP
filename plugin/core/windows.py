@@ -1,5 +1,5 @@
 from ...third_party import WebsocketServer  # type: ignore
-from .configurations import WindowConfigManager
+from .configurations import WindowConfigManager, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
@@ -396,12 +396,12 @@ class WindowManager(Manager):
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
                 msg = "".join((
-                msg = "".join((
-                    "The {0} server has crashed 5 times in the last 3 minutes.\n\n",
+                    "The {0} server has crashed {1} times in the last {2} seconds.\n",
+                    "Exit code: {3}\n\n",
                     "You can try to Restart it or you can choose Cancel to disable it for this window for the ",
                     "duration of the current session. ",
                     "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-                )).format(config.name)
+                )).format(config.name, RETRY_MAX_COUNT, int(RETRY_COUNT_TIMEDELTA.total_seconds()), exit_code)
                 if exception:
                     msg += "\n\n--- Error: ---\n{}".format(str(exception))
                 restart = sublime.ok_cancel_dialog(msg, "Restart")

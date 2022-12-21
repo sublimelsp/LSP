@@ -878,7 +878,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      params:         A ConfigurationItem for which configuration is requested.
         :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
 
-        :returns The resolved configuration for given params.
+        :returns: The resolved configuration for given params.
         """
         return configuration
 

@@ -68,13 +68,13 @@ class LspResolveDocsCommand(LspTextCommand):
             if not self.view.is_valid():
                 return
             if self.view.is_popup_visible():
-                update_lsp_popup(self.view, minihtml_content, md=True)
+                update_lsp_popup(self.view, minihtml_content, md=False)
             else:
                 show_lsp_popup(
                     self.view,
                     minihtml_content,
                     flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                    md=True,
+                    md=False,
                     on_navigate=self._on_navigate)
 
         sublime.set_timeout(run_main)

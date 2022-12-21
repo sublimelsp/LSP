@@ -80,13 +80,11 @@ class CodeActionsManager:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 if manual and only_kinds == [CodeActionKind.Refactor]:
-                    refactor_actions = [
-                        cast(CodeAction, a) for a in actions
-                        if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind'))
-                    ]
-                    self.refactor_actions_cache.extend(
-                        [(session.config.name, a) for a in refactor_actions] if len(refactor_actions) <= 10 else
-                        [(session.config.name, a) for a in refactor_actions if not a.get('disabled')])
+                    self.refactor_actions_cache.extend([
+                        (session.config.name, cast(CodeAction, a)) for a in actions
+                        if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind')) and
+                        not a.get('disabled')
+                    ])
                 return [
                     a for a in actions
                     if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')
@@ -357,18 +355,17 @@ class LspRefactorCommand(LspTextCommand):
     def is_enabled(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if not super().is_enabled(event, point):
             return False
-        return id > -1 and len(actions_manager.refactor_actions_cache) > id and \
-            not bool(actions_manager.refactor_actions_cache[id][1].get('disabled'))
+        return -1 < id < len(actions_manager.refactor_actions_cache)
 
     def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if id == -1:
             if super().is_enabled(event, point):
                 sublime.set_timeout_async(self._request_refactor_actions_async)
             return False
-        return len(actions_manager.refactor_actions_cache) > id and self._is_cache_valid()
+        return id < len(actions_manager.refactor_actions_cache) and self._is_cache_valid()
 
     def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
-        if id > -1 and len(actions_manager.refactor_actions_cache) > id:
+        if -1 < id < len(actions_manager.refactor_actions_cache):
             return actions_manager.refactor_actions_cache[id][1]['title']
 
     def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:

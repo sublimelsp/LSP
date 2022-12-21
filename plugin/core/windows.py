@@ -1,5 +1,5 @@
 from ...third_party import WebsocketServer  # type: ignore
-from .configurations import WindowConfigManager
+from .configurations import WindowConfigManager, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
@@ -393,15 +393,18 @@ class WindowManager(Manager):
             listener.on_session_shutdown_async(session)
         if exit_code != 0 or exception:
             config = session.config
-            msg = "".join((
-                "{0} exited with status code {1}. ",
-                "Do you want to restart it? If you choose Cancel, it will be disabled for this window for the ",
-                "duration of the current session. ",
-                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-            )).format(config.name, exit_code)
-            if exception:
-                msg += "\n\n--- Error: ---\n{}".format(str(exception))
-            if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
+            restart = self._config_manager.record_crash(config.name, exit_code, exception)
+            if not restart:
+                msg = "".join((
+                    "The {0} server has crashed {1} times in the last {2} seconds.\n\n",
+                    "You can try to Restart it or you can choose Cancel to disable it for this window for the ",
+                    "duration of the current session. ",
+                    "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
+                )).format(config.name, RETRY_MAX_COUNT, int(RETRY_COUNT_TIMEDELTA.total_seconds()))
+                if exception:
+                    msg += "\n\n--- Error: ---\n{}".format(str(exception))
+                restart = sublime.ok_cancel_dialog(msg, "Restart")
+            if restart:
                 for listener in self._listeners:
                     self.register_listener_async(listener)
             else:

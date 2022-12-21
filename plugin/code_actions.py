@@ -34,6 +34,8 @@ class CodeActionsManager:
 
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]]
+        self.refactor_actions_key = None  # type: Optional[str]
+        self.refactor_actions_cache = []  # type: List[Tuple[str, CodeAction]]
 
     def request_for_region_async(
         self,
@@ -49,6 +51,7 @@ class CodeActionsManager:
         """
         listener = windows.listener_for_view(view)
         if not listener:
+            self.refactor_actions_key = None
             return Promise.resolve([])
         location_cache_key = None
         use_cache = not manual
@@ -60,6 +63,9 @@ class CodeActionsManager:
                     return task
                 else:
                     self._response_cache = None
+        elif only_kinds == [CodeActionKind.Refactor]:
+            self.refactor_actions_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), region)
+            self.refactor_actions_cache.clear()
 
         def request_factory(session: Session) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
@@ -73,13 +79,23 @@ class CodeActionsManager:
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
-                return [a for a in actions if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind'))]
+                if manual and only_kinds == [CodeActionKind.Refactor]:
+                    self.refactor_actions_cache.extend([
+                        (session.config.name, cast(CodeAction, a)) for a in actions
+                        if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind')) and
+                        not a.get('disabled')
+                    ])
+                return [
+                    a for a in actions
+                    if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')
+                ]
             if manual:
-                return actions
+                return [a for a in actions if not a.get('disabled')]
             # On implicit (selection change) request, only return commands and quick fix kinds.
             return [
                 a for a in actions
-                if is_command(a) or not a.get('kind') or kinds_include_kind([CodeActionKind.QuickFix], a.get('kind'))
+                if is_command(a) or not a.get('disabled') and
+                kinds_include_kind([CodeActionKind.QuickFix], a.get('kind', CodeActionKind.QuickFix))
             ]
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
@@ -115,7 +131,7 @@ class CodeActionsManager:
             # actions that need to be then manually filtered.
             session_kinds = get_session_kinds(session)
             matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
-            return [a for a in actions if a.get('kind') in matching_kinds]
+            return [a for a in actions if a.get('kind') in matching_kinds and not a.get('disabled')]
 
         return self._collect_code_actions_async(listener, request_factory, response_filter)
 
@@ -129,12 +145,9 @@ class CodeActionsManager:
         def on_response(
             session: Session, response: Union[Error, Optional[List[CodeActionOrCommand]]]
         ) -> CodeActionsByConfigName:
-            if isinstance(response, Error):
-                actions = []
-            else:
-                actions = [action for action in (response or []) if not action.get('disabled')]
-                if actions and response_filter:
-                    actions = response_filter(session, actions)
+            actions = []
+            if response and not isinstance(response, Error) and response_filter:
+                actions = response_filter(session, response)
             return (session.config.name, actions)
 
         tasks = []  # type: List[Promise[CodeActionsByConfigName]]
@@ -333,3 +346,52 @@ class LspCodeActionsCommand(LspTextCommand):
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
             sublime.error_message("{}: {}".format(session_name, str(response)))
+
+
+class LspRefactorCommand(LspTextCommand):
+
+    capability = 'codeActionProvider'
+
+    def is_enabled(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if not super().is_enabled(event, point):
+            return False
+        return -1 < id < len(actions_manager.refactor_actions_cache)
+
+    def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if id == -1:
+            if super().is_enabled(event, point):
+                sublime.set_timeout_async(self._request_refactor_actions_async)
+            return False
+        return id < len(actions_manager.refactor_actions_cache) and self._is_cache_valid()
+
+    def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
+        if -1 < id < len(actions_manager.refactor_actions_cache):
+            return actions_manager.refactor_actions_cache[id][1]['title']
+
+    def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+        sublime.set_timeout_async(partial(self.run_async, id))
+
+    def run_async(self, id: int) -> None:
+        if self._is_cache_valid():
+            config_name, action = actions_manager.refactor_actions_cache[id]
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(action, progress=True) \
+                    .then(lambda response: self._handle_response_async(config_name, response))
+
+    def _handle_response_async(self, session_name: str, response: Any) -> None:
+        if isinstance(response, Error):
+            sublime.error_message("{}: {}".format(session_name, str(response)))
+
+    def _is_cache_valid(self) -> bool:
+        v = self.view
+        region = first_selection_region(v)
+        if region is None:
+            return False
+        return actions_manager.refactor_actions_key == "{}#{}:{}".format(v.buffer_id(), v.change_count(), region)
+
+    def _request_refactor_actions_async(self) -> None:
+        region = first_selection_region(self.view)
+        if region is None:
+            return
+        actions_manager.request_for_region_async(self.view, region, [], [CodeActionKind.Refactor], True)

@@ -396,14 +396,15 @@ class WindowManager(Manager):
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
                 msg = "".join((
-                    "{0} exited with status code {1}. ",
-                    "Do you want to restart it? If you choose Cancel, it will be disabled for this window for the ",
+                msg = "".join((
+                    "The {0} server has crashed 5 times in the last 3 minutes.\n\n",
+                    "You can try to Restart it or you can choose Cancel to disable it for this window for the ",
                     "duration of the current session. ",
                     "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-                )).format(config.name, exit_code)
+                )).format(config.name)
                 if exception:
                     msg += "\n\n--- Error: ---\n{}".format(str(exception))
-                restart = sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name))
+                restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
                     self.register_listener_async(listener)

@@ -279,29 +279,33 @@ class SessionBuffer:
     on_reload_async = on_revert_async
 
     def purge_changes_async(self, view: sublime.View) -> None:
-        if self.pending_changes is not None:
-            sync_kind = self.text_sync_kind()
-            if sync_kind == TextDocumentSyncKind.None_:
-                return
-            if sync_kind == TextDocumentSyncKind.Full:
-                changes = None
-                version = view.change_count()
-            else:
-                changes = self.pending_changes.changes
-                version = self.pending_changes.version
-            try:
-                notification = did_change(view, version, changes)
-                self.session.send_notification(notification)
-            except MissingUriError:
-                return  # we're closing
-            finally:
-                self.pending_changes = None
-            self._do_color_boxes_async(view, version)
-            self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
-                self._do_document_link_async(view, version)
-            self.do_inlay_hints_async(view)
-            self.session.notify_plugin_on_session_buffer_change(self)
+        if self.pending_changes is None:
+            return
+        sync_kind = self.text_sync_kind()
+        if sync_kind == TextDocumentSyncKind.None_:
+            return
+        if sync_kind == TextDocumentSyncKind.Full:
+            changes = None
+            version = view.change_count()
+        else:
+            changes = self.pending_changes.changes
+            version = self.pending_changes.version
+        try:
+            notification = did_change(view, version, changes)
+            self.session.send_notification(notification)
+        except MissingUriError:
+            return  # we're closing
+        finally:
+            self.pending_changes = None
+        self.session.notify_plugin_on_session_buffer_change(self)
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
+
+    def _on_after_change_async(self, view: sublime.View, version: int) -> None:
+        self._do_color_boxes_async(view, version)
+        self.do_semantic_tokens_async(view)
+        if userprefs().link_highlight_style in ("underline", "none"):
+            self._do_document_link_async(view, version)
+        self.do_inlay_hints_async(view)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         if self.should_notify_will_save():

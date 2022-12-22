@@ -353,6 +353,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
 
 class LspMenuActionCommand(LspTextCommand, metaclass=ABCMeta):
+    """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'
 

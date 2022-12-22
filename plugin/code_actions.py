@@ -84,18 +84,15 @@ class CodeActionsManager:
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
+                code_actions = [cast(CodeAction, a) for a in actions if not is_command(a) and not a.get('disabled')]
                 if manual and only_kinds == MENU_ACTIONS_KINDS:
-                    code_actions = [cast(CodeAction, a) for a in actions if not is_command(a) and not a.get('disabled')]
                     for action in code_actions:
                         kind = action.get('kind')
                         if kinds_include_kind([CodeActionKind.Refactor], kind):
                             self.refactor_actions_cache.append((session.config.name, action))
                         elif kinds_include_kind([CodeActionKind.Source], kind):
                             self.source_actions_cache.append((session.config.name, action))
-                return [
-                    a for a in actions
-                    if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')
-                ]
+                return [action for action in code_actions if kinds_include_kind(only_kinds, action.get('kind'))]
             if manual:
                 return [a for a in actions if not a.get('disabled')]
             # On implicit (selection change) request, only return commands and quick fix kinds.

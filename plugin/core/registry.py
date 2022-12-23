@@ -73,6 +73,18 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         else:
             return None
 
+    def session_by_name(self, session_name: str) -> Optional[Session]:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return None
+        for session in wm.get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            if session.config.name == session_name:
+                return session
+        else:
+            return None
+
 
 class LspTextCommand(sublime_plugin.TextCommand):
     """
@@ -220,3 +232,31 @@ class LspPrevDiagnosticCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
         navigate_diagnostics(self.view, point, forward=False)
+
+
+class LspExpandTreeItemCommand(LspWindowCommand):
+
+    capability = 'callHierarchyProvider'
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.expand_item(id)
+
+
+class LspCollapseTreeItemCommand(LspWindowCommand):
+
+    capability = 'callHierarchyProvider'
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.collapse_item(id)

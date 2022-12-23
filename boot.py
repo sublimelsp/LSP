@@ -3,6 +3,7 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
+from .plugin.call_hierarchy import LspCallHierarchyCommand
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_lens import LspCodeLensCommand
@@ -21,10 +22,13 @@ from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
 from .plugin.core.protocol import Location
 from .plugin.core.protocol import LocationLink
+from .plugin.core.registry import LspCollapseTreeItemCommand
+from .plugin.core.registry import LspExpandTreeItemCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
+from .plugin.core.registry import LspWindowCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin
@@ -189,14 +193,13 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout(panel_manager.update_log_panel)
 
 
-class LspOpenLocationCommand(sublime_plugin.TextCommand):
+class LspOpenLocationCommand(LspWindowCommand):
     """
     A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
     """
 
     def run(
         self,
-        _: sublime.Edit,
         location: Union[Location, LocationLink],
         session_name: Optional[str] = None,
         flags: int = 0,
@@ -205,11 +208,13 @@ class LspOpenLocationCommand(sublime_plugin.TextCommand):
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
 
     def _run_async(
-        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int = 0, group: int = -1
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
     ) -> None:
-        manager = windows.lookup(self.view.window())
-        if manager:
-            manager.open_location_async(location, session_name, self.view, flags, group) \
+        if session_name:
+            self.session_name = session_name
+        session = self.session()
+        if session:
+            session.open_location_async(location, flags, group) \
                 .then(lambda view: self._handle_continuation(location, view is not None))
 
     def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:

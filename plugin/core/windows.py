@@ -77,6 +77,7 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self._server_log = []  # type: List[Tuple[str, str]]
         self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
+        self.tree_view_sheets = {}
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))

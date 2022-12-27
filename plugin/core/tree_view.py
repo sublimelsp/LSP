@@ -1,3 +1,4 @@
+from .css import css
 from .promise import Promise
 from .typing import Dict, IntEnum, List, Optional, TypeVar
 from .views import SublimeKind
@@ -154,7 +155,6 @@ class TreeViewSheet(sublime.HtmlSheet):
         node = self.nodes[id]
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
-            print(tree_item.id)
             self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
             node.children.append(tree_item.id)
         node.is_resolved = True
@@ -179,8 +179,12 @@ class TreeViewSheet(sublime.HtmlSheet):
     def _update_contents(self) -> None:
         contents = """
         <style>
-            body {{
+            html {{
                 padding: 0;
+            }}
+            {}
+            h3 a {{
+                text-decoration: none;
             }}
             .tree-view {{
                 padding: 0.5rem;
@@ -250,11 +254,11 @@ class TreeViewSheet(sublime.HtmlSheet):
                 padding-left: 0.5rem;
             }}
         </style>
-        <body id="lsp-tree-view">
+        <body id="lsp-tree-view" class="lsp_sheet">
             <h3>{}</h3>
             <div class="tree-view">{}</div>
         </body>
-        """.format(self.header, "".join([self._subtree_html(root_id) for root_id in self.root_nodes]))
+        """.format(css().sheets, self.header, "".join([self._subtree_html(root_id) for root_id in self.root_nodes]))
         self.set_contents(contents)
 
     def _subtree_html(self, id: str) -> str:

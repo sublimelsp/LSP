@@ -29,9 +29,11 @@ def new_tree_view_sheet(
     flags: int = 0,
     group: int = -1
 ) -> Optional[TreeViewSheet]:
-    """ Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one
-    TreeViewSheet with the given name is allowed per window. If there already exists a TreeViewSheet with the same
-    name, its content will be replaced with the new data. """
+    """
+    Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one TreeViewSheet
+    with the given name is allowed per window. If there already exists a TreeViewSheet with the same name, its content
+    will be replaced with the new data. The header argument is allowed to contain minihtml markup.
+    """
     wm = windows.lookup(window)
     if not wm:
         return None

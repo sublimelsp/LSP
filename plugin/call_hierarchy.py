@@ -10,6 +10,7 @@ from .core.registry import new_tree_view_sheet
 from .core.registry import windows
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.typing import cast
@@ -117,9 +118,39 @@ class LspCallHierarchyCommand(LspTextCommand):
             self._window.status_message("Call hierarchy not available")
             return
         data_provider = CallHierarchyDataProvider(self._window, session_name, CallHierarchyType.IncomingCalls, response)
-        new_tree_view_sheet(
-            self._window,
-            "Call Hierarchy",
-            data_provider,
-            header="Call Hierarchy: Incoming Calls",
-            flags=sublime.ADD_TO_SELECTION)
+        header = 'Call Hierarchy: Incoming Calls <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
+            sublime.command_url('lsp_call_hierarchy_toggle', {
+                'session_name': session_name,
+                'call_hierarchy_type': CallHierarchyType.OutgoingCalls,
+                'root_elements': response
+            })
+        )
+        new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
+
+
+class LspCallHierarchyToggleCommand(LspWindowCommand):
+
+    capability = 'callHierarchyProvider'
+
+    def run(
+        self, session_name: str, call_hierarchy_type: CallHierarchyType, root_elements: List[CallHierarchyItem]
+    ) -> None:
+        if call_hierarchy_type == CallHierarchyType.IncomingCalls:
+            current_type_label = 'Incoming Calls'
+            other_type = CallHierarchyType.OutgoingCalls
+            tooltip = 'Show outgoing calls'
+        else:
+            current_type_label = 'Outgoing Calls'
+            other_type = CallHierarchyType.IncomingCalls
+            tooltip = 'Show incoming calls'
+        header = 'Call Hierarchy: {} <a href="{}" title="{}">&#8644;</a>'.format(
+            current_type_label,
+            sublime.command_url('lsp_call_hierarchy_toggle', {
+                'session_name': session_name,
+                'call_hierarchy_type': other_type,
+                'root_elements': root_elements
+            }),
+            tooltip
+        )
+        data_provider = CallHierarchyDataProvider(self.window, session_name, call_hierarchy_type, root_elements)
+        new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)

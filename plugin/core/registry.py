@@ -279,8 +279,6 @@ class LspPrevDiagnosticCommand(LspTextCommand):
 
 class LspExpandTreeItemCommand(LspWindowCommand):
 
-    capability = 'callHierarchyProvider'
-
     def run(self, name: str, id: str) -> None:
         wm = windows.lookup(self.window)
         if not wm:
@@ -292,8 +290,6 @@ class LspExpandTreeItemCommand(LspWindowCommand):
 
 
 class LspCollapseTreeItemCommand(LspWindowCommand):
-
-    capability = 'callHierarchyProvider'
 
     def run(self, name: str, id: str) -> None:
         wm = windows.lookup(self.window)

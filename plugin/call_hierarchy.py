@@ -118,7 +118,7 @@ class LspCallHierarchyCommand(LspTextCommand):
             self._window.status_message("Call hierarchy not available")
             return
         data_provider = CallHierarchyDataProvider(self._window, session_name, CallHierarchyType.IncomingCalls, response)
-        header = 'Call Hierarchy: Incoming Calls <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
+        header = 'Call Hierarchy: Callers of… <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
             make_toggle_command(session_name, CallHierarchyType.OutgoingCalls, response))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
@@ -131,13 +131,13 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
         self, session_name: str, call_hierarchy_type: CallHierarchyType, root_elements: List[CallHierarchyItem]
     ) -> None:
         if call_hierarchy_type == CallHierarchyType.IncomingCalls:
-            current_type_label = 'Incoming Calls'
+            current_type_label = 'Callers of…'
             other_type = CallHierarchyType.OutgoingCalls
-            tooltip = 'Show outgoing calls'
+            tooltip = 'Show Outgoing Calls'
         elif call_hierarchy_type == CallHierarchyType.OutgoingCalls:
-            current_type_label = 'Outgoing Calls'
+            current_type_label = 'Calls from…'
             other_type = CallHierarchyType.IncomingCalls
-            tooltip = 'Show incoming calls'
+            tooltip = 'Show Incoming Calls'
         else:
             return
         header = 'Call Hierarchy: {} <a href="{}" title="{}">&#8644;</a>'.format(

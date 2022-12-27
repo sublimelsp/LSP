@@ -1,5 +1,4 @@
 from .promise import Promise
-from .registry import windows
 from .typing import Dict, IntEnum, List, Optional, TypeVar
 from .views import SublimeKind
 from abc import ABCMeta
@@ -7,7 +6,6 @@ from abc import abstractmethod
 from functools import partial
 import html
 import sublime
-import sublime_api  # pyright: ignore[reportMissingImports]
 import uuid
 
 
@@ -67,7 +65,8 @@ class TreeItem:
             label_html = '<span class="label">{}</span>'.format(html.escape(self.label))
         description_html = '<span class="description">{}</span>'.format(html.escape(self.description)) if \
             self.description else ''
-        return '<p>' + indent_html + disclosure_button_html + icon_html + label_html + description_html + '</p>'
+        return '<div class="tree-view-row">{}</div>'.format(
+            indent_html + disclosure_button_html + icon_html + label_html + description_html)
 
     @staticmethod
     def _kind_class_name(kind_id: int) -> str:
@@ -92,11 +91,11 @@ class TreeItem:
 
 class Node:
 
-    __slots__ = ('element', 'item', 'indent_level', 'children', 'is_resolved')
+    __slots__ = ('element', 'tree_item', 'indent_level', 'children', 'is_resolved')
 
-    def __init__(self, element: T, item: TreeItem, indent_level: int = 0) -> None:  # pyright: ignore
+    def __init__(self, element: T, tree_item: TreeItem, indent_level: int = 0) -> None:  # pyright: ignore
         self.element = element
-        self.item = item
+        self.tree_item = tree_item
         self.indent_level = indent_level
         self.children = []  # type: List[str]  # IDs of child nodes
         self.is_resolved = False
@@ -141,35 +140,40 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
     def _set_root_nodes(self, elements: List[T]) -> None:  # pyright: ignore[reportInvalidTypeVarUse]
+        promises = []  # type: List[Promise[None]]
         for element in elements:
-            item = self.data_provider.get_tree_item(element)
-            self.nodes[item.id] = Node(element, item)
-            self.root_nodes.append(item.id)
-        self._update_contents()
+            tree_item = self.data_provider.get_tree_item(element)
+            tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
+            self.nodes[tree_item.id] = Node(element, tree_item)
+            self.root_nodes.append(tree_item.id)
+            promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
+        Promise.all(promises).then(lambda _: self._update_contents())
 
     def _add_children(self, id: str, elements: List[T]) -> None:  # pyright: ignore[reportInvalidTypeVarUse]
         assert id in self.nodes
         node = self.nodes[id]
         for element in elements:
-            item = self.data_provider.get_tree_item(element)
-            self.nodes[item.id] = Node(element, item, node.indent_level + 1)
-            node.children.append(item.id)
+            tree_item = self.data_provider.get_tree_item(element)
+            print(tree_item.id)
+            self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
+            node.children.append(tree_item.id)
         node.is_resolved = True
-        self._update_contents()
 
     def expand_item(self, id: str) -> None:
         assert id in self.nodes
         node = self.nodes[id]
-        node.item.collapsible_state = TreeItemCollapsibleState.EXPANDED
+        node.tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
         if node.is_resolved:
             self._update_contents()
             return
         else:
-            self.data_provider.get_children(node.element).then(partial(self._add_children, id))
+            self.data_provider.get_children(node.element) \
+                .then(partial(self._add_children, id)) \
+                .then(lambda _: self._update_contents())
 
     def collapse_item(self, id: str) -> None:
         assert id in self.nodes
-        self.nodes[id].item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
+        self.nodes[id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self._update_contents()
 
     def _update_contents(self) -> None:
@@ -180,6 +184,9 @@ class TreeViewSheet(sublime.HtmlSheet):
             }}
             .tree-view {{
                 padding: 0.5rem;
+            }}
+            .tree-view-row {{
+                margin: 0.4rem;
             }}
             .disclosure-button {{
                 color: color(var(--foreground) alpha(0.8));
@@ -252,45 +259,7 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def _subtree_html(self, id: str) -> str:
         node = self.nodes[id]
-        if node.item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
-            return node.item.html(self.name, node.indent_level) + "".join(
+        if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
+            return node.tree_item.html(self.name, node.indent_level) + "".join(
                 [self._subtree_html(child_id) for child_id in node.children])
-        return node.item.html(self.name, node.indent_level)
-
-
-def new_tree_view_sheet(
-    window: sublime.Window,
-    name: str,
-    data_provider: TreeDataProvider,
-    header: str = "",
-    flags: int = 0,
-    group: int = -1
-) -> Optional[TreeViewSheet]:
-    """ Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one
-    TreeViewSheet with the given name is allowed per window. If there already exists a TreeViewSheet with the same
-    name, its content will be replaced with the new data. """
-    wm = windows.lookup(window)
-    if not wm:
-        return None
-    if name in wm.tree_view_sheets:
-        tree_view_sheet = wm.tree_view_sheets[name]
-        sheet_id = tree_view_sheet.id()
-        if tree_view_sheet.window():
-            tree_view_sheet.set_provider(data_provider, header)
-            # add to selected sheets if not already selected
-            selected_sheets = window.selected_sheets()
-            for sheet in window.sheets():
-                if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
-                    if sheet not in selected_sheets:
-                        selected_sheets.append(sheet)
-                        window.select_sheets(selected_sheets)
-                    break
-            return tree_view_sheet
-    tree_view_sheet = TreeViewSheet(
-        sublime_api.window_new_html_sheet(window.window_id, name, "", flags, group),
-        name,
-        data_provider,
-        header
-    )
-    wm.tree_view_sheets[name] = tree_view_sheet
-    return tree_view_sheet
+        return node.tree_item.html(self.name, node.indent_level)

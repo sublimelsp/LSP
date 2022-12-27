@@ -6,14 +6,15 @@ from .core.protocol import CallHierarchyOutgoingCall
 from .core.protocol import CallHierarchyOutgoingCallsParams
 from .core.protocol import CallHierarchyPrepareParams
 from .core.protocol import Request
+from .core.registry import new_tree_view_sheet
 from .core.registry import windows
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.typing import cast
 from .core.typing import IntEnum, List, Optional
+from .core.views import parse_uri
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_position_params
 from functools import partial
@@ -40,7 +41,6 @@ class CallHierarchyDataProvider(TreeDataProvider):
         self.root_elements = root_elements
 
     def get_children(self, element: Optional[CallHierarchyItem]) -> Promise[List[CallHierarchyItem]]:
-        # print("get_children", element)
         if element is None:
             return Promise.resolve(self.root_elements)
         wm = windows.lookup(self.window)
@@ -74,7 +74,7 @@ class CallHierarchyDataProvider(TreeDataProvider):
             element['name'],
             kind=SYMBOL_KINDS.get(element['kind'], sublime.KIND_AMBIGUOUS),
             description=element.get('detail', ""),
-            tooltip="Open source location",
+            tooltip="{}:{}".format(parse_uri(element['uri'])[1], element['selectionRange']['start']['line'] + 1),
             command_url=command_url
         )
 

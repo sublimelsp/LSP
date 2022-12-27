@@ -119,12 +119,7 @@ class LspCallHierarchyCommand(LspTextCommand):
             return
         data_provider = CallHierarchyDataProvider(self._window, session_name, CallHierarchyType.IncomingCalls, response)
         header = 'Call Hierarchy: Incoming Calls <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
-            sublime.command_url('lsp_call_hierarchy_toggle', {
-                'session_name': session_name,
-                'call_hierarchy_type': CallHierarchyType.OutgoingCalls,
-                'root_elements': response
-            })
-        )
+            make_toggle_command(session_name, CallHierarchyType.OutgoingCalls, response))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
 
@@ -139,18 +134,23 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
             current_type_label = 'Incoming Calls'
             other_type = CallHierarchyType.OutgoingCalls
             tooltip = 'Show outgoing calls'
-        else:
+        elif call_hierarchy_type == CallHierarchyType.OutgoingCalls:
             current_type_label = 'Outgoing Calls'
             other_type = CallHierarchyType.IncomingCalls
             tooltip = 'Show incoming calls'
+        else:
+            return
         header = 'Call Hierarchy: {} <a href="{}" title="{}">&#8644;</a>'.format(
-            current_type_label,
-            sublime.command_url('lsp_call_hierarchy_toggle', {
-                'session_name': session_name,
-                'call_hierarchy_type': other_type,
-                'root_elements': root_elements
-            }),
-            tooltip
-        )
+            current_type_label, make_toggle_command(session_name, other_type, root_elements), tooltip)
         data_provider = CallHierarchyDataProvider(self.window, session_name, call_hierarchy_type, root_elements)
         new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
+
+
+def make_toggle_command(
+    session_name: str, call_hierarchy_type: CallHierarchyType, root_elements: List[CallHierarchyItem]
+) -> str:
+    return sublime.command_url('lsp_call_hierarchy_toggle', {
+        'session_name': session_name,
+        'call_hierarchy_type': call_hierarchy_type,
+        'root_elements': root_elements
+    })

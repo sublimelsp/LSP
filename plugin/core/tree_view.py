@@ -45,10 +45,10 @@ class TreeItem:
     def html(self, sheet_name: str, indent_level: int) -> str:
         indent_html = '<span style="padding-left: {}rem;">&nbsp;</span>'.format(indent_level)
         if self.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
-            disclosure_button_html = '<a class="disclosure-button" href="{}">&#9654;</a>'.format(
+            disclosure_button_html = '<a class="disclosure-button" href="{}">▶</a>'.format(
                 sublime.command_url('lsp_expand_tree_item', {'name': sheet_name, 'id': self.id}))
         elif self.collapsible_state == TreeItemCollapsibleState.EXPANDED:
-            disclosure_button_html = '<a class="disclosure-button" href="{}">&#9660;</a>'.format(
+            disclosure_button_html = '<a class="disclosure-button" href="{}">▼</a>'.format(
                 sublime.command_url('lsp_collapse_tree_item', {'name': sheet_name, 'id': self.id}))
         else:
             disclosure_button_html = '<span class="disclosure-button">&nbsp;</span>'

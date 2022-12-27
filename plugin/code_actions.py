@@ -17,12 +17,15 @@ from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
+from abc import ABCMeta
+from abc import abstractmethod
 from functools import partial
 import sublime
 
 ConfigName = str
 CodeActionOrCommand = Union[CodeAction, Command]
 CodeActionsByConfigName = Tuple[ConfigName, List[CodeActionOrCommand]]
+MENU_ACTIONS_KINDS = [CodeActionKind.Refactor, CodeActionKind.Source]
 
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
@@ -34,8 +37,9 @@ class CodeActionsManager:
 
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]]
-        self.refactor_actions_key = None  # type: Optional[str]
+        self.menu_actions_cache_key = None  # type: Optional[str]
         self.refactor_actions_cache = []  # type: List[Tuple[str, CodeAction]]
+        self.source_actions_cache = []  # type: List[Tuple[str, CodeAction]]
 
     def request_for_region_async(
         self,
@@ -51,7 +55,7 @@ class CodeActionsManager:
         """
         listener = windows.listener_for_view(view)
         if not listener:
-            self.refactor_actions_key = None
+            self.menu_actions_cache_key = None
             return Promise.resolve([])
         location_cache_key = None
         use_cache = not manual
@@ -63,9 +67,10 @@ class CodeActionsManager:
                     return task
                 else:
                     self._response_cache = None
-        elif only_kinds == [CodeActionKind.Refactor]:
-            self.refactor_actions_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), region)
+        elif only_kinds == MENU_ACTIONS_KINDS:
+            self.menu_actions_cache_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), region)
             self.refactor_actions_cache.clear()
+            self.source_actions_cache.clear()
 
         def request_factory(session: Session) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
@@ -79,16 +84,15 @@ class CodeActionsManager:
         def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
-                if manual and only_kinds == [CodeActionKind.Refactor]:
-                    self.refactor_actions_cache.extend([
-                        (session.config.name, cast(CodeAction, a)) for a in actions
-                        if not is_command(a) and kinds_include_kind([CodeActionKind.Refactor], a.get('kind')) and
-                        not a.get('disabled')
-                    ])
-                return [
-                    a for a in actions
-                    if not is_command(a) and kinds_include_kind(only_kinds, a.get('kind')) and not a.get('disabled')
-                ]
+                code_actions = [cast(CodeAction, a) for a in actions if not is_command(a) and not a.get('disabled')]
+                if manual and only_kinds == MENU_ACTIONS_KINDS:
+                    for action in code_actions:
+                        kind = action.get('kind')
+                        if kinds_include_kind([CodeActionKind.Refactor], kind):
+                            self.refactor_actions_cache.append((session.config.name, action))
+                        elif kinds_include_kind([CodeActionKind.Source], kind):
+                            self.source_actions_cache.append((session.config.name, action))
+                return [action for action in code_actions if kinds_include_kind(only_kinds, action.get('kind'))]
             if manual:
                 return [a for a in actions if not a.get('disabled')]
             # On implicit (selection change) request, only return commands and quick fix kinds.
@@ -348,32 +352,38 @@ class LspCodeActionsCommand(LspTextCommand):
             sublime.error_message("{}: {}".format(session_name, str(response)))
 
 
-class LspRefactorCommand(LspTextCommand):
+class LspMenuActionCommand(LspTextCommand, metaclass=ABCMeta):
+    """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'
+
+    @property
+    @abstractmethod
+    def actions_cache(self) -> List[Tuple[str, CodeAction]]:
+        ...
 
     def is_enabled(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if not super().is_enabled(event, point):
             return False
-        return -1 < id < len(actions_manager.refactor_actions_cache)
+        return -1 < id < len(self.actions_cache)
 
     def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if id == -1:
             if super().is_enabled(event, point):
-                sublime.set_timeout_async(self._request_refactor_actions_async)
+                sublime.set_timeout_async(partial(self._request_menu_actions_async, event))
             return False
-        return id < len(actions_manager.refactor_actions_cache) and self._is_cache_valid()
+        return id < len(self.actions_cache) and self._is_cache_valid(event)
 
     def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
-        if -1 < id < len(actions_manager.refactor_actions_cache):
-            return actions_manager.refactor_actions_cache[id][1]['title']
+        if -1 < id < len(self.actions_cache):
+            return self.actions_cache[id][1]['title']
 
     def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:
-        sublime.set_timeout_async(partial(self.run_async, id))
+        sublime.set_timeout_async(partial(self.run_async, id, event))
 
-    def run_async(self, id: int) -> None:
-        if self._is_cache_valid():
-            config_name, action = actions_manager.refactor_actions_cache[id]
+    def run_async(self, id: int, event: Optional[dict]) -> None:
+        if self._is_cache_valid(event):
+            config_name, action = self.actions_cache[id]
             session = self.session_by_name(config_name)
             if session:
                 session.run_code_action_async(action, progress=True) \
@@ -383,15 +393,33 @@ class LspRefactorCommand(LspTextCommand):
         if isinstance(response, Error):
             sublime.error_message("{}: {}".format(session_name, str(response)))
 
-    def _is_cache_valid(self) -> bool:
-        v = self.view
-        region = first_selection_region(v)
+    def _is_cache_valid(self, event: Optional[dict]) -> bool:
+        region = self._get_region(event)
         if region is None:
             return False
-        return actions_manager.refactor_actions_key == "{}#{}:{}".format(v.buffer_id(), v.change_count(), region)
+        v = self.view
+        return actions_manager.menu_actions_cache_key == "{}#{}:{}".format(v.buffer_id(), v.change_count(), region)
 
-    def _request_refactor_actions_async(self) -> None:
-        region = first_selection_region(self.view)
-        if region is None:
-            return
-        actions_manager.request_for_region_async(self.view, region, [], [CodeActionKind.Refactor], True)
+    def _get_region(self, event: Optional[dict]) -> Optional[sublime.Region]:
+        if event is not None and self.applies_to_context_menu(event):
+            return sublime.Region(self.view.window_to_text((event['x'], event['y'])))
+        return first_selection_region(self.view)
+
+    def _request_menu_actions_async(self, event: Optional[dict]) -> None:
+        region = self._get_region(event)
+        if region is not None:
+            actions_manager.request_for_region_async(self.view, region, [], MENU_ACTIONS_KINDS, True)
+
+
+class LspRefactorCommand(LspMenuActionCommand):
+
+    @property
+    def actions_cache(self) -> List[Tuple[str, CodeAction]]:
+        return actions_manager.refactor_actions_cache
+
+
+class LspSourceActionCommand(LspMenuActionCommand):
+
+    @property
+    def actions_cache(self) -> List[Tuple[str, CodeAction]]:
+        return actions_manager.source_actions_cache

@@ -7,6 +7,7 @@ from .plugin.call_hierarchy import LspCallHierarchyCommand
 from .plugin.call_hierarchy import LspCallHierarchyToggleCommand
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
+from .plugin.code_actions import LspSourceActionCommand
 from .plugin.code_lens import LspCodeLensCommand
 from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode

@@ -7,8 +7,53 @@
         "caption": "-"
       },
       {
-        "command": "lsp_refactor",
+        "command": "lsp_source_action",
         "args": {"id": -1}
+      },
+      {
+        "caption": "LSP: Source Action",
+        "children": [
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 0}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 1}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 2}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 3}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 4}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 5}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 6}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 7}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 8}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"id": 9}
+          }
+        ]
       },
       {
         "caption": "LSP: Refactor",
@@ -60,12 +105,17 @@
         ]
       },
       {
-        "caption": "LSP: Format File",
-        "command": "lsp_format_document"
-      },
-      {
-        "caption": "LSP: Format Selection",
-        "command": "lsp_format_document_range"
+        "caption": "LSP: Format",
+        "children": [
+          {
+            "caption": "Format File",
+            "command": "lsp_format_document"
+          },
+          {
+            "caption": "Format Selection",
+            "command": "lsp_format_document_range"
+          }
+        ]
       }
     ]
   },

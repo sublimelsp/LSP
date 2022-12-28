@@ -57,7 +57,7 @@ class LspInlayHintClickCommand(LspTextCommand):
 
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
-    position = inlay_hint["position"]  # type: ignore
+    position = inlay_hint["position"]
     region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)

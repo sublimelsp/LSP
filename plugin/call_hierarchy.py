@@ -152,6 +152,6 @@ def make_toggle_command(
 ) -> str:
     return sublime.command_url('lsp_call_hierarchy_toggle', {
         'session_name': session_name,
-        'call_hierarchy_type': direction,
+        'direction': direction,
         'root_elements': root_elements
     })

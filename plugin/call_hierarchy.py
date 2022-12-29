@@ -69,8 +69,7 @@ class CallHierarchyDataProvider(TreeDataProvider):
                 'targetRange': element['range'],
                 'targetSelectionRange': element['selectionRange']
             },
-            'session_name': self.session_name,
-            'flags': sublime.SEMI_TRANSIENT | sublime.ADD_TO_SELECTION
+            'session_name': self.session_name
         })
         return TreeItem(
             element['name'],

@@ -205,9 +205,20 @@ class LspOpenLocationCommand(LspWindowCommand):
         location: Union[Location, LocationLink],
         session_name: Optional[str] = None,
         flags: int = 0,
-        group: int = -1
+        group: int = -1,
+        event: Optional[dict] = None
     ) -> None:
+        if event:
+            modifier_keys = event.get('modifier_keys')
+            if modifier_keys:
+                if 'primary' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                elif 'shift' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+
+    def want_event(self) -> bool:
+        return True
 
     def _run_async(
         self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int

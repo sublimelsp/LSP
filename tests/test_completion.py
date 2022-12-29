@@ -643,7 +643,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": 2,  # Method
             "deprecated": True
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -652,7 +652,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": 2,  # Method
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
@@ -687,7 +687,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "")
+            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -738,7 +738,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "")
+            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
             self.assertRegex(native.trigger, expected_regex)
 
         check(

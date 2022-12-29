@@ -710,19 +710,19 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f$",
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\)$",
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )

@@ -1,5 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
@@ -640,7 +641,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {
             "label": 'hello',
-            "kind": 2,  # Method
+            "kind": CompletionItemKind.Method,
             "deprecated": True
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", self.view.id())
@@ -649,7 +650,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_show_deprecated_tag(self) -> None:
         item_with_deprecated_tags = {
             "label": 'hello',
-            "kind": 2,  # Method
+            "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", self.view.id())

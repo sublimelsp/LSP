@@ -640,7 +640,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             else:
                 title = all_actions[0]['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link('lsp_code_actions', title, {"code_actions_by_config": responses})
+            code_actions_link = make_command_link(
+                'lsp_code_actions', title, {"code_actions_by_config": responses}, view_id=self.view.id())
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
@@ -809,8 +810,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
             LspResolveDocsCommand.completions[session_name] = response_items
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
+            config_name = session.config.name
             items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, session.config.name)
+                format_completion(response_item, index, can_resolve_completion_items, config_name, self.view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:

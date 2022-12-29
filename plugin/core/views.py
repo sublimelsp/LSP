@@ -787,10 +787,10 @@ def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
 
 
 def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
-                      class_name: Optional[str] = None, view: Optional[sublime.View] = None) -> str:
-    if view:
+                      class_name: Optional[str] = None, view_id: Optional[int] = None) -> str:
+    if view_id is not None:
         cmd = "lsp_run_text_command_helper"
-        args = {"view_id": view.id(), "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
+        args = {"view_id": view_id, "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
     else:
         cmd = command
         args = command_args
@@ -1014,7 +1014,7 @@ def format_diagnostic_for_html(
 
 
 def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
+    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
 
@@ -1030,7 +1030,8 @@ def format_completion(
 
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):
-        details.append(make_command_link('lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}))
+        details.append(make_command_link(
+            'lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}, view_id=view_id))
 
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         trigger = lsp_label + lsp_label_detail

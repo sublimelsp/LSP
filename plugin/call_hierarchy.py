@@ -22,7 +22,7 @@ from functools import partial
 import sublime
 
 
-class CallHierarchyType(IntEnum):
+class CallHierarchyDirection(IntEnum):
     IncomingCalls = 1
     OutgoingCalls = 2
 
@@ -33,12 +33,12 @@ class CallHierarchyDataProvider(TreeDataProvider):
         self,
         window: sublime.Window,
         session_name: str,
-        call_hierarchy_type: CallHierarchyType,
+        direction: CallHierarchyDirection,
         root_elements: List[CallHierarchyItem]
     ) -> None:
         self.window = window
         self.session_name = session_name
-        self.call_hierarchy_type = call_hierarchy_type
+        self.direction = direction
         self.root_elements = root_elements
 
     def get_children(self, element: Optional[CallHierarchyItem]) -> Promise[List[CallHierarchyItem]]:
@@ -54,10 +54,10 @@ class CallHierarchyDataProvider(TreeDataProvider):
                 break
         else:
             return Promise.resolve([])
-        if self.call_hierarchy_type == CallHierarchyType.IncomingCalls:
+        if self.direction == CallHierarchyDirection.IncomingCalls:
             params = cast(CallHierarchyIncomingCallsParams, {'item': element})
             return session.send_request_task(Request.incomingCalls(params)).then(self._handle_incoming_calls_async)
-        elif self.call_hierarchy_type == CallHierarchyType.OutgoingCalls:
+        elif self.direction == CallHierarchyDirection.OutgoingCalls:
             params = cast(CallHierarchyOutgoingCallsParams, {'item': element})
             return session.send_request_task(Request.outgoingCalls(params)).then(self._handle_outgoing_calls_async)
         return Promise.resolve([])
@@ -118,9 +118,10 @@ class LspCallHierarchyCommand(LspTextCommand):
         if not response:
             self._window.status_message("Call hierarchy not available")
             return
-        data_provider = CallHierarchyDataProvider(self._window, session_name, CallHierarchyType.IncomingCalls, response)
+        data_provider = CallHierarchyDataProvider(
+            self._window, session_name, CallHierarchyDirection.IncomingCalls, response)
         header = 'Call Hierarchy: Callers of… <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
-            make_toggle_command(session_name, CallHierarchyType.OutgoingCalls, response))
+            make_toggle_command(session_name, CallHierarchyDirection.OutgoingCalls, response))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
 
@@ -129,29 +130,29 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
     capability = 'callHierarchyProvider'
 
     def run(
-        self, session_name: str, call_hierarchy_type: CallHierarchyType, root_elements: List[CallHierarchyItem]
+        self, session_name: str, direction: CallHierarchyDirection, root_elements: List[CallHierarchyItem]
     ) -> None:
-        if call_hierarchy_type == CallHierarchyType.IncomingCalls:
-            current_type_label = 'Callers of…'
-            other_type = CallHierarchyType.OutgoingCalls
+        if direction == CallHierarchyDirection.IncomingCalls:
+            current_label = 'Callers of…'
+            new_direction = CallHierarchyDirection.OutgoingCalls
             tooltip = 'Show Outgoing Calls'
-        elif call_hierarchy_type == CallHierarchyType.OutgoingCalls:
-            current_type_label = 'Calls from…'
-            other_type = CallHierarchyType.IncomingCalls
+        elif direction == CallHierarchyDirection.OutgoingCalls:
+            current_label = 'Calls from…'
+            new_direction = CallHierarchyDirection.IncomingCalls
             tooltip = 'Show Incoming Calls'
         else:
             return
         header = 'Call Hierarchy: {} <a href="{}" title="{}">&#8644;</a>'.format(
-            current_type_label, make_toggle_command(session_name, other_type, root_elements), tooltip)
-        data_provider = CallHierarchyDataProvider(self.window, session_name, call_hierarchy_type, root_elements)
+            current_label, make_toggle_command(session_name, new_direction, root_elements), tooltip)
+        data_provider = CallHierarchyDataProvider(self.window, session_name, direction, root_elements)
         new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
 
 def make_toggle_command(
-    session_name: str, call_hierarchy_type: CallHierarchyType, root_elements: List[CallHierarchyItem]
+    session_name: str, direction: CallHierarchyDirection, root_elements: List[CallHierarchyItem]
 ) -> str:
     return sublime.command_url('lsp_call_hierarchy_toggle', {
         'session_name': session_name,
-        'call_hierarchy_type': call_hierarchy_type,
+        'call_hierarchy_type': direction,
         'root_elements': root_elements
     })

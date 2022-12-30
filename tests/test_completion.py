@@ -1,5 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
@@ -640,19 +641,19 @@ class QueryCompletionsTests(CompletionsTestsBase):
     def test_show_deprecated_flag(self) -> None:
         item_with_deprecated_flag = {
             "label": 'hello',
-            "kind": 2,  # Method
+            "kind": CompletionItemKind.Method,
             "deprecated": True
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
         item_with_deprecated_tags = {
             "label": 'hello',
-            "kind": 2,  # Method
+            "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
@@ -687,7 +688,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "")
+            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -710,19 +711,19 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f$",
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f$",
             label="f",
             label_details=None
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\)$",
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)"}
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_resolve_docs {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
@@ -738,7 +739,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "")
+            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
             self.assertRegex(native.trigger, expected_regex)
 
         check(

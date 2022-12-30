@@ -223,9 +223,7 @@ class LspOpenLocationCommand(LspWindowCommand):
     def _run_async(
         self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
     ) -> None:
-        if session_name:
-            self.session_name = session_name
-        session = self.session()
+        session = self.session_by_name(session_name) if session_name else self.session()
         if session:
             session.open_location_async(location, flags, group) \
                 .then(lambda view: self._handle_continuation(location, view is not None))

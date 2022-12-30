@@ -125,8 +125,7 @@ class LspCallHierarchyCommand(LspTextCommand):
                 'session_name': session_name,
                 'direction': CallHierarchyDirection.OutgoingCalls,
                 'root_elements': response
-            },
-            tooltip="Show outgoing calls"))
+            }, tooltip="Show outgoing calls"))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
 
@@ -152,7 +151,6 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
                 'session_name': session_name,
                 'direction': new_direction,
                 'root_elements': root_elements
-            },
-            tooltip=tooltip))
+            }, tooltip=tooltip))
         data_provider = CallHierarchyDataProvider(self.window, session_name, direction, root_elements)
         new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)

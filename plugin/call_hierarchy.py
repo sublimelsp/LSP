@@ -15,6 +15,7 @@ from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.typing import cast
 from .core.typing import IntEnum, List, Optional
+from .core.views import make_command_link
 from .core.views import parse_uri
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_position_params
@@ -119,8 +120,13 @@ class LspCallHierarchyCommand(LspTextCommand):
             return
         data_provider = CallHierarchyDataProvider(
             self._window, session_name, CallHierarchyDirection.IncomingCalls, response)
-        header = 'Call Hierarchy: Callers of… <a href="{}" title="Show outgoing calls">&#8644;</a>'.format(
-            make_toggle_command(session_name, CallHierarchyDirection.OutgoingCalls, response))
+        header = 'Call Hierarchy: Callers of… {}'.format(
+            make_command_link('lsp_call_hierarchy_toggle', "⇄", {
+                'session_name': session_name,
+                'direction': CallHierarchyDirection.OutgoingCalls,
+                'root_elements': response
+            },
+            tooltip="Show outgoing calls"))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
 
 
@@ -141,17 +147,12 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
             tooltip = 'Show Incoming Calls'
         else:
             return
-        header = 'Call Hierarchy: {} <a href="{}" title="{}">&#8644;</a>'.format(
-            current_label, make_toggle_command(session_name, new_direction, root_elements), tooltip)
+        header = 'Call Hierarchy: {} {}'.format(
+            current_label, make_command_link('lsp_call_hierarchy_toggle', "⇄", {
+                'session_name': session_name,
+                'direction': new_direction,
+                'root_elements': root_elements
+            },
+            tooltip=tooltip))
         data_provider = CallHierarchyDataProvider(self.window, session_name, direction, root_elements)
         new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
-
-
-def make_toggle_command(
-    session_name: str, direction: CallHierarchyDirection, root_elements: List[CallHierarchyItem]
-) -> str:
-    return sublime.command_url('lsp_call_hierarchy_toggle', {
-        'session_name': session_name,
-        'direction': direction,
-        'root_elements': root_elements
-    })

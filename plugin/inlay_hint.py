@@ -1,7 +1,7 @@
 from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
-from .core.typing import Optional, Union
+from .core.typing import cast, Optional, Union
 from .core.views import point_to_offset
 from .formatting import apply_text_edits_to_view
 import html
@@ -57,7 +57,7 @@ class LspInlayHintClickCommand(LspTextCommand):
 
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
-    position = inlay_hint["position"]  # type: ignore
+    position = inlay_hint["position"]
     region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
@@ -110,13 +110,13 @@ def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> s
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
-    label = inlay_hint['label']  # type: ignore
+    label = inlay_hint['label']
     is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
     if isinstance(label, str):
         if is_clickable:
             inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
                 'session_name': session.config.name,
-                'inlay_hint': inlay_hint,
+                'inlay_hint': cast(dict, inlay_hint),
                 'phantom_uuid': phantom_uuid
             })
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
@@ -131,16 +131,16 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         if is_clickable:
             inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
                 'session_name': session.config.name,
-                'inlay_hint': inlay_hint,
+                'inlay_hint': cast(dict, inlay_hint),
                 'phantom_uuid': phantom_uuid,
-                'label_part': label_part
+                'label_part': cast(dict, label_part)
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
         value += html.escape(label_part['value'])
         if is_clickable:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
-        result += "<div title=\"{tooltip}\">{value}</div>".format(
+        result += "<span title=\"{tooltip}\">{value}</span>".format(
             tooltip=format_inlay_hint_tooltip(label_part.get("tooltip")),
             value=value
         )

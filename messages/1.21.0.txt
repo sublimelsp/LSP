@@ -1,0 +1,34 @@
+=> 1.21.0
+
+# Features
+
+- Add "Source Action" entry to the "Edit" main menu (#2149) (jwortmann)
+- Add "Refactor" entry to the "Edit" main menu (#2141) (jwortmann)
+- Auto-restart on server crashing, up to 5 times (#2145) (Lucas Alber)
+
+# Fixes and Improvements
+
+- Fix inlay hint parts wrapping into multiple lines (#2153) (Rafał Chłodnicki)
+- Ensure commands triggered from minihtml run on correct view (#2154) (Rafał Chłodnicki)
+- Fix completion documentation being parsed as markdown twice (#2146) (Rafał Chłodnicki)
+- When going to definition, scroll to start of the region, not end (#2147) (Rafał Chłodnicki)
+- Improve performance of completion & signature request on typing (#2148) (Rafał Chłodnicki)
+- Fix code lenses not updating after Undo (#2139) (Rafał Chłodnicki)
+- Add missing Goto commands to Command Palette (#2140) (Rafał Chłodnicki)
+- docs: add missing keyboard shortcuts (#2143) (Rafał Chłodnicki)
+- Pass force_group to LocationPicker (#2134) (Rafał Chłodnicki)
+- Don't advertise support for disabled code actions (#2137) (Rafał Chłodnicki)
+- Add context for lsp_open_link key binding (#2138) (jwortmann)
+- Fix prepareRename support (#2127) (Rafał Chłodnicki)
+- docs(language_servers): add markmark language server (for Markdown) (#2129) (Nico Rehwaldt)
+- Fix plugin overwrite `on_workspace_configuration` (#2132) (Lucas Alber)
+- Hide inactive items in context menu (#2124) (jwortmann)
+- Don't show a source if diagnostic doesn't have a source (#2119) (Sainan)
+- Combine file and range formatting entries in context menu (#2123) (jwortmann)
+- Add language id for Django templates (Jannis Vajen)
+- Nicer presentation for "find references/definition" quick panel (#2109) (Rafał Chłodnicki)
+- Make Goto Diagnostic overlays consistent (#2115) (jwortmann)
+- Don't trigger code action requests for background views (#2108) (Rafał Chłodnicki)
+- Ignore diagnostics for files in folder_exclude_patterns (#2113) (jwortmann)
+- Fix diagnostics underline color priority (#2106) (jwortmann)
+- Fix diagnostics_additional_delay_auto_complete_ms not working after split view (#2107) (jwortmann)

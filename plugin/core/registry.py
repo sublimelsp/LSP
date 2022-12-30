@@ -42,14 +42,17 @@ def new_tree_view_sheet(
         sheet_id = tree_view_sheet.id()
         if tree_view_sheet.window():
             tree_view_sheet.set_provider(data_provider, header)
-            # add to selected sheets if not already selected
-            selected_sheets = window.selected_sheets()
-            for sheet in window.sheets():
-                if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
-                    if sheet not in selected_sheets:
-                        selected_sheets.append(sheet)
-                        window.select_sheets(selected_sheets)
-                    break
+            if flags & sublime.ADD_TO_SELECTION:
+                # add to selected sheets if not already selected
+                selected_sheets = window.selected_sheets()
+                for sheet in window.sheets():
+                    if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
+                        if sheet not in selected_sheets:
+                            selected_sheets.append(sheet)
+                            window.select_sheets(selected_sheets)
+                        break
+            else:
+                window.focus_sheet(tree_view_sheet)
             return tree_view_sheet
     tree_view_sheet = TreeViewSheet(
         sublime_api.window_new_html_sheet(window.window_id, name, "", flags, group),

@@ -7,6 +7,7 @@ from .core.typing import Any, Optional, Dict
 from weakref import ref
 import sublime
 
+
 class ActiveRequest:
     """
     Holds state per request.

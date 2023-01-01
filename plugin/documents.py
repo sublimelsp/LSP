@@ -342,12 +342,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
+        if userprefs().lsp_view_size_limit != 0:
+            if self.view.size() > userprefs().lsp_view_size_limit:
+                return
         if not self._registered and is_regular_view(self.view):
             self._register_async()
             return
         self.on_activated_async()
 
     def on_activated_async(self) -> None:
+        if userprefs().lsp_view_size_limit != 0:
+            if self.view.size() > userprefs().lsp_view_size_limit:
+                return
         if self.view.is_loading() or not is_regular_view(self.view):
             return
         if not self._registered:

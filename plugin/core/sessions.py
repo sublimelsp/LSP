@@ -1123,7 +1123,8 @@ class _RegistrationData:
                 return
 
 
-_WORK_DONE_PROGRESS_PREFIX = "wd"
+# This prefix should disambiguate common string generation techniques like UUID4.
+_WORK_DONE_PROGRESS_PREFIX = "$ublime-"
 
 
 class Session(TransportCallbacks):
@@ -1810,28 +1811,46 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
+    def _create_window_progress_reporter(self, token: str, value: Dict[str, Any]) -> None:
+        self._progress[token] = WindowProgressReporter(
+            window=self.window,
+            key="lspprogress{}{}".format(self.config.name, token),
+            title=value["title"],
+            message=value.get("message")
+        )
+
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
+        value = params['value']
+        kind = value['kind']
         if token not in self._progress:
+            # If the token is not in the _progress map then that could mean two things:
+            #
+            # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
+            #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it succeeds,
+            #    we can delegate to the appropriate session view instances.
+            #
+            # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
+            #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
+            #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
             try:
                 request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                 request = self._response_handlers[request_id][0]
                 self._invoke_views(request, "on_request_progress", request_id, params)
                 return
             except (IndexError, ValueError, KeyError):
+                # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
+                # dealing with possibility (2).
+                if kind == 'begin':
+                    # We are dealing with possibility (2), so create the progress reporter now.
+                    self._create_window_progress_reporter(token, value)
+                    return
                 pass
             debug('unknown $/progress token: {}'.format(token))
             return
-        value = params['value']
-        kind = value['kind']
         if kind == 'begin':
-            self._progress[token] = WindowProgressReporter(
-                window=self.window,
-                key="lspprogress{}{}".format(self.config.name, token),
-                title=value["title"],
-                message=value.get("message")
-            )
+            self._create_window_progress_reporter(token, value)
         elif kind == 'report':
             progress = self._progress[token]
             assert isinstance(progress, WindowProgressReporter)

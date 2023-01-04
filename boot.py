@@ -39,7 +39,6 @@ from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.typing import Any, Optional, List, Type, Dict
-from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener

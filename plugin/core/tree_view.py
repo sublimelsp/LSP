@@ -92,13 +92,13 @@ class TreeItem:
 
 class Node:
 
-    __slots__ = ('element', 'tree_item', 'indent_level', 'children', 'is_resolved')
+    __slots__ = ('element', 'tree_item', 'indent_level', 'child_ids', 'is_resolved')
 
     def __init__(self, element: T, tree_item: TreeItem, indent_level: int = 0) -> None:
         self.element = element
         self.tree_item = tree_item
         self.indent_level = indent_level
-        self.children = []  # type: List[str]  # IDs of child nodes
+        self.child_ids = []  # type: List[str]
         self.is_resolved = False
 
 
@@ -156,7 +156,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
-            node.children.append(tree_item.id)
+            node.child_ids.append(tree_item.id)
         node.is_resolved = True
 
     def expand_item(self, id: str) -> None:
@@ -263,7 +263,7 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def _subtree_html(self, id: str) -> str:
         node = self.nodes[id]
+        html = node.tree_item.html(self.name, node.indent_level)
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
-            return node.tree_item.html(self.name, node.indent_level) + "".join(
-                [self._subtree_html(child_id) for child_id in node.children])
-        return node.tree_item.html(self.name, node.indent_level)
+            html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
+        return html

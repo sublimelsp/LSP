@@ -9,7 +9,7 @@ import html
 import sublime
 import uuid
 
-
+# pyright: reportInvalidTypeVarUse=false
 T = TypeVar('T')
 
 
@@ -94,7 +94,7 @@ class Node:
 
     __slots__ = ('element', 'tree_item', 'indent_level', 'children', 'is_resolved')
 
-    def __init__(self, element: T, tree_item: TreeItem, indent_level: int = 0) -> None:  # pyright: ignore
+    def __init__(self, element: T, tree_item: TreeItem, indent_level: int = 0) -> None:
         self.element = element
         self.tree_item = tree_item
         self.indent_level = indent_level
@@ -110,7 +110,7 @@ class TreeDataProvider(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_tree_item(self, element: T) -> TreeItem:  # pyright: ignore[reportInvalidTypeVarUse]
+    def get_tree_item(self, element: T) -> TreeItem:
         """ Implement this to return the UI representation (TreeItem) of the element that gets displayed in the
         TreeViewSheet. """
         raise NotImplementedError()
@@ -140,7 +140,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.header = header
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
-    def _set_root_nodes(self, elements: List[T]) -> None:  # pyright: ignore[reportInvalidTypeVarUse]
+    def _set_root_nodes(self, elements: List[T]) -> None:
         promises = []  # type: List[Promise[None]]
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
@@ -150,7 +150,7 @@ class TreeViewSheet(sublime.HtmlSheet):
             promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
         Promise.all(promises).then(lambda _: self._update_contents())
 
-    def _add_children(self, id: str, elements: List[T]) -> None:  # pyright: ignore[reportInvalidTypeVarUse]
+    def _add_children(self, id: str, elements: List[T]) -> None:
         assert id in self.nodes
         node = self.nodes[id]
         for element in elements:

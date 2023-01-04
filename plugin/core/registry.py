@@ -1,11 +1,14 @@
 from .protocol import Diagnostic
+from .protocol import Location
+from .protocol import LocationLink
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .tree_view import TreeDataProvider
 from .tree_view import TreeViewSheet
-from .typing import Optional, Any, Generator, Iterable, List
+from .typing import Optional, Any, Generator, Iterable, List, Union
 from .views import first_selection_region
+from .views import get_uri_and_position_from_location
 from .views import MissingUriError
 from .views import point_to_offset
 from .views import uri_from_view
@@ -195,6 +198,46 @@ class LspTextCommand(sublime_plugin.TextCommand):
             for sv in listener.session_views_async():
                 if capability_path is None or sv.has_capability_async(capability_path):
                     yield sv.session
+
+
+class LspOpenLocationCommand(LspWindowCommand):
+    """
+    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
+    """
+
+    def run(
+        self,
+        location: Union[Location, LocationLink],
+        session_name: Optional[str] = None,
+        flags: int = 0,
+        group: int = -1,
+        event: Optional[dict] = None
+    ) -> None:
+        if event:
+            modifier_keys = event.get('modifier_keys')
+            if modifier_keys:
+                if 'primary' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                elif 'shift' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+
+    def want_event(self) -> bool:
+        return True
+
+    def _run_async(
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
+    ) -> None:
+        session = self.session_by_name(session_name) if session_name else self.session()
+        if session:
+            session.open_location_async(location, flags, group) \
+                .then(lambda view: self._handle_continuation(location, view is not None))
+
+    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
+        if not success:
+            uri, _ = get_uri_and_position_from_location(location)
+            message = "Failed to open {}".format(uri)
+            sublime.status_message(message)
 
 
 class LspRestartServerCommand(LspTextCommand):

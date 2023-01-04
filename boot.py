@@ -22,15 +22,13 @@ from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
-from .plugin.core.protocol import Location
-from .plugin.core.protocol import LocationLink
 from .plugin.core.registry import LspCollapseTreeItemCommand
 from .plugin.core.registry import LspExpandTreeItemCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
-from .plugin.core.registry import LspWindowCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin
@@ -40,7 +38,7 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.typing import Any, Optional, List, Type, Dict, Union
+from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import get_uri_and_position_from_location
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
@@ -193,43 +191,3 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
                 sublime.set_timeout(panel_manager.update_log_panel)
-
-
-class LspOpenLocationCommand(LspWindowCommand):
-    """
-    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
-    """
-
-    def run(
-        self,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str] = None,
-        flags: int = 0,
-        group: int = -1,
-        event: Optional[dict] = None
-    ) -> None:
-        if event:
-            modifier_keys = event.get('modifier_keys')
-            if modifier_keys:
-                if 'primary' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
-                elif 'shift' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
-        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
-
-    def want_event(self) -> bool:
-        return True
-
-    def _run_async(
-        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
-    ) -> None:
-        session = self.session_by_name(session_name) if session_name else self.session()
-        if session:
-            session.open_location_async(location, flags, group) \
-                .then(lambda view: self._handle_continuation(location, view is not None))
-
-    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
-        if not success:
-            uri, _ = get_uri_and_position_from_location(location)
-            message = "Failed to open {}".format(uri)
-            sublime.status_message(message)

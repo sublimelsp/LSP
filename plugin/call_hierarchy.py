@@ -5,6 +5,7 @@ from .core.protocol import CallHierarchyItem
 from .core.protocol import CallHierarchyOutgoingCall
 from .core.protocol import CallHierarchyOutgoingCallsParams
 from .core.protocol import CallHierarchyPrepareParams
+from .core.protocol import DocumentUri
 from .core.protocol import Request
 from .core.registry import new_tree_view_sheet
 from .core.registry import get_position
@@ -19,7 +20,9 @@ from .core.views import make_command_link
 from .core.views import parse_uri
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_position_params
+from .goto_diagnostic import simple_project_path
 from functools import partial
+from pathlib import Path
 import sublime
 import weakref
 
@@ -70,9 +73,17 @@ class CallHierarchyDataProvider(TreeDataProvider):
             element['name'],
             kind=SYMBOL_KINDS.get(element['kind'], sublime.KIND_AMBIGUOUS),
             description=element.get('detail', ""),
-            tooltip="{}:{}".format(parse_uri(element['uri'])[1], element['selectionRange']['start']['line'] + 1),
+            tooltip="{}:{}".format(self._simple_path(element['uri']), element['selectionRange']['start']['line'] + 1),
             command_url=command_url
         )
+
+    def _simple_path(self, uri: DocumentUri) -> str:
+        scheme, path = parse_uri(uri)
+        session = self.weaksession()
+        if not session or scheme != 'file':
+            return path
+        simple_path = simple_project_path([Path(folder.path) for folder in session.get_workspace_folders()], Path(path))
+        return str(simple_path) if simple_path else path
 
     def _handle_incoming_calls_async(
         self, response: Optional[List[CallHierarchyIncomingCall]]

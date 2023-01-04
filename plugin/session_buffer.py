@@ -6,6 +6,10 @@ from .core.protocol import DocumentUri
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
 from .core.protocol import Request
+from .core.protocol import SemanticTokensDeltaParams
+from .core.protocol import SemanticTokensParams
+from .core.protocol import SemanticTokensRangeParams
+from .core.protocol import TextDocumentSaveReason
 from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -15,6 +19,7 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
+from .core.typing import cast
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -311,7 +316,7 @@ class SessionBuffer:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.last_known_uri, 1))
+            self.session.send_notification(will_save(self.last_known_uri, TextDocumentSaveReason.Manual))
 
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
         if new_uri != self.last_known_uri:
@@ -484,21 +489,21 @@ class SessionBuffer:
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
         if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
-            request = Request.semanticTokensRange(params, view)
+            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
         elif self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
-            request = Request.semanticTokensFullDelta(params, view)
+            request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.full"):
-            request = Request.semanticTokensFull(params, view)
+            request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = entire_content_range(view)
-            request = Request.semanticTokensRange(params, view)
+            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
 

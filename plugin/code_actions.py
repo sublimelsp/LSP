@@ -16,7 +16,8 @@ from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import text_document_code_action_params
-from .save_command import LspSaveCommand, SaveTask
+from .save_command import LspSaveCommand
+from .save_command import SaveTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial

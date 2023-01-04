@@ -1,13 +1,17 @@
 from .core.edit import parse_workspace_edit
 from .core.edit import TextEditTuple
+from .core.protocol import PrepareRenameParams
 from .core.protocol import PrepareRenameResult
 from .core.protocol import Range
+from .core.protocol import RenameParams
 from .core.protocol import Request
+from .core.protocol import WorkspaceEdit
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
 from .core.typing import Any, Optional, Dict, List, TypeGuard
+from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region
 from .core.views import get_line
@@ -109,8 +113,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             raise TypeError("required positional argument")
         if location is None:
             return
-        params = text_document_position_params(self.view, location)
-        request = Request("textDocument/prepareRename", params, self.view, progress=True)
+        params = cast(PrepareRenameParams, text_document_position_params(self.view, location))
+        request = Request.prepareRename(params, self.view, progress=True)
         prepare_provider_session.send_request(
             request, partial(self._on_prepare_result, location), self._on_prepare_error)
 
@@ -119,15 +123,15 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not session:
             return
         position_params = text_document_position_params(self.view, position)
-        params = {
+        params = cast(RenameParams, {
             "textDocument": position_params["textDocument"],
             "position": position_params["position"],
             "newName": new_name,
-        }
-        request = Request("textDocument/rename", params, self.view, progress=True)
+        })
+        request = Request.rename(params, self.view, progress=True)
         session.send_request(request, partial(self._on_rename_result_async, session))
 
-    def _on_rename_result_async(self, session: Session, response: Any) -> None:
+    def _on_rename_result_async(self, session: Session, response: Optional[WorkspaceEdit]) -> None:
         if not response:
             return session.window.status_message('Nothing to rename')
         changes = parse_workspace_edit(response)

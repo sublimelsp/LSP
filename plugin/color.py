@@ -4,6 +4,7 @@ from .core.protocol import ColorPresentation
 from .core.protocol import ColorPresentationParams
 from .core.protocol import Request
 from .core.registry import LspTextCommand
+from .core.typing import cast
 from .core.typing import List
 from .core.views import range_to_region
 from .core.views import text_document_identifier
@@ -19,11 +20,11 @@ class LspColorPresentationCommand(LspTextCommand):
         if session:
             self._version = self.view.change_count()
             self._range = color_information['range']
-            params = {
+            params = cast(ColorPresentationParams, {
                 'textDocument': text_document_identifier(self.view),
                 'color': color_information['color'],
                 'range': self._range
-            }  # type: ColorPresentationParams
+            })
             session.send_request_async(Request.colorPresentation(params, self.view), self._handle_response_async)
 
     def want_event(self) -> bool:

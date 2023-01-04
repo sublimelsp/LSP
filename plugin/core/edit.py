@@ -1,7 +1,10 @@
 from .logging import debug
 from .open import open_file
 from .promise import Promise
-from .protocol import UINT_MAX, TextEdit as LspTextEdit, Position, WorkspaceEdit
+from .protocol import Position
+from .protocol import TextEdit
+from .protocol import UINT_MAX
+from .protocol import WorkspaceEdit
 from .typing import List, Dict, Optional, Tuple
 from functools import partial
 import sublime
@@ -37,7 +40,7 @@ def parse_range(range: Position) -> Tuple[int, int]:
     return range['line'], min(UINT_MAX, range['character'])
 
 
-def parse_text_edit(text_edit: LspTextEdit, version: Optional[int] = None) -> TextEditTuple:
+def parse_text_edit(text_edit: TextEdit, version: Optional[int] = None) -> TextEditTuple:
     return (
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),

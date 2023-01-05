@@ -1,4 +1,6 @@
-from .core.protocol import CodeLens, CodeLensExtended, Error
+from .core.protocol import CodeLens
+from .core.protocol import CodeLensExtended
+from .core.protocol import Error
 from .core.typing import List, Tuple, Dict, Iterable, Generator, Union, cast
 from .core.registry import LspTextCommand
 from .core.registry import windows

@@ -1,4 +1,8 @@
-from .core.protocol import InlayHintLabelPart, MarkupContent, Point, InlayHint, Request
+from .core.protocol import InlayHint
+from .core.protocol import InlayHintLabelPart
+from .core.protocol import MarkupContent
+from .core.protocol import Point
+from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.typing import cast, Optional, Union

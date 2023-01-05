@@ -27,6 +27,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
+from .protocol import DidChangeWorkspaceFoldersParams
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
@@ -35,9 +36,11 @@ from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
 from .protocol import GeneralClientCapabilities
+from .protocol import InitializeParams
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import LSPAny
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
@@ -205,7 +208,7 @@ def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
-                          config: ClientConfig) -> dict:
+                          config: ClientConfig) -> InitializeParams:
     completion_kinds = cast(List[CompletionItemKind], _enum_like_class_to_list(CompletionItemKind))
     symbol_kinds = cast(List[SymbolKind], _enum_like_class_to_list(SymbolKind))
     diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_like_class_to_list(DiagnosticTag))
@@ -452,7 +455,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": config.init_options.get_resolved(variables)
+        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
     }
 
 
@@ -1348,7 +1351,7 @@ class Session(TransportCallbacks):
                         "added": [a.to_lsp() for a in added],
                         "removed": [r.to_lsp() for r in removed]
                     }
-                }
+                }  # type: DidChangeWorkspaceFoldersParams
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders

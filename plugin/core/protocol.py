@@ -5861,15 +5861,15 @@ class Request:
         self.progress = progress  # type: Union[bool, str]
 
     @classmethod
-    def initialize(cls, params: Mapping[str, Any]) -> 'Request':
+    def initialize(cls, params: InitializeParams) -> 'Request':
         return Request("initialize", params)
 
     @classmethod
-    def complete(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def complete(cls, params: CompletionParams, view: sublime.View) -> 'Request':
         return Request("textDocument/completion", params, view)
 
     @classmethod
-    def signatureHelp(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def signatureHelp(cls, params: SignatureHelpParams, view: sublime.View) -> 'Request':
         return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
@@ -5877,7 +5877,7 @@ class Request:
         return Request("textDocument/codeAction", params, view)
 
     @classmethod
-    def documentColor(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentColor(cls, params: DocumentColorParams, view: sublime.View) -> 'Request':
         return Request('textDocument/documentColor', params, view)
 
     @classmethod
@@ -5885,7 +5885,7 @@ class Request:
         return Request('textDocument/colorPresentation', params, view)
 
     @classmethod
-    def willSaveWaitUntil(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def willSaveWaitUntil(cls, params: WillSaveTextDocumentParams, view: sublime.View) -> 'Request':
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
@@ -5893,23 +5893,23 @@ class Request:
         return Request("textDocument/documentSymbol", params, view, progress=True)
 
     @classmethod
-    def documentHighlight(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentHighlight(cls, params: DocumentHighlightParams, view: sublime.View) -> 'Request':
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def documentLink(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentLink(cls, params: DocumentLinkParams, view: sublime.View) -> 'Request':
         return Request("textDocument/documentLink", params, view)
 
     @classmethod
-    def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensFull(cls, params: SemanticTokensParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/full", params, view)
 
     @classmethod
-    def semanticTokensFullDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensFullDelta(cls, params: SemanticTokensDeltaParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/full/delta", params, view)
 
     @classmethod
-    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensRange(cls, params: SemanticTokensRangeParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/range", params, view)
 
     @classmethod
@@ -5927,6 +5927,18 @@ class Request:
     @classmethod
     def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
         return Request('inlayHint/resolve', params, view)
+
+    @classmethod
+    def rename(cls, params: RenameParams, view: sublime.View, progress: bool = False) -> 'Request':
+        return Request('textDocument/rename', params, view, progress)
+
+    @classmethod
+    def prepareRename(cls, params: PrepareRenameParams, view: sublime.View, progress: bool = False) -> 'Request':
+        return Request('textDocument/prepareRename', params, view, progress)
+
+    @classmethod
+    def selectionRange(cls, params: SelectionRangeParams) -> 'Request':
+        return Request('textDocument/selectionRange', params)
 
     @classmethod
     def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> 'Request':
@@ -6003,35 +6015,35 @@ class Notification:
         return Notification("initialized", {})
 
     @classmethod
-    def didOpen(cls, params: dict) -> 'Notification':
+    def didOpen(cls, params: DidOpenTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didOpen", params)
 
     @classmethod
-    def didChange(cls, params: dict) -> 'Notification':
+    def didChange(cls, params: DidChangeTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didChange", params)
 
     @classmethod
-    def willSave(cls, params: dict) -> 'Notification':
+    def willSave(cls, params: WillSaveTextDocumentParams) -> 'Notification':
         return Notification("textDocument/willSave", params)
 
     @classmethod
-    def didSave(cls, params: dict) -> 'Notification':
+    def didSave(cls, params: DidSaveTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didSave", params)
 
     @classmethod
-    def didClose(cls, params: dict) -> 'Notification':
+    def didClose(cls, params: DidCloseTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params: dict) -> 'Notification':
+    def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> 'Notification':
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
-    def didChangeWatchedFiles(cls, params: dict) -> 'Notification':
+    def didChangeWatchedFiles(cls, params: DidChangeWatchedFilesParams) -> 'Notification':
         return Notification("workspace/didChangeWatchedFiles", params)
 
     @classmethod
-    def didChangeWorkspaceFolders(cls, params: dict) -> 'Notification':
+    def didChangeWorkspaceFolders(cls, params: DidChangeWorkspaceFoldersParams) -> 'Notification':
         return Notification("workspace/didChangeWorkspaceFolders", params)
 
     @classmethod

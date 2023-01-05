@@ -22,7 +22,7 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit: Any, changes: Optional[List[TextEditTuple]] = None) -> None:
+    def run(self, edit: sublime.Edit, changes: Optional[List[TextEditTuple]] = None) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         if not changes:
@@ -46,7 +46,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 else:
                     self.apply_change(region, replacement, edit)
 
-    def apply_change(self, region: sublime.Region, replacement: str, edit: Any) -> None:
+    def apply_change(self, region: sublime.Region, replacement: str, edit: sublime.Edit) -> None:
         if region.empty():
             self.view.insert(edit, region.a, replacement)
         else:

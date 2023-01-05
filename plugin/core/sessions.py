@@ -1347,12 +1347,11 @@ class Session(TransportCallbacks):
         if self.should_notify_did_change_workspace_folders():
             added, removed = diff(self._workspace_folders, folders)
             if added or removed:
-                change_event = {
-                    "added": [a.to_lsp() for a in added],
-                    "removed": [r.to_lsp() for r in removed]
-                }  # type: WorkspaceFoldersChangeEvent
                 params = {
-                    "event": change_event
+                    "event": {
+                        "added": [a.to_lsp() for a in added],
+                        "removed": [r.to_lsp() for r in removed]
+                    }
                 }  # type: DidChangeWorkspaceFoldersParams
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():

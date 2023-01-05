@@ -505,7 +505,8 @@ def did_change_text_document_params(
 ) -> DidChangeTextDocumentParams:
     content_changes = []  # type: List[TextDocumentContentChangeEvent]
     result = {
-        "textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes
+        "textDocument": versioned_text_document_identifier(view, version),
+        "contentChanges": content_changes
     }  # type: DidChangeTextDocumentParams
     if changes is None:
         # TextDocumentSyncKind.Full

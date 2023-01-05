@@ -396,5 +396,11 @@ class ViewsTest(DeferrableTestCase):
     def test_escaped_newline_in_markdown(self) -> None:
         self.assertEqual(
             minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
-            "<p>hello<br />\nworld</p>"
+            "<p>hello\\\nworld</p>"
+        )
+
+    def test_single_backslash_in_markdown(self) -> None:
+        self.assertEqual(
+            minihtml(self.view, {"kind": "markdown", "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
+            "<p>A\\B</p>"
         )

@@ -721,12 +721,6 @@ def minihtml(
             "markdown_extensions": [
                 "markdown.extensions.admonition",
                 {
-                    "pymdownx.escapeall": {
-                        "hardbreak": True,
-                        "nbsp": False
-                    }
-                },
-                {
                     "pymdownx.magiclink": {
                         # links are displayed without the initial ftp://, http://, https://, or ftps://.
                         "hide_protocol": True,

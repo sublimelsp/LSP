@@ -59,7 +59,6 @@ from .protocol import TokenFormat
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceEdit
-from .protocol import WorkspaceFoldersChangeEvent
 from .settings import client_configs
 from .settings import globalprefs
 from .transports import Transport

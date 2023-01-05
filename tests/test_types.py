@@ -59,7 +59,7 @@ class TestDocumentSelector(unittest.TestCase):
         return view
 
     def test_language(self) -> None:
-        selector = DocumentSelector([{"language": "txt"}])
+        selector = DocumentSelector([{"language": "plaintext"}])
         view = self._make_view("Packages/Text/Plain text.tmLanguage", "foobar.txt")
         self.assertTrue(selector.matches(view))
         view = self._make_view("Packages/Python/Python.sublime-syntax", "hello.py")

@@ -1,9 +1,9 @@
-from .core.sessions import SessionViewProtocol
-from .core.progress import ProgressReporter
-from .core.progress import ViewProgressReporter
-from .core.progress import WindowProgressReporter
-from .core.protocol import Request
-from .core.typing import Any, Optional, Dict
+from .sessions import SessionViewProtocol
+from .progress import ProgressReporter
+from .progress import ViewProgressReporter
+from .progress import WindowProgressReporter
+from .protocol import Request
+from .typing import Any, Optional, Dict
 from weakref import ref
 import sublime
 

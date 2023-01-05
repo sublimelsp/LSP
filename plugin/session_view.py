@@ -1,5 +1,5 @@
-from .active_request import ActiveRequest
 from .code_lens import CodeLensView
+from .core.active_request import ActiveRequest
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended

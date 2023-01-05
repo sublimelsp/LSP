@@ -542,11 +542,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 context_params["triggerCharacter"] = last_char
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
-            params = cast(SignatureHelpParams, {
+            params = {
                 "textDocument": position_params["textDocument"],
                 "position": position_params["position"],
                 "context": context_params
-            })
+            }  # type: SignatureHelpParams
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))

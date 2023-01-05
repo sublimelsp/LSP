@@ -40,6 +40,7 @@ from .protocol import InitializeParams
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import LSPAny
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
@@ -58,6 +59,7 @@ from .protocol import TokenFormat
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceEdit
+from .protocol import WorkspaceFoldersChangeEvent
 from .settings import client_configs
 from .settings import globalprefs
 from .transports import Transport
@@ -444,7 +446,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
     if get_file_watcher_implementation():
         workspace_capabilites["didChangeWatchedFiles"] = {"dynamicRegistration": True}
-    return cast(InitializeParams, {
+    return {
         "processId": os.getpid(),
         "clientInfo": {
             "name": "Sublime Text LSP",
@@ -454,8 +456,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": config.init_options.get_resolved(variables)
-    })
+        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
+    }
 
 
 class SessionViewProtocol(Protocol):
@@ -1345,12 +1347,13 @@ class Session(TransportCallbacks):
         if self.should_notify_did_change_workspace_folders():
             added, removed = diff(self._workspace_folders, folders)
             if added or removed:
-                params = cast(DidChangeWorkspaceFoldersParams, {
-                    "event": {
-                        "added": [a.to_lsp() for a in added],
-                        "removed": [r.to_lsp() for r in removed]
-                    }
-                })
+                change_event = {
+                    "added": [a.to_lsp() for a in added],
+                    "removed": [r.to_lsp() for r in removed]
+                }  # type: WorkspaceFoldersChangeEvent
+                params = {
+                    "event": change_event
+                }  # type: DidChangeWorkspaceFoldersParams
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders

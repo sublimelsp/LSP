@@ -6035,7 +6035,7 @@ class Notification:
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params: DidChangeTextDocumentParams) -> 'Notification':
+    def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> 'Notification':
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod

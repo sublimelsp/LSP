@@ -504,9 +504,9 @@ def did_change_text_document_params(
     view: sublime.View, version: int, changes: Optional[Iterable[sublime.TextChange]] = None
 ) -> DidChangeTextDocumentParams:
     content_changes = []  # type: List[TextDocumentContentChangeEvent]
-    result = cast(DidChangeTextDocumentParams, {
+    result = {
         "textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes
-    })
+    }  # type: DidChangeTextDocumentParams
     if changes is None:
         # TextDocumentSyncKind.Full
         content_changes.append({"text": entire_content(view)})
@@ -526,9 +526,9 @@ def will_save_text_document_params(
 def did_save_text_document_params(
     view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
 ) -> DidSaveTextDocumentParams:
-    result = cast(DidSaveTextDocumentParams, {
+    result = {
         "textDocument": text_document_identifier(uri if uri is not None else view)
-    })
+    }  # type: DidSaveTextDocumentParams
     if include_text:
         result["text"] = entire_content(view)
     return result

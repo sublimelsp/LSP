@@ -115,13 +115,13 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                         selected_index = i
                     else:
                         break
+            self.view.run_command("lsp_selection_clear")
             window.show_quick_panel(
                 panel_items,
                 self.on_symbol_selected,
                 sublime.KEEP_OPEN_ON_FOCUS_LOST,
                 selected_index,
                 self.on_highlighted)
-            self.view.run_command("lsp_selection_clear")
 
     def handle_response_error(self, error: Any) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)

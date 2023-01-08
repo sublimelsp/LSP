@@ -108,7 +108,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
             # Find region that is either intersecting or before to the current selection end.
             selected_index = 0
-            if len(self.old_regions):
+            if self.old_regions:
                 first_selection = self.old_regions[0]
                 for i, (r, _, _) in enumerate(self.regions):
                     if r.begin() <= first_selection.b:
@@ -138,21 +138,27 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def on_symbol_selected(self, index: int) -> None:
         if index == -1:
-            if len(self.old_regions) > 0:
-                self.view.run_command("lsp_selection_add", {"regions": [(r.a, r.b) for r in self.old_regions]})
+            if self.old_regions:
+                self.view.run_command("lsp_selection_set", {"regions": [(r.a, r.b) for r in self.old_regions]})
                 self.view.show_at_center(self.old_regions[0].begin())
         else:
-            region = self.selection_region(index) or self.region(index)
-            self.view.run_command("lsp_selection_add", {"regions": [(region.a, region.a)]})
+            region = self.selection_region(index)
+            if not region:
+                self.view.erase_regions(self.REGIONS_KEY)
+                region = self.region(index)
+                self.view.run_command("lsp_selection_set", {"regions": [(region.a, region.a)]})
             self.view.show_at_center(region.a)
-        self.view.erase_regions(self.REGIONS_KEY)
         self.old_regions.clear()
         self.regions.clear()
 
     def on_highlighted(self, index: int) -> None:
-        region = self.region(index)
+        region = self.selection_region(index)
+        if region:
+            self.view.run_command("lsp_selection_set", {"regions": [region.to_tuple()]})
+        else:
+            region = self.region(index)
+            self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
         self.view.show_at_center(region.a)
-        self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
 
     def process_symbols(
             self,

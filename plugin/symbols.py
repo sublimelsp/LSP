@@ -4,8 +4,8 @@ from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
 from .core.views import range_to_region
+from .core.views import SUBLIME_KIND_ID_COLOR_SCOPES
 from .core.views import SublimeKind
-from .core.views import SYMBOL_KIND_SCOPES
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 from contextlib import contextmanager
@@ -21,12 +21,8 @@ def unpack_lsp_kind(kind: SymbolKind) -> SublimeKind:
     return SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
 
 
-def format_symbol_kind(kind: SymbolKind) -> str:
-    return SYMBOL_KINDS.get(kind, (None, None, str(kind)))[2]
-
-
-def get_symbol_scope_from_lsp_kind(kind: SymbolKind) -> str:
-    return SYMBOL_KIND_SCOPES.get(kind, "comment")
+def get_symbol_color_scope_from_lsp_kind(kind: SymbolKind) -> str:
+    return SUBLIME_KIND_ID_COLOR_SCOPES.get(unpack_lsp_kind(kind)[0], "comment")
 
 
 def symbol_information_to_quick_panel_item(
@@ -188,7 +184,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         lsp_kind = item["kind"]
         self.regions.append((range_to_region(item['range'], self.view),
                              range_to_region(item['selectionRange'], self.view),
-                             get_symbol_scope_from_lsp_kind(lsp_kind)))
+                             get_symbol_color_scope_from_lsp_kind(lsp_kind)))
         name = item['name']
         with _additional_name(names, name):
             st_kind, st_icon, st_display_type = unpack_lsp_kind(lsp_kind)
@@ -215,7 +211,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         for item in items:
             self.regions.append((range_to_region(item['location']['range'], self.view),
-                                 None, get_symbol_scope_from_lsp_kind(item['kind'])))
+                                 None, get_symbol_color_scope_from_lsp_kind(item['kind'])))
             quick_panel_item = symbol_information_to_quick_panel_item(item, show_file_name=False)
             quick_panel_items.append(quick_panel_item)
         return quick_panel_items

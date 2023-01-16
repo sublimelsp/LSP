@@ -4,6 +4,8 @@ import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_actions import LspRefactorCommand
+from .plugin.code_actions import LspSourceActionCommand
 from .plugin.code_lens import LspCodeLensCommand
 from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
@@ -41,6 +43,7 @@ from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
+from .plugin.formatting import LspFormatCommand
 from .plugin.formatting import LspFormatDocumentCommand
 from .plugin.formatting import LspFormatDocumentRangeCommand
 from .plugin.goto import LspSymbolDeclarationCommand

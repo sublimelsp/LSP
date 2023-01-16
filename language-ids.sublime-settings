@@ -90,6 +90,7 @@
     "source.yaml.sublime.syntax": "yaml", // https://github.com/SublimeText/PackageDev
     "source.yaml.yarn": "yaml", // https://github.com/SublimeText/AFileIcon
     "text.advanced_csv": "csv", // https://github.com/SublimeText/AFileIcon
+    "text.django": "html", // https://github.com/willstott101/django-sublime-syntax
     "text.html.basic": "html",
     "text.html.elixir": "html",  // https://github.com/elixir-editors/elixir-tmbundle
     "text.html.markdown.academicmarkdown": "markdown", // https://github.com/mangecoeur/AcademicMarkdown
@@ -97,21 +98,21 @@
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
     "text.html.ngx": "html", // https://github.com/princemaple/ngx-html-syntax
     "text.jinja": "html", // https://github.com/Sublime-Instincts/BetterJinja
-    "text.plain": "txt",
-    "text.plain.buildpacks": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.eslint": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.fastq": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.license": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.lnk": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.log": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.nodejs": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.pcb": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.ps": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.python": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.readme": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.ruby": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.sketch": "txt", // https://github.com/SublimeText/AFileIcon
-    "text.plain.visualstudio": "txt", // https://github.com/SublimeText/AFileIcon
+    "text.plain": "plaintext",
+    "text.plain.buildpacks": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.eslint": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.fastq": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.license": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.lnk": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.log": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.nodejs": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.pcb": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.ps": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.python": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.readme": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.ruby": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.sketch": "plaintext", // https://github.com/SublimeText/AFileIcon
+    "text.plain.visualstudio": "plaintext", // https://github.com/SublimeText/AFileIcon
     "text.plist": "xml", // https://bitbucket.org/fschwehn/sublime_plist
     "text.xml.plist": "xml", // https://github.com/SublimeText/PackageDev
     "text.xml.plist.textmate.preferences": "xml", // https://github.com/SublimeText/PackageDev

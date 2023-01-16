@@ -1,5 +1,9 @@
-from .core.diagnostics_storage import ParsedUri, is_severity_included
-from .core.protocol import Diagnostic, DocumentUri, DiagnosticSeverity, Location
+from .core.diagnostics_storage import is_severity_included
+from .core.diagnostics_storage import ParsedUri
+from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentUri
+from .core.protocol import Location
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -7,9 +11,14 @@ from .core.types import ClientConfig
 from .core.typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
-from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
+from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
-from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
+from .core.views import format_diagnostic_source_and_code
+from .core.views import format_severity
+from .core.views import get_uri_and_position_from_location
+from .core.views import MissingUriError
+from .core.views import to_encoded_filename
+from .core.views import uri_from_view
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import Counter, OrderedDict

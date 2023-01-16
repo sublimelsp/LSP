@@ -8,16 +8,21 @@ from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
+from .core.protocol import CompletionParams
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
+from .core.protocol import DocumentHighlightParams
+from .core.protocol import DocumentUri
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
+from .core.protocol import SignatureHelpParams
 from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
+from .core.registry import get_position
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
@@ -26,9 +31,11 @@ from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
+from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -160,6 +167,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
+        self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
@@ -342,6 +350,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes)
+        self._code_lenses_debouncer_async.debounce(
+            self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         if not different:
             return
         self._clear_highlight_regions()
@@ -349,13 +359,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
-        self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
-                                                  after_ms=self.code_lenses_debounce_time)
 
-    def get_uri(self) -> str:
+    def get_uri(self) -> DocumentUri:
         return self._uri
 
-    def set_uri(self, new_uri: str) -> None:
+    def set_uri(self, new_uri: DocumentUri) -> None:
         self._uri = new_uri
         self.view.settings().set("lsp_uri", self._uri)
 
@@ -474,6 +482,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             )
         elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
+        elif key == "lsp.link_available" and operator == sublime.OP_EQUAL:
+            position = get_position(self.view)
+            if position is None:
+                return not operand
+            session = self.session_async('documentLinkProvider', position)
+            if not session:
+                return not operand
+            session_view = session.session_view_for_view_async(self.view)
+            if not session_view:
+                return not operand
+            return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
@@ -554,7 +573,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 "textDocument": position_params["textDocument"],
                 "position": position_params["position"],
                 "context": context_params
-            }
+            }  # type: SignatureHelpParams
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
@@ -653,7 +672,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             else:
                 title = all_actions[0]['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link('lsp_code_actions', title, {"code_actions_by_config": responses})
+            code_actions_link = make_command_link(
+                'lsp_code_actions', title, {"code_actions_by_config": responses}, view_id=self.view.id())
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
@@ -736,7 +756,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point = region.b
         session = self.session_async("documentHighlightProvider", point)
         if session:
-            params = text_document_position_params(self.view, point)
+            params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
@@ -778,9 +798,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
             def completion_request() -> Promise[ResolvedCompletions]:
                 config_name = session.config.name
-                return session.send_request_task(
-                    Request.complete(text_document_position_params(self.view, location), self.view)
-                ).then(lambda response: (response, config_name))
+                params = cast(CompletionParams, text_document_position_params(self.view, location))
+                request = Request.complete(params, self.view)
+                return session.send_request_task(request).then(lambda response: (response, config_name))
 
             completion_promises.append(completion_request())
 
@@ -822,8 +842,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
             LspResolveDocsCommand.completions[session_name] = response_items
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
+            config_name = session.config.name
             items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, session.config.name)
+                format_completion(response_item, index, can_resolve_completion_items, config_name, self.view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:

@@ -1,5 +1,6 @@
+from .protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
-from .typing import Any, Dict, List, Union
+from .typing import Any, List, Union
 from .url import filename_to_uri
 import sublime
 import os
@@ -40,7 +41,7 @@ class WorkspaceFolder:
             return self.name == other.name and self.path == other.path
         return False
 
-    def to_lsp(self) -> Dict[str, str]:
+    def to_lsp(self) -> LspWorkspaceFolder:
         return {"name": self.name, "uri": self.uri()}
 
     def uri(self) -> str:

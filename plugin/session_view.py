@@ -1,5 +1,5 @@
 from .code_lens import CodeLensView
-from .core.progress import ViewProgressReporter
+from .core.active_request import ActiveRequest
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
@@ -10,7 +10,6 @@ from .core.protocol import Request
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
@@ -43,9 +42,8 @@ class SessionView:
         self._view = listener.view
         self._session = session
         self._initialize_region_keys()
-        self.active_requests = {}  # type: Dict[int, Request]
+        self._active_requests = {}  # type: Dict[int, ActiveRequest]
         self._listener = ref(listener)
-        self.progress = {}  # type: Dict[int, ViewProgressReporter]
         self._code_lenses = CodeLensView(self._view)
         self.code_lenses_needs_refresh = False
         settings = self._view.settings()
@@ -74,8 +72,8 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            for request_id, request in self.active_requests.items():
-                if request.view and request.view.id() == self.view.id():
+            for request_id, data in self._active_requests.items():
+                if data.request.view and data.request.view.id() == self.view.id():
                     self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
@@ -307,31 +305,15 @@ class SessionView:
             self.view.erase_regions("{}_underline".format(key))
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
-        self.active_requests[request_id] = request
-        if request.progress:
-            debounced(
-                functools.partial(self._start_progress_reporter_async, request_id, request.method),
-                timeout_ms=200,
-                condition=lambda: request_id in self.active_requests and request_id not in self.progress,
-                async_thread=True
-            )
+        self._active_requests[request_id] = ActiveRequest(self, request_id, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
-        self.active_requests.pop(request_id, None)
-        self.progress.pop(request_id, None)
+        self._active_requests.pop(request_id, None)
 
     def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
-        value = params['value']
-        kind = value['kind']
-        if kind == 'begin':
-            title = value["title"]
-            progress = self.progress.get(request_id)
-            if not progress:
-                progress = self._start_progress_reporter_async(request_id, title)
-            progress.title = title
-            progress(value.get("message"), value.get("percentage"))
-        elif kind == 'report':
-            self.progress[request_id](value.get("message"), value.get("percentage"))
+        request = self._active_requests.get(request_id, None)
+        if request:
+            request.update_progress_async(params)
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, change_count, changes)
@@ -351,21 +333,12 @@ class SessionView:
     def on_post_save_async(self, new_uri: DocumentUri) -> None:
         self.session_buffer.on_post_save_async(self.view, new_uri)
 
-    def _start_progress_reporter_async(self, request_id: int, title: str) -> ViewProgressReporter:
-        progress = ViewProgressReporter(
-            view=self.view,
-            key="lspprogressview{}{}".format(self.session.config.name, request_id),
-            title=title
-        )
-        self.progress[request_id] = progress
-        return progress
-
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def start_code_lenses_async(self) -> None:
         params = {'textDocument': text_document_identifier(self.view)}
-        for request_id, request in self.active_requests.items():
-            if request.method == "codeAction/resolve":
+        for request_id, data in self._active_requests.items():
+            if data.request.method == "codeAction/resolve":
                 self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 

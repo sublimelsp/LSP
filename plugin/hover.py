@@ -64,10 +64,10 @@ class LinkKind:
 
     def link(self, point: int, view: sublime.View) -> str:
         args = {'point': point}
-        link = make_command_link(self.subl_cmd_name, self.label, args, None, view)
+        link = make_command_link(self.subl_cmd_name, self.label, args, None, view.id())
         if self.supports_side_by_side:
             args['side_by_side'] = True
-            link += ' ' + make_command_link(self.subl_cmd_name, '◨', args, 'icon', view)
+            link += ' ' + make_command_link(self.subl_cmd_name, '◨', args, 'icon', view.id())
         return link
 
 

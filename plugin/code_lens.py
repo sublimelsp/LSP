@@ -1,4 +1,6 @@
-from .core.protocol import CodeLens, CodeLensExtended, Error
+from .core.protocol import CodeLens
+from .core.protocol import CodeLensExtended
+from .core.protocol import Error
 from .core.typing import List, Tuple, Dict, Iterable, Generator, Union, cast
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -23,7 +25,7 @@ class CodeLensData:
         self.region = range_to_region(data['range'], view)
         self.session_name = session_name
         self.annotation = '...'
-        self.resolve_annotation()
+        self.resolve_annotation(view.id())
         self.is_resolve_error = False
 
     def __repr__(self) -> str:
@@ -42,7 +44,7 @@ class CodeLensData:
     def small_html(self) -> str:
         return '<small style="font-family: system">{}</small>'.format(self.annotation)
 
-    def resolve_annotation(self) -> None:
+    def resolve_annotation(self, view_id: int) -> None:
         command = self.data.get('command')
         if command is not None:
             command_name = command.get('command')
@@ -51,7 +53,7 @@ class CodeLensData:
                     'session_name': self.session_name,
                     'command_name': command_name,
                     'command_args': command.get('arguments', []),
-                })
+                }, view_id=view_id)
             else:
                 self.annotation = html_escape(command['title'])
         else:
@@ -64,7 +66,7 @@ class CodeLensData:
             return
         self.data = code_lens_or_error
         self.region = range_to_region(code_lens_or_error['range'], view)
-        self.resolve_annotation()
+        self.resolve_annotation(view.id())
 
 
 class CodeLensView:

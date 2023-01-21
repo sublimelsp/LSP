@@ -265,7 +265,6 @@ class WindowManager(Manager):
                     sublime.set_timeout_async(self._dequeue_listener_async)
                     return self._window.status_message(message)
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
-            config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             if cwd:
                 transport_cwd = cwd  # type: Optional[str]

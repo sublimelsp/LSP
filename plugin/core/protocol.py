@@ -5987,6 +5987,7 @@ class Error(Exception):
 
 T = TypeVar('T', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
 
+
 class Response(Generic[T]):
 
     __slots__ = ('request_id', 'result')

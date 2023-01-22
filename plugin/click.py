@@ -7,7 +7,7 @@ class LspClick(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, count: int, command: str, args: dict) -> None:
         self.click_count += 1
-        if (self.click_count == count):
+        if self.click_count == count:
             self.view.run_command(command, args)
             self.click_count = 0
             return

@@ -137,7 +137,7 @@ class LspCallHierarchyCommand(LspTextCommand):
                 'root_elements': response
             }, tooltip="Show outgoing calls"))
         new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header)
-        data_provider.get_children(None).then(partial(open_root, self._window, session.config.name))
+        data_provider.get_children(None).then(partial(open_first, self._window, session.config.name))
 
 
 class LspCallHierarchyToggleCommand(LspWindowCommand):
@@ -168,17 +168,17 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
             }, tooltip=tooltip))
         data_provider = CallHierarchyDataProvider(weakref.ref(session), direction, root_elements)
         new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header)
-        data_provider.get_children(None).then(partial(open_root, self.window, session.config.name))
+        data_provider.get_children(None).then(partial(open_first, self.window, session.config.name))
 
 
-def open_root(window: sublime.Window, session_name: str, items: List[CallHierarchyItem]) -> None:
+def open_first(window: sublime.Window, session_name: str, items: List[CallHierarchyItem]) -> None:
     if items and window.is_valid():
-        first_root = items[0]
+        item = items[0]
         window.run_command('lsp_open_location', {
             'location': {
-                'targetUri': first_root['uri'],
-                'targetRange': first_root['range'],
-                'targetSelectionRange': first_root['selectionRange']
+                'targetUri': item['uri'],
+                'targetRange': item['range'],
+                'targetSelectionRange': item['selectionRange']
             },
             'session_name': session_name,
             'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT

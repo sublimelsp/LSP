@@ -118,10 +118,13 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
     is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
     if isinstance(label, str):
         if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
-                'session_name': session.config.name,
-                'inlay_hint': cast(dict, inlay_hint),
-                'phantom_uuid': phantom_uuid
+            inlay_hint_click_command = sublime.command_url('lsp_double_click', {
+                'command':'lsp_inlay_hint_click',
+                'args': {
+                    'session_name': session.config.name,
+                    'inlay_hint': cast(dict, inlay_hint),
+                    'phantom_uuid': phantom_uuid
+                }
             })
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
         result += html.escape(label)
@@ -133,11 +136,14 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         value = ""
         is_clickable = is_clickable or bool(label_part.get('command'))
         if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
-                'session_name': session.config.name,
-                'inlay_hint': cast(dict, inlay_hint),
-                'phantom_uuid': phantom_uuid,
-                'label_part': cast(dict, label_part)
+            inlay_hint_click_command = sublime.command_url('lsp_double_click', {
+                'command': 'lsp_inlay_hint_click',
+                'args': {
+                    'session_name': session.config.name,
+                    'inlay_hint': cast(dict, inlay_hint),
+                    'phantom_uuid': phantom_uuid,
+                    'label_part': cast(dict, label_part)
+                }
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
         value += html.escape(label_part['value'])

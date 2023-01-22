@@ -546,7 +546,8 @@ class LspDoubleClickCommand(sublime_plugin.TextCommand):
             self.view.run_command(command, args)
             self.click_count = 0
             return
+        sublime.set_timeout(self.reset, 500)
 
-        def reset() -> None:
-            self.click_count = 0
-        sublime.set_timeout(reset, 500)
+    @classmethod
+    def reset(cls) -> None:
+        cls.click_count = 0

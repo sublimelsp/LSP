@@ -57,7 +57,7 @@ class SessionView:
             session_buffer.add_session_view(self)
         self._session_buffer = session_buffer
         session.register_session_view_async(self)
-        session.config.set_view_status(self._view, "")
+        session.config.set_view_status(self._view, session.config_status_message)
         if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)

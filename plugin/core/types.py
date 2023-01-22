@@ -802,7 +802,7 @@ class ClientConfig:
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = "{}: {}".format(self.name, message) if message else self.name
+            status = "{} ({})".format(self.name, message) if message else self.name
             view.set_status(self.status_key, status)
 
     def erase_view_status(self, view: sublime.View) -> None:

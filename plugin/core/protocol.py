@@ -5913,6 +5913,18 @@ class Request:
         return Request("textDocument/semanticTokens/range", params, view)
 
     @classmethod
+    def prepareCallHierarchy(cls, params: CallHierarchyPrepareParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
+
+    @classmethod
+    def incomingCalls(cls, params: CallHierarchyIncomingCallsParams) -> 'Request':
+        return Request("callHierarchy/incomingCalls", params, None)
+
+    @classmethod
+    def outgoingCalls(cls, params: CallHierarchyOutgoingCallsParams) -> 'Request':
+        return Request("callHierarchy/outgoingCalls", params, None)
+
+    @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 

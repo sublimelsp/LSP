@@ -393,6 +393,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
+        },
+        "callHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {
@@ -1142,6 +1145,7 @@ class Session(TransportCallbacks):
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self.config = config
+        self.config_status_message = ''
         self.manager = weakref.ref(manager)
         self.window = manager.window
         self.state = ClientStates.STARTING
@@ -1206,6 +1210,16 @@ class Session(TransportCallbacks):
             if sv.view == view:
                 return sv
         return None
+
+    def set_config_status_async(self, message: str) -> None:
+        """
+        Sets the message that is shown in parenthesis within the permanent language server status.
+
+        :param message: The message
+        """
+        self.config_status_message = message.strip()
+        for sv in self.session_views_async():
+            self.config.set_view_status(sv.view, message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message

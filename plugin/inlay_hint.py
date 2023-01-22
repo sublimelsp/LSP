@@ -71,7 +71,6 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
     html = """
@@ -91,12 +90,11 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
                 text-decoration: none;
             }}
         </style>
-        <div class="inlay-hint" title="{tooltip}">
+        <div class="inlay-hint">
             {label}
         </div>
     </body>
     """.format(
-        tooltip=tooltip,
         font=font,
         label=label
     )
@@ -131,13 +129,17 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 command=inlay_hint_click_command,
                 tooltip=tooltip
             )
-        result += html.escape(label)
+        result += '<span title="{tooltip}">{value}</span>'.format(
+            tooltip= 'Double Click ' + tooltip if is_clickable else tooltip,
+            value=html.escape(label)
+        )
         if is_clickable:
             result += "</a>"
         return result
 
     for label_part in label:
         value = ""
+        tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
         is_clickable = is_clickable or bool(label_part.get('command'))
         if is_clickable:
             inlay_hint_click_command = sublime.command_url('lsp_double_click', {
@@ -149,16 +151,13 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                     'label_part': cast(dict, label_part)
                 }
             })
-            value += '<a href="{command}" title="Double Click {tooltip}">'.format(
-                command=inlay_hint_click_command,
-                tooltip=format_inlay_hint_tooltip(label_part.get("tooltip"))
-            )
+            value += '<a href="{command}">'.format(command=inlay_hint_click_command)
         value += html.escape(label_part['value'])
         if is_clickable:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
         result += "<span title=\"{tooltip}\">{value}</span>".format(
-            tooltip=format_inlay_hint_tooltip(label_part.get("tooltip")),
+            tooltip= 'Double Click ' + tooltip if is_clickable else tooltip,
             value=value
         )
     return result

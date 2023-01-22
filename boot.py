@@ -41,7 +41,6 @@ from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
-from .plugin.click import LspClick
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.formatting import LspFormatCommand
@@ -73,6 +72,7 @@ from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspSelectionSetCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
 from .plugin.tooling import LspCopyToClipboardFromBase64Command
+from .plugin.tooling import LspDoubleClick
 from .plugin.tooling import LspDumpBufferCapabilities
 from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspParseVscodePackageJson

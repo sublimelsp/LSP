@@ -129,7 +129,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         "clients": {
             "fsautocomplete": {
                 "enabled": true,
-                "command": ["fsautocomplete", "--background-service-enabled"],
+                "command": ["fsautocomplete"],
                 "selector": "source.fsharp",
                 "initializationOptions": {
                     "AutomaticWorkspaceInit": true

@@ -1,7 +1,9 @@
 from .core.logging import debug
 from .core.open import open_file_uri
 from .core.open import open_in_browser
-from .core.protocol import DocumentLink, Request
+from .core.protocol import DocumentLink
+from .core.protocol import Request
+from .core.protocol import URI
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.typing import Optional
@@ -54,7 +56,7 @@ class LspOpenLinkCommand(LspTextCommand):
         if target is not None:
             self.open_target(target)
 
-    def open_target(self, target: str) -> None:
+    def open_target(self, target: URI) -> None:
         if target.startswith("file:"):
             window = self.view.window()
             if window:

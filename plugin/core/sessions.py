@@ -27,6 +27,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
+from .protocol import DidChangeWorkspaceFoldersParams
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
@@ -35,9 +36,11 @@ from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
 from .protocol import GeneralClientCapabilities
+from .protocol import InitializeParams
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import LSPAny
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
@@ -205,7 +208,7 @@ def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
-                          config: ClientConfig) -> dict:
+                          config: ClientConfig) -> InitializeParams:
     completion_kinds = cast(List[CompletionItemKind], _enum_like_class_to_list(CompletionItemKind))
     symbol_kinds = cast(List[SymbolKind], _enum_like_class_to_list(SymbolKind))
     diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_like_class_to_list(DiagnosticTag))
@@ -455,7 +458,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": config.init_options.get_resolved(variables)
+        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
     }
 
 
@@ -1126,7 +1129,8 @@ class _RegistrationData:
                 return
 
 
-_WORK_DONE_PROGRESS_PREFIX = "wd"
+# This prefix should disambiguate common string generation techniques like UUID4.
+_WORK_DONE_PROGRESS_PREFIX = "$ublime-"
 
 
 class Session(TransportCallbacks):
@@ -1351,7 +1355,7 @@ class Session(TransportCallbacks):
                         "added": [a.to_lsp() for a in added],
                         "removed": [r.to_lsp() for r in removed]
                     }
-                }
+                }  # type: DidChangeWorkspaceFoldersParams
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders
@@ -1813,28 +1817,46 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
+    def _create_window_progress_reporter(self, token: str, value: Dict[str, Any]) -> None:
+        self._progress[token] = WindowProgressReporter(
+            window=self.window,
+            key="lspprogress{}{}".format(self.config.name, token),
+            title=value["title"],
+            message=value.get("message")
+        )
+
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
+        value = params['value']
+        kind = value['kind']
         if token not in self._progress:
+            # If the token is not in the _progress map then that could mean two things:
+            #
+            # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
+            #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it succeeds,
+            #    we can delegate to the appropriate session view instances.
+            #
+            # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
+            #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
+            #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
             try:
                 request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                 request = self._response_handlers[request_id][0]
                 self._invoke_views(request, "on_request_progress", request_id, params)
                 return
             except (IndexError, ValueError, KeyError):
+                # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
+                # dealing with possibility (2).
+                if kind == 'begin':
+                    # We are dealing with possibility (2), so create the progress reporter now.
+                    self._create_window_progress_reporter(token, value)
+                    return
                 pass
             debug('unknown $/progress token: {}'.format(token))
             return
-        value = params['value']
-        kind = value['kind']
         if kind == 'begin':
-            self._progress[token] = WindowProgressReporter(
-                window=self.window,
-                key="lspprogress{}{}".format(self.config.name, token),
-                title=value["title"],
-                message=value.get("message")
-            )
+            self._create_window_progress_reporter(token, value)
         elif kind == 'report':
             progress = self._progress[token]
             assert isinstance(progress, WindowProgressReporter)

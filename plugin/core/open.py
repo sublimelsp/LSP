@@ -91,7 +91,7 @@ def open_file(
     view = window.open_file(file, flags, group)
     if not view.is_loading():
         if was_already_open and (flags & sublime.SEMI_TRANSIENT):
-            # work-around bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
+            # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
             # its view listeners initialized.
             sublime_plugin.check_view_event_listeners(view)  # type: ignore
         # It's already loaded. Possibly already open in a tab.

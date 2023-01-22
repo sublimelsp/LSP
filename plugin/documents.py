@@ -8,14 +8,18 @@ from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionList
+from .core.protocol import CompletionParams
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
+from .core.protocol import DocumentHighlightParams
+from .core.protocol import DocumentUri
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
+from .core.protocol import SignatureHelpParams
 from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
 from .core.registry import get_position
@@ -31,6 +35,7 @@ from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
@@ -329,10 +334,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                                       after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
 
-    def get_uri(self) -> str:
+    def get_uri(self) -> DocumentUri:
         return self._uri
 
-    def set_uri(self, new_uri: str) -> None:
+    def set_uri(self, new_uri: DocumentUri) -> None:
         self._uri = new_uri
         self.view.settings().set("lsp_uri", self._uri)
 
@@ -541,7 +546,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 "textDocument": position_params["textDocument"],
                 "position": position_params["position"],
                 "context": context_params
-            }
+            }  # type: SignatureHelpParams
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
@@ -724,7 +729,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point = region.b
         session = self.session_async("documentHighlightProvider", point)
         if session:
-            params = text_document_position_params(self.view, point)
+            params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
@@ -766,9 +771,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
             def completion_request() -> Promise[ResolvedCompletions]:
                 config_name = session.config.name
-                return session.send_request_task(
-                    Request.complete(text_document_position_params(self.view, location), self.view)
-                ).then(lambda response: (response, config_name))
+                params = cast(CompletionParams, text_document_position_params(self.view, location))
+                request = Request.complete(params, self.view)
+                return session.send_request_task(request).then(lambda response: (response, config_name))
 
             completion_promises.append(completion_request())
 

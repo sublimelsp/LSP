@@ -1,6 +1,7 @@
 from .core.edit import parse_text_edit
 from .core.promise import Promise
 from .core.protocol import Error
+from .core.protocol import TextDocumentSaveReason
 from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.sessions import Session
@@ -61,7 +62,7 @@ class WillSaveWaitTask(SaveTask):
 
     def _will_save_wait_until_async(self, session: Session) -> None:
         session.send_request_async(
-            will_save_wait_until(self._task_runner.view, reason=1),  # TextDocumentSaveReason.Manual
+            will_save_wait_until(self._task_runner.view, reason=TextDocumentSaveReason.Manual),
             self._on_response,
             lambda error: self._on_response(None))
 

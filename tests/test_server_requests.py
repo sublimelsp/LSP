@@ -130,14 +130,14 @@ class ServerRequests(TextDocumentTestCase):
                     {"method": "workspace/didChangeWorkspaceFolders", "id": "asdf"},
                     {"method": "textDocument/didOpen", "id": "1"},
                     {"method": "textDocument/willSaveWaitUntil", "id": "2",
-                     "registerOptions": {"documentSelector": [{"language": "txt"}]}},
+                     "registerOptions": {"documentSelector": [{"language": "plaintext"}]}},
                     {"method": "textDocument/didChange", "id": "adsf",
                      "registerOptions": {"syncKind": TextDocumentSyncKind.Full, "documentSelector": [
-                       {"language": "txt"}
+                       {"language": "plaintext"}
                      ]}},
                     {"method": "textDocument/completion", "id": "myCompletionRegistrationId",
                      "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
-                       {"language": "txt"}
+                       {"language": "plaintext"}
                      ]}}
                 ]
             },
@@ -206,7 +206,7 @@ class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
                     # Note that the triggerCharacters are disabled in the configuration.
                     {"method": "textDocument/completion", "id": "anotherCompletionRegistrationId",
                      "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
-                       {"language": "txt"}
+                       {"language": "plaintext"}
                      ]}}
                 ]
             },

@@ -13,6 +13,11 @@ from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
+from .protocol import DidChangeTextDocumentParams
+from .protocol import DidCloseTextDocumentParams
+from .protocol import DidOpenTextDocumentParams
+from .protocol import DidSaveTextDocumentParams
+from .protocol import DocumentColorParams
 from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
 from .protocol import ExperimentalTextDocumentRangeParams
@@ -25,9 +30,15 @@ from .protocol import Point
 from .protocol import Position
 from .protocol import Range
 from .protocol import Request
+from .protocol import SelectionRangeParams
 from .protocol import SymbolKind
+from .protocol import TextDocumentContentChangeEvent
 from .protocol import TextDocumentIdentifier
+from .protocol import TextDocumentItem
 from .protocol import TextDocumentPositionParams
+from .protocol import TextDocumentSaveReason
+from .protocol import VersionedTextDocumentIdentifier
+from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
@@ -185,34 +196,26 @@ SUBLIME_KIND_SCOPES = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }  # type: Dict[SublimeKind, str]
 
-SYMBOL_KIND_SCOPES = {
-    SymbolKind.File: "string",
-    SymbolKind.Module: "entity.name.namespace",
-    SymbolKind.Namespace: "entity.name.namespace",
-    SymbolKind.Package: "entity.name.namespace",
-    SymbolKind.Class: "entity.name.class",
-    SymbolKind.Method: "entity.name.function",
-    SymbolKind.Property: "variable.other.member",
-    SymbolKind.Field: "variable.other.member",
-    SymbolKind.Constructor: "entity.name.function.constructor",
-    SymbolKind.Enum: "entity.name.enum",
-    SymbolKind.Interface: "entity.name.interface",
-    SymbolKind.Function: "entity.name.function",
-    SymbolKind.Variable: "variable.other",
-    SymbolKind.Constant: "variable.other.constant",
-    SymbolKind.String: "string",
-    SymbolKind.Number: "constant.numeric",
-    SymbolKind.Boolean: "constant.language.boolean",
-    SymbolKind.Array: "meta.sequence",
-    SymbolKind.Object: "meta.mapping",
-    SymbolKind.Key: "meta.mapping.key string",
-    SymbolKind.Null: "constant.language.null",
-    SymbolKind.EnumMember: "constant.other.enum",
-    SymbolKind.Struct: "entity.name.struct",
-    SymbolKind.Event: "entity.name.function",
-    SymbolKind.Operator: "keyword.operator",
-    SymbolKind.TypeParameter: "variable.parameter.type"
-}  # type: Dict[SymbolKind, str]
+# Recommended colors to use by themes for each symbol kind, based on the kind_container specialization class described
+# at https://www.sublimetext.com/docs/themes.html#quick-panel
+SUBLIME_KIND_ID_COLOR_SCOPES = {
+    sublime.KIND_ID_KEYWORD: "region.pinkish",
+    sublime.KIND_ID_TYPE: "region.purplish",
+    sublime.KIND_ID_FUNCTION: "region.redish",
+    sublime.KIND_ID_NAMESPACE: "region.bluish",
+    sublime.KIND_ID_NAVIGATION: "region.yellowish",
+    sublime.KIND_ID_MARKUP: "region.orangish",
+    sublime.KIND_ID_VARIABLE: "region.cyanish",
+    sublime.KIND_ID_SNIPPET: "region.greenish",
+    sublime.KIND_ID_COLOR_REDISH: "region.redish",
+    sublime.KIND_ID_COLOR_ORANGISH: "region.orangish",
+    sublime.KIND_ID_COLOR_YELLOWISH: "region.yellowish",
+    sublime.KIND_ID_COLOR_GREENISH: "region.greenish",
+    sublime.KIND_ID_COLOR_CYANISH: "region.cyanish",
+    sublime.KIND_ID_COLOR_BLUISH: "region.bluish",
+    sublime.KIND_ID_COLOR_PURPLISH: "region.purplish",
+    sublime.KIND_ID_COLOR_PINKISH: "region.pinkish"
+}  # type: Dict[int, str]
 
 DOCUMENT_HIGHLIGHT_KINDS = {
     DocumentHighlightKind.Text: "text",
@@ -448,7 +451,7 @@ def entire_content_range(view: sublime.View) -> Range:
     return region_to_range(view, entire_content_region(view))
 
 
-def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -457,7 +460,7 @@ def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
     }
 
 
-def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict[str, Any]:
+def versioned_text_document_identifier(view: sublime.View, version: int) -> VersionedTextDocumentIdentifier:
     return {"uri": uri_from_view(view), "version": version}
 
 
@@ -474,11 +477,11 @@ def text_document_range_params(view: sublime.View, location: int,
     }
 
 
-def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:
     return {"textDocument": text_document_item(view, language_id)}
 
 
-def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
+def render_text_change(change: sublime.TextChange) -> TextDocumentContentChangeEvent:
     # Note: cannot use protocol.Range because these are "historic" points.
     return {
         "range": {
@@ -489,10 +492,14 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
     }
 
 
-def did_change_text_document_params(view: sublime.View, version: int,
-                                    changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
-    content_changes = []  # type: List[Dict[str, Any]]
-    result = {"textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes}
+def did_change_text_document_params(
+    view: sublime.View, version: int, changes: Optional[Iterable[sublime.TextChange]] = None
+) -> DidChangeTextDocumentParams:
+    content_changes = []  # type: List[TextDocumentContentChangeEvent]
+    result = {
+        "textDocument": versioned_text_document_identifier(view, version),
+        "contentChanges": content_changes
+    }  # type: DidChangeTextDocumentParams
     if changes is None:
         # TextDocumentSyncKind.Full
         content_changes.append({"text": entire_content(view)})
@@ -503,21 +510,24 @@ def did_change_text_document_params(view: sublime.View, version: int,
     return result
 
 
-def will_save_text_document_params(view_or_uri: Union[DocumentUri, sublime.View], reason: int) -> Dict[str, Any]:
+def will_save_text_document_params(
+    view_or_uri: Union[DocumentUri, sublime.View], reason: TextDocumentSaveReason
+) -> WillSaveTextDocumentParams:
     return {"textDocument": text_document_identifier(view_or_uri), "reason": reason}
 
 
 def did_save_text_document_params(
     view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
-) -> Dict[str, Any]:
-    identifier = text_document_identifier(uri if uri is not None else view)
-    result = {"textDocument": identifier}  # type: Dict[str, Any]
+) -> DidSaveTextDocumentParams:
+    result = {
+        "textDocument": text_document_identifier(uri if uri is not None else view)
+    }  # type: DidSaveTextDocumentParams
     if include_text:
         result["text"] = entire_content(view)
     return result
 
 
-def did_close_text_document_params(uri: DocumentUri) -> Dict[str, Any]:
+def did_close_text_document_params(uri: DocumentUri) -> DidCloseTextDocumentParams:
     return {"textDocument": text_document_identifier(uri)}
 
 
@@ -530,11 +540,11 @@ def did_change(view: sublime.View, version: int,
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 
-def will_save(uri: DocumentUri, reason: int) -> Notification:
+def will_save(uri: DocumentUri, reason: TextDocumentSaveReason) -> Notification:
     return Notification.willSave(will_save_text_document_params(uri, reason))
 
 
-def will_save_wait_until(view: sublime.View, reason: int) -> Request:
+def will_save_wait_until(view: sublime.View, reason: TextDocumentSaveReason) -> Request:
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
@@ -579,7 +589,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     }, view, progress=True)
 
 
-def selection_range_params(view: sublime.View) -> Dict[str, Any]:
+def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),
         "positions": [position(view, r.b) for r in view.sel()]
@@ -721,12 +731,6 @@ def minihtml(
             "markdown_extensions": [
                 "markdown.extensions.admonition",
                 {
-                    "pymdownx.escapeall": {
-                        "hardbreak": True,
-                        "nbsp": False
-                    }
-                },
-                {
                     "pymdownx.magiclink": {
                         # links are displayed without the initial ftp://, http://, https://, or ftps://.
                         "hide_protocol": True,
@@ -854,7 +858,7 @@ def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> su
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
 
 
-def document_color_params(view: sublime.View) -> Dict[str, Any]:
+def document_color_params(view: sublime.View) -> DocumentColorParams:
     return {"textDocument": text_document_identifier(view)}
 
 

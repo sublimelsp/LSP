@@ -5914,7 +5914,7 @@ class Request:
 
     @classmethod
     def prepareCallHierarchy(cls, params: CallHierarchyPrepareParams, view: sublime.View) -> 'Request':
-        return Request("textDocument/prepareCallHierarchy", params, view)
+        return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
 
     @classmethod
     def incomingCalls(cls, params: CallHierarchyIncomingCallsParams) -> 'Request':

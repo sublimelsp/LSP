@@ -67,7 +67,8 @@ class CallHierarchyDataProvider(TreeDataProvider):
                 'targetRange': element['range'],
                 'targetSelectionRange': element['selectionRange']
             },
-            'session_name': self.session_name
+            'session_name': self.session_name,
+            'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
         })
         return TreeItem(
             element['name'],
@@ -135,7 +136,8 @@ class LspCallHierarchyCommand(LspTextCommand):
                 'direction': CallHierarchyDirection.OutgoingCalls,
                 'root_elements': response
             }, tooltip="Show outgoing calls"))
-        new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
+        new_tree_view_sheet(self._window, "Call Hierarchy", data_provider, header)
+        data_provider.get_children(None).then(partial(open_root, self._window, session.config.name))
 
 
 class LspCallHierarchyToggleCommand(LspWindowCommand):
@@ -165,4 +167,19 @@ class LspCallHierarchyToggleCommand(LspWindowCommand):
                 'root_elements': root_elements
             }, tooltip=tooltip))
         data_provider = CallHierarchyDataProvider(weakref.ref(session), direction, root_elements)
-        new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header, flags=sublime.ADD_TO_SELECTION)
+        new_tree_view_sheet(self.window, "Call Hierarchy", data_provider, header)
+        data_provider.get_children(None).then(partial(open_root, self.window, session.config.name))
+
+
+def open_root(window: sublime.Window, session_name: str, items: List[CallHierarchyItem]) -> None:
+    if items and window.is_valid():
+        first_root = items[0]
+        window.run_command('lsp_open_location', {
+            'location': {
+                'targetUri': first_root['uri'],
+                'targetRange': first_root['range'],
+                'targetSelectionRange': first_root['selectionRange']
+            },
+            'session_name': session_name,
+            'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+        })

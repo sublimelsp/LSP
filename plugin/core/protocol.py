@@ -1,5 +1,5 @@
 from .typing import Enum, IntEnum, IntFlag, StrEnum
-from .typing import Any, Dict, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, Union
+from .typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, TypeVar, Union  # noqa: E501
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -5913,6 +5913,18 @@ class Request:
         return Request("textDocument/semanticTokens/range", params, view)
 
     @classmethod
+    def prepareCallHierarchy(cls, params: CallHierarchyPrepareParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
+
+    @classmethod
+    def incomingCalls(cls, params: CallHierarchyIncomingCallsParams) -> 'Request':
+        return Request("callHierarchy/incomingCalls", params, None)
+
+    @classmethod
+    def outgoingCalls(cls, params: CallHierarchyOutgoingCallsParams) -> 'Request':
+        return Request("callHierarchy/outgoingCalls", params, None)
+
+    @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 
@@ -5985,11 +5997,14 @@ class Error(Exception):
         return Error(ErrorCodes.InternalError, str(ex))
 
 
-class Response:
+T = TypeVar('T', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
+
+
+class Response(Generic[T]):
 
     __slots__ = ('request_id', 'result')
 
-    def __init__(self, request_id: Any, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
+    def __init__(self, request_id: Any, result: T) -> None:
         self.request_id = request_id
         self.result = result
 

@@ -781,24 +781,33 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
+def make_link(href: str, text: Any, class_name: Optional[str] = None, tooltip: Optional[str] = None) -> str:
     if isinstance(text, str):
         text = text.replace(' ', '&nbsp;')
+    link = "<a href='{}'".format(href)
     if class_name:
-        return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
-    else:
-        return "<a href='{}'>{}</a>".format(href, text)
+        link += " class='{}'".format(class_name)
+    if tooltip:
+        link += " title='{}'".format(html.escape(tooltip))
+    link += ">{}</a>".format(text)
+    return link
 
 
-def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
-                      class_name: Optional[str] = None, view_id: Optional[int] = None) -> str:
+def make_command_link(
+    command: str,
+    text: str,
+    command_args: Optional[Dict[str, Any]] = None,
+    class_name: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    view_id: Optional[int] = None
+) -> str:
     if view_id is not None:
         cmd = "lsp_run_text_command_helper"
         args = {"view_id": view_id, "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
     else:
         cmd = command
         args = command_args
-    return make_link(sublime.command_url(cmd, args), text, class_name)
+    return make_link(sublime.command_url(cmd, args), text, class_name, tooltip)
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):

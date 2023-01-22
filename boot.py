@@ -3,6 +3,8 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
+from .plugin.call_hierarchy import LspCallHierarchyCommand
+from .plugin.call_hierarchy import LspCallHierarchyToggleCommand
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -20,9 +22,10 @@ from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
-from .plugin.core.protocol import Location
-from .plugin.core.protocol import LocationLink
+from .plugin.core.registry import LspCollapseTreeItemCommand
+from .plugin.core.registry import LspExpandTreeItemCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
@@ -35,8 +38,7 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.typing import Any, Optional, List, Type, Dict, Union
-from .plugin.core.views import get_uri_and_position_from_location
+from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
@@ -189,33 +191,3 @@ class Listener(sublime_plugin.EventListener):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
                 sublime.set_timeout(panel_manager.update_log_panel)
-
-
-class LspOpenLocationCommand(sublime_plugin.TextCommand):
-    """
-    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
-    """
-
-    def run(
-        self,
-        _: sublime.Edit,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str] = None,
-        flags: int = 0,
-        group: int = -1
-    ) -> None:
-        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
-
-    def _run_async(
-        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int = 0, group: int = -1
-    ) -> None:
-        manager = windows.lookup(self.view.window())
-        if manager:
-            manager.open_location_async(location, session_name, self.view, flags, group) \
-                .then(lambda view: self._handle_continuation(location, view is not None))
-
-    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
-        if not success:
-            uri, _ = get_uri_and_position_from_location(location)
-            message = "Failed to open {}".format(uri)
-            sublime.status_message(message)

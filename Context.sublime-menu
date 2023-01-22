@@ -24,6 +24,10 @@
                 "caption": "Goto Implementation…"
             },
             {
+                "command": "lsp_call_hierarchy",
+                "caption": "Show Call Hierarchy"
+            },
+            {
                 "command": "lsp_symbol_rename",
                 "caption": "Rename…"
             },

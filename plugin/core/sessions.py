@@ -36,7 +36,9 @@ from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
 from .protocol import GeneralClientCapabilities
+from .protocol import InitializeError
 from .protocol import InitializeParams
+from .protocol import InitializeResult
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
@@ -391,6 +393,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
+        },
+        "callHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {
@@ -1140,6 +1145,7 @@ class Session(TransportCallbacks):
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self.config = config
+        self.config_status_message = ''
         self.manager = weakref.ref(manager)
         self.window = manager.window
         self.state = ClientStates.STARTING
@@ -1204,6 +1210,16 @@ class Session(TransportCallbacks):
             if sv.view == view:
                 return sv
         return None
+
+    def set_config_status_async(self, message: str) -> None:
+        """
+        Sets the message that is shown in parenthesis within the permanent language server status.
+
+        :param message: The message
+        """
+        self.config_status_message = message.strip()
+        for sv in self.session_views_async():
+            self.config.set_view_status(sv.view, message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
@@ -1373,13 +1389,16 @@ class Session(TransportCallbacks):
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
-    def _handle_initialize_success(self, result: Any) -> None:
+    def _handle_initialize_success(self, result: InitializeResult) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
+            # We've missed calling the "on_server_response_async" API as plugin was not created yet.
+            # Handle it now and use fake request ID since it shouldn't matter.
+            self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
         execute_commands = self.get_capability('executeCommandProvider.commands')
@@ -1407,7 +1426,7 @@ class Session(TransportCallbacks):
             self._init_callback(self, False)
             self._init_callback = None
 
-    def _handle_initialize_error(self, result: Any) -> None:
+    def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()

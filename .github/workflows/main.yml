@@ -38,7 +38,7 @@ jobs:
           python-version: '3.8'
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils
-      - run: pip3 install mypy==0.971 flake8==5.0.4 pyright==1.1.271 yapf==0.31.0 --user
+      - run: pip3 install mypy==0.971 flake8==5.0.4 pyright==1.1.289 yapf==0.31.0 --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       # - run: mypy -p plugin
       - run: flake8 plugin tests

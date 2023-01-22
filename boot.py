@@ -41,7 +41,7 @@ from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
-from .plugin.double_click import LspDoubleClick
+from .plugin.click import LspClick
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.formatting import LspFormatCommand

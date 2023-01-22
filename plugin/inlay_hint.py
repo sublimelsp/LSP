@@ -118,7 +118,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
     is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
     if isinstance(label, str):
         if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_double_click', {
+            inlay_hint_click_command = sublime.command_url('lsp_click', {
+                'count': 2,
                 'command':'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
@@ -136,7 +137,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         value = ""
         is_clickable = is_clickable or bool(label_part.get('command'))
         if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_double_click', {
+            inlay_hint_click_command = sublime.command_url('lsp_click', {
+                'count': 2,
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,

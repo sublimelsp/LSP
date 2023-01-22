@@ -365,6 +365,9 @@ class Window:
     def active_view(self) -> 'Optional[View]':
         ...
 
+    def new_html_sheet(self, name: str, contents: str, flags: int = ..., group: int = ...) -> 'Sheet':
+        ...
+
     def run_command(self, cmd: str, args: Optional[Any] = ...) -> None:
         ...
 
@@ -390,6 +393,9 @@ class Window:
         ...
 
     def focus_view(self, view: 'View') -> None:
+        ...
+
+    def select_sheets(self, sheets: 'List[Sheet]') -> None:
         ...
 
     def get_sheet_index(self, sheet: 'Sheet') -> Tuple[int, int]:
@@ -656,7 +662,7 @@ class Sheet:
         ...
 
 
-class HtmlSheet:
+class HtmlSheet(Sheet):
     sheet_id = ...  # type: Any
 
     def __init__(self, id: Any) -> None:

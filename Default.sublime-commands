@@ -150,4 +150,8 @@
         "caption": "LSP: Run Code Lens",
         "command": "lsp_code_lens"
     },
+    {
+        "caption": "LSP: Show Call Hierarchy",
+        "command": "lsp_call_hierarchy"
+    },
 ]

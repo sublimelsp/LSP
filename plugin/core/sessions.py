@@ -391,6 +391,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
+        },
+        "callHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {

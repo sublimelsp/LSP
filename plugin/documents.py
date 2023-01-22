@@ -259,8 +259,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
-                # Checking against points is inclusive unlike checking whether region intersects another
-                # region which is exclusive (at region end) and we want an inclusive behavior in this case.
+                # Checking against points is inclusive unlike checking whether region intersects another region
+                # which is exclusive (at region end) and we want an inclusive behavior in this case.
                 if region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)

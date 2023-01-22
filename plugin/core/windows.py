@@ -9,11 +9,8 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
-from .promise import Promise
 from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import Location
-from .protocol import LocationLink
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -22,10 +19,11 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import userprefs
 from .transports import create_transport
+from .tree_view import TreeViewSheet
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -77,6 +75,7 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self._server_log = []  # type: List[Tuple[str, str]]
         self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
+        self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
@@ -115,19 +114,6 @@ class WindowManager(Manager):
 
     def disable_config_async(self, config_name: str) -> None:
         self._config_manager.disable_config(config_name)
-
-    def open_location_async(
-        self,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str],
-        view: sublime.View,
-        flags: int = 0,
-        group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
-        for session in self.sessions(view):
-            if session_name is None or session_name == session.config.name:
-                return session.open_location_async(location, flags, group)
-        return Promise.resolve(None)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)

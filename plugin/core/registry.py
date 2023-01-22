@@ -1,9 +1,14 @@
 from .protocol import Diagnostic
+from .protocol import Location
+from .protocol import LocationLink
 from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
-from .typing import Optional, Any, Generator, Iterable, List
+from .tree_view import TreeDataProvider
+from .tree_view import TreeViewSheet
+from .typing import Optional, Any, Generator, Iterable, List, Union
 from .views import first_selection_region
+from .views import get_uri_and_position_from_location
 from .views import MissingUriError
 from .views import point_to_offset
 from .views import uri_from_view
@@ -12,10 +17,54 @@ from .windows import WindowRegistry
 from functools import partial
 import operator
 import sublime
+import sublime_api  # pyright: ignore[reportMissingImports]
 import sublime_plugin
 
 
 windows = WindowRegistry()
+
+
+def new_tree_view_sheet(
+    window: sublime.Window,
+    name: str,
+    data_provider: TreeDataProvider,
+    header: str = "",
+    flags: int = 0,
+    group: int = -1
+) -> Optional[TreeViewSheet]:
+    """
+    Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one TreeViewSheet
+    with the given name is allowed per window. If there already exists a TreeViewSheet with the same name, its content
+    will be replaced with the new data. The header argument is allowed to contain minihtml markup.
+    """
+    wm = windows.lookup(window)
+    if not wm:
+        return None
+    if name in wm.tree_view_sheets:
+        tree_view_sheet = wm.tree_view_sheets[name]
+        sheet_id = tree_view_sheet.id()
+        if tree_view_sheet.window():
+            tree_view_sheet.set_provider(data_provider, header)
+            if flags & sublime.ADD_TO_SELECTION:
+                # add to selected sheets if not already selected
+                selected_sheets = window.selected_sheets()
+                for sheet in window.sheets():
+                    if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
+                        if sheet not in selected_sheets:
+                            selected_sheets.append(sheet)
+                            window.select_sheets(selected_sheets)
+                        break
+            else:
+                window.focus_sheet(tree_view_sheet)
+            return tree_view_sheet
+    tree_view_sheet = TreeViewSheet(
+        sublime_api.window_new_html_sheet(window.window_id, name, "", flags, group),
+        name,
+        data_provider,
+        header
+    )
+    wm.tree_view_sheets[name] = tree_view_sheet
+    return tree_view_sheet
 
 
 def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
@@ -70,6 +119,18 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             if self.session_name and session.config.name != self.session_name:
                 continue
             return session
+        else:
+            return None
+
+    def session_by_name(self, session_name: str) -> Optional[Session]:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return None
+        for session in wm.get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            if session.config.name == session_name:
+                return session
         else:
             return None
 
@@ -137,6 +198,46 @@ class LspTextCommand(sublime_plugin.TextCommand):
             for sv in listener.session_views_async():
                 if capability_path is None or sv.has_capability_async(capability_path):
                     yield sv.session
+
+
+class LspOpenLocationCommand(LspWindowCommand):
+    """
+    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
+    """
+
+    def run(
+        self,
+        location: Union[Location, LocationLink],
+        session_name: Optional[str] = None,
+        flags: int = 0,
+        group: int = -1,
+        event: Optional[dict] = None
+    ) -> None:
+        if event:
+            modifier_keys = event.get('modifier_keys')
+            if modifier_keys:
+                if 'primary' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                elif 'shift' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+
+    def want_event(self) -> bool:
+        return True
+
+    def _run_async(
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
+    ) -> None:
+        session = self.session_by_name(session_name) if session_name else self.session()
+        if session:
+            session.open_location_async(location, flags, group) \
+                .then(lambda view: self._handle_continuation(location, view is not None))
+
+    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
+        if not success:
+            uri, _ = get_uri_and_position_from_location(location)
+            message = "Failed to open {}".format(uri)
+            sublime.status_message(message)
 
 
 class LspRestartServerCommand(LspTextCommand):
@@ -220,3 +321,27 @@ class LspPrevDiagnosticCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
         navigate_diagnostics(self.view, point, forward=False)
+
+
+class LspExpandTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.expand_item(id)
+
+
+class LspCollapseTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.collapse_item(id)

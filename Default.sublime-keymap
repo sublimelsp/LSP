@@ -188,6 +188,12 @@
     //     "command": "lsp_open_link",
     //     "context": [{"key": "lsp.link_available"}]
     // },
+    // Show Call Hierarchy
+    // {
+    //     "keys": ["UNBOUND"],
+    //     "command": "lsp_call_hierarchy",
+    //     "context": [{"key": "lsp.session_with_capability", "operand": "callHierarchyProvider"}]
+    // },
     // Expand Selection (a replacement for ST's "Expand Selection")
     // {
     //     "keys": ["primary+shift+a"],

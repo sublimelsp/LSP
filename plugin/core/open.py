@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 import os
 import re
 import sublime
+import sublime_plugin
 import subprocess
 import webbrowser
 
@@ -88,6 +89,10 @@ def open_file(
 
     view = window.open_file(file, flags, group)
     if not view.is_loading():
+        if flags & sublime.SEMI_TRANSIENT:
+            # work-around bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
+            # its view listeners initialized.
+            sublime_plugin.check_view_event_listeners(view)  # type: ignore
         # It's already loaded. Possibly already open in a tab.
         return Promise.resolve(view)
 

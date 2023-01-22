@@ -13,6 +13,7 @@ class LspClick(sublime_plugin.TextCommand):
             self.view.run_command(command, args)
             self.click_count = 0
             return
+
         def reset() -> None:
             self.click_count = 0
         sublime.set_timeout(reset, 500)

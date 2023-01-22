@@ -120,7 +120,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         if is_clickable:
             inlay_hint_click_command = sublime.command_url('lsp_click', {
                 'count': 2,
-                'command':'lsp_inlay_hint_click',
+                'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
                     'inlay_hint': cast(dict, inlay_hint),

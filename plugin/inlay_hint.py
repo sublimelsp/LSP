@@ -112,6 +112,7 @@ def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> s
 
 
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
+    tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     label = inlay_hint['label']
@@ -126,7 +127,10 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                     'phantom_uuid': phantom_uuid
                 }
             })
-            result += '<a href="{command}">'.format(command=inlay_hint_click_command)
+            result += '<a href="{command}" title="Double Click {tooltip}">'.format(
+                command=inlay_hint_click_command,
+                tooltip=tooltip
+            )
         result += html.escape(label)
         if is_clickable:
             result += "</a>"
@@ -145,7 +149,10 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                     'label_part': cast(dict, label_part)
                 }
             })
-            value += '<a href="{command}">'.format(command=inlay_hint_click_command)
+            value += '<a href="{command}" title="Double Click {tooltip}">'.format(
+                command=inlay_hint_click_command,
+                tooltip=format_inlay_hint_tooltip(label_part.get("tooltip"))
+            )
         value += html.escape(label_part['value'])
         if is_clickable:
             value += "</a>"

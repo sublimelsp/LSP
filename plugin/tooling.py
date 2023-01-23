@@ -540,7 +540,7 @@ class ServerTestRunner(TransportCallbacks):
 class LspDoubleClickCommand(sublime_plugin.TextCommand):
     click_count = 0
 
-    def run(self, edit: sublime.Edit, command: str, args: dict) -> None:
+    def run(self, edit: sublime.Edit, command: str, args: Dict[Any, Any]) -> None:
         self.click_count += 1
         if self.click_count == 2:
             self.view.run_command(command, args)

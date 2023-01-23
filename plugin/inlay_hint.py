@@ -127,7 +127,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
         result += '<span title="{tooltip}">{value}</span>'.format(
-            tooltip=tooltip + '(Double-click to execute)' if is_clickable else tooltip,
+            tooltip=tooltip + '(Double-click to insert)' if is_clickable else tooltip,
             value=html.escape(label)
         )
         if is_clickable:

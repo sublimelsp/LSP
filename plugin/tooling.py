@@ -544,7 +544,7 @@ class LspOnDoubleClickCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, command: str, args: Dict[Any, Any]) -> None:
         if self.prev_command != command or self.prev_args != args:
-            self.reset()
+            self.click_count = 0
             self.prev_command = command
             self.prev_args = args
         self.click_count += 1
@@ -556,3 +556,5 @@ class LspOnDoubleClickCommand(sublime_plugin.TextCommand):
 
     def reset(self) -> None:
         self.click_count = 0
+        self.prev_command = None
+        self.prev_args = None

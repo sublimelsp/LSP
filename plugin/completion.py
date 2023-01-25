@@ -47,13 +47,13 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> Range:
 
 class QueryCompletionsTask:
     """
-    Represents pending completions request.
+    Represents pending completion requests.
 
-    Can be canceled while in progress in which case the "on_done" callback will get immediately called with empty
+    Can be canceled while in progress in which case the "on_done_async" callback will get immediately called with empty
     list and the pending response from the server(s) will be canceled and results ignored.
 
-    All public methods must only be called on the async thread and the "on_done" callback will also be called on the
-    async thread.
+    All public methods must only be called on the async thread and the "on_done_async" callback will also be called
+    on the async thread.
     """
     def __init__(
         self,

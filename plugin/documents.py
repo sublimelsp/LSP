@@ -2,13 +2,12 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
+from .completion import QueryCompletionsTask
 from .core.logging import debug
 from .core.panels import PanelName
 from .core.promise import Promise
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemKind
-from .core.protocol import CompletionList
-from .core.protocol import CompletionParams
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlight
@@ -34,7 +33,7 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
@@ -43,7 +42,6 @@ from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -66,13 +64,6 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
-
-Flags = int
-ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
-
-SessionName = str
-CompletionResponse = Union[List[CompletionItem], CompletionList, None]
-ResolvedCompletions = Tuple[Union[CompletionResponse, Error], SessionName]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -166,6 +157,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._change_count_on_last_save = -1
         self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
+        self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._setup()
 
     def __del__(self) -> None:
@@ -505,14 +497,35 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
+        completion_list = sublime.CompletionList()
+        triggered_manually = self._auto_complete_triggered_manually
+        self._auto_complete_triggered_manually = False  # reset state for next completion popup
+        sublime.set_timeout_async(
+            lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
+        return completion_list
 
-        def resolve(clist: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
-            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
-            sublime.set_timeout(lambda: clist.set_completions(items, flags))
+    # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-        clist = sublime.CompletionList()
-        sublime.set_timeout_async(lambda: self._on_query_completions_async(partial(resolve, clist), locations[0]))
-        return clist
+    def _on_query_completions_async(
+        self, clist: sublime.CompletionList, location: int, triggered_manually: bool
+    ) -> None:
+        if self._completions_task:
+            self._completions_task.cancel_async()
+        on_done = partial(self._on_query_completions_resolved_async, clist)
+        self._completions_task = QueryCompletionsTask(self.view, location, triggered_manually, on_done)
+        sessions = list(self.sessions_async('completionProvider'))
+        if not sessions or not self.view.is_valid():
+            self._completions_task.cancel_async()
+            return
+        self.purge_changes_async()
+        self._completions_task.query_completions_async(sessions)
+
+    def _on_query_completions_resolved_async(
+        self, clist: sublime.CompletionList, completions: List[sublime.CompletionItem], flags: int = 0
+    ) -> None:
+        self._completions_task = None
+        # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+        sublime.set_timeout(lambda: clist.set_completions(completions, flags))
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -755,77 +768,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
-
-    # --- textDocument/complete ----------------------------------------------------------------------------------------
-
-    def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
-        triggered_manually = self._auto_complete_triggered_manually
-        self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        sessions = list(self.sessions_async('completionProvider'))
-        if not sessions or not self.view.is_valid():
-            resolve_completion_list([], 0)
-            return
-        self.purge_changes_async()
-        completion_promises = []  # type: List[Promise[ResolvedCompletions]]
-        for session in sessions:
-
-            def completion_request() -> Promise[ResolvedCompletions]:
-                config_name = session.config.name
-                params = cast(CompletionParams, text_document_position_params(self.view, location))
-                request = Request.complete(params, self.view)
-                return session.send_request_task(request).then(lambda response: (response, config_name))
-
-            completion_promises.append(completion_request())
-
-        Promise.all(completion_promises).then(
-            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggered_manually))
-
-    def _on_all_settled(
-        self,
-        responses: List[ResolvedCompletions],
-        resolve_completion_list: ResolveCompletionsFn,
-        triggered_manually: bool
-    ) -> None:
-        LspResolveDocsCommand.completions = {}
-        items = []  # type: List[sublime.CompletionItem]
-        errors = []  # type: List[Error]
-        flags = 0  # int
-        prefs = userprefs()
-        if prefs.inhibit_snippet_completions:
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-        if prefs.inhibit_word_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
-        view_settings = self.view.settings()
-        include_snippets = view_settings.get("auto_complete_include_snippets") and \
-            (triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
-        for response, session_name in responses:
-            if isinstance(response, Error):
-                errors.append(response)
-                continue
-            session = self.session_by_name(session_name)
-            if not session:
-                continue
-            response_items = []  # type: List[CompletionItem]
-            if isinstance(response, dict):
-                response_items = response["items"] or []
-                if response.get("isIncomplete", False):
-                    flags |= sublime.DYNAMIC_COMPLETIONS
-            elif isinstance(response, list):
-                response_items = response
-            response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-            LspResolveDocsCommand.completions[session_name] = response_items
-            can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
-            config_name = session.config.name
-            items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, config_name, self.view.id())
-                for index, response_item in enumerate(response_items)
-                if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
-        if items:
-            flags |= sublime.INHIBIT_REORDER
-        if errors:
-            error_messages = ", ".join(str(error) for error in errors)
-            sublime.status_message('Completion error: {}'.format(error_messages))
-        resolve_completion_list(items, flags)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

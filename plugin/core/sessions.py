@@ -1969,6 +1969,12 @@ class Session(TransportCallbacks):
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
+    def send_request_task_2(self, request: Request) -> Tuple[Promise, int]:
+        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        promise, resolver = task
+        request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        return (promise, request_id)
+
     def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
         self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
         if ignore_response and request_id in self._response_handlers:

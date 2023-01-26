@@ -115,8 +115,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     label = inlay_hint['label']
     has_text_edits = bool(inlay_hint.get('textEdits'))
+    is_clickable = has_text_edits or can_resolve_inlay_hint
     if isinstance(label, str):
-        if has_text_edits or can_resolve_inlay_hint:
+        if is_clickable:
             inlay_hint_click_command = sublime.command_url('lsp_on_double_click', {
                 'command': 'lsp_inlay_hint_click',
                 'args': {
@@ -131,7 +132,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             tooltip=tooltip or instruction_text,
             value=html.escape(label)
         )
-        if has_text_edits:
+        if is_clickable:
             result += "</a>"
         return result
 

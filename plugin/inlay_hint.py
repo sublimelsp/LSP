@@ -114,9 +114,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     label = inlay_hint['label']
-    is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
+    has_text_edits = bool(inlay_hint.get('textEdits'))
     if isinstance(label, str):
-        if is_clickable:
+        if has_text_edits or can_resolve_inlay_hint:
             inlay_hint_click_command = sublime.command_url('lsp_on_double_click', {
                 'command': 'lsp_inlay_hint_click',
                 'args': {
@@ -126,20 +126,20 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 }
             })
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
-        instruction_text = 'Double-click to insert' if is_clickable else ""
+        instruction_text = 'Double-click to insert' if has_text_edits else ""
         result += '<span title="{tooltip}">{value}</span>'.format(
             tooltip=tooltip or instruction_text,
             value=html.escape(label)
         )
-        if is_clickable:
+        if has_text_edits:
             result += "</a>"
         return result
 
     for label_part in label:
         value = ""
         tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
-        is_clickable = is_clickable or bool(label_part.get('command'))
-        if is_clickable:
+        has_command = bool(label_part.get('command'))
+        if has_command:
             inlay_hint_click_command = sublime.command_url('lsp_on_double_click', {
                 'command': 'lsp_inlay_hint_click',
                 'args': {
@@ -151,10 +151,10 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
         value += html.escape(label_part['value'])
-        if is_clickable:
+        if has_command:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
-        instruction_text = 'Double-click to execute' if is_clickable else ""
+        instruction_text = 'Double-click to execute' if has_command else ""
         result += "<span title=\"{tooltip}\">{value}</span>".format(
             tooltip=tooltip or instruction_text,
             value=value

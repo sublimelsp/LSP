@@ -38,7 +38,7 @@
   // warning: 2
   // info: 3
   // hint: 4
-  "show_diagnostics_panel_on_save": 2,
+  "show_diagnostics_panel_on_save": 0,
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,

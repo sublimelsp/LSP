@@ -154,4 +154,8 @@
         "caption": "LSP: Show Call Hierarchy",
         "command": "lsp_call_hierarchy"
     },
+    {
+        "caption": "LSP: Show Type Hierarchy",
+        "command": "lsp_type_hierarchy"
+    },
 ]

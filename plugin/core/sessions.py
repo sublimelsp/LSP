@@ -396,6 +396,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "callHierarchy": {
             "dynamicRegistration": True
+        },
+        "typeHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {

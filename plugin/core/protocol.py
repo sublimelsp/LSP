@@ -5925,6 +5925,18 @@ class Request:
         return Request("callHierarchy/outgoingCalls", params, None)
 
     @classmethod
+    def prepareTypeHierarchy(cls, params: TypeHierarchyPrepareParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareTypeHierarchy", params, view, progress=True)
+
+    @classmethod
+    def supertypes(cls, params: TypeHierarchySupertypesParams) -> 'Request':
+        return Request("typeHierarchy/supertypes", params, None)
+
+    @classmethod
+    def subtypes(cls, params: TypeHierarchySubtypesParams) -> 'Request':
+        return Request("typeHierarchy/subtypes", params, None)
+
+    @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 

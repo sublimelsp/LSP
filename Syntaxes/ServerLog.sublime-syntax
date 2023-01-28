@@ -8,7 +8,7 @@ scope: output.lsp.log
 variables:
   method: '[[:alnum:]/$#]+'
   servername: '[[:alnum:]_-]+'
-  id: '[^\s:]+'
+  id: '[^\s():]+'
 
 contexts:
   main:
@@ -24,6 +24,10 @@ contexts:
       scope: punctuation.accessor.lsp
       push:
         - meta_scope: meta.group.lsp
+        - match: '\[(\d{2}:\d{2}:\d{2}\.\d{3})\]'
+          captures:
+            1: constant.numeric.time
+            2: constant.numeric.duration
         - match: (?:==|--)>
           scope: storage.modifier.lsp
           set: [maybe-payload, request, server-name]
@@ -58,7 +62,7 @@ contexts:
       pop: true
 
   request:
-    - match: ({{method}})(\()({{id}})(\))
+    - match: ({{method}}) (\()({{id}})(\))
       captures:
         1: keyword.control.lsp
         2: punctuation.section.parens.begin.lsp
@@ -72,8 +76,10 @@ contexts:
       pop: true
 
   response:
-    - match: '{{id}}'
-      scope: constant.numeric.id.lsp
+    - match: ' \(({{id}})\) \(duration: (\d+ms)\)'
+      captures:
+        1: constant.numeric.id.lsp
+        2: constant.numeric.duration.lsp
       pop: true
 
   maybe-payload:

@@ -26,7 +26,7 @@ contexts:
         - meta_scope: meta.group.lsp
         - match: '\[(\d{2}:\d{2}:\d{2}\.\d{3})\]'
           captures:
-            1: constant.numeric.timestamp
+            1: constant.numeric.timestamp.lsp
         - match: (?:==|--)>
           scope: storage.modifier.lsp
           set: [maybe-payload, request, server-name]

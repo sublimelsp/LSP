@@ -34,7 +34,7 @@ from collections import deque
 from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
-from time import time
+from time import perf_counter
 from weakref import ref
 from weakref import WeakSet
 import functools
@@ -546,13 +546,13 @@ class RequestTimeTracker:
         self._start_times = {}  # type: Dict[int, float]
 
     def start_tracking(self, request_id: int) -> None:
-        self._start_times[request_id] = time()
+        self._start_times[request_id] = perf_counter()
 
     def end_tracking(self, request_id) -> str:
         duration = '-'
         if request_id in self._start_times:
             start = self._start_times.pop(request_id)
-            duration_ms = time() - start
+            duration_ms = perf_counter() - start
             duration = '{}ms'.format(int(duration_ms * 1000))
         return duration
 
@@ -700,7 +700,7 @@ class RemoteLogger(Logger):
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': 'stderr',
             'params': message,
             'isError': True,
@@ -711,7 +711,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
@@ -721,7 +721,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'params': params,
             'direction': self.DIRECTION_INCOMING,
             'isError': is_error,
@@ -731,7 +731,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_INCOMING,
@@ -741,7 +741,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
         })
@@ -752,14 +752,14 @@ class RemoteLogger(Logger):
             'id': request_id,
             'isError': True,
             'params': error.to_lsp(),
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'direction': self.DIRECTION_OUTGOING,
         })
 
     def outgoing_notification(self, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
@@ -768,7 +768,7 @@ class RemoteLogger(Logger):
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'error': 'Unhandled notification!' if unhandled else None,
             'method': method,
             'params': params,

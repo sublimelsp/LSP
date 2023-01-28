@@ -279,7 +279,9 @@ class SessionBuffer:
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(view, view.change_count(), None))
+        version = view.change_count()
+        self.session.send_notification(did_change(view, version, None))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
     on_reload_async = on_revert_async
 

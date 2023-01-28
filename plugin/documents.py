@@ -909,8 +909,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
-            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                      after_ms=self.highlights_debounce_time)
+            self._when_selection_remains_stable_async(
+                self._do_highlights_async, current_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:

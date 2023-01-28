@@ -75,7 +75,7 @@ contexts:
       pop: true
 
   response:
-    - match: ' \(({{id}})\) \(duration: (\d+ms)\)'
+    - match: ' \(({{id}})\) \(duration: (\d+ms|-)\)'
       captures:
         1: constant.numeric.id.lsp
         2: constant.numeric.duration.lsp

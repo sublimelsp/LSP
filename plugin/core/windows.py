@@ -548,17 +548,16 @@ class RequestTimeTracker:
     def start_tracking(self, request_id: int) -> None:
         self._start_times[request_id] = time()
 
-    def end_tracking(self, request_id) -> float:
-        duration_ms = time() - self._start_times[request_id]
-        self._start_times.pop(request_id)
-        return duration_ms
+    def end_tracking(self, request_id) -> str:
+        duration = '-'
+        if request_id in self._start_times:
+            start = self._start_times.pop(request_id)
+            duration_ms = time() - start
+            duration = '{}ms'.format(int(duration_ms * 1000))
+        return duration
 
     @classmethod
-    def format_duration(cls, duration_ms: float) -> str:
-        return str(int(duration_ms * 1000))
-
-    @classmethod
-    def formatted_time(cls) -> str:
+    def formatted_now(cls) -> str:
         now = datetime.now()
         return '{}.{:03d}'.format(now.strftime("%H:%M:%S"), int(now.microsecond / 1000))
 
@@ -594,14 +593,14 @@ class PanelLogger(Logger):
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         if not userprefs().log_server:
             return
-        duration_ms = self._request_time_tracker.end_tracking(request_id)
-        self.log(self._format_response(">>>", request_id, duration_ms), params)
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response(">>>", request_id, duration), params)
 
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
         if not userprefs().log_server:
             return
-        duration_ms = self._request_time_tracker.end_tracking(request_id)
-        self.log(self._format_response("~~>", request_id, duration_ms), error.to_lsp())
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response("~~>", request_id, duration), error.to_lsp())
 
     def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         if not userprefs().log_server:
@@ -618,8 +617,8 @@ class PanelLogger(Logger):
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        duration_ms = self._request_time_tracker.end_tracking(request_id)
-        self.log(self._format_response(direction, request_id, duration_ms), params)
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response(direction, request_id, duration), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
         if not userprefs().log_server:
@@ -633,17 +632,16 @@ class PanelLogger(Logger):
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
 
-    def _format_response(self, direction: str, request_id: Any, duration_ms: float) -> str:
-        duration_str = RequestTimeTracker.format_duration(duration_ms)
-        return "[{}] {} {} ({}) (duration: {}ms)".format(
-            RequestTimeTracker.formatted_time(), direction, self._server_name, request_id, duration_str)
+    def _format_response(self, direction: str, request_id: Any, duration: str) -> str:
+        return "[{}] {} {} ({}) (duration: {})".format(
+            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
 
     def _format_request(self, direction: str, method: str, request_id: Any) -> str:
         return "[{}] {} {} {} ({})".format(
-            RequestTimeTracker.formatted_time(), direction, self._server_name, method, request_id)
+            RequestTimeTracker.formatted_now(), direction, self._server_name, method, request_id)
 
     def _format_notification(self, direction: str, method: str) -> str:
-        return "[{}] {} {} {}".format(RequestTimeTracker.formatted_time(), direction, self._server_name, method)
+        return "[{}] {} {} {}".format(RequestTimeTracker.formatted_now(), direction, self._server_name, method)
 
 
 class RemoteLogger(Logger):

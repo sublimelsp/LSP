@@ -420,7 +420,7 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 4,
-              "default": 2,
+              "default": 0,
               "markdownDescription": "Open the diagnostics panel automatically **on save** when diagnostics level is equal to or less than:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`\n\nThe panel is not shown when there is already another panel open. The panel is never _closed_ automatically. To close the panel, press the <kbd>Esc</kbd> key."
             },
             "show_diagnostics_count_in_view_status": {

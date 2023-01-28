@@ -902,9 +902,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     listener.on_load_async()
 
     def _on_view_updated_async(self) -> None:
-        different, current_region = self._update_stored_region_async()
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
+        different, current_region = self._update_stored_region_async()
         if not different:
             return
         self._clear_highlight_regions()

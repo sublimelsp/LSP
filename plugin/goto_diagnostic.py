@@ -1,5 +1,8 @@
 from .core.diagnostics_storage import is_severity_included
 from .core.diagnostics_storage import ParsedUri
+from .core.paths import project_base_dir
+from .core.paths import project_path
+from .core.paths import simple_project_path
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
@@ -8,7 +11,7 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
@@ -313,59 +316,3 @@ def truncate_message(diagnostic: Diagnostic, max_lines: int = 6) -> Diagnostic:
     diagnostic = diagnostic.copy()
     diagnostic["message"] = "\n".join(lines[:max_lines - 1]) + " …\n"
     return diagnostic
-
-
-def project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The project path of `/path/to/project/file` in the project `/path/to/project` is `file`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    _, file = folder_path
-    return file
-
-
-def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The simple project path of `/path/to/project/file` in the project `/path/to/project` is `project/file`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    folder, file = folder_path
-    return folder.name / file
-
-
-def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The inverse of `simple_project_path()`.
-    """
-    parts = file_path.parts
-    folder_name = parts[0]
-    for folder in project_folders:
-        if folder.name == folder_name:
-            return folder / Path(*parts[1:])
-    return None
-
-
-def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    folder, _ = folder_path
-    return folder.parent
-
-
-def split_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Tuple[Path, Path]]:
-    abs_path = file_path.resolve()
-    for folder in project_folders:
-        try:
-            rel_path = abs_path.relative_to(folder)
-        except ValueError:
-            continue
-        return folder, rel_path
-    return None

@@ -194,6 +194,12 @@
     //     "command": "lsp_call_hierarchy",
     //     "context": [{"key": "lsp.session_with_capability", "operand": "callHierarchyProvider"}]
     // },
+    // Show Type Hierarchy
+    // {
+    //     "keys": ["UNBOUND"],
+    //     "command": "lsp_type_hierarchy",
+    //     "context": [{"key": "lsp.session_with_capability", "operand": "typeHierarchyProvider"}]
+    // },
     // Expand Selection (a replacement for ST's "Expand Selection")
     // {
     //     "keys": ["primary+shift+a"],

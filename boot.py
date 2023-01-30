@@ -78,6 +78,8 @@ from .plugin.tooling import LspDumpBufferCapabilities
 from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
+from .plugin.type_hierarchy import LspTypeHierarchyCommand
+from .plugin.type_hierarchy import LspTypeHierarchyToggleCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:

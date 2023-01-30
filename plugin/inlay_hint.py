@@ -129,7 +129,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         result += '<span title="{tooltip}">{value}</span>'.format(
-            tooltip=tooltip + instruction_text,
+            tooltip=(tooltip + instruction_text).strip(),
             value=html.escape(label)
         )
         if is_clickable:
@@ -157,7 +157,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         # InlayHintLabelPart.location is not supported
         instruction_text = '\nDouble-click to execute' if has_command else ""
         result += "<span title=\"{tooltip}\">{value}</span>".format(
-            tooltip=tooltip + instruction_text,
+            tooltip=(tooltip + instruction_text).strip(),
             value=value
         )
     return result

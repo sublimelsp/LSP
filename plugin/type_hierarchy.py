@@ -2,8 +2,6 @@ from .core.paths import simple_path
 from .core.promise import Promise
 from .core.protocol import TypeHierarchyItem
 from .core.protocol import TypeHierarchyPrepareParams
-from .core.protocol import TypeHierarchySubtypesParams
-from .core.protocol import TypeHierarchySupertypesParams
 from .core.protocol import Request
 from .core.registry import new_tree_view_sheet
 from .core.registry import get_position
@@ -48,11 +46,9 @@ class TypeHierarchyDataProvider(TreeDataProvider):
         if not session:
             return Promise.resolve([])
         if self.direction == TypeHierarchyDirection.Supertypes:
-            params = cast(TypeHierarchySupertypesParams, {'item': element})
-            return session.send_request_task(Request.supertypes(params)).then(self._ensure_list)
+            return session.send_request_task(Request.supertypes({'item': element})).then(self._ensure_list)
         elif self.direction == TypeHierarchyDirection.Subtypes:
-            params = cast(TypeHierarchySubtypesParams, {'item': element})
-            return session.send_request_task(Request.subtypes(params)).then(self._ensure_list)
+            return session.send_request_task(Request.subtypes({'item': element})).then(self._ensure_list)
         return Promise.resolve([])
 
     def get_tree_item(self, element: TypeHierarchyItem) -> TreeItem:
@@ -116,7 +112,7 @@ class LspTypeHierarchyCommand(LspTextCommand):
                 'session_name': session.config.name,
                 'direction': TypeHierarchyDirection.Subtypes,
                 'root_elements': response
-            }, tooltip="Show subtypes"))
+            }, tooltip="Show Subtypes"))
         new_tree_view_sheet(self._window, "Type Hierarchy", data_provider, header)
         data_provider.get_children(None).then(partial(open_first, self._window, session.config.name))
 

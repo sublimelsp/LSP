@@ -71,7 +71,6 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
     html = """
@@ -91,12 +90,11 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
                 text-decoration: none;
             }}
         </style>
-        <div class="inlay-hint" title="{tooltip}">
+        <div class="inlay-hint">
             {label}
         </div>
     </body>
     """.format(
-        tooltip=tooltip,
         font=font,
         label=label
     )
@@ -112,40 +110,54 @@ def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> s
 
 
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
+    tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
     label = inlay_hint['label']
-    is_clickable = bool(inlay_hint.get('textEdits')) or can_resolve_inlay_hint
+    has_text_edits = bool(inlay_hint.get('textEdits'))
+    is_clickable = has_text_edits or can_resolve_inlay_hint
     if isinstance(label, str):
         if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
-                'session_name': session.config.name,
-                'inlay_hint': cast(dict, inlay_hint),
-                'phantom_uuid': phantom_uuid
+            inlay_hint_click_command = sublime.command_url('lsp_on_double_click', {
+                'command': 'lsp_inlay_hint_click',
+                'args': {
+                    'session_name': session.config.name,
+                    'inlay_hint': cast(dict, inlay_hint),
+                    'phantom_uuid': phantom_uuid
+                }
             })
             result += '<a href="{command}">'.format(command=inlay_hint_click_command)
-        result += html.escape(label)
+        instruction_text = '\nDouble-click to insert' if has_text_edits else ""
+        result += '<span title="{tooltip}">{value}</span>'.format(
+            tooltip=(tooltip + instruction_text).strip(),
+            value=html.escape(label)
+        )
         if is_clickable:
             result += "</a>"
         return result
 
     for label_part in label:
         value = ""
-        is_clickable = is_clickable or bool(label_part.get('command'))
-        if is_clickable:
-            inlay_hint_click_command = sublime.command_url('lsp_inlay_hint_click', {
-                'session_name': session.config.name,
-                'inlay_hint': cast(dict, inlay_hint),
-                'phantom_uuid': phantom_uuid,
-                'label_part': cast(dict, label_part)
+        tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
+        has_command = bool(label_part.get('command'))
+        if has_command:
+            inlay_hint_click_command = sublime.command_url('lsp_on_double_click', {
+                'command': 'lsp_inlay_hint_click',
+                'args': {
+                    'session_name': session.config.name,
+                    'inlay_hint': cast(dict, inlay_hint),
+                    'phantom_uuid': phantom_uuid,
+                    'label_part': cast(dict, label_part)
+                }
             })
             value += '<a href="{command}">'.format(command=inlay_hint_click_command)
         value += html.escape(label_part['value'])
-        if is_clickable:
+        if has_command:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
+        instruction_text = '\nDouble-click to execute' if has_command else ""
         result += "<span title=\"{tooltip}\">{value}</span>".format(
-            tooltip=format_inlay_hint_tooltip(label_part.get("tooltip")),
+            tooltip=(tooltip + instruction_text).strip(),
             value=value
         )
     return result

@@ -3,8 +3,6 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.call_hierarchy import LspCallHierarchyCommand
-from .plugin.call_hierarchy import LspCallHierarchyToggleCommand
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -22,13 +20,16 @@ from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
+from .plugin.core.registry import LspCallHierarchyCommand
 from .plugin.core.registry import LspCollapseTreeItemCommand
 from .plugin.core.registry import LspExpandTreeItemCommand
+from .plugin.core.registry import LspHierarchyToggleCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
+from .plugin.core.registry import LspTypeHierarchyCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin
@@ -79,8 +80,6 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from .plugin.type_hierarchy import LspTypeHierarchyCommand
-from .plugin.type_hierarchy import LspTypeHierarchyToggleCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:

@@ -20,16 +20,13 @@ from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
-from .plugin.core.registry import LspCallHierarchyCommand
 from .plugin.core.registry import LspCollapseTreeItemCommand
 from .plugin.core.registry import LspExpandTreeItemCommand
-from .plugin.core.registry import LspHierarchyToggleCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
-from .plugin.core.registry import LspTypeHierarchyCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin
@@ -54,6 +51,9 @@ from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
+from .plugin.hierarchy import LspCallHierarchyCommand
+from .plugin.hierarchy import LspHierarchyToggleCommand
+from .plugin.hierarchy import LspTypeHierarchyCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.panels import LspClearLogPanelCommand

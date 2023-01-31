@@ -507,7 +507,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
 class LspHierarchyToggleCommand(LspWindowCommand):
 
     def run(
-        self, session_name: str, sheet_name: str, direction: int, root_elements: List[CallHierarchyItem]
+        self, session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItem]
     ) -> None:
         session = self.session_by_name(session_name)
         if not session:

@@ -4,7 +4,7 @@ Follow the setup steps for a language server to get it up and running.
 
 If you encounter problems, consult the [common issues](troubleshooting.md#common-problems) page or search the [LSP issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
-If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./guides/client_configuration.md). Pull requests for adding a new client configuration are welcome.
+If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./client_configuration.md). Pull requests for adding a new client configuration are welcome.
 
 !!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
     [LSP-json](https://packagecontrol.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
@@ -28,7 +28,7 @@ Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LS
 
 ## C/C++
 
-See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
+Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/LSP-clangd).
 
 ## C\#
 
@@ -65,17 +65,17 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
     ```json
     {
-    	"clients": {
-    		"serve-d": {
-    			"enabled": true,
-    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
-    			"selector": "source.d",
-    			"settings": {
-    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
-	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
-    			}
-    		}
-    	}
+        "clients": {
+            "serve-d": {
+                "enabled": true,
+                "command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+                "selector": "source.d",
+                "settings": {
+                    "d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+                    "d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+                }
+            }
+        }
     }
     ```
 
@@ -129,7 +129,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         "clients": {
             "fsautocomplete": {
                 "enabled": true,
-                "command": ["fsautocomplete", "--background-service-enabled"],
+                "command": ["fsautocomplete"],
                 "selector": "source.fsharp",
                 "initializationOptions": {
                     "AutomaticWorkspaceInit": true
@@ -322,6 +322,27 @@ Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-
 ## Markdown
 
 Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
+
+### markmark
+
+[Markmark](https://github.com/nikku/markmark) is a language server for Markdown files, supporting go to definition / references [and more](https://github.com/nikku/markmark#features).
+
+1. [Install Markmark](https://github.com/nikku/markmark#installation) (requires `Node >= 16`)
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark"` client configuration to the `"clients"`:
+
+
+    ```json
+    {
+        "clients": {
+            "markmark": {
+                "enabled": true,
+                "command": ["markmark-lsp", "--stdio"],
+                "selector": "text.html.markdown"
+            }
+        }
+    }
+    ```
+
 
 ## OCaml/Reason
 
@@ -555,37 +576,7 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 
 ## Terraform
 
-1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
-
-    For `terraform-ls`:
-
-    ```json
-    {
-        "clients": {
-            "terraform": {
-                "enabled": true,
-                "command": ["terraform-ls", "serve"],
-                "selector": "source.terraform"
-            }
-        }
-    }
-    ```
-
-    For `terraform-lsp`:
-
-    ```json
-    {
-        "clients": {
-            "terraform": {
-                "enabled": true,
-                "command": ["terraform-lsp"],
-                "selector": "source.terraform"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [LSP-terraform](https://github.com/sublimelsp/LSP-terraform).
 
 ## Vue
 

@@ -1,10 +1,13 @@
 from .core.logging import debug
-from .core.protocol import DocumentUri, Location, Position
+from .core.protocol import DocumentUri
+from .core.protocol import Location
 from .core.protocol import LocationLink
+from .core.protocol import Position
 from .core.sessions import Session
 from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
+from .core.views import SublimeKind
 from .core.views import to_encoded_filename
 from urllib.request import url2pathname
 import functools
@@ -61,7 +64,10 @@ class LocationPicker:
         session: Session,
         locations: Union[List[Location], List[LocationLink]],
         side_by_side: bool,
-        group: int = -1
+        force_group: bool = True,
+        group: int = -1,
+        placeholder: str = "",
+        kind: SublimeKind = sublime.KIND_AMBIGUOUS
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -71,17 +77,24 @@ class LocationPicker:
         self._window = window
         self._weaksession = weakref.ref(session)
         self._side_by_side = side_by_side
+        self._force_group = force_group
         self._group = group
         self._items = locations
         self._highlighted_view = None  # type: Optional[sublime.View]
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
         self._window.focus_group(group)
+        config_name = session.config.name
         self._window.show_quick_panel(
-            items=[location_to_human_readable(session.config, base_dir, location) for location in locations],
+            items=[
+                sublime.QuickPanelItem(
+                    location_to_human_readable(session.config, base_dir, location), annotation=config_name, kind=kind)
+                for location in locations
+            ],
             on_select=self._select_entry,
             on_highlight=self._highlight_entry,
-            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST
+            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+            placeholder=placeholder
         )
 
     def _unpack(self, index: int) -> Tuple[Optional[Session], Union[Location, LocationLink], DocumentUri, Position]:
@@ -107,7 +120,8 @@ class LocationPicker:
                         self._window.status_message("Unable to open {}".format(uri))
             else:
                 sublime.set_timeout_async(
-                    functools.partial(open_location_async, session, location, self._side_by_side, True, self._group))
+                    functools.partial(
+                        open_location_async, session, location, self._side_by_side, self._force_group, self._group))
         else:
             self._window.focus_view(self._view)
             # When a group was specified close the current highlighted

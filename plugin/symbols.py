@@ -1,11 +1,11 @@
 import weakref
-from .core.protocol import Request, Range, DocumentSymbol, SymbolInformation, SymbolTag
+from .core.protocol import Request, DocumentSymbol, SymbolInformation, SymbolKind, SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
-from .core.views import KIND_UNSPECIFIED
 from .core.views import range_to_region
-from .core.views import SYMBOL_KIND_SCOPES
+from .core.views import SUBLIME_KIND_ID_COLOR_SCOPES
+from .core.views import SublimeKind
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 from contextlib import contextmanager
@@ -17,16 +17,12 @@ import sublime_plugin
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
 
-def unpack_lsp_kind(kind: int) -> Tuple[int, str, str]:
-    return SYMBOL_KINDS.get(kind, KIND_UNSPECIFIED)
+def unpack_lsp_kind(kind: SymbolKind) -> SublimeKind:
+    return SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
 
 
-def format_symbol_kind(kind: int) -> str:
-    return SYMBOL_KINDS.get(kind, (None, None, str(kind)))[2]
-
-
-def get_symbol_scope_from_lsp_kind(kind: int) -> str:
-    return SYMBOL_KIND_SCOPES.get(kind, "comment")
+def get_symbol_color_scope_from_lsp_kind(kind: SymbolKind) -> str:
+    return SUBLIME_KIND_ID_COLOR_SCOPES.get(unpack_lsp_kind(kind)[0], "comment")
 
 
 def symbol_information_to_quick_panel_item(
@@ -94,15 +90,13 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         super().__init__(view)
         self.old_regions = []  # type: List[sublime.Region]
         self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region], str]]
-        self.is_first_selection = False
 
     def run(self, edit: sublime.Edit, event: Optional[Dict[str, Any]] = None) -> None:
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:
-            params = {"textDocument": text_document_identifier(self.view)}
             session.send_request(
-                Request("textDocument/documentSymbol", params, self.view, progress=True),
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
                 lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
@@ -110,15 +104,24 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
         window = self.view.window()
         if window and isinstance(response, list) and len(response) > 0:
+            panel_items = self.process_symbols(response)
             self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
-            self.is_first_selection = True
+            # Find region that is either intersecting or before to the current selection end.
+            selected_index = 0
+            if self.old_regions:
+                first_selection = self.old_regions[0]
+                for i, (r, _, _) in enumerate(self.regions):
+                    if r.begin() <= first_selection.b:
+                        selected_index = i
+                    else:
+                        break
+            self.view.run_command("lsp_selection_clear")
             window.show_quick_panel(
-                self.process_symbols(response),
+                panel_items,
                 self.on_symbol_selected,
                 sublime.KEEP_OPEN_ON_FOCUS_LOST,
-                0,
+                selected_index,
                 self.on_highlighted)
-            self.view.run_command("lsp_selection_clear")
 
     def handle_response_error(self, error: Any) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
@@ -135,24 +138,27 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def on_symbol_selected(self, index: int) -> None:
         if index == -1:
-            if len(self.old_regions) > 0:
-                self.view.run_command("lsp_selection_add", {"regions": [(r.a, r.b) for r in self.old_regions]})
+            if self.old_regions:
+                self.view.run_command("lsp_selection_set", {"regions": [(r.a, r.b) for r in self.old_regions]})
                 self.view.show_at_center(self.old_regions[0].begin())
         else:
-            region = self.selection_region(index) or self.region(index)
-            self.view.run_command("lsp_selection_add", {"regions": [(region.a, region.a)]})
+            region = self.selection_region(index)
+            if not region:
+                self.view.erase_regions(self.REGIONS_KEY)
+                region = self.region(index)
+                self.view.run_command("lsp_selection_set", {"regions": [(region.a, region.a)]})
             self.view.show_at_center(region.a)
-        self.view.erase_regions(self.REGIONS_KEY)
         self.old_regions.clear()
         self.regions.clear()
 
     def on_highlighted(self, index: int) -> None:
-        if self.is_first_selection:
-            self.is_first_selection = False
-            return
-        region = self.region(index)
+        region = self.selection_region(index)
+        if region:
+            self.view.run_command("lsp_selection_set", {"regions": [region.to_tuple()]})
+        else:
+            region = self.region(index)
+            self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
         self.view.show_at_center(region.a)
-        self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
 
     def process_symbols(
             self,
@@ -169,8 +175,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         # Sort both lists in sync according to the range's begin point.
         sorted_results = zip(*sorted(zip(self.regions, panel_items), key=lambda item: item[0][0].begin()))
         sorted_regions, sorted_panel_items = sorted_results
-        self.regions = list(sorted_regions)
-        return list(sorted_panel_items)
+        self.regions = list(sorted_regions)  # type: ignore
+        return list(sorted_panel_items)  # type: ignore
 
     def process_document_symbols(self, items: List[DocumentSymbol]) -> List[sublime.QuickPanelItem]:
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]
@@ -182,9 +188,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def process_document_symbol_recursive(self, quick_panel_items: List[sublime.QuickPanelItem], item: DocumentSymbol,
                                           names: List[str]) -> None:
         lsp_kind = item["kind"]
-        self.regions.append((range_to_region(Range.from_lsp(item['range']), self.view),
-                             range_to_region(Range.from_lsp(item['selectionRange']), self.view),
-                             get_symbol_scope_from_lsp_kind(lsp_kind)))
+        self.regions.append((range_to_region(item['range'], self.view),
+                             range_to_region(item['selectionRange'], self.view),
+                             get_symbol_color_scope_from_lsp_kind(lsp_kind)))
         name = item['name']
         with _additional_name(names, name):
             st_kind, st_icon, st_display_type = unpack_lsp_kind(lsp_kind)
@@ -210,8 +216,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def process_symbol_informations(self, items: List[SymbolInformation]) -> List[sublime.QuickPanelItem]:
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         for item in items:
-            self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view),
-                                 None, get_symbol_scope_from_lsp_kind(item['kind'])))
+            self.regions.append((range_to_region(item['location']['range'], self.view),
+                                 None, get_symbol_color_scope_from_lsp_kind(item['kind'])))
             quick_panel_item = symbol_information_to_quick_panel_item(item, show_file_name=False)
             quick_panel_items.append(quick_panel_item)
         return quick_panel_items
@@ -221,11 +227,8 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
     def want_event(self) -> bool:
         return False
 
-    def validate(self, txt: str) -> bool:
-        return txt != ""
-
     def placeholder(self) -> str:
-        return "Symbol"
+        return "Enter symbol name"
 
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
@@ -235,15 +238,14 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
         return SymbolQueryInput()
 
-    def run(self, edit: sublime.Edit, symbol_query_input: str) -> None:
-        if symbol_query_input:
-            session = self.best_session(self.capability)
-            if session:
-                params = {"query": symbol_query_input}
-                request = Request("workspace/symbol", params, None, progress=True)
-                self.weaksession = weakref.ref(session)
-                session.send_request(request, lambda r: self._handle_response(
-                    symbol_query_input, r), self._handle_error)
+    def run(self, edit: sublime.Edit, symbol_query_input: str, event: Optional[Any] = None) -> None:
+        session = self.best_session(self.capability)
+        if session:
+            self.weaksession = weakref.ref(session)
+            session.send_request(
+                Request.workspaceSymbol({"query": symbol_query_input}),
+                lambda r: self._handle_response(symbol_query_input, r),
+                self._handle_error)
 
     def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
         if index != -1:
@@ -260,7 +262,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
                     list(map(symbol_information_to_quick_panel_item, matches)),
                     lambda i: self._open_file(matches, i))
         else:
-            sublime.message_dialog("No matches found for query string: '{}'".format(query))
+            sublime.message_dialog("No matches found for query: '{}'".format(query))
 
     def _handle_error(self, error: Dict[str, Any]) -> None:
         reason = error.get("message", "none provided by server :(")

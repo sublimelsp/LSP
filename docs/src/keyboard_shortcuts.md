@@ -5,31 +5,34 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 !!! Mac
     If you using macOS, replace <kbd>ctrl</kbd> with <kbd>command</kbd>.
 
-!!! Note
-    If <kbd>F4</kbd> / <kbd>shift</kbd> <kbd>F4</kbd> stop working, double-click a diagnostic in the Diagnostics Panel. It should work again afterwards.
-
 | Feature | Shortcut | Command |
 | ------- | -------- | ------- |
 | Auto Complete | <kbd>ctrl</kbd> <kbd>space</kbd> (also on macOS) | `auto_complete`
 | Expand Selection | unbound | `lsp_expand_selection`
 | Find References | <kbd>shift</kbd> <kbd>f12</kbd> | `lsp_symbol_references`
+| Follow Link | unbound | `lsp_open_link`
 | Format File | unbound | `lsp_format_document`
 | Format Selection | unbound | `lsp_format_document_range`
 | Goto Declaration | unbound | `lsp_symbol_declaration`
 | Goto Definition | unbound<br>suggested: <kbd>f12</kbd> | `lsp_symbol_definition`
+| Goto Diagnostic | unbound<br>suggested: <kbd>f8</kbd> | `lsp_goto_diagnostic` (with args: `{"uri": "$view_uri"}`)
+| Goto Diagnostic in Project | unbound<br>suggested: <kbd>shift</kbd> <kbd>f8</kbd> | `lsp_goto_diagnostic`
 | Goto Implementation | unbound | `lsp_symbol_implementation`
 | Goto Symbol in Project | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>shift</kbd> <kbd>r</kbd> | `lsp_workspace_symbols`
 | Goto Symbol | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>r</kbd> | `lsp_document_symbols`
 | Goto Type Definition | unbound | `lsp_symbol_type_definition`
 | Hover Popup | unbound | `lsp_hover`
 | Insert/Replace Completions | <kbd>alt</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
-| Next Diagnostic | <kbd>F4</kbd> | -
-| Previous Diagnostic | <kbd>shift</kbd> <kbd>F4</kbd> | -
+| Next Diagnostic | unbound | `lsp_next_diagnostic`
+| Previous Diagnostic | unbound | `lsp_prev_diagnostic`
 | Rename | unbound | `lsp_symbol_rename`
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
 | Run Code Lens | unbound | `lsp_code_lens`
+| Run Refactor Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["refactor"]}`)
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
+| Show Call Hierarchy | unbound | `lsp_call_hierarchy`
+| Show Type Hierarchy | unbound | `lsp_type_hierarchy`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

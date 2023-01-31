@@ -1,8 +1,11 @@
 from .logging import debug
 from .open import open_file
 from .promise import Promise
-from .protocol import UINT_MAX, TextEdit as LspTextEdit, Position
-from .typing import List, Dict, Any, Optional, Tuple
+from .protocol import Position
+from .protocol import TextEdit
+from .protocol import UINT_MAX
+from .protocol import WorkspaceEdit
+from .typing import List, Dict, Optional, Tuple
 from functools import partial
 import sublime
 
@@ -11,7 +14,7 @@ import sublime
 TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str, Optional[int]]
 
 
-def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEditTuple]]:
+def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> Dict[str, List[TextEditTuple]]:
     changes = {}  # type: Dict[str, List[TextEditTuple]]
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
@@ -37,7 +40,7 @@ def parse_range(range: Position) -> Tuple[int, int]:
     return range['line'], min(UINT_MAX, range['character'])
 
 
-def parse_text_edit(text_edit: LspTextEdit, version: int = None) -> TextEditTuple:
+def parse_text_edit(text_edit: TextEdit, version: Optional[int] = None) -> TextEditTuple:
     return (
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),

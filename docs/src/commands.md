@@ -50,4 +50,7 @@ You can include special variables in the `command_args` array that will be autom
 | `"$selection_begin"` or `"${selection_begin}"` | int | Character offset of the begin of the (topmost) selection |
 | `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (topmost) selection |
 | `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$line"` or `"${line}"` | int | Zero-based line number of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$character"` or `"${character}"` | int | Zero-based character offset relative to the current line of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
 | `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
+| `"$text_document_position"` or `"${text_document_position}"` | object | JSON object with `'textDocument'` and `'position'` of the (topmost) selection, see [TextDocumentPositionParams](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams) |

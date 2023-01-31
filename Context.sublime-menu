@@ -24,6 +24,14 @@
                 "caption": "Goto Implementation…"
             },
             {
+                "command": "lsp_call_hierarchy",
+                "caption": "Show Call Hierarchy"
+            },
+            {
+                "command": "lsp_type_hierarchy",
+                "caption": "Show Type Hierarchy"
+            },
+            {
                 "command": "lsp_symbol_rename",
                 "caption": "Rename…"
             },
@@ -33,16 +41,16 @@
             },
             {
                 "command": "lsp_code_actions",
+                "args": {"only_kinds": ["refactor"]},
+                "caption": "Refactor…"
+            },
+            {
+                "command": "lsp_code_actions",
                 "args": {"only_kinds": ["source"]},
                 "caption": "Source Action…"
             },
             {
-                "command": "lsp_format_document",
-                "caption": "Format File"
-            },
-            {
-                "command": "lsp_format_document_range",
-                "caption": "Format Selection"
+                "command": "lsp_format"
             },
             {
                 "command": "lsp_expand_selection",

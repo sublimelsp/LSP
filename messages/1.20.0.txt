@@ -1,0 +1,20 @@
+=> 1.20.0
+
+# Features
+
+- (API) Add `$line` and `$character` expansion variables (#2092) (Matthew Erhard)
+
+# Fixes and Improvements
+
+- (Code Action) Filter out non-quickfix actions in view (#2081) (Rafał Chłodnicki)
+- (JSON Schema) Fix crash on generating schema with mixed-type enum (#2083) (Rafał Chłodnicki)
+- (UI) Update diagnostics gutter icons and change default to "sign" (#2086) (jwortmann)
+- (Color Boxes) Fix short color box rendering bug after color presentation change (#2087) (jwortmann)
+- Properly handle disabling of the LSP package (#2085) (Rafał Chłodnicki)
+- Fix issues with restarting servers (#2088) (Rafał Chłodnicki)
+- (Diagnostics) Only enable Goto Diagnostic commands if diagnostic with configured severity exists (#2091) (jwortmann)
+- (Document Symbol) Focus symbol closest to selection on showing document symbols (#2094) (Rafał Chłodnicki)
+- (Docs) Add LSP-clangd and LSP-terraform to Language Servers (#2096) (Rafał Chłodnicki)
+- (Document Link) Adjust the label to "Open in Browser" if the target is not a file uri (#2098) (jwortmann)
+- Add Jinja to language ids (#2099) (Предраг Николић)
+- Add Elixir to language ids (#2100) (Предраг Николић)

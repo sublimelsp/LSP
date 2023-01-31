@@ -1,17 +1,15 @@
-from .core.panels import ensure_panel
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.sessions import Session
-from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.types import PANEL_FILE_REGEX
-from .core.types import PANEL_LINE_REGEX
 from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
+from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
@@ -19,11 +17,6 @@ import functools
 import linecache
 import os
 import sublime
-
-
-def ensure_references_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
-                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -38,6 +31,17 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool = False,
     ) -> bool:
         return fallback or super().is_enabled(event, point)
+
+    def is_visible(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        fallback: bool = False,
+    ) -> bool:
+        if self.applies_to_context_menu(event):
+            return self.is_enabled(event, point, side_by_side, fallback)
+        return True
 
     def run(
         self,
@@ -58,30 +62,44 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 'context': {"includeDeclaration": False},
             }
             request = Request("textDocument/references", params, self.view, progress=True)
+            word_range = self.view.word(pos)
             session.send_request(
                 request,
                 functools.partial(
                     self._handle_response_async,
-                    self.view.substr(self.view.word(pos)),
+                    self.view.substr(word_range),
                     session,
                     side_by_side,
-                    fallback
+                    fallback,
+                    word_range.begin()
                 )
             )
         else:
             self._handle_no_results(fallback, side_by_side)
 
     def _handle_response_async(
-        self, word: str, session: Session, side_by_side: bool, fallback: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        fallback: bool,
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
-        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, fallback, response))
+        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, fallback, position, response))
 
     def _handle_response(
-        self, word: str, session: Session, side_by_side: bool, fallback: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        fallback: bool,
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
         if response:
             if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(session, response, side_by_side)
+                self._show_references_in_quick_panel(word, session, response, side_by_side, position)
             else:
                 self._show_references_in_output_panel(word, session, response)
         else:
@@ -96,22 +114,24 @@ class LspSymbolReferencesCommand(LspTextCommand):
         else:
             window.status_message("No references found")
 
-    def _show_references_in_quick_panel(self, session: Session, locations: List[Location], side_by_side: bool) -> None:
+    def _show_references_in_quick_panel(
+        self, word: str, session: Session, locations: List[Location], side_by_side: bool, position: int
+    ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-        LocationPicker(self.view, session, locations, side_by_side)
+        kind = get_symbol_kind_from_scope(self.view.scope_name(position))
+        LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word, kind=kind)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
-        window = session.window
-        panel = ensure_references_panel(window)
+        wm = windows.lookup(session.window)
+        if not wm:
+            return
+        panel = wm.panel_manager and wm.panel_manager.ensure_references_panel()
         if not panel:
             return
-        manager = session.manager()
-        if not manager:
-            return
-        base_dir = manager.get_project_path(self.view.file_name() or "")
+        base_dir = wm.get_project_path(self.view.file_name() or "")
         to_render = []  # type: List[str]
         references_count = 0
-        references_by_file = _group_locations_by_uri(window, session.config, locations)
+        references_by_file = _group_locations_by_uri(wm.window, session.config, locations)
         for file, references in references_by_file.items():
             to_render.append('{}:'.format(_get_relative_path(base_dir, file)))
             for reference in references:
@@ -122,7 +142,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         characters = "\n".join(to_render)
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.references"})
+        wm.window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
             'characters': "{} references for '{}'\n\n{}".format(references_count, word, characters),
             'force': True,

@@ -1,11 +1,70 @@
-from .configurations import ConfigManager
+from .protocol import Diagnostic
+from .protocol import Location
+from .protocol import LocationLink
+from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
-from .settings import client_configs
-from .typing import Optional, Any, Generator, Iterable
+from .tree_view import TreeDataProvider
+from .tree_view import TreeViewSheet
+from .typing import Optional, Any, Generator, Iterable, List, Union
+from .views import first_selection_region
+from .views import get_uri_and_position_from_location
+from .views import MissingUriError
+from .views import point_to_offset
+from .views import uri_from_view
+from .windows import WindowManager
 from .windows import WindowRegistry
+from functools import partial
+import operator
 import sublime
+import sublime_api  # pyright: ignore[reportMissingImports]
 import sublime_plugin
+
+
+windows = WindowRegistry()
+
+
+def new_tree_view_sheet(
+    window: sublime.Window,
+    name: str,
+    data_provider: TreeDataProvider,
+    header: str = "",
+    flags: int = 0,
+    group: int = -1
+) -> Optional[TreeViewSheet]:
+    """
+    Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one TreeViewSheet
+    with the given name is allowed per window. If there already exists a TreeViewSheet with the same name, its content
+    will be replaced with the new data. The header argument is allowed to contain minihtml markup.
+    """
+    wm = windows.lookup(window)
+    if not wm:
+        return None
+    if name in wm.tree_view_sheets:
+        tree_view_sheet = wm.tree_view_sheets[name]
+        sheet_id = tree_view_sheet.id()
+        if tree_view_sheet.window():
+            tree_view_sheet.set_provider(data_provider, header)
+            if flags & sublime.ADD_TO_SELECTION:
+                # add to selected sheets if not already selected
+                selected_sheets = window.selected_sheets()
+                for sheet in window.sheets():
+                    if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
+                        if sheet not in selected_sheets:
+                            selected_sheets.append(sheet)
+                            window.select_sheets(selected_sheets)
+                        break
+            else:
+                window.focus_sheet(tree_view_sheet)
+            return tree_view_sheet
+    tree_view_sheet = TreeViewSheet(
+        sublime_api.window_new_html_sheet(window.window_id, name, "", flags, group),
+        name,
+        data_provider,
+        header
+    )
+    wm.tree_view_sheets[name] = tree_view_sheet
+    return tree_view_sheet
 
 
 def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
@@ -18,11 +77,6 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: Optiona
         return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))  # type: ignore
     except ValueError:
         return None
-
-
-configs = ConfigManager(client_configs.all)
-client_configs.set_listener(configs.update)
-windows = WindowRegistry(configs)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[int]:
@@ -56,12 +110,27 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         return self.session() is not None
 
     def session(self) -> Optional[Session]:
-        for session in windows.lookup(self.window).get_sessions():
+        wm = windows.lookup(self.window)
+        if not wm:
+            return None
+        for session in wm.get_sessions():
             if self.capability and not session.has_capability(self.capability):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
             return session
+        else:
+            return None
+
+    def session_by_name(self, session_name: str) -> Optional[Session]:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return None
+        for session in wm.get_sessions():
+            if self.capability and not session.has_capability(self.capability):
+                continue
+            if session.config.name == session_name:
+                return session
         else:
             return None
 
@@ -100,6 +169,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def want_event(self) -> bool:
         return True
 
+    @staticmethod
+    def applies_to_context_menu(event: Optional[dict]) -> bool:
+        return event is not None and 'x' in event
+
     def get_listener(self) -> Optional[AbstractViewListener]:
         return windows.listener_for_view(self.view)
 
@@ -127,37 +200,148 @@ class LspTextCommand(sublime_plugin.TextCommand):
                     yield sv.session
 
 
+class LspOpenLocationCommand(LspWindowCommand):
+    """
+    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
+    """
+
+    def run(
+        self,
+        location: Union[Location, LocationLink],
+        session_name: Optional[str] = None,
+        flags: int = 0,
+        group: int = -1,
+        event: Optional[dict] = None
+    ) -> None:
+        if event:
+            modifier_keys = event.get('modifier_keys')
+            if modifier_keys:
+                if 'primary' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                elif 'shift' in modifier_keys:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
+
+    def want_event(self) -> bool:
+        return True
+
+    def _run_async(
+        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
+    ) -> None:
+        session = self.session_by_name(session_name) if session_name else self.session()
+        if session:
+            session.open_location_async(location, flags, group) \
+                .then(lambda view: self._handle_continuation(location, view is not None))
+
+    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
+        if not success:
+            uri, _ = get_uri_and_position_from_location(location)
+            message = "Failed to open {}".format(uri)
+            sublime.status_message(message)
+
+
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: str = None) -> None:
-        window = self.view.window()
-        if not window:
+    def run(self, edit: Any, config_name: Optional[str] = None) -> None:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
         if not self._config_names:
             return
-        self._wm = windows.lookup(window)
         if len(self._config_names) == 1:
-            self.restart_server(0)
+            self.restart_server(wm, 0)
         else:
-            window.show_quick_panel(self._config_names, self.restart_server)
+            wm.window.show_quick_panel(self._config_names, partial(self.restart_server, wm))
 
-    def restart_server(self, index: int) -> None:
-        if index < 0:
+    def restart_server(self, wm: WindowManager, index: int) -> None:
+        if index == -1:
             return
 
         def run_async() -> None:
             config_name = self._config_names[index]
-            if not config_name:
-                return
-            self._wm._end_sessions_async(config_name)
-            listener = windows.listener_for_view(self.view)
-            if listener:
-                self._wm.register_listener_async(listener)
+            if config_name:
+                wm.restart_sessions_async(config_name)
 
         sublime.set_timeout_async(run_async)
 
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
     def run(self, config_name: Optional[str] = None) -> None:
-        sublime.set_timeout_async(lambda: windows.lookup(self.window).restart_sessions_async(config_name))
+
+        def run_async() -> None:
+            wm = windows.lookup(self.window)
+            if wm:
+                wm.restart_sessions_async(config_name)
+
+        sublime.set_timeout_async(run_async)
+
+
+def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
+    try:
+        uri = uri_from_view(view)
+    except MissingUriError:
+        return
+    wm = windows.lookup(view.window())
+    if not wm:
+        return
+    diagnostics = []  # type: List[Diagnostic]
+    for session in wm.get_sessions():
+        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
+    if not diagnostics:
+        return
+    # Sort diagnostics by location
+    diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']), reverse=not forward)
+    if point is None:
+        region = first_selection_region(view)
+        point = region.b if region is not None else 0
+    # Find next/previous diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in
+    # this view after/before the cursor
+    op_func = operator.gt if forward else operator.lt
+    for diagnostic in diagnostics:
+        diag_pos = point_to_offset(Point.from_lsp(diagnostic['range']['start']), view)
+        if op_func(diag_pos, point):
+            break
+    else:
+        diag_pos = point_to_offset(Point.from_lsp(diagnostics[0]['range']['start']), view)
+    view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
+    view.show_at_center(diag_pos)
+    # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would
+    # immediately hide the popup.
+    sublime.set_timeout_async(lambda: view.run_command('lsp_hover', {'only_diagnostics': True, 'point': diag_pos}), 200)
+
+
+class LspNextDiagnosticCommand(LspTextCommand):
+
+    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+        navigate_diagnostics(self.view, point, forward=True)
+
+
+class LspPrevDiagnosticCommand(LspTextCommand):
+
+    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+        navigate_diagnostics(self.view, point, forward=False)
+
+
+class LspExpandTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.expand_item(id)
+
+
+class LspCollapseTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        sheet = wm.tree_view_sheets.get(name)
+        if not sheet:
+            return
+        sheet.collapse_item(id)

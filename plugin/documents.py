@@ -1,24 +1,22 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
-from .completion import LspResolveDocsCommand
+from .completion import QueryCompletionsTask
 from .core.logging import debug
-from .core.panels import is_panel_open
 from .core.panels import PanelName
-from .core.promise import Promise
-from .core.protocol import CompletionItem
-from .core.protocol import CompletionItemKind
-from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
-from .core.protocol import Error
-from .core.protocol import Range
+from .core.protocol import DocumentHighlightParams
+from .core.protocol import DocumentUri
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
+from .core.protocol import SignatureHelpParams
 from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
+from .core.registry import get_position
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
@@ -27,9 +25,11 @@ from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
+from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
+from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
@@ -37,7 +37,6 @@ from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_completion
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -60,13 +59,6 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
-
-Flags = int
-ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
-
-SessionName = str
-CompletionResponse = Union[List[CompletionItem], CompletionList, None]
-ResolvedCompletions = Tuple[Union[CompletionResponse, Error], SessionName]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -157,7 +149,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
+        self._change_count_on_last_save = -1
+        self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
+        self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._setup()
 
     def __del__(self) -> None:
@@ -175,7 +170,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
-        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
+        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -202,7 +197,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             new_window = self.view.window()
             if not new_window:
                 return
-            old_window = self._manager.window()
+            old_window = self._manager.window
             if new_window.id() == old_window.id():
                 return
             self._manager.unregister_listener_async(self)
@@ -234,13 +229,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
 
-    def diagnostics_async(
-        self
+    def _diagnostics_async(
+        self, allow_stale: bool = False
     ) -> Generator[Tuple[SessionBufferProtocol, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
         change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            # do not provide stale diagnostics
-            if sb.diagnostics_version == change_count:
+            if sb.diagnostics_version == change_count or allow_stale:
                 yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(
@@ -249,11 +243,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
         result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
-                # Checking against points is inclusive unlike checking whether region intersects another
-                # region which is exclusive (at region end) and we want an inclusive behavior in this case.
+                # Checking against points is inclusive unlike checking whether region intersects another region
+                # which is exclusive (at region end) and we want an inclusive behavior in this case.
                 if region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
@@ -268,7 +262,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
         result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        for sb, diagnostics in self.diagnostics_async():
+        for sb, diagnostics in self._diagnostics_async():
             intersections = []  # type: List[Diagnostic]
             for diagnostic, candidate in diagnostics:
                 severity = diagnostic_severity(diagnostic)
@@ -281,11 +275,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 result.append((sb, intersections))
         return result, covering
 
-    def on_diagnostics_updated_async(self) -> None:
+    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         self._clear_code_actions_annotation()
-        if userprefs().show_code_actions:
-            self._do_code_actions()
+        if is_view_visible and userprefs().show_code_actions:
+            self._do_code_actions_async()
         self._update_diagnostic_in_status_bar_async()
+        window = self.view.window()
+        is_active_view = window and window.active_view() == self.view
+        if is_active_view and self.view.change_count() == self._change_count_on_last_save:
+            self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -309,24 +307,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             yield sv.session_buffer
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
-        different, current_region = self._update_stored_region_async()
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes)
-        if not different:
-            return
-        self._clear_highlight_regions()
-        if userprefs().document_highlight_style:
-            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                      after_ms=self.highlights_debounce_time)
-        self.do_signature_help_async(manual=False)
-        self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
-                                                  after_ms=self.code_lenses_debounce_time)
+        self._on_view_updated_async()
 
-    def get_uri(self) -> str:
+    def get_uri(self) -> DocumentUri:
         return self._uri
 
-    def set_uri(self, new_uri: str) -> None:
+    def set_uri(self, new_uri: DocumentUri) -> None:
         self._uri = new_uri
         self.view.settings().set("lsp_uri", self._uri)
 
@@ -338,22 +327,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_load_async(self) -> None:
         if not self._registered and is_regular_view(self.view):
             self._register_async()
+            return
+        self.on_activated_async()
 
     def on_activated_async(self) -> None:
-        if not self.view.is_loading() and is_regular_view(self.view):
-            if not self._registered:
-                self._register_async()
-            for sv in self.session_views_async():
-                if sv.code_lenses_needs_refresh:
-                    sv.set_code_lenses_pending_refresh(False)
-                    sv.start_code_lenses_async()
-            for sb in self.session_buffers_async():
-                if sb.semantic_tokens.needs_refresh:
-                    sb.set_semantic_tokens_pending_refresh(False)
-                    sb.do_semantic_tokens_async(self.view)
-                if sb.inlay_hints_needs_refresh:
-                    sb.set_inlay_hints_pending_refresh(False)
-                    sb.do_inlay_hints_async(self.view)
+        if self.view.is_loading() or not is_regular_view(self.view):
+            return
+        if not self._registered:
+            self._register_async()
+        if userprefs().show_code_actions:
+            self._do_code_actions_async()
+        for sv in self.session_views_async():
+            if sv.code_lenses_needs_refresh:
+                sv.set_code_lenses_pending_refresh(False)
+                sv.start_code_lenses_async()
+        for sb in self.session_buffers_async():
+            if sb.semantic_tokens.needs_refresh:
+                sb.set_semantic_tokens_pending_refresh(False)
+                sb.do_semantic_tokens_async(self.view)
+            if sb.inlay_hints_needs_refresh:
+                sb.set_inlay_hints_pending_refresh(False)
+                sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
@@ -365,7 +359,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                                           after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             if userprefs().show_code_actions:
-                self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                self._when_selection_remains_stable_async(self._do_code_actions_async, current_region,
                                                           after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
             self._resolve_visible_code_lenses_async()
@@ -387,19 +381,29 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # The URI scheme has changed. This means we need to re-determine whether any language servers should
             # be attached to the view.
             sublime.set_timeout(self._reset)
-        window = self.view.window()
-        if window and userprefs().show_diagnostics_panel_on_save > 0 and is_panel_open(window, PanelName.Diagnostics):
-            self._hide_diagnostics_panel_if_empty()
+        self._change_count_on_last_save = self.view.change_count()
+        self._toggle_diagnostics_panel_if_needed_async()
 
-    def _hide_diagnostics_panel_if_empty(self) -> None:
+    def _toggle_diagnostics_panel_if_needed_async(self) -> None:
         severity_threshold = userprefs().show_diagnostics_panel_on_save
-        hide_panel = True
-        for _, diagnostics in self.diagnostics_async():
+        if severity_threshold == 0:
+            return
+        if not self._manager:
+            return
+        panel_manager = self._manager.panel_manager
+        if not panel_manager:
+            return
+        has_relevant_diagnostcs = False
+        for _, diagnostics in self._diagnostics_async(allow_stale=True):
             if any(diagnostic_severity(diagnostic) <= severity_threshold for diagnostic, _ in diagnostics):
-                hide_panel = False
+                has_relevant_diagnostcs = True
                 break
-        if hide_panel and self._manager:
-            self._manager.hide_diagnostics_panel_async()
+        if panel_manager.is_panel_open(PanelName.Diagnostics):
+            if not has_relevant_diagnostcs:
+                panel_manager.hide_diagnostics_panel_async()
+        else:
+            if has_relevant_diagnostcs:
+                panel_manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -429,6 +433,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             )
         elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
+        elif key == "lsp.link_available" and operator == sublime.OP_EQUAL:
+            position = get_position(self.view)
+            if position is None:
+                return not operand
+            session = self.session_async('documentLinkProvider', position)
+            if not session:
+                return not operand
+            session_view = session.session_view_for_view_async(self.view)
+            if not session_view:
+                return not operand
+            return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
@@ -468,14 +483,35 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
+        completion_list = sublime.CompletionList()
+        triggered_manually = self._auto_complete_triggered_manually
+        self._auto_complete_triggered_manually = False  # reset state for next completion popup
+        sublime.set_timeout_async(
+            lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
+        return completion_list
 
-        def resolve(clist: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
-            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
-            sublime.set_timeout(lambda: clist.set_completions(items, flags))
+    # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-        clist = sublime.CompletionList()
-        sublime.set_timeout_async(lambda: self._on_query_completions_async(partial(resolve, clist), locations[0]))
-        return clist
+    def _on_query_completions_async(
+        self, clist: sublime.CompletionList, location: int, triggered_manually: bool
+    ) -> None:
+        if self._completions_task:
+            self._completions_task.cancel_async()
+        on_done = partial(self._on_query_completions_resolved_async, clist)
+        self._completions_task = QueryCompletionsTask(self.view, location, triggered_manually, on_done)
+        sessions = list(self.sessions_async('completionProvider'))
+        if not sessions or not self.view.is_valid():
+            self._completions_task.cancel_async()
+            return
+        self.purge_changes_async()
+        self._completions_task.query_completions_async(sessions)
+
+    def _on_query_completions_resolved_async(
+        self, clist: sublime.CompletionList, completions: List[sublime.CompletionItem], flags: int = 0
+    ) -> None:
+        self._completions_task = None
+        # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+        sublime.set_timeout(lambda: clist.set_completions(completions, flags))
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -496,20 +532,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if manual or last_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
-            context_params = {}  # type: SignatureHelpContext
-            if manual:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.Invoked
-            else:
-                context_params["triggerKind"] = SignatureHelpTriggerKind.TriggerCharacter
+            trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
+            context_params = {
+                'triggerKind': trigger_kind,
+                'isRetrigger': self._sighelp is not None,
+            }  # type: SignatureHelpContext
+            if not manual:
                 context_params["triggerCharacter"] = last_char
-            context_params["isRetrigger"] = self._sighelp is not None
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
             params = {
                 "textDocument": position_params["textDocument"],
                 "position": position_params["position"],
                 "context": context_params
-            }
+            }  # type: SignatureHelpParams
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
@@ -578,13 +614,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions(self) -> None:
+    def _do_code_actions_async(self) -> None:
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
-        actions_manager.request_for_region_async(
-            self.view, covering, diagnostics_by_config, self._on_code_actions, manual=False)
+        actions_manager \
+            .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
+            .then(self._on_code_actions)
 
-    def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
-        action_count = sum(map(len, responses.values()))
+    def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
+        # flatten list
+        action_lists = [actions for _, actions in responses if len(actions)]
+        all_actions = [action for actions in action_lists for action in actions]
+        action_count = len(all_actions)
         if action_count == 0:
             return
         regions = [sublime.Region(self._stored_region.b, self._stored_region.a)]
@@ -602,9 +642,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = next(itertools.chain.from_iterable(responses.values()))['title']
+                title = all_actions[0]['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            code_actions_link = make_command_link(
+                'lsp_code_actions', title, {"code_actions_by_config": responses}, view_id=self.view.id())
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
@@ -616,26 +657,30 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            actions = self._actions_by_config[config_name]
+            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    items, selected_index = format_code_actions_for_quick_panel(
+                        map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
                         items,
-                        lambda i: self.handle_code_action_select(config_name, i),
+                        lambda i: self.handle_code_action_select(config_name, actions, i),
                         selected_index=selected_index,
                         placeholder="Code actions")
             else:
-                self.handle_code_action_select(config_name, 0)
+                self.handle_code_action_select(config_name, actions, 0)
 
-    def handle_code_action_select(self, config_name: str, index: int) -> None:
-        if index > -1:
-            def run_async() -> None:
-                session = self.session_by_name(config_name)
-                if session:
-                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
-            sublime.set_timeout_async(run_async)
+    def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
+        if index == -1:
+            return
+
+        def run_async() -> None:
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(actions[index], progress=True)
+
+        sublime.set_timeout_async(run_async)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
@@ -658,16 +703,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
-    def _highlights_key(self, kind: int, multiline: bool) -> str:
+    def _highlights_key(self, kind: DocumentHighlightKind, multiline: bool) -> str:
         return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             self.view.erase_regions(self._highlights_key(kind, False))
             self.view.erase_regions(self._highlights_key(kind, True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in range(1, 4):
+        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
             regions = itertools.chain(
                 self.view.get_regions(self._highlights_key(kind, False)),
                 self.view.get_regions(self._highlights_key(kind, True))
@@ -683,16 +728,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point = region.b
         session = self.session_async("documentHighlightProvider", point)
         if session:
-            params = text_document_position_params(self.view, point)
+            params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
-    def _on_highlights(self, response: Optional[List]) -> None:
+    def _on_highlights(self, response: Optional[List[DocumentHighlight]]) -> None:
         if not isinstance(response, list):
             response = []
-        kind2regions = {}  # type: Dict[Tuple[int, bool], List[sublime.Region]]
+        kind2regions = {}  # type: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]]
         for highlight in response:
-            r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
+            r = range_to_region(highlight["range"], self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Text)
             kind2regions.setdefault((kind, len(self.view.split_by_newlines(r)) > 1), []).append(r)
 
@@ -709,76 +754,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
-
-    # --- textDocument/complete ----------------------------------------------------------------------------------------
-
-    def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
-        triggered_manually = self._auto_complete_triggered_manually
-        self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        sessions = list(self.sessions_async('completionProvider'))
-        if not sessions or not self.view.is_valid():
-            resolve_completion_list([], 0)
-            return
-        self.purge_changes_async()
-        completion_promises = []  # type: List[Promise[ResolvedCompletions]]
-        for session in sessions:
-
-            def completion_request() -> Promise[ResolvedCompletions]:
-                config_name = session.config.name
-                return session.send_request_task(
-                    Request.complete(text_document_position_params(self.view, location), self.view)
-                ).then(lambda response: (response, config_name))
-
-            completion_promises.append(completion_request())
-
-        Promise.all(completion_promises).then(
-            lambda responses: self._on_all_settled(responses, resolve_completion_list, triggered_manually))
-
-    def _on_all_settled(
-        self,
-        responses: List[ResolvedCompletions],
-        resolve_completion_list: ResolveCompletionsFn,
-        triggered_manually: bool
-    ) -> None:
-        LspResolveDocsCommand.completions = {}
-        items = []  # type: List[sublime.CompletionItem]
-        errors = []  # type: List[Error]
-        flags = 0  # int
-        prefs = userprefs()
-        if prefs.inhibit_snippet_completions:
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-        if prefs.inhibit_word_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
-        view_settings = self.view.settings()
-        include_snippets = view_settings.get("auto_complete_include_snippets") and \
-            (triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
-        for response, session_name in responses:
-            if isinstance(response, Error):
-                errors.append(response)
-                continue
-            session = self.session_by_name(session_name)
-            if not session:
-                continue
-            response_items = []  # type: List[CompletionItem]
-            if isinstance(response, dict):
-                response_items = response["items"] or []
-                if response.get("isIncomplete", False):
-                    flags |= sublime.DYNAMIC_COMPLETIONS
-            elif isinstance(response, list):
-                response_items = response
-            response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-            LspResolveDocsCommand.completions[session_name] = response_items
-            can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
-            items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, session.config.name)
-                for index, response_item in enumerate(response_items)
-                if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
-        if items:
-            flags |= sublime.INHIBIT_REORDER
-        if errors:
-            error_messages = ", ".join(str(error) for error in errors)
-            sublime.status_message('Completion error: {}'.format(error_messages))
-        resolve_completion_list(items, flags)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 
@@ -820,11 +795,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_revert_async()
+        self._on_view_updated_async()
 
     def reload_async(self) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_reload_async()
+        self._on_view_updated_async()
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 
@@ -842,10 +819,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self._registered = True
         if not self._manager:
-            window = self.view.window()
-            if not window:
-                return
-            self._manager = windows.lookup(window)
+            self._manager = windows.lookup(self.view.window())
+        if not self._manager:
+            return
         self._manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):
@@ -861,6 +837,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)
                     listener.on_load_async()
+
+    def _on_view_updated_async(self) -> None:
+        self._code_lenses_debouncer_async.debounce(
+            self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
+        different, current_region = self._update_stored_region_async()
+        if not different:
+            return
+        self._clear_highlight_regions()
+        if userprefs().document_highlight_style:
+            self._when_selection_remains_stable_async(
+                self._do_highlights_async, current_region, after_ms=self.highlights_debounce_time)
+        self.do_signature_help_async(manual=False)
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
         """

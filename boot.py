@@ -3,8 +3,13 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
+from .plugin.call_hierarchy import LspCallHierarchyCommand
+from .plugin.call_hierarchy import LspCallHierarchyToggleCommand
 from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_actions import LspRefactorCommand
+from .plugin.code_actions import LspSourceActionCommand
 from .plugin.code_lens import LspCodeLensCommand
+from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionItemCommand
@@ -14,18 +19,14 @@ from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
-from .plugin.core.logging import exception_log
 from .plugin.core.open import opening_files
-from .plugin.core.panels import destroy_output_panels
-from .plugin.core.panels import LspClearLogPanelCommand
-from .plugin.core.panels import LspClearPanelCommand
-from .plugin.core.panels import LspToggleLogPanelLinesLimitCommand
-from .plugin.core.panels import LspUpdatePanelCommand
-from .plugin.core.panels import LspUpdateLogPanelCommand
-from .plugin.core.panels import WindowPanelListener
+from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
-from .plugin.core.protocol import Location
-from .plugin.core.protocol import LocationLink
+from .plugin.core.registry import LspCollapseTreeItemCommand
+from .plugin.core.registry import LspExpandTreeItemCommand
+from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspOpenLocationCommand
+from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
@@ -37,14 +38,14 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.typing import Any, Optional, List, Type, Dict, Union
-from .plugin.core.views import get_uri_and_position_from_location
+from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
+from .plugin.formatting import LspFormatCommand
 from .plugin.formatting import LspFormatDocumentCommand
 from .plugin.formatting import LspFormatDocumentRangeCommand
 from .plugin.goto import LspSymbolDeclarationCommand
@@ -54,8 +55,13 @@ from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
+from .plugin.panels import LspToggleLogPanelLinesLimitCommand
 from .plugin.panels import LspToggleServerPanelCommand
+from .plugin.panels import LspUpdateLogPanelCommand
+from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveAllCommand
@@ -70,8 +76,11 @@ from .plugin.symbols import LspWorkspaceSymbolsCommand
 from .plugin.tooling import LspCopyToClipboardFromBase64Command
 from .plugin.tooling import LspDumpBufferCapabilities
 from .plugin.tooling import LspDumpWindowConfigs
+from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
+from .plugin.type_hierarchy import LspTypeHierarchyCommand
+from .plugin.type_hierarchy import LspTypeHierarchyToggleCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
@@ -105,21 +114,14 @@ def _unregister_all_plugins() -> None:
 def plugin_loaded() -> None:
     load_settings()
     load_css()
+    windows.enable()
     _register_all_plugins()
     client_configs.update_configs()
-    for window in sublime.windows():
-        windows.lookup(window)
 
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
-    for window in sublime.windows():
-        destroy_output_panels(window)  # references and diagnostics panels
-        try:
-            windows.lookup(window).plugin_unloaded()
-            windows.discard(window)
-        except Exception as ex:
-            exception_log("failed to unload window", ex)
+    windows.disable()
     unload_settings()
 
 
@@ -129,10 +131,14 @@ class Listener(sublime_plugin.EventListener):
         kill_all_subprocesses()
 
     def on_load_project_async(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_load_project_async()
+        manager = windows.lookup(w)
+        if manager:
+            manager.on_load_project_async()
 
     def on_post_save_project_async(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_post_save_project_async()
+        manager = windows.lookup(w)
+        if manager:
+            manager.on_post_save_project_async()
 
     def on_new_window_async(self, w: sublime.Window) -> None:
         sublime.set_timeout(lambda: windows.lookup(w))
@@ -176,38 +182,14 @@ class Listener(sublime_plugin.EventListener):
                     break
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name in ("next_result", "prev_result"):
-            view = window.active_view()
-            if view:
-                view.run_command("lsp_hover", {"only_diagnostics": True})
-
-
-class LspOpenLocationCommand(sublime_plugin.TextCommand):
-    """
-    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
-    """
-
-    def run(
-        self,
-        _: sublime.Edit,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str] = None,
-        flags: int = 0,
-        group: int = -1
-    ) -> None:
-        sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
-
-    def _run_async(
-        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int = 0, group: int = -1
-    ) -> None:
-        window = self.view.window()
-        if not window:
-            return
-        windows.lookup(window).open_location_async(location, session_name, self.view, flags, group).then(
-            lambda view: self._handle_continuation(location, view is not None))
-
-    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
-        if not success:
-            uri, _ = get_uri_and_position_from_location(location)
-            message = "Failed to open {}".format(uri)
-            sublime.status_message(message)
+        if command_name == "show_panel":
+            wm = windows.lookup(window)
+            if not wm:
+                return
+            panel_manager = wm.panel_manager
+            if not panel_manager:
+                return
+            if panel_manager.is_panel_open(PanelName.Diagnostics):
+                sublime.set_timeout_async(wm.update_diagnostics_panel_async)
+            elif panel_manager.is_panel_open(PanelName.Log):
+                sublime.set_timeout(panel_manager.update_log_panel)

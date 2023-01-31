@@ -1,7 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.protocol import Range
 from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
@@ -331,7 +330,7 @@ class ViewsTest(DeferrableTestCase):
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
         self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
-        self.assertEqual(phantom.region, range_to_region(Range.from_lsp(response[0]["range"]), self.view))
+        self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
 
     def test_document_color_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
@@ -360,7 +359,7 @@ class ViewsTest(DeferrableTestCase):
             view=self.view,
             region=sublime.Region(0, 1),
             diagnostics=[diagnostic],
-            on_save_actions=["refactor"]
+            only_kinds=["refactor"]
         )
         self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
@@ -397,5 +396,11 @@ class ViewsTest(DeferrableTestCase):
     def test_escaped_newline_in_markdown(self) -> None:
         self.assertEqual(
             minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
-            "<p>hello<br />\nworld</p>"
+            "<p>hello\\\nworld</p>"
+        )
+
+    def test_single_backslash_in_markdown(self) -> None:
+        self.assertEqual(
+            minihtml(self.view, {"kind": "markdown", "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
+            "<p>A\\B</p>"
         )

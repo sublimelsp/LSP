@@ -1,7 +1,8 @@
 from .code_lens import CodeLensView
-from .core.progress import ViewProgressReporter
+from .core.active_request import ActiveRequest
 from .core.promise import Promise
 from .core.protocol import CodeLens
+from .core.protocol import CodeLensExtended
 from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
@@ -9,7 +10,6 @@ from .core.protocol import Request
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
@@ -42,9 +42,8 @@ class SessionView:
         self._view = listener.view
         self._session = session
         self._initialize_region_keys()
-        self.active_requests = {}  # type: Dict[int, Request]
+        self._active_requests = {}  # type: Dict[int, ActiveRequest]
         self._listener = ref(listener)
-        self.progress = {}  # type: Dict[int, ViewProgressReporter]
         self._code_lenses = CodeLensView(self._view)
         self.code_lenses_needs_refresh = False
         settings = self._view.settings()
@@ -58,7 +57,7 @@ class SessionView:
             session_buffer.add_session_view(self)
         self._session_buffer = session_buffer
         session.register_session_view_async(self)
-        session.config.set_view_status(self._view, "")
+        session.config.set_view_status(self._view, session.config_status_message)
         if self._session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
@@ -73,14 +72,16 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            for request_id, request in self.active_requests.items():
-                if request.view and request.view.id() == self.view.id():
+            for request_id, data in self._active_requests.items():
+                if data.request.view and data.request.view.id() == self.view.id():
                     self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions(self.diagnostics_key(severity, False))
-            self.view.erase_regions(self.diagnostics_key(severity, True))
+            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, False)))
+            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, False)))
+            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, True)))
+            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, True)))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
 
@@ -133,7 +134,10 @@ class SessionView:
         self.view.add_regions("lsp_document_link", r)
         for severity in range(1, 5):
             for mode in line_modes:
-                self.view.add_regions("lsp{}d{}{}".format(self.session.config.name, mode, severity), r)
+                self.view.add_regions("lsp{}d{}{}_icon".format(self.session.config.name, mode, severity), r)
+        for severity in range(4, 0, -1):
+            for mode in line_modes:
+                self.view.add_regions("lsp{}d{}{}_underline".format(self.session.config.name, mode, severity), r)
         if document_highlight_style in ("underline", "stippled"):
             for kind in document_highlight_kinds:
                 for mode in line_modes:
@@ -264,7 +268,7 @@ class SessionView:
                 return 'markup.{}.lsp'.format(k.lower())
         return None
 
-    def present_diagnostics_async(self) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
@@ -273,9 +277,10 @@ class SessionView:
             self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], True)
         listener = self.listener()
         if listener:
-            listener.on_diagnostics_updated_async()
+            listener.on_diagnostics_updated_async(is_view_visible)
 
     def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
+        ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         key = self.diagnostics_key(severity, multiline)
         key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
         for key_tag in key_tags.values():
@@ -290,36 +295,22 @@ class SessionView:
                     self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags)
+            self.view.add_regions("{}_icon".format(key), non_tag_regions, data.scope, data.icon, ICON_FLAGS)
+            self.view.add_regions("{}_underline".format(key), non_tag_regions, data.scope, "", flags)
         else:
-            self.view.erase_regions(key)
+            self.view.erase_regions("{}_icon".format(key))
+            self.view.erase_regions("{}_underline".format(key))
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
-        self.active_requests[request_id] = request
-        if request.progress:
-            debounced(
-                functools.partial(self._start_progress_reporter_async, request_id, request.method),
-                timeout_ms=200,
-                condition=lambda: request_id in self.active_requests and request_id not in self.progress,
-                async_thread=True
-            )
+        self._active_requests[request_id] = ActiveRequest(self, request_id, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
-        self.active_requests.pop(request_id, None)
-        self.progress.pop(request_id, None)
+        self._active_requests.pop(request_id, None)
 
     def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
-        value = params['value']
-        kind = value['kind']
-        if kind == 'begin':
-            title = value["title"]
-            progress = self.progress.get(request_id)
-            if not progress:
-                progress = self._start_progress_reporter_async(request_id, title)
-            progress.title = title
-            progress(value.get("message"), value.get("percentage"))
-        elif kind == 'report':
-            self.progress[request_id](value.get("message"), value.get("percentage"))
+        request = self._active_requests.get(request_id, None)
+        if request:
+            request.update_progress_async(params)
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, change_count, changes)
@@ -339,21 +330,12 @@ class SessionView:
     def on_post_save_async(self, new_uri: DocumentUri) -> None:
         self.session_buffer.on_post_save_async(self.view, new_uri)
 
-    def _start_progress_reporter_async(self, request_id: int, title: str) -> ViewProgressReporter:
-        progress = ViewProgressReporter(
-            view=self.view,
-            key="lspprogressview{}{}".format(self.session.config.name, request_id),
-            title=title
-        )
-        self.progress[request_id] = progress
-        return progress
-
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def start_code_lenses_async(self) -> None:
         params = {'textDocument': text_document_identifier(self.view)}
-        for request_id, request in self.active_requests.items():
-            if request.method == "codeAction/resolve":
+        for request_id, data in self._active_requests.items():
+            if data.request.method == "codeAction/resolve":
                 self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 
@@ -386,7 +368,7 @@ class SessionView:
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
 
     def __str__(self) -> str:

@@ -1,7 +1,10 @@
 from .core.paths import simple_path
 from .core.promise import Promise
+from .core.protocol import CallHierarchyIncomingCall
 from .core.protocol import CallHierarchyItem
+from .core.protocol import CallHierarchyOutgoingCall
 from .core.protocol import CallHierarchyPrepareParams
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import TextDocumentPositionParams
 from .core.protocol import TypeHierarchyItem
@@ -33,19 +36,13 @@ class HierarchyDataProvider(TreeDataProvider):
     def __init__(
         self,
         weaksession: 'weakref.ref[Session]',
-        request1: Callable[..., Request],
-        request2: Callable[..., Request],
-        request_handler1: Callable[..., List[HierarchyItem]],
-        request_handler2: Callable[..., List[HierarchyItem]],
-        direction: int,
+        request: Callable[..., Request],
+        request_handler: Callable[..., List[HierarchyItem]],
         root_elements: List[HierarchyItem]
     ) -> None:
         self.weaksession = weaksession
-        self.request1 = request1
-        self.request2 = request2
-        self.request_handler1 = request_handler1
-        self.request_handler2 = request_handler2
-        self.direction = direction
+        self.request = request
+        self.request_handler = request_handler
         self.root_elements = root_elements
         session = self.weaksession()
         self.session_name = session.config.name if session else None
@@ -56,11 +53,7 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         if not session:
             return Promise.resolve([])
-        if self.direction == 1:
-            return session.send_request_task(self.request1({'item': element})).then(self.request_handler1)
-        if self.direction == 2:
-            return session.send_request_task(self.request2({'item': element})).then(self.request_handler2)
-        return Promise.resolve([])
+        return session.send_request_task(self.request({'item': element})).then(self.request_handler)
 
     def get_tree_item(self, element: HierarchyItem) -> TreeItem:
         command_url = sublime.command_url('lsp_open_location', {
@@ -86,17 +79,26 @@ def make_data_provider(
     weaksession: 'weakref.ref[Session]', sheet_name: str, direction: int, response: List[HierarchyItem]
 ) -> HierarchyDataProvider:
     if sheet_name == "Call Hierarchy":
-        request1 = Request.incomingCalls
-        request2 = Request.outgoingCalls
-        handler1 = lambda response: [incoming_call['from'] for incoming_call in response] if isinstance(response, list) else []  # noqa: E501,E731
-        handler2 = lambda response: [outgoing_call['to'] for outgoing_call in response] if isinstance(response, list) else []  # noqa: E501,E731
+        request = Request.incomingCalls if direction == 1 else Request.outgoingCalls
+        handler = incoming_calls_handler if direction == 1 else outgoing_calls_handler
     elif sheet_name == "Type Hierarchy":
-        request1 = Request.supertypes
-        request2 = Request.subtypes
-        handler1 = handler2 = lambda response: response if isinstance(response, list) else []  # noqa: E731
+        request = Request.supertypes if direction == 1 else Request.subtypes
+        handler = type_hierarchy_handler
     else:
         raise NotImplementedError('{} not implemented'.format(sheet_name))
-    return HierarchyDataProvider(weaksession, request1, request2, handler1, handler2, direction, response)
+    return HierarchyDataProvider(weaksession, request, handler, response)
+
+
+def incoming_calls_handler(response: Union[List[CallHierarchyIncomingCall], None, Error]) -> List[CallHierarchyItem]:
+    return [incoming_call['from'] for incoming_call in response] if isinstance(response, list) else []
+
+
+def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[CallHierarchyItem]:
+    return [incoming_call['to'] for incoming_call in response] if isinstance(response, list) else []
+
+
+def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[TypeHierarchyItem]:
+    return response if isinstance(response, list) else []
 
 
 def make_header(session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItem]) -> str:

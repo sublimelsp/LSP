@@ -3,8 +3,6 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.call_hierarchy import LspCallHierarchyCommand
-from .plugin.call_hierarchy import LspCallHierarchyToggleCommand
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -53,6 +51,9 @@ from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
+from .plugin.hierarchy import LspCallHierarchyCommand
+from .plugin.hierarchy import LspHierarchyToggleCommand
+from .plugin.hierarchy import LspTypeHierarchyCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.panels import LspClearLogPanelCommand
@@ -79,8 +80,6 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from .plugin.type_hierarchy import LspTypeHierarchyCommand
-from .plugin.type_hierarchy import LspTypeHierarchyToggleCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:

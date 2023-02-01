@@ -14,9 +14,9 @@ T = TypeVar('T')
 
 
 class TreeItemCollapsibleState(IntEnum):
-    COLLAPSED = 1
-    EXPANDED = 2
-    DISABLED = 3
+    NONE = 1
+    COLLAPSED = 2
+    EXPANDED = 3
 
 
 class TreeItem:
@@ -159,7 +159,7 @@ class TreeViewSheet(sublime.HtmlSheet):
             self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
             node.child_ids.append(tree_item.id)
         if len(elements) == 0:
-            node.tree_item.collapsible_state = TreeItemCollapsibleState.DISABLED
+            node.tree_item.collapsible_state = TreeItemCollapsibleState.NONE
         node.is_resolved = True
 
     def expand_item(self, id: str) -> None:

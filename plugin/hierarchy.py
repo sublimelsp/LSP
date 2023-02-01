@@ -104,7 +104,7 @@ def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]
 def make_header(session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItem]) -> str:
     if sheet_name == "Call Hierarchy":
         label = "Callers of…" if direction == 1 else "Calls from…"
-        tooltip = "Show outgoing calls" if direction == 1 else "Show Incoming Calls"
+        tooltip = "Show Outgoing Calls" if direction == 1 else "Show Incoming Calls"
     elif sheet_name == "Type Hierarchy":
         label = "Supertypes of…" if direction == 1 else "Subtypes of…"
         tooltip = "Show Subtypes" if direction == 1 else "Show Supertypes"

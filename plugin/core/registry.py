@@ -323,25 +323,26 @@ class LspPrevDiagnosticCommand(LspTextCommand):
         navigate_diagnostics(self.view, point, forward=False)
 
 
+def toggle_tree_item(window: sublime.Window, name: str, id: str, expand: bool) -> None:
+    wm = windows.lookup(window)
+    if not wm:
+        return
+    sheet = wm.tree_view_sheets.get(name)
+    if not sheet:
+        return
+    if expand:
+        sheet.expand_item(id)
+    else:
+        sheet.collapse_item(id)
+
+
 class LspExpandTreeItemCommand(LspWindowCommand):
 
     def run(self, name: str, id: str) -> None:
-        wm = windows.lookup(self.window)
-        if not wm:
-            return
-        sheet = wm.tree_view_sheets.get(name)
-        if not sheet:
-            return
-        sheet.expand_item(id)
+        toggle_tree_item(self.window, name, id, True)
 
 
 class LspCollapseTreeItemCommand(LspWindowCommand):
 
     def run(self, name: str, id: str) -> None:
-        wm = windows.lookup(self.window)
-        if not wm:
-            return
-        sheet = wm.tree_view_sheets.get(name)
-        if not sheet:
-            return
-        sheet.collapse_item(id)
+        toggle_tree_item(self.window, name, id, False)

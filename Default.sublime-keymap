@@ -63,14 +63,14 @@
     {
         "keys": ["shift+f12"],
         "command": "lsp_symbol_references",
-        "args": {"side_by_side": false, "fallback": false},
+        "args": {"side_by_side": false, "force_group": true, "fallback": false, "group": -1},
         "context": [{"key": "lsp.session_with_capability", "operand": "referencesProvider"}]
     },
     // Find References (side-by-side)
     // {
     //     "keys": ["primary+shift+f12"],
     //     "command": "lsp_symbol_references",
-    //     "args": {"side_by_side": true, "fallback": false},
+    //     "args": {"side_by_side": true, "force_group": true, "fallback": false, "group": -1},
     //     "context": [{"key": "lsp.session_with_capability", "operand": "referencesProvider"}]
     // },
     // Goto Definition

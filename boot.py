@@ -191,4 +191,4 @@ class Listener(sublime_plugin.EventListener):
             if panel_manager.is_panel_open(PanelName.Diagnostics):
                 sublime.set_timeout_async(wm.update_diagnostics_panel_async)
             elif panel_manager.is_panel_open(PanelName.Log):
-                sublime.set_timeout(panel_manager.update_log_panel)
+                sublime.set_timeout(lambda: panel_manager.update_log_panel(scroll_to_selection=True))

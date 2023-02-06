@@ -878,7 +878,8 @@ class View:
     def visible_region(self) -> Region:
         ...
 
-    def show(self, x: Union[Selection, Region, int], show_surrounds: bool = ...) -> None:
+    def show(self, x: Union[Selection, Region, int], show_surrounds: bool = True, keep_to_left: bool = False,
+             animate: bool = True) -> None:
         ...
 
     def show_at_center(self, x: Union[Selection, Region, int], animate: bool = True) -> None:

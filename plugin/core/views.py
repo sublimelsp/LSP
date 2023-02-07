@@ -1030,22 +1030,18 @@ def format_completion(
     item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
-
     lsp_label = item['label']
     lsp_label_details = item.get('labelDetails') or {}
     lsp_label_detail = lsp_label_details.get('detail') or ""
     lsp_label_description = lsp_label_details.get('description') or ""
     lsp_filter_text = item.get('filterText') or ""
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
-
     completion_kind = item.get('kind')
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
-
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):
         details.append(make_command_link(
             'lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}, view_id=view_id))
-
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail
@@ -1062,22 +1058,22 @@ def format_completion(
         details.append(html.escape(lsp_label + lsp_label_detail))
         if lsp_label_description:
             details.append(html.escape(lsp_label_description))
-
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
-
-    insert_replace_support_html = get_insert_replace_support_html(item)
-    if insert_replace_support_html:
-        details.append(insert_replace_support_html)
-
+    text_edit = item.get('textEdit')
+    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
+        insert_mode = userprefs().completion_insert_mode
+        oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
+        command_url = sublime.command_url("lsp_commit_completion_with_opposite_insert_mode")
+        details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
     completion = sublime.CompletionItem.command_completion(
         trigger=trigger,
-        command='lsp_select_completion_item',
-        args={"item": item, "session_name": session_name},
+        command='lsp_select_completion',
+        args={"index": index, "session_name": session_name},
         annotation=annotation,
         kind=kind,
         details=" | ".join(details))
-    if item.get('textEdit'):
+    if text_edit:
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
 
@@ -1095,13 +1091,3 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
-
-
-def get_insert_replace_support_html(item: CompletionItem) -> Optional[str]:
-    text_edit = item.get('textEdit')
-    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
-        insert_mode = userprefs().completion_insert_mode
-        oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
-        command_url = sublime.command_url("lsp_commit_completion_with_opposite_insert_mode")
-        return "<a href='{}'>{}</a>".format(command_url, oposite_insert_mode)
-    return None

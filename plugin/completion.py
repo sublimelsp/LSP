@@ -90,7 +90,7 @@ class QueryCompletionsTask:
     def _resolve_completions_async(self, responses: List[ResolvedCompletions]) -> None:
         if self._resolved:
             return
-        LspResolveDocsCommand.completions = {}
+        LspSelectCompletionCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
         errors = []  # type: List[Error]
         flags = 0  # int
@@ -117,7 +117,7 @@ class QueryCompletionsTask:
             elif isinstance(response, list):
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-            LspResolveDocsCommand.completions[session.config.name] = response_items
+            LspSelectCompletionCommand.completions[session.config.name] = response_items
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             config_name = session.config.name
             items.extend(
@@ -149,8 +149,6 @@ class QueryCompletionsTask:
 
 
 class LspResolveDocsCommand(LspTextCommand):
-
-    completions = {}  # type: Dict[SessionName, List[CompletionItem]]
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
 
@@ -218,8 +216,12 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
         LspCommitCompletionWithOppositeInsertMode.active = False
 
 
-class LspSelectCompletionItemCommand(LspTextCommand):
-    def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
+class LspSelectCompletionCommand(LspTextCommand):
+
+    completions = {}  # type: Dict[SessionName, List[CompletionItem]]
+
+    def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
+        item = LspSelectCompletionCommand.completions[session_name][index]
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")

@@ -153,7 +153,7 @@ class LspResolveDocsCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
 
         def run_async() -> None:
-            item = self.completions[session_name][index]
+            item = LspSelectCompletionCommand.completions[session_name][index]
             session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
                 request = Request.resolveCompletionItem(item, self.view)

@@ -6,6 +6,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
@@ -353,7 +354,8 @@ class LspCodeActionsCommand(LspTextCommand):
             sublime.error_message("{}: {}".format(session_name, str(response)))
 
 
-class LspMenuActionCommand(LspTextCommand, metaclass=ABCMeta):
+# This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
+class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
     """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'
@@ -363,23 +365,42 @@ class LspMenuActionCommand(LspTextCommand, metaclass=ABCMeta):
     def actions_cache(self) -> List[Tuple[str, CodeAction]]:
         ...
 
-    def is_enabled(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        if not super().is_enabled(event, point):
-            return False
-        return -1 < id < len(self.actions_cache)
+    @property
+    def view(self) -> Optional[sublime.View]:
+        return self.window.active_view()
 
-    def is_visible(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, id: int, event: Optional[dict] = None) -> bool:
+        if not -1 < id < len(self.actions_cache):
+            return False
+        return self._has_session(event)
+
+    def is_visible(self, id: int, event: Optional[dict] = None) -> bool:
         if id == -1:
-            if super().is_enabled(event, point):
+            if self._has_session(event):
                 sublime.set_timeout_async(partial(self._request_menu_actions_async, event))
             return False
         return id < len(self.actions_cache) and self._is_cache_valid(event)
 
-    def description(self, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[str]:
+    def _has_session(self, event: Optional[dict] = None) -> bool:
+        view = self.view
+        if not view:
+            return False
+        region = self._get_region(event)
+        if region is None:
+            return False
+        listener = windows.listener_for_view(view)
+        if not listener:
+            return False
+        return bool(listener.session_async(self.capability, region.b))
+
+    def description(self, id: int, event: Optional[dict] = None) -> Optional[str]:
         if -1 < id < len(self.actions_cache):
             return self.actions_cache[id][1]['title']
 
-    def run(self, edit: sublime.Edit, id: int, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+    def want_event(self) -> bool:
+        return True
+
+    def run(self, id: int, event: Optional[dict] = None) -> None:
         sublime.set_timeout_async(partial(self.run_async, id, event))
 
     def run_async(self, id: int, event: Optional[dict]) -> None:
@@ -395,21 +416,34 @@ class LspMenuActionCommand(LspTextCommand, metaclass=ABCMeta):
             sublime.error_message("{}: {}".format(session_name, str(response)))
 
     def _is_cache_valid(self, event: Optional[dict]) -> bool:
+        view = self.view
+        if not view:
+            return False
         region = self._get_region(event)
         if region is None:
             return False
-        v = self.view
-        return actions_manager.menu_actions_cache_key == "{}#{}:{}".format(v.buffer_id(), v.change_count(), region)
+        return actions_manager.menu_actions_cache_key == "{}#{}:{}".format(
+            view.buffer_id(), view.change_count(), region)
 
     def _get_region(self, event: Optional[dict]) -> Optional[sublime.Region]:
+        view = self.view
+        if not view:
+            return None
         if event is not None and self.applies_to_context_menu(event):
-            return sublime.Region(self.view.window_to_text((event['x'], event['y'])))
-        return first_selection_region(self.view)
+            return sublime.Region(view.window_to_text((event['x'], event['y'])))
+        return first_selection_region(view)
+
+    @staticmethod
+    def applies_to_context_menu(event: Optional[dict]) -> bool:
+        return event is not None and 'x' in event
 
     def _request_menu_actions_async(self, event: Optional[dict]) -> None:
+        view = self.view
+        if not view:
+            return
         region = self._get_region(event)
         if region is not None:
-            actions_manager.request_for_region_async(self.view, region, [], MENU_ACTIONS_KINDS, True)
+            actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
 
 
 class LspRefactorCommand(LspMenuActionCommand):

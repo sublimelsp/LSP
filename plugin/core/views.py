@@ -1072,8 +1072,8 @@ def format_completion(
     completion = sublime.CompletionItem(
         trigger,
         annotation,
-        # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        'subl:lsp_select_completion {{"index":{},"session_name":"{}"}}'.format(index, session_name),
+        # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
+        'lsp_select_completion {{"index":{},"session_name":"{}"}}'.format(index, session_name),
         sublime.COMPLETION_FORMAT_COMMAND,
         kind,
         details=" | ".join(details)

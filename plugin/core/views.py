@@ -814,7 +814,7 @@ def make_documentation_link(text: str, index: int, session_name: str, view_id: i
     """A version of "make_command_link" optimized for specific use case to avoid slow json.dumps in the hot path."""
     args = '{{"view_id": {}, "command": "lsp_resolve_docs", "args": {{"index": {}, "session_name": "{}"}}}}'.format(
         view_id, index, session_name)
-    href = 'subl:lsp_run_text_command_helper {}'.format(html.escape(args))
+    href = 'subl:lsp_run_text_command_helper {}'.format(args)
     return make_link(href, text)
 
 
@@ -1071,7 +1071,7 @@ def format_completion(
     if text_edit and 'insert' in text_edit and 'replace' in text_edit:
         insert_mode = userprefs().completion_insert_mode
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
-        command_url = sublime.command_url("lsp_commit_completion_with_opposite_insert_mode")
+        command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
         details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
     completion = sublime.CompletionItem.command_completion(
         trigger=trigger,

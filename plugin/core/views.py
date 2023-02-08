@@ -1069,13 +1069,15 @@ def format_completion(
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
         command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
         details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
-    completion = sublime.CompletionItem.command_completion(
-        trigger=trigger,
-        command='lsp_select_completion',
-        args={"index": index, "session_name": session_name},
-        annotation=annotation,
-        kind=kind,
-        details=" | ".join(details))
+    completion = sublime.CompletionItem(
+        trigger,
+        annotation,
+        # Not using "make_command_link" in a hot path to avoid slow json.dumps.
+        'subl:lsp_select_completion {{"index":{},"session_name":"{}"}}'.format(index, session_name),
+        sublime.COMPLETION_FORMAT_COMMAND,
+        kind,
+        details=" | ".join(details)
+    )
     if text_edit:
         completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion

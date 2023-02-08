@@ -810,14 +810,6 @@ def make_command_link(
     return make_link(sublime.command_url(cmd, args), text, class_name, tooltip)
 
 
-def make_documentation_link(index: int, session_name: str, view_id: int) -> str:
-    """A version of "make_command_link" optimized for specific use case to avoid slow json.dumps in the hot path."""
-    args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
-        view_id, index, session_name)
-    href = 'subl:lsp_run_text_command_helper {}'.format(args)
-    return make_link(href, 'More')
-
-
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
     def run(self, view_id: int, command: str, args: Optional[Dict[str, Any]] = None) -> None:
         view = sublime.View(view_id)
@@ -1048,7 +1040,11 @@ def format_completion(
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
     details = []  # type: List[str]
     if can_resolve_completion_items or item.get('documentation'):
-        details.append(make_documentation_link(index, session_name, view_id))
+        # Not using "make_command_link" in a hot path to avoid slow json.dumps.
+        args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
+            view_id, index, session_name)
+        href = 'subl:lsp_run_text_command_helper {}'.format(args)
+        details.append(make_link(href, 'More'))
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail

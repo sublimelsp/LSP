@@ -812,7 +812,7 @@ def make_command_link(
 
 def make_documentation_link(text: str, index: int, session_name: str, view_id: int) -> str:
     """A version of "make_command_link" optimized for specific use case to avoid slow json.dumps in the hot path."""
-    args = '{{"view_id": {}, "command": "lsp_resolve_docs", "args": {{"index": {}, "session_name": "{}"}}}}'.format(
+    args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
         view_id, index, session_name)
     href = 'subl:lsp_run_text_command_helper {}'.format(args)
     return make_link(href, text)

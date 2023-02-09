@@ -876,17 +876,6 @@ class FormatCompletionsUnitTests(unittest.TestCase):
         )
         self._verify_completion(
             {
-                "filterText": ". $attrs",
-                "label": "$attrs",
-                "labelDetails": {
-                    "detail": "()"
-                },
-            },
-            trigger='$attrs',
-            details='$attrs()'
-        )
-        self._verify_completion(
-            {
                 "filterText": "banner?()",
                 "label": "banner?",
                 "labelDetails": {
@@ -896,4 +885,14 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             },
             trigger='banner?()',
             annotation='BannerElement'
+        )
+        self._verify_completion(
+            {
+                "filterText": ". $attrs",
+                "label": "$attrs",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='$attrs()'
         )

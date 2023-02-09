@@ -59,7 +59,7 @@ def format_completion(
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text):
+    elif lsp_label.startswith(lsp_filter_text) or ' ' in lsp_filter_text:
         trigger = lsp_label
         annotation = lsp_detail
         if lsp_label_detail:

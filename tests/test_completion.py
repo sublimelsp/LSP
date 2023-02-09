@@ -8,6 +8,7 @@ from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from setup import TextDocumentTestCase
 import sublime
+import unittest
 
 
 additional_edits = {
@@ -797,3 +798,102 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
             completion_items=[completion_item],
             insert_text='',
             expected_text='import ghjk;\nghjk')
+
+
+class FormatCompletionsUnitTests(unittest.TestCase):
+
+    def _verify_completion(
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+    ) -> None:
+        item = format_completion(payload, index=0, can_resolve_completion_items=False, session_name='abc', view_id=0)
+        self.assertEquals(item.trigger, trigger)
+        self.assertEquals(item.annotation, annotation)
+        self.assertEquals(item.details, details)
+        self.assertEquals(item.flags, flags)
+
+    def test_label(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+
+    def test_detail(self) -> None:
+        self._verify_completion(
+            {
+                "detail": "typescript",
+                "label": "readConfigFile",
+            },
+            trigger='readConfigFile',
+            annotation='typescript'
+        )
+
+    def test_label_details(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+
+    def test_filter_text(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+        self._verify_completion(
+            {
+                "filterText": ". $attrs",
+                "label": "$attrs",
+            },
+            trigger='$attrs',
+        )
+        self._verify_completion(
+            {
+                "filterText": "import { readConfigFile$1 } from 'typescript';",
+                "label": "readConfigFile",
+            },
+            trigger='readConfigFile',
+        )
+
+    def test_filter_text_and_label_details(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+        self._verify_completion(
+            {
+                "filterText": ". $attrs",
+                "label": "$attrs",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='$attrs',
+            details='$attrs()'
+        )
+        self._verify_completion(
+            {
+                "filterText": "banner?()",
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()",
+                    "description": "BannerElement"
+                },
+            },
+            trigger='banner?()',
+            annotation='BannerElement'
+        )

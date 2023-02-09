@@ -1,11 +1,11 @@
 from copy import deepcopy
+from LSP.plugin.completion import format_completion
 from LSP.plugin.core.protocol import CompletionItem
 from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
-from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
 import sublime
 

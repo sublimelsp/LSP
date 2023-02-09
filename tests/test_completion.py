@@ -913,8 +913,8 @@ class FormatCompletionsUnitTests(unittest.TestCase):
                     'description': 'Texture2D',
                     'detail': ' (uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)'
                 },
-                'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)'
+                'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr)'
             },
-            trigger='create_texture (uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)',
+            trigger='create_texture (uint width, uint height, ubyte* ptr)',
             annotation='Texture2D'
         )

@@ -55,10 +55,12 @@ class PanelManager:
     def is_panel_open(self, panel_name: str) -> bool:
         return self._window.is_valid() and self._window.active_panel() == "output.{}".format(panel_name)
 
-    def update_log_panel(self) -> None:
+    def update_log_panel(self, scroll_to_selection: bool = False) -> None:
         panel = self.ensure_log_panel()
         if panel and self.is_panel_open(PanelName.Log):
             panel.run_command("lsp_update_log_panel")
+            if scroll_to_selection:
+                panel.show(panel.sel(), animate=False)
 
     def ensure_panel(self, name: str, result_file_regex: str, result_line_regex: str,
                      syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:

@@ -840,7 +840,7 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             trigger='banner?()',
         )
 
-    def test_filter_text(self) -> None:
+    def test_filter_text_1(self) -> None:
         self._verify_completion(
             {
                 "filterText": "banner",
@@ -848,6 +848,8 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             },
             trigger='banner?',
         )
+
+    def test_filter_text_2(self) -> None:
         self._verify_completion(
             {
                 "filterText": ". $attrs",
@@ -855,6 +857,8 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             },
             trigger='$attrs',
         )
+
+    def test_filter_text_3(self) -> None:
         self._verify_completion(
             {
                 "filterText": "import { readConfigFile$1 } from 'typescript';",
@@ -863,7 +867,7 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             trigger='readConfigFile',
         )
 
-    def test_filter_text_and_label_details(self) -> None:
+    def test_filter_text_and_label_details_1(self) -> None:
         self._verify_completion(
             {
                 "filterText": "banner",
@@ -874,6 +878,8 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             },
             trigger='banner?()',
         )
+
+    def test_filter_text_and_label_details_2(self) -> None:
         self._verify_completion(
             {
                 "filterText": "banner?()",
@@ -886,6 +892,8 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             trigger='banner?()',
             annotation='BannerElement'
         )
+
+    def test_filter_text_and_label_details_3(self) -> None:
         self._verify_completion(
             {
                 "filterText": ". $attrs",
@@ -895,4 +903,18 @@ class FormatCompletionsUnitTests(unittest.TestCase):
                 },
             },
             trigger='$attrs()'
+        )
+
+    def test_filter_text_and_label_details_4(self) -> None:
+        self._verify_completion(
+            {
+                'label': 'create_texture',
+                'labelDetails': {
+                    'description': 'Texture2D',
+                    'detail': ' (uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)'
+                },
+                'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)'
+            },
+            trigger='create_texture (uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)',
+            annotation='Texture2D'
         )

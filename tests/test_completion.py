@@ -911,7 +911,7 @@ class FormatCompletionsUnitTests(unittest.TestCase):
                 'label': 'create_texture',
                 'labelDetails': {
                     'description': 'Texture2D',
-                    'detail': ' (uint width, uint height, ubyte* ptr, PixelFormat format = PixelFormat.Rgba)'
+                    'detail': ' (uint width, uint height, ubyte* ptr)'
                 },
                 'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr)'
             },

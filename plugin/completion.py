@@ -56,10 +56,11 @@ def format_completion(
             view_id, index, session_name)
         href = 'subl:lsp_run_text_command_helper {}'.format(args)
         details.append(make_link(href, 'More'))
-    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
+    ignore_filter_text = ' ' in lsp_filter_text
+    if lsp_label_detail and (ignore_filter_text or (lsp_label + lsp_label_detail).startswith(lsp_filter_text)):
         trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text) or ' ' in lsp_filter_text:
+    elif ignore_filter_text or lsp_label.startswith(lsp_filter_text):
         trigger = lsp_label
         annotation = lsp_detail
         if lsp_label_detail:

@@ -63,6 +63,7 @@ INHIBIT_EXPLICIT_COMPLETIONS = ...  # type: int
 INHIBIT_REORDER = ...  # type: int
 DYNAMIC_COMPLETIONS = ...  # type: int
 COMPLETION_FLAG_KEEP_PREFIX = ...  # type: int
+COMPLETION_FORMAT_COMMAND = ...  # type: int
 DIALOG_CANCEL = ...  # type: int
 DIALOG_YES = ...  # type: int
 DIALOG_NO = ...  # type: int

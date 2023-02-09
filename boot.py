@@ -10,7 +10,7 @@ from .plugin.code_lens import LspCodeLensCommand
 from .plugin.color import LspColorPresentationCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
-from .plugin.completion import LspSelectCompletionItemCommand
+from .plugin.completion import LspSelectCompletionCommand
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand

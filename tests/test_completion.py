@@ -867,6 +867,18 @@ class FormatCompletionsUnitTests(unittest.TestCase):
             trigger='readConfigFile',
         )
 
+    def test_filter_text_4(self) -> None:
+        # See the `test_filter_text_is_not_a_prefix_of_label` test above and
+        # also https://github.com/sublimelsp/LSP/issues/771
+        # This is probably a silly server behavior that we probably shouldn't need to support?
+        self._verify_completion(
+            {
+                "label": "Implement all members",
+                "filterText": "e",
+            },
+            trigger='e',
+        )
+
     def test_filter_text_and_label_details_1(self) -> None:
         self._verify_completion(
             {

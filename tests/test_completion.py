@@ -877,6 +877,7 @@ class FormatCompletionsUnitTests(unittest.TestCase):
                 "filterText": "e",
             },
             trigger='e',
+            details='Implement all members'
         )
 
     def test_filter_text_and_label_details_1(self) -> None:

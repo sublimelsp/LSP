@@ -7,9 +7,7 @@ from .protocol import CodeActionTriggerKind
 from .protocol import Color
 from .protocol import ColorInformation
 from .protocol import Command
-from .protocol import CompletionItem
 from .protocol import CompletionItemKind
-from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
@@ -1024,63 +1022,6 @@ def format_diagnostic_for_html(
         formatted.append("</pre>")
     formatted.append("</pre>")
     return "".join(formatted)
-
-
-def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, view_id: int
-) -> sublime.CompletionItem:
-    # This is a hot function. Don't do heavy computations or IO in this function.
-    lsp_label = item['label']
-    lsp_label_details = item.get('labelDetails') or {}
-    lsp_label_detail = lsp_label_details.get('detail') or ""
-    lsp_label_description = lsp_label_details.get('description') or ""
-    lsp_filter_text = item.get('filterText') or ""
-    lsp_detail = (item.get('detail') or "").replace("\n", " ")
-    completion_kind = item.get('kind')
-    kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
-    details = []  # type: List[str]
-    if can_resolve_completion_items or item.get('documentation'):
-        # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
-            view_id, index, session_name)
-        href = 'subl:lsp_run_text_command_helper {}'.format(args)
-        details.append(make_link(href, 'More'))
-    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
-        trigger = lsp_label + lsp_label_detail
-        annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text):
-        trigger = lsp_label
-        annotation = lsp_detail
-        if lsp_label_detail:
-            details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-    else:
-        trigger = lsp_filter_text
-        annotation = lsp_detail
-        details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-    if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
-        annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
-    text_edit = item.get('textEdit')
-    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
-        insert_mode = userprefs().completion_insert_mode
-        oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
-        command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
-        details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
-    completion = sublime.CompletionItem(
-        trigger,
-        annotation,
-        # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        'lsp_select_completion {{"index":{},"session_name":"{}"}}'.format(index, session_name),
-        sublime.COMPLETION_FORMAT_COMMAND,
-        kind,
-        details=" | ".join(details)
-    )
-    if text_edit:
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    return completion
 
 
 def format_code_actions_for_quick_panel(

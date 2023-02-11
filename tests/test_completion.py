@@ -1,6 +1,8 @@
 from copy import deepcopy
 from LSP.plugin.completion import format_completion
+from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemDefaults
 from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
@@ -797,3 +799,107 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
             completion_items=[completion_item],
             insert_text='',
             expected_text='import ghjk;\nghjk')
+
+
+class ItemDefaultTests(CompletionsTestsBase):
+    def test_respects_defaults_for_completion(self):
+        item = {
+            'label': 'Hello'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'start': { 'character': 0, 'line': 0 },
+                'end': { 'character': 0, 'line': 0 },
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 }
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+    def test_defaults_should_not_override_completion_fields_if_present(self):
+        item = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 }
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+                'replace': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+            },
+            'insertTextFormat': InsertTextFormat.Snippet,
+            'data': ['3', '4']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 }
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+
+    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
+        item = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+                'replace': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+            },
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert',
+            'textEdit': {
+                'newText': 'Text to insert', # this text will be inserted
+                'insert': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+                'replace': {
+                    'start': { 'character': 0, 'line': 0 },
+                    'end': { 'character': 0, 'line': 0 },
+                },
+            }
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)

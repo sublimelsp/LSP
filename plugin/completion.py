@@ -113,11 +113,11 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> Range:
     return text_edit['range']
 
 
-def is_range(val: Optional[Any]) -> TypeGuard[Range]:
+def is_range(val: Any) -> TypeGuard[Range]:
     return isinstance(val, dict) and 'start' in val and 'end' in val
 
 
-def is_edit_range(val: Optional[Any]) -> TypeGuard[CompletionEditRange]:
+def is_edit_range(val: Any) -> TypeGuard[CompletionEditRange]:
     return isinstance(val, dict) and 'insert' in val and 'replace' in val
 
 

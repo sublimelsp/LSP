@@ -231,8 +231,8 @@ class QueryCompletionsTask:
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             config_name = session.config.name
             items.extend(
-                format_completion(response_item, index, can_resolve_completion_items,
-                                  config_name, item_defaults, self._view.id())
+                format_completion(
+                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:

@@ -228,10 +228,7 @@ class QueryCompletionsTask:
             elif isinstance(response, list):
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-            LspSelectCompletionCommand.completions[session.config.name] = {
-                'items': response_items,
-                'itemDefaults': item_defaults
-            }
+            LspSelectCompletionCommand.completions[session.config.name] = response_items, item_defaults
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             config_name = session.config.name
             items.extend(

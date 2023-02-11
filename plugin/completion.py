@@ -41,8 +41,12 @@ CompletionsStore = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
 def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool,
-    session_name: str, item_defaults: CompletionItemDefaults, view_id: int
+    item: CompletionItem,
+    index: int,
+    can_resolve_completion_items: bool,
+    session_name: str,
+    item_defaults: CompletionItemDefaults,
+    view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label = item['label']

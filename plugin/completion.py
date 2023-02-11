@@ -37,10 +37,7 @@ import webbrowser
 SessionName = str
 CompletionResponse = Union[List[CompletionItem], CompletionList, None]
 ResolvedCompletions = Tuple[Union[CompletionResponse, Error], 'weakref.ref[Session]']
-CompletionsStore = TypedDict('CompletionsStore', {
-    'items': List[CompletionItem],
-    'itemDefaults': CompletionItemDefaults
-})
+CompletionsStore = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
 def format_completion(

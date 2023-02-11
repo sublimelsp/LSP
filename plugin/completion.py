@@ -139,11 +139,14 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
                 'newText': new_text,
                 'range': edit_range
             }
-    if default_text_edit:
-        item['textEdit'] = item.get('textEdit', default_text_edit)
+    if default_text_edit and 'textEdit' not in item:
+        item['textEdit'] = default_text_edit
     default_insert_text_format = item_defaults.get('insertTextFormat')
-    if default_insert_text_format:
-        item['insertTextFormat'] = item.get("insertTextFormat", default_insert_text_format)
+    if default_insert_text_format and 'insertTextFormat' not in item:
+        item['insertTextFormat'] = default_insert_text_format
+    default_data = item_defaults.get('data')
+    if default_data and 'data' not in item:
+        item['data'] = default_data
     default_data = item_defaults.get('data')
     if default_data:
         item['data'] = item.get('data', default_data)

@@ -148,9 +148,6 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
     default_data = item_defaults.get('data')
     if default_data and 'data' not in item:
         item['data'] = default_data
-    default_data = item_defaults.get('data')
-    if default_data:
-        item['data'] = item.get('data', default_data)
     return item
 
 

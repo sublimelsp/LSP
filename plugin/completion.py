@@ -44,7 +44,8 @@ CompletionsStore = TypedDict('CompletionsStore', {
 
 
 def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, item_defaults: CompletionItemDefaults, view_id: int
+    item: CompletionItem, index: int, can_resolve_completion_items: bool,
+    session_name: str, item_defaults: CompletionItemDefaults, view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label = item['label']
@@ -196,7 +197,7 @@ class QueryCompletionsTask:
             return
         LspSelectCompletionCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
-        item_defaults = {} # type: CompletionItemDefaults
+        item_defaults = {}  # type: CompletionItemDefaults
         errors = []  # type: List[Error]
         flags = 0  # int
         prefs = userprefs()
@@ -230,7 +231,8 @@ class QueryCompletionsTask:
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             config_name = session.config.name
             items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
+                format_completion(response_item, index, can_resolve_completion_items,
+                                  config_name, item_defaults, self._view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:

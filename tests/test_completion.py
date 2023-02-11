@@ -808,8 +808,8 @@ class ItemDefaultTests(CompletionsTestsBase):
         }  # type: CompletionItem
         item_defaults = {
             'editRange': {
-                'start': { 'character': 0, 'line': 0 },
-                'end': { 'character': 0, 'line': 0 },
+                'start': {'character': 0, 'line': 0},
+                'end': {'character': 0, 'line': 0},
             },
             'insertTextFormat': InsertTextFormat.PlainText,
             'data': ['1', '2']
@@ -819,8 +819,8 @@ class ItemDefaultTests(CompletionsTestsBase):
             'textEdit': {
                 'newText': 'Hello',
                 'range': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 }
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
                 }
             },
             'insertTextFormat': InsertTextFormat.PlainText,
@@ -834,8 +834,8 @@ class ItemDefaultTests(CompletionsTestsBase):
             'textEdit': {
                 'newText': 'Hello',
                 'range': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 }
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
                 }
             },
             'insertTextFormat': InsertTextFormat.PlainText,
@@ -844,12 +844,12 @@ class ItemDefaultTests(CompletionsTestsBase):
         item_defaults = {
             'editRange': {
                 'insert': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
                 'replace': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
             },
             'insertTextFormat': InsertTextFormat.Snippet,
@@ -860,15 +860,14 @@ class ItemDefaultTests(CompletionsTestsBase):
             'textEdit': {
                 'newText': 'Hello',
                 'range': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 }
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
                 }
             },
             'insertTextFormat': InsertTextFormat.PlainText,
             'data': ['1', '2']
         }  # type: CompletionItem
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
-
 
     def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
         item = {
@@ -878,12 +877,12 @@ class ItemDefaultTests(CompletionsTestsBase):
         item_defaults = {
             'editRange': {
                 'insert': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
                 'replace': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
             },
         }  # type: CompletionItemDefaults
@@ -891,14 +890,14 @@ class ItemDefaultTests(CompletionsTestsBase):
             'label': 'Hello',
             'textEditText': 'Text to insert',
             'textEdit': {
-                'newText': 'Text to insert', # this text will be inserted
+                'newText': 'Text to insert',  # this text will be inserted
                 'insert': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
                 'replace': {
-                    'start': { 'character': 0, 'line': 0 },
-                    'end': { 'character': 0, 'line': 0 },
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
                 },
             }
         }  # type: CompletionItem

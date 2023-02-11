@@ -9,6 +9,7 @@ from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from setup import TextDocumentTestCase
+from unittest import TestCase
 import sublime
 
 
@@ -801,7 +802,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
             expected_text='import ghjk;\nghjk')
 
 
-class ItemDefaultTests(CompletionsTestsBase):
+class ItemDefaultTests(TestCase):
     def test_respects_defaults_for_completion(self):
         item = {
             'label': 'Hello'

@@ -6130,5 +6130,5 @@ ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangePa
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range
-CompletionItemDefaults = __ItemDefaults_Type_15
-CompletionEditRange = __EditRange_Type_15
+CompletionItemDefaults = __CompletionList_itemDefaults_Type_1
+CompletionEditRange = __CompletionList_itemDefaults_editRange_Type_1

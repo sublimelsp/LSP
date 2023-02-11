@@ -141,7 +141,7 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
             }
     if default_text_edit:
         item['textEdit'] = item.get('textEdit', default_text_edit)
-    default_insert_text_format = item_defaults.get('insertTextFormat', InsertTextFormat.PlainText)
+    default_insert_text_format = item_defaults.get('insertTextFormat')
     if default_insert_text_format:
         item['insertTextFormat'] = item.get("insertTextFormat", default_insert_text_format)
     default_data = item_defaults.get('data')

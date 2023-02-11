@@ -265,9 +265,8 @@ class LspResolveDocsCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
 
         def run_async() -> None:
-            item = LspSelectCompletionCommand.completions[session_name]['items'][index]
-            item_defaults = LspSelectCompletionCommand.completions[session_name].get('itemDefaults', {})
-            item = completion_with_defaults(item, item_defaults)
+            items, item_defaults = LspSelectCompletionCommand.completions[session_name]
+            item = completion_with_defaults(items[index], item_defaults)
             session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
                 request = Request.resolveCompletionItem(item, self.view)

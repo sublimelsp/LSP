@@ -265,12 +265,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "insertTextModeSupport": {
                     "valueSet": [InsertTextMode.AdjustIndentation]
                 },
-                "labelDetailsSupport": True
+                "labelDetailsSupport": True,
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
             },
-            "insertTextMode": InsertTextMode.AdjustIndentation
+            "insertTextMode": InsertTextMode.AdjustIndentation,
+            "completionList": {
+                "itemDefaults": ["editRange", "insertTextFormat", "data"]
+            }
         },
         "signatureHelp": {
             "dynamicRegistration": True,

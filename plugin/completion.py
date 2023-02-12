@@ -1,7 +1,9 @@
 from .core.edit import parse_text_edit
 from .core.logging import debug
 from .core.promise import Promise
+from .core.protocol import CompletionEditRange
 from .core.protocol import CompletionItem
+from .core.protocol import CompletionItemDefaults
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionItemTag
 from .core.protocol import CompletionList
@@ -16,7 +18,7 @@ from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast
+from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast, Any, TypeGuard
 from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import make_link
@@ -35,10 +37,16 @@ import webbrowser
 SessionName = str
 CompletionResponse = Union[List[CompletionItem], CompletionList, None]
 ResolvedCompletions = Tuple[Union[CompletionResponse, Error], 'weakref.ref[Session]']
+CompletionsStore = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
 def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, view_id: int
+    item: CompletionItem,
+    index: int,
+    can_resolve_completion_items: bool,
+    session_name: str,
+    item_defaults: CompletionItemDefaults,
+    view_id: int
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label = item['label']
@@ -74,7 +82,7 @@ def format_completion(
             details.append(html.escape(lsp_label_description))
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
-    text_edit = item.get('textEdit')
+    text_edit = item.get('textEdit', item_defaults.get('editRange'))
     if text_edit and 'insert' in text_edit and 'replace' in text_edit:
         insert_mode = userprefs().completion_insert_mode
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
@@ -103,6 +111,46 @@ def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> Range:
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast(TextEdit, text_edit)
     return text_edit['range']
+
+
+def is_range(val: Any) -> TypeGuard[Range]:
+    return isinstance(val, dict) and 'start' in val and 'end' in val
+
+
+def is_edit_range(val: Any) -> TypeGuard[CompletionEditRange]:
+    return isinstance(val, dict) and 'insert' in val and 'replace' in val
+
+
+def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItemDefaults) -> CompletionItem:
+    """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
+    if not item_defaults:
+        return item
+    default_text_edit = None  # type: Optional[Union[TextEdit, InsertReplaceEdit]]
+    edit_range = item_defaults.get('editRange')
+    if edit_range:
+        #  If textEditText is not provided and a list's default range is provided
+        # the label property is used as a text.
+        new_text = item.get('textEditText') or item['label']
+        if is_edit_range(edit_range):
+            default_text_edit = {
+                'newText': new_text,
+                'insert': edit_range.get('insert'),
+                'replace': edit_range.get('insert'),
+            }
+        elif is_range(edit_range):
+            default_text_edit = {
+                'newText': new_text,
+                'range': edit_range
+            }
+    if default_text_edit and 'textEdit' not in item:
+        item['textEdit'] = default_text_edit
+    default_insert_text_format = item_defaults.get('insertTextFormat')
+    if default_insert_text_format and 'insertTextFormat' not in item:
+        item['insertTextFormat'] = default_insert_text_format
+    default_data = item_defaults.get('data')
+    if default_data and 'data' not in item:
+        item['data'] = default_data
+    return item
 
 
 class QueryCompletionsTask:
@@ -152,6 +200,7 @@ class QueryCompletionsTask:
             return
         LspSelectCompletionCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
+        item_defaults = {}  # type: CompletionItemDefaults
         errors = []  # type: List[Error]
         flags = 0  # int
         prefs = userprefs()
@@ -172,16 +221,18 @@ class QueryCompletionsTask:
             response_items = []  # type: List[CompletionItem]
             if isinstance(response, dict):
                 response_items = response["items"] or []
+                item_defaults = response.get('itemDefaults') or {}
                 if response.get("isIncomplete", False):
                     flags |= sublime.DYNAMIC_COMPLETIONS
             elif isinstance(response, list):
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-            LspSelectCompletionCommand.completions[session.config.name] = response_items
+            LspSelectCompletionCommand.completions[session.config.name] = response_items, item_defaults
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             config_name = session.config.name
             items.extend(
-                format_completion(response_item, index, can_resolve_completion_items, config_name, self._view.id())
+                format_completion(
+                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
@@ -213,7 +264,8 @@ class LspResolveDocsCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
 
         def run_async() -> None:
-            item = LspSelectCompletionCommand.completions[session_name][index]
+            items, item_defaults = LspSelectCompletionCommand.completions[session_name]
+            item = completion_with_defaults(items[index], item_defaults)
             session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
                 request = Request.resolveCompletionItem(item, self.view)
@@ -278,10 +330,11 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions = {}  # type: Dict[SessionName, List[CompletionItem]]
+    completions = {}  # type: Dict[SessionName, CompletionsStore]
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
-        item = LspSelectCompletionCommand.completions[session_name][index]
+        items, item_defaults = LspSelectCompletionCommand.completions[session_name]
+        item = completion_with_defaults(items[index], item_defaults)
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")

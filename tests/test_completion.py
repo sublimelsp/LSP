@@ -1,12 +1,15 @@
 from copy import deepcopy
 from LSP.plugin.completion import format_completion
+from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemDefaults
 from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from setup import TextDocumentTestCase
+from unittest import TestCase
 import sublime
 
 
@@ -644,7 +647,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -653,7 +656,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
@@ -688,7 +691,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -739,7 +742,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -797,3 +800,106 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
             completion_items=[completion_item],
             insert_text='',
             expected_text='import ghjk;\nghjk')
+
+
+class ItemDefaultTests(TestCase):
+    def test_respects_defaults_for_completion(self):
+        item = {
+            'label': 'Hello'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'start': {'character': 0, 'line': 0},
+                'end': {'character': 0, 'line': 0},
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+    def test_defaults_should_not_override_completion_fields_if_present(self):
+        item = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            },
+            'insertTextFormat': InsertTextFormat.Snippet,
+            'data': ['3', '4']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
+        item = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            },
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert',
+            'textEdit': {
+                'newText': 'Text to insert',  # this text will be inserted
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            }
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)

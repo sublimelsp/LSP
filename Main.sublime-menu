@@ -133,6 +133,19 @@
     ]
   },
   {
+    "id": "view",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Show Inlay Hints",
+        "command": "lsp_toggle_inlay_hints"
+      }
+    ]
+  },
+  {
     "id": "goto",
     "children": [
       {

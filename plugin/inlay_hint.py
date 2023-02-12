@@ -27,6 +27,9 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)
 
+    def is_checked(self) -> bool:
+        return self.are_enabled(self.window)
+
     @classmethod
     def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
         if not window:

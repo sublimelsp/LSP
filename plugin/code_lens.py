@@ -1,4 +1,6 @@
-from .core.protocol import CodeLens, CodeLensExtended, Error
+from .core.protocol import CodeLens
+from .core.protocol import CodeLensExtended
+from .core.protocol import Error
 from .core.typing import List, Tuple, Dict, Iterable, Generator, Union, cast
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -23,7 +25,7 @@ class CodeLensData:
         self.region = range_to_region(data['range'], view)
         self.session_name = session_name
         self.annotation = '...'
-        self.resolve_annotation()
+        self.resolve_annotation(view.id())
         self.is_resolve_error = False
 
     def __repr__(self) -> str:
@@ -42,7 +44,7 @@ class CodeLensData:
     def small_html(self) -> str:
         return '<small style="font-family: system">{}</small>'.format(self.annotation)
 
-    def resolve_annotation(self) -> None:
+    def resolve_annotation(self, view_id: int) -> None:
         command = self.data.get('command')
         if command is not None:
             command_name = command.get('command')
@@ -51,7 +53,7 @@ class CodeLensData:
                     'session_name': self.session_name,
                     'command_name': command_name,
                     'command_args': command.get('arguments', []),
-                })
+                }, view_id=view_id)
             else:
                 self.annotation = html_escape(command['title'])
         else:
@@ -64,7 +66,7 @@ class CodeLensData:
             return
         self.data = code_lens_or_error
         self.region = range_to_region(code_lens_or_error['range'], view)
-        self.resolve_annotation()
+        self.resolve_annotation(view.id())
 
 
 class CodeLensView:
@@ -86,11 +88,11 @@ class CodeLensView:
         return self._init
 
     def _clear_annotations(self) -> None:
-        for index, _ in enumerate(self._flat_iteration()):
-            self.view.erase_regions(self._region_key(index))
+        for index, lens in enumerate(self._flat_iteration()):
+            self.view.erase_regions(self._region_key(lens.session_name, index))
 
-    def _region_key(self, index: int) -> str:
-        return '{0}.{1}'.format(self.CODE_LENS_KEY, index)
+    def _region_key(self, session_name: str, index: int) -> str:
+        return '{0}.{1}.{2}'.format(self.CODE_LENS_KEY, session_name, index)
 
     def clear_view(self) -> None:
         self._phantom.update([])
@@ -161,9 +163,11 @@ class CodeLensView:
                 phantoms.append(sublime.Phantom(phantom_region, html, sublime.LAYOUT_BELOW))
             self._phantom.update(phantoms)
         else:  # 'annotation'
+            self._clear_annotations()
             accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
             for index, lens in enumerate(self._flat_iteration()):
-                self.view.add_regions(self._region_key(index), [lens.region], "", "", 0, [lens.small_html], accent)
+                self.view.add_regions(
+                    self._region_key(lens.session_name, index), [lens.region], "", "", 0, [lens.small_html], accent)
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         region = self.view.line(region)

@@ -1,5 +1,5 @@
-from .typing import Enum, IntEnum, IntFlag
-from .typing import Any, Dict, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, Union
+from .typing import Enum, IntEnum, IntFlag, StrEnum
+from .typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, TypeVar, Union  # noqa: E501
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -327,7 +327,7 @@ class DocumentHighlightKind(IntEnum):
     """ Write-access of a symbol, like writing to a variable. """
 
 
-class CodeActionKind(Enum):
+class CodeActionKind(StrEnum):
     """ A set of predefined code action kinds """
     Empty = ''
     """ Empty kind. """
@@ -560,7 +560,7 @@ class TokenFormat(Enum):
 
 
 Definition = Union['Location', List['Location']]
-""" The definition of a symbol represented as one or many [locations](#Location).
+""" The definition of a symbol represented as one or many {@link Location locations}.
 For most programming languages there is only one location at which a symbol is
 defined.
 
@@ -570,7 +570,7 @@ by the client. """
 DefinitionLink = 'LocationLink'
 """ Information about where a symbol is defined.
 
-Provides additional metadata over normal [location](#Location) definitions, including the range of
+Provides additional metadata over normal {@link Location location} definitions, including the range of
 the defining symbol """
 
 LSPArray = List['LSPAny']
@@ -586,12 +586,12 @@ optional as well.
 @since 3.17.0 """
 
 Declaration = Union['Location', List['Location']]
-""" The declaration of a symbol representation as one or many [locations](#Location). """
+""" The declaration of a symbol representation as one or many {@link Location locations}. """
 
 DeclarationLink = 'LocationLink'
 """ Information about where a symbol is declared.
 
-Provides additional metadata over normal [location](#Location) declarations, including the range of
+Provides additional metadata over normal {@link Location location} declarations, including the range of
 the declaring symbol.
 
 Servers should prefer returning `DeclarationLink` over `Declaration` if supported
@@ -617,14 +617,14 @@ pull request.
 
 PrepareRenameResult = Union['Range', '__PrepareRenameResult_Type_1', '__PrepareRenameResult_Type_2']
 
-ProgressToken = Union[int, str]
-
 DocumentSelector = List['DocumentFilter']
 """ A document selector is the combination of one or many document filters.
 
 @sample `let sel:DocumentSelector = [{ language: 'typescript' }, { language: 'json', pattern: '**∕tsconfig.json' }]`;
 
 The use of a string as a document filter is deprecated @since 3.16.0. """
+
+ProgressToken = Union[int, str]
 
 ChangeAnnotationIdentifier = str
 """ An identifier to refer to a change annotation stored with a workspace edit. """
@@ -634,11 +634,11 @@ WorkspaceDocumentDiagnosticReport = Union['WorkspaceFullDocumentDiagnosticReport
 
 @since 3.17.0 """
 
-TextDocumentContentChangeEvent = Union['__TextDocumentContentChangeEvent_Type_3', '__TextDocumentContentChangeEvent_Type_4']
+TextDocumentContentChangeEvent = Union['__TextDocumentContentChangeEvent_Type_1', '__TextDocumentContentChangeEvent_Type_2']
 """ An event describing a change to a text document. If only a text is provided
 it is considered to be the full content of the document. """
 
-MarkedString = Union[str, '__MarkedString_Type_5']
+MarkedString = Union[str, '__MarkedString_Type_1']
 """ MarkedString can be used to render human readable text. It is either a markdown string
 or a code-block that provides a language and a code snippet. The language identifier
 is semantically equal to the optional language identifier in fenced code blocks in GitHub
@@ -658,15 +658,19 @@ a notebook cell document.
 
 @since 3.17.0 - proposed support for NotebookCellTextDocumentFilter. """
 
+LSPObject = Dict[str, 'LSPAny']
+""" LSP object definition.
+@since 3.17.0 """
+
 GlobPattern = Union['Pattern', 'RelativePattern']
 """ The glob pattern. Either a string pattern or a relative pattern.
 
 @since 3.17.0 """
 
-TextDocumentFilter = Union['__TextDocumentFilter_Type_6', '__TextDocumentFilter_Type_7', '__TextDocumentFilter_Type_8']
+TextDocumentFilter = Union['__TextDocumentFilter_Type_1', '__TextDocumentFilter_Type_2', '__TextDocumentFilter_Type_3']
 """ A document filter denotes a document by different properties like
-the [language](#TextDocument.languageId), the [scheme](#Uri.scheme) of
-its resource, or a glob-pattern that is applied to the [path](#TextDocument.fileName).
+the {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of
+its resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.
 
 Glob patterns can have the following syntax:
 - `*` to match one or more characters in a path segment
@@ -681,7 +685,7 @@ Glob patterns can have the following syntax:
 
 @since 3.17.0 """
 
-NotebookDocumentFilter = Union['__NotebookDocumentFilter_Type_9', '__NotebookDocumentFilter_Type_10', '__NotebookDocumentFilter_Type_11']
+NotebookDocumentFilter = Union['__NotebookDocumentFilter_Type_1', '__NotebookDocumentFilter_Type_2', '__NotebookDocumentFilter_Type_3']
 """ A notebook document filter denotes a notebook document by
 different properties. The properties will be match
 against the notebook's URI (same as with documents)
@@ -777,13 +781,6 @@ ConfigurationParams = TypedDict('ConfigurationParams', {
 """ The parameters of a configuration request. """
 
 
-PartialResultParams = TypedDict('PartialResultParams', {
-    # An optional token that a server can use to report partial results (e.g. streaming) to
-    # the client.
-    'partialResultToken': NotRequired['ProgressToken'],
-})
-
-
 DocumentColorParams = TypedDict('DocumentColorParams', {
     # The text document.
     'textDocument': 'TextDocumentIdentifier',
@@ -793,7 +790,7 @@ DocumentColorParams = TypedDict('DocumentColorParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [DocumentColorRequest](#DocumentColorRequest). """
+""" Parameters for a {@link DocumentColorRequest}. """
 
 
 ColorInformation = TypedDict('ColorInformation', {
@@ -828,7 +825,7 @@ ColorPresentationParams = TypedDict('ColorPresentationParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [ColorPresentationRequest](#ColorPresentationRequest). """
+""" Parameters for a {@link ColorPresentationRequest}. """
 
 
 ColorPresentation = TypedDict('ColorPresentation', {
@@ -836,12 +833,12 @@ ColorPresentation = TypedDict('ColorPresentation', {
     # picker header. By default this is also the text that is inserted when selecting
     # this color presentation.
     'label': str,
-    # An [edit](#TextEdit) which is applied to a document when selecting
-    # this presentation for the color.  When `falsy` the [label](#ColorPresentation.label)
+    # An {@link TextEdit edit} which is applied to a document when selecting
+    # this presentation for the color.  When `falsy` the {@link ColorPresentation.label label}
     # is used.
     'textEdit': NotRequired['TextEdit'],
-    # An optional array of additional [text edits](#TextEdit) that are applied when
-    # selecting this color presentation. Edits must not overlap with the main [edit](#ColorPresentation.textEdit) nor with themselves.
+    # An optional array of additional {@link TextEdit text edits} that are applied when
+    # selecting this color presentation. Edits must not overlap with the main {@link ColorPresentation.textEdit edit} nor with themselves.
     'additionalTextEdits': NotRequired[List['TextEdit']],
 })
 
@@ -868,7 +865,7 @@ FoldingRangeParams = TypedDict('FoldingRangeParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [FoldingRangeRequest](#FoldingRangeRequest). """
+""" Parameters for a {@link FoldingRangeRequest}. """
 
 
 FoldingRange = TypedDict('FoldingRange', {
@@ -884,7 +881,7 @@ FoldingRange = TypedDict('FoldingRange', {
     'endCharacter': NotRequired[Uint],
     # Describes the kind of the folding range such as `comment' or 'region'. The kind
     # is used to categorize folding ranges and used by commands like 'Fold all comments'.
-    # See [FoldingRangeKind](#FoldingRangeKind) for an enumeration of standardized kinds.
+    # See {@link FoldingRangeKind} for an enumeration of standardized kinds.
     'kind': NotRequired['FoldingRangeKind'],
     # The text that the client should show when the specified range is
     # collapsed. If not defined or not supported by the client, a default
@@ -945,7 +942,7 @@ SelectionRangeParams = TypedDict('SelectionRangeParams', {
 
 
 SelectionRange = TypedDict('SelectionRange', {
-    # The [range](#Range) of this selection range.
+    # The {@link Range range} of this selection range.
     'range': 'Range',
     # The parent selection range containing this range. Therefore `parent.range` must contain `this.range`.
     'parent': NotRequired['SelectionRange'],
@@ -1003,7 +1000,7 @@ CallHierarchyItem = TypedDict('CallHierarchyItem', {
     # The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code.
     'range': 'Range',
     # The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
-    # Must be contained by the [`range`](#CallHierarchyItem.range).
+    # Must be contained by the {@link CallHierarchyItem.range `range`}.
     'selectionRange': 'Range',
     # A data entry field that is preserved between a call hierarchy prepare and
     # incoming calls or outgoing calls requests.
@@ -1045,7 +1042,7 @@ CallHierarchyIncomingCall = TypedDict('CallHierarchyIncomingCall', {
     # The item that makes the call.
     'from': 'CallHierarchyItem',
     # The ranges at which the calls appear. This is relative to the caller
-    # denoted by [`this.from`](#CallHierarchyIncomingCall.from).
+    # denoted by {@link CallHierarchyIncomingCall.from `this.from`}.
     'fromRanges': List['Range'],
 })
 """ Represents an incoming call, e.g. a caller of a method or constructor.
@@ -1070,8 +1067,8 @@ CallHierarchyOutgoingCall = TypedDict('CallHierarchyOutgoingCall', {
     # The item that is called.
     'to': 'CallHierarchyItem',
     # The range at which this item is called. This is the range relative to the caller, e.g the item
-    # passed to [`provideCallHierarchyOutgoingCalls`](#CallHierarchyItemProvider.provideCallHierarchyOutgoingCalls)
-    # and not [`this.to`](#CallHierarchyOutgoingCall.to).
+    # passed to {@link CallHierarchyItemProvider.provideCallHierarchyOutgoingCalls `provideCallHierarchyOutgoingCalls`}
+    # and not {@link CallHierarchyOutgoingCall.to `this.to`}.
     'fromRanges': List['Range'],
 })
 """ Represents an outgoing call, e.g. calling a getter from a method or a method from a constructor etc.
@@ -1119,7 +1116,7 @@ SemanticTokensRegistrationOptions = TypedDict('SemanticTokensRegistrationOptions
     # of a document.
     'range': NotRequired[Union[bool, dict]],
     # Server supports providing semantic tokens for a full document.
-    'full': NotRequired[Union[bool, '__Full_Type_12']],
+    'full': NotRequired[Union[bool, '__SemanticTokensOptions_full_Type_1']],
     # The id used to register the request. The id can be used to deregister
     # the request again. See also Registration#id.
     'id': NotRequired[str],
@@ -1377,7 +1374,7 @@ TypeHierarchyItem = TypedDict('TypeHierarchyItem', {
     'range': 'Range',
     # The range that should be selected and revealed when this symbol is being
     # picked, e.g. the name of a function. Must be contained by the
-    # [`range`](#TypeHierarchyItem.range).
+    # {@link TypeHierarchyItem.range `range`}.
     'selectionRange': 'Range',
     # A data entry field that is preserved between a type hierarchy prepare and
     # supertypes or subtypes requests. It could also be used to identify the
@@ -1694,7 +1691,7 @@ InitializeParams = TypedDict('InitializeParams', {
     # Information about the client
     #
     # @since 3.15.0
-    'clientInfo': NotRequired['__ClientInfo_Type_13'],
+    'clientInfo': NotRequired['___InitializeParams_clientInfo_Type_1'],
     # The locale the client is currently showing the user interface
     # in. This must not necessarily be the locale of the operating
     # system.
@@ -1720,7 +1717,7 @@ InitializeParams = TypedDict('InitializeParams', {
     # User provided initialization options.
     'initializationOptions': NotRequired['LSPAny'],
     # The initial trace setting. If omitted trace is disabled ('off').
-    'trace': NotRequired[Union[Literal['off'], Literal['messages'], Literal['compact'], Literal['verbose']]],
+    'trace': NotRequired['TraceValues'],
     # The workspace folders configured in the client when the server starts.
     #
     # This property is only available if the client supports workspace folders.
@@ -1738,7 +1735,7 @@ InitializeResult = TypedDict('InitializeResult', {
     # Information about the server.
     #
     # @since 3.15.0
-    'serverInfo': NotRequired['__ServerInfo_Type_14'],
+    'serverInfo': NotRequired['__InitializeResult_serverInfo_Type_1'],
 })
 """ The result returned from an initialize request. """
 
@@ -1969,15 +1966,15 @@ CompletionItem = TypedDict('CompletionItem', {
     # item of those that match best is selected.
     'preselect': NotRequired[bool],
     # A string that should be used when comparing this item
-    # with other items. When `falsy` the [label](#CompletionItem.label)
+    # with other items. When `falsy` the {@link CompletionItem.label label}
     # is used.
     'sortText': NotRequired[str],
     # A string that should be used when filtering a set of
-    # completion items. When `falsy` the [label](#CompletionItem.label)
+    # completion items. When `falsy` the {@link CompletionItem.label label}
     # is used.
     'filterText': NotRequired[str],
     # A string that should be inserted into a document when selecting
-    # this completion. When `falsy` the [label](#CompletionItem.label)
+    # this completion. When `falsy` the {@link CompletionItem.label label}
     # is used.
     #
     # The `insertText` is subject to interpretation by the client side.
@@ -2001,9 +1998,9 @@ CompletionItem = TypedDict('CompletionItem', {
     #
     # @since 3.16.0
     'insertTextMode': NotRequired['InsertTextMode'],
-    # An [edit](#TextEdit) which is applied to a document when selecting
+    # An {@link TextEdit edit} which is applied to a document when selecting
     # this completion. When an edit is provided the value of
-    # [insertText](#CompletionItem.insertText) is ignored.
+    # {@link CompletionItem.insertText insertText} is ignored.
     #
     # Most editors support two different operations when accepting a completion
     # item. One is to insert a completion text and the other is to replace an
@@ -2033,9 +2030,9 @@ CompletionItem = TypedDict('CompletionItem', {
     #
     # @since 3.17.0
     'textEditText': NotRequired[str],
-    # An optional array of additional [text edits](#TextEdit) that are applied when
+    # An optional array of additional {@link TextEdit text edits} that are applied when
     # selecting this completion. Edits must not overlap (including the same insert position)
-    # with the main [edit](#CompletionItem.textEdit) nor with themselves.
+    # with the main {@link CompletionItem.textEdit edit} nor with themselves.
     #
     # Additional text edits should be used to change text unrelated to the current cursor position
     # (for example adding an import statement at the top of the file if the completion item will
@@ -2045,12 +2042,12 @@ CompletionItem = TypedDict('CompletionItem', {
     # then type that character. *Note* that all commit characters should have `length=1` and that superfluous
     # characters will be ignored.
     'commitCharacters': NotRequired[List[str]],
-    # An optional [command](#Command) that is executed *after* inserting this completion. *Note* that
+    # An optional {@link Command command} that is executed *after* inserting this completion. *Note* that
     # additional modifications to the current document should be described with the
-    # [additionalTextEdits](#CompletionItem.additionalTextEdits)-property.
+    # {@link CompletionItem.additionalTextEdits additionalTextEdits}-property.
     'command': NotRequired['Command'],
     # A data entry field that is preserved on a completion item between a
-    # [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest](#CompletionResolveRequest).
+    # {@link CompletionRequest} and a {@link CompletionResolveRequest}.
     'data': NotRequired['LSPAny'],
 })
 """ A completion item represents a text snippet that is
@@ -2076,11 +2073,11 @@ CompletionList = TypedDict('CompletionList', {
     # capability.
     #
     # @since 3.17.0
-    'itemDefaults': NotRequired['__ItemDefaults_Type_15'],
+    'itemDefaults': NotRequired['__CompletionList_itemDefaults_Type_1'],
     # The completion items.
     'items': List['CompletionItem'],
 })
-""" Represents a collection of [completion items](#CompletionItem) to be presented
+""" Represents a collection of {@link CompletionItem completion items} to be presented
 in the editor. """
 
 
@@ -2113,9 +2110,9 @@ CompletionRegistrationOptions = TypedDict('CompletionRegistrationOptions', {
     # capabilities.
     #
     # @since 3.17.0
-    'completionItem': NotRequired['__CompletionItem_Type_17'],
+    'completionItem': NotRequired['__CompletionOptions_completionItem_Type_1'],
 })
-""" Registration options for a [CompletionRequest](#CompletionRequest). """
+""" Registration options for a {@link CompletionRequest}. """
 
 
 HoverParams = TypedDict('HoverParams', {
@@ -2126,7 +2123,7 @@ HoverParams = TypedDict('HoverParams', {
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [HoverRequest](#HoverRequest). """
+""" Parameters for a {@link HoverRequest}. """
 
 
 Hover = TypedDict('Hover', {
@@ -2144,7 +2141,7 @@ HoverRegistrationOptions = TypedDict('HoverRegistrationOptions', {
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [HoverRequest](#HoverRequest). """
+""" Registration options for a {@link HoverRequest}. """
 
 
 SignatureHelpParams = TypedDict('SignatureHelpParams', {
@@ -2160,7 +2157,7 @@ SignatureHelpParams = TypedDict('SignatureHelpParams', {
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [SignatureHelpRequest](#SignatureHelpRequest). """
+""" Parameters for a {@link SignatureHelpRequest}. """
 
 
 SignatureHelp = TypedDict('SignatureHelp', {
@@ -2204,7 +2201,7 @@ SignatureHelpRegistrationOptions = TypedDict('SignatureHelpRegistrationOptions',
     # @since 3.15.0
     'retriggerCharacters': NotRequired[List[str]],
 })
-""" Registration options for a [SignatureHelpRequest](#SignatureHelpRequest). """
+""" Registration options for a {@link SignatureHelpRequest}. """
 
 
 DefinitionParams = TypedDict('DefinitionParams', {
@@ -2218,7 +2215,7 @@ DefinitionParams = TypedDict('DefinitionParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [DefinitionRequest](#DefinitionRequest). """
+""" Parameters for a {@link DefinitionRequest}. """
 
 
 DefinitionRegistrationOptions = TypedDict('DefinitionRegistrationOptions', {
@@ -2226,7 +2223,7 @@ DefinitionRegistrationOptions = TypedDict('DefinitionRegistrationOptions', {
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [DefinitionRequest](#DefinitionRequest). """
+""" Registration options for a {@link DefinitionRequest}. """
 
 
 ReferenceParams = TypedDict('ReferenceParams', {
@@ -2241,7 +2238,7 @@ ReferenceParams = TypedDict('ReferenceParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [ReferencesRequest](#ReferencesRequest). """
+""" Parameters for a {@link ReferencesRequest}. """
 
 
 ReferenceRegistrationOptions = TypedDict('ReferenceRegistrationOptions', {
@@ -2249,7 +2246,7 @@ ReferenceRegistrationOptions = TypedDict('ReferenceRegistrationOptions', {
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [ReferencesRequest](#ReferencesRequest). """
+""" Registration options for a {@link ReferencesRequest}. """
 
 
 DocumentHighlightParams = TypedDict('DocumentHighlightParams', {
@@ -2263,13 +2260,13 @@ DocumentHighlightParams = TypedDict('DocumentHighlightParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [DocumentHighlightRequest](#DocumentHighlightRequest). """
+""" Parameters for a {@link DocumentHighlightRequest}. """
 
 
 DocumentHighlight = TypedDict('DocumentHighlight', {
     # The range this highlight applies to.
     'range': 'Range',
-    # The highlight kind, default is [text](#DocumentHighlightKind.Text).
+    # The highlight kind, default is {@link DocumentHighlightKind.Text text}.
     'kind': NotRequired['DocumentHighlightKind'],
 })
 """ A document highlight is a range inside a text document which deserves
@@ -2282,7 +2279,7 @@ DocumentHighlightRegistrationOptions = TypedDict('DocumentHighlightRegistrationO
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [DocumentHighlightRequest](#DocumentHighlightRequest). """
+""" Registration options for a {@link DocumentHighlightRequest}. """
 
 
 DocumentSymbolParams = TypedDict('DocumentSymbolParams', {
@@ -2294,7 +2291,7 @@ DocumentSymbolParams = TypedDict('DocumentSymbolParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" Parameters for a [DocumentSymbolRequest](#DocumentSymbolRequest). """
+""" Parameters for a {@link DocumentSymbolRequest}. """
 
 
 SymbolInformation = TypedDict('SymbolInformation', {
@@ -2372,7 +2369,7 @@ DocumentSymbolRegistrationOptions = TypedDict('DocumentSymbolRegistrationOptions
     # @since 3.16.0
     'label': NotRequired[str],
 })
-""" Registration options for a [DocumentSymbolRequest](#DocumentSymbolRequest). """
+""" Registration options for a {@link DocumentSymbolRequest}. """
 
 
 CodeActionParams = TypedDict('CodeActionParams', {
@@ -2388,7 +2385,7 @@ CodeActionParams = TypedDict('CodeActionParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [CodeActionRequest](#CodeActionRequest). """
+""" The parameters of a {@link CodeActionRequest}. """
 
 
 Command = TypedDict('Command', {
@@ -2438,7 +2435,7 @@ CodeAction = TypedDict('CodeAction', {
     #     error message with `reason` in the editor.
     #
     # @since 3.16.0
-    'disabled': NotRequired['__Disabled_Type_18'],
+    'disabled': NotRequired['__CodeAction_disabled_Type_1'],
     # The workspace edit this code action performs.
     'edit': NotRequired['WorkspaceEdit'],
     # A command this code action executes. If a code action
@@ -2472,7 +2469,7 @@ CodeActionRegistrationOptions = TypedDict('CodeActionRegistrationOptions', {
     # @since 3.16.0
     'resolveProvider': NotRequired[bool],
 })
-""" Registration options for a [CodeActionRequest](#CodeActionRequest). """
+""" Registration options for a {@link CodeActionRequest}. """
 
 
 WorkspaceSymbolParams = TypedDict('WorkspaceSymbolParams', {
@@ -2485,7 +2482,7 @@ WorkspaceSymbolParams = TypedDict('WorkspaceSymbolParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest). """
+""" The parameters of a {@link WorkspaceSymbolRequest}. """
 
 
 WorkspaceSymbol = TypedDict('WorkspaceSymbol', {
@@ -2494,7 +2491,7 @@ WorkspaceSymbol = TypedDict('WorkspaceSymbol', {
     # capability `workspace.symbol.resolveSupport`.
     #
     # See SymbolInformation#location for more details.
-    'location': Union['Location', '__Location_Type_19'],
+    'location': Union['Location', '__WorkspaceSymbol_location_Type_1'],
     # A data entry field that is preserved on a workspace symbol between a
     # workspace symbol request and a workspace symbol resolve request.
     'data': NotRequired['LSPAny'],
@@ -2526,7 +2523,7 @@ WorkspaceSymbolRegistrationOptions = TypedDict('WorkspaceSymbolRegistrationOptio
     # @since 3.17.0
     'resolveProvider': NotRequired[bool],
 })
-""" Registration options for a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest). """
+""" Registration options for a {@link WorkspaceSymbolRequest}. """
 
 
 CodeLensParams = TypedDict('CodeLensParams', {
@@ -2538,7 +2535,7 @@ CodeLensParams = TypedDict('CodeLensParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [CodeLensRequest](#CodeLensRequest). """
+""" The parameters of a {@link CodeLensRequest}. """
 
 
 CodeLens = TypedDict('CodeLens', {
@@ -2547,11 +2544,11 @@ CodeLens = TypedDict('CodeLens', {
     # The command this code lens represents.
     'command': NotRequired['Command'],
     # A data entry field that is preserved on a code lens item between
-    # a [CodeLensRequest](#CodeLensRequest) and a [CodeLensResolveRequest]
+    # a {@link CodeLensRequest} and a [CodeLensResolveRequest]
     # (#CodeLensResolveRequest)
     'data': NotRequired['LSPAny'],
 })
-""" A code lens represents a [command](#Command) that should be shown along with
+""" A code lens represents a {@link Command command} that should be shown along with
 source text, like the number of references, a way to run tests, etc.
 
 A code lens is _unresolved_ when no command is associated to it. For performance
@@ -2565,7 +2562,7 @@ CodeLensRegistrationOptions = TypedDict('CodeLensRegistrationOptions', {
     # Code lens has a resolve provider as well.
     'resolveProvider': NotRequired[bool],
 })
-""" Registration options for a [CodeLensRequest](#CodeLensRequest). """
+""" Registration options for a {@link CodeLensRequest}. """
 
 
 DocumentLinkParams = TypedDict('DocumentLinkParams', {
@@ -2577,7 +2574,7 @@ DocumentLinkParams = TypedDict('DocumentLinkParams', {
     # the client.
     'partialResultToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [DocumentLinkRequest](#DocumentLinkRequest). """
+""" The parameters of a {@link DocumentLinkRequest}. """
 
 
 DocumentLink = TypedDict('DocumentLink', {
@@ -2608,7 +2605,7 @@ DocumentLinkRegistrationOptions = TypedDict('DocumentLinkRegistrationOptions', {
     # Document links have a resolve provider as well.
     'resolveProvider': NotRequired[bool],
 })
-""" Registration options for a [DocumentLinkRequest](#DocumentLinkRequest). """
+""" Registration options for a {@link DocumentLinkRequest}. """
 
 
 DocumentFormattingParams = TypedDict('DocumentFormattingParams', {
@@ -2619,7 +2616,7 @@ DocumentFormattingParams = TypedDict('DocumentFormattingParams', {
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [DocumentFormattingRequest](#DocumentFormattingRequest). """
+""" The parameters of a {@link DocumentFormattingRequest}. """
 
 
 DocumentFormattingRegistrationOptions = TypedDict('DocumentFormattingRegistrationOptions', {
@@ -2627,7 +2624,7 @@ DocumentFormattingRegistrationOptions = TypedDict('DocumentFormattingRegistratio
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [DocumentFormattingRequest](#DocumentFormattingRequest). """
+""" Registration options for a {@link DocumentFormattingRequest}. """
 
 
 DocumentRangeFormattingParams = TypedDict('DocumentRangeFormattingParams', {
@@ -2640,7 +2637,7 @@ DocumentRangeFormattingParams = TypedDict('DocumentRangeFormattingParams', {
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [DocumentRangeFormattingRequest](#DocumentRangeFormattingRequest). """
+""" The parameters of a {@link DocumentRangeFormattingRequest}. """
 
 
 DocumentRangeFormattingRegistrationOptions = TypedDict('DocumentRangeFormattingRegistrationOptions', {
@@ -2648,7 +2645,7 @@ DocumentRangeFormattingRegistrationOptions = TypedDict('DocumentRangeFormattingR
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
 })
-""" Registration options for a [DocumentRangeFormattingRequest](#DocumentRangeFormattingRequest). """
+""" Registration options for a {@link DocumentRangeFormattingRequest}. """
 
 
 DocumentOnTypeFormattingParams = TypedDict('DocumentOnTypeFormattingParams', {
@@ -2666,7 +2663,7 @@ DocumentOnTypeFormattingParams = TypedDict('DocumentOnTypeFormattingParams', {
     # The formatting options.
     'options': 'FormattingOptions',
 })
-""" The parameters of a [DocumentOnTypeFormattingRequest](#DocumentOnTypeFormattingRequest). """
+""" The parameters of a {@link DocumentOnTypeFormattingRequest}. """
 
 
 DocumentOnTypeFormattingRegistrationOptions = TypedDict('DocumentOnTypeFormattingRegistrationOptions', {
@@ -2678,7 +2675,7 @@ DocumentOnTypeFormattingRegistrationOptions = TypedDict('DocumentOnTypeFormattin
     # More trigger characters.
     'moreTriggerCharacter': NotRequired[List[str]],
 })
-""" Registration options for a [DocumentOnTypeFormattingRequest](#DocumentOnTypeFormattingRequest). """
+""" Registration options for a {@link DocumentOnTypeFormattingRequest}. """
 
 
 RenameParams = TypedDict('RenameParams', {
@@ -2687,13 +2684,13 @@ RenameParams = TypedDict('RenameParams', {
     # The position at which this request was sent.
     'position': 'Position',
     # The new name of the symbol. If the given name is not valid the
-    # request must return a [ResponseError](#ResponseError) with an
+    # request must return a {@link ResponseError} with an
     # appropriate message set.
     'newName': str,
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [RenameRequest](#RenameRequest). """
+""" The parameters of a {@link RenameRequest}. """
 
 
 RenameRegistrationOptions = TypedDict('RenameRegistrationOptions', {
@@ -2705,7 +2702,7 @@ RenameRegistrationOptions = TypedDict('RenameRegistrationOptions', {
     # @since version 3.12.0
     'prepareProvider': NotRequired[bool],
 })
-""" Registration options for a [RenameRequest](#RenameRequest). """
+""" Registration options for a {@link RenameRequest}. """
 
 
 PrepareRenameParams = TypedDict('PrepareRenameParams', {
@@ -2726,14 +2723,14 @@ ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
     # An optional token that a server can use to report work done progress.
     'workDoneToken': NotRequired['ProgressToken'],
 })
-""" The parameters of a [ExecuteCommandRequest](#ExecuteCommandRequest). """
+""" The parameters of a {@link ExecuteCommandRequest}. """
 
 
 ExecuteCommandRegistrationOptions = TypedDict('ExecuteCommandRegistrationOptions', {
     # The commands to be executed on the server
     'commands': List[str],
 })
-""" Registration options for a [ExecuteCommandRequest](#ExecuteCommandRequest). """
+""" Registration options for a {@link ExecuteCommandRequest}. """
 
 
 ApplyWorkspaceEditParams = TypedDict('ApplyWorkspaceEditParams', {
@@ -2863,6 +2860,13 @@ WorkDoneProgressParams = TypedDict('WorkDoneProgressParams', {
 })
 
 
+PartialResultParams = TypedDict('PartialResultParams', {
+    # An optional token that a server can use to report partial results (e.g. streaming) to
+    # the client.
+    'partialResultToken': NotRequired['ProgressToken'],
+})
+
+
 LocationLink = TypedDict('LocationLink', {
     # Span of the origin of this link.
     #
@@ -2879,7 +2883,7 @@ LocationLink = TypedDict('LocationLink', {
     # Must be contained by the `targetRange`. See also `DocumentSymbol#range`
     'targetSelectionRange': 'Range',
 })
-""" Represents the connection of two locations. Provides additional metadata over normal [locations](#Location),
+""" Represents the connection of two locations. Provides additional metadata over normal {@link Location locations},
 including an origin range. """
 
 
@@ -3037,7 +3041,7 @@ SemanticTokensOptions = TypedDict('SemanticTokensOptions', {
     # of a document.
     'range': NotRequired[Union[bool, dict]],
     # Server supports providing semantic tokens for a full document.
-    'full': NotRequired[Union[bool, '__Full_Type_20']],
+    'full': NotRequired[Union[bool, '__SemanticTokensOptions_full_Type_2']],
     'workDoneProgress': NotRequired[bool],
 })
 """ @since 3.16.0 """
@@ -3482,7 +3486,7 @@ NotebookDocumentChangeEvent = TypedDict('NotebookDocumentChangeEvent', {
     # Note: should always be an object literal (e.g. LSPObject)
     'metadata': NotRequired['LSPObject'],
     # Changes to cells
-    'cells': NotRequired['__Cells_Type_21'],
+    'cells': NotRequired['__NotebookDocumentChangeEvent_cells_Type_1'],
 })
 """ A change event for a notebook document.
 
@@ -3632,7 +3636,7 @@ ServerCapabilities = TypedDict('ServerCapabilities', {
     # @since 3.17.0
     'diagnosticProvider': NotRequired[Union['DiagnosticOptions', 'DiagnosticRegistrationOptions']],
     # Workspace specific server capabilities.
-    'workspace': NotRequired['__Workspace_Type_24'],
+    'workspace': NotRequired['__ServerCapabilities_workspace_Type_1'],
     # Experimental server capabilities.
     'experimental': NotRequired['LSPAny'],
 })
@@ -3775,7 +3779,7 @@ CompletionOptions = TypedDict('CompletionOptions', {
     # capabilities.
     #
     # @since 3.17.0
-    'completionItem': NotRequired['__CompletionItem_Type_25'],
+    'completionItem': NotRequired['__CompletionOptions_completionItem_Type_2'],
     'workDoneProgress': NotRequired[bool],
 })
 """ Completion options. """
@@ -3843,13 +3847,13 @@ SignatureHelpOptions = TypedDict('SignatureHelpOptions', {
     'retriggerCharacters': NotRequired[List[str]],
     'workDoneProgress': NotRequired[bool],
 })
-""" Server Capabilities for a [SignatureHelpRequest](#SignatureHelpRequest). """
+""" Server Capabilities for a {@link SignatureHelpRequest}. """
 
 
 DefinitionOptions = TypedDict('DefinitionOptions', {
     'workDoneProgress': NotRequired[bool],
 })
-""" Server Capabilities for a [DefinitionRequest](#DefinitionRequest). """
+""" Server Capabilities for a {@link DefinitionRequest}. """
 
 
 ReferenceContext = TypedDict('ReferenceContext', {
@@ -3869,7 +3873,7 @@ ReferenceOptions = TypedDict('ReferenceOptions', {
 DocumentHighlightOptions = TypedDict('DocumentHighlightOptions', {
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [DocumentHighlightRequest](#DocumentHighlightRequest). """
+""" Provider options for a {@link DocumentHighlightRequest}. """
 
 
 BaseSymbolInformation = TypedDict('BaseSymbolInformation', {
@@ -3898,7 +3902,7 @@ DocumentSymbolOptions = TypedDict('DocumentSymbolOptions', {
     'label': NotRequired[str],
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [DocumentSymbolRequest](#DocumentSymbolRequest). """
+""" Provider options for a {@link DocumentSymbolRequest}. """
 
 
 CodeActionContext = TypedDict('CodeActionContext', {
@@ -3919,7 +3923,7 @@ CodeActionContext = TypedDict('CodeActionContext', {
     'triggerKind': NotRequired['CodeActionTriggerKind'],
 })
 """ Contains additional diagnostic information about the context in which
-a [code action](#CodeActionProvider.provideCodeActions) is run. """
+a {@link CodeActionProvider.provideCodeActions code action} is run. """
 
 
 CodeActionOptions = TypedDict('CodeActionOptions', {
@@ -3935,7 +3939,7 @@ CodeActionOptions = TypedDict('CodeActionOptions', {
     'resolveProvider': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [CodeActionRequest](#CodeActionRequest). """
+""" Provider options for a {@link CodeActionRequest}. """
 
 
 WorkspaceSymbolOptions = TypedDict('WorkspaceSymbolOptions', {
@@ -3946,7 +3950,7 @@ WorkspaceSymbolOptions = TypedDict('WorkspaceSymbolOptions', {
     'resolveProvider': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
-""" Server capabilities for a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest). """
+""" Server capabilities for a {@link WorkspaceSymbolRequest}. """
 
 
 CodeLensOptions = TypedDict('CodeLensOptions', {
@@ -3954,7 +3958,7 @@ CodeLensOptions = TypedDict('CodeLensOptions', {
     'resolveProvider': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
-""" Code Lens provider options of a [CodeLensRequest](#CodeLensRequest). """
+""" Code Lens provider options of a {@link CodeLensRequest}. """
 
 
 DocumentLinkOptions = TypedDict('DocumentLinkOptions', {
@@ -3962,7 +3966,7 @@ DocumentLinkOptions = TypedDict('DocumentLinkOptions', {
     'resolveProvider': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [DocumentLinkRequest](#DocumentLinkRequest). """
+""" Provider options for a {@link DocumentLinkRequest}. """
 
 
 FormattingOptions = TypedDict('FormattingOptions', {
@@ -3989,13 +3993,13 @@ FormattingOptions = TypedDict('FormattingOptions', {
 DocumentFormattingOptions = TypedDict('DocumentFormattingOptions', {
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [DocumentFormattingRequest](#DocumentFormattingRequest). """
+""" Provider options for a {@link DocumentFormattingRequest}. """
 
 
 DocumentRangeFormattingOptions = TypedDict('DocumentRangeFormattingOptions', {
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [DocumentRangeFormattingRequest](#DocumentRangeFormattingRequest). """
+""" Provider options for a {@link DocumentRangeFormattingRequest}. """
 
 
 DocumentOnTypeFormattingOptions = TypedDict('DocumentOnTypeFormattingOptions', {
@@ -4004,7 +4008,7 @@ DocumentOnTypeFormattingOptions = TypedDict('DocumentOnTypeFormattingOptions', {
     # More trigger characters.
     'moreTriggerCharacter': NotRequired[List[str]],
 })
-""" Provider options for a [DocumentOnTypeFormattingRequest](#DocumentOnTypeFormattingRequest). """
+""" Provider options for a {@link DocumentOnTypeFormattingRequest}. """
 
 
 RenameOptions = TypedDict('RenameOptions', {
@@ -4014,7 +4018,7 @@ RenameOptions = TypedDict('RenameOptions', {
     'prepareProvider': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
-""" Provider options for a [RenameRequest](#RenameRequest). """
+""" Provider options for a {@link RenameRequest}. """
 
 
 ExecuteCommandOptions = TypedDict('ExecuteCommandOptions', {
@@ -4022,7 +4026,7 @@ ExecuteCommandOptions = TypedDict('ExecuteCommandOptions', {
     'commands': List[str],
     'workDoneProgress': NotRequired[bool],
 })
-""" The server capabilities of a [ExecuteCommandRequest](#ExecuteCommandRequest). """
+""" The server capabilities of a {@link ExecuteCommandRequest}. """
 
 
 SemanticTokensLegend = TypedDict('SemanticTokensLegend', {
@@ -4162,13 +4166,6 @@ WorkspaceUnchangedDocumentDiagnosticReport = TypedDict('WorkspaceUnchangedDocume
 @since 3.17.0 """
 
 
-LSPObject = TypedDict('LSPObject', {
-
-})
-""" LSP object definition.
-@since 3.17.0 """
-
-
 NotebookCell = TypedDict('NotebookCell', {
     # The cell's kind
     'kind': 'NotebookCellKind',
@@ -4248,7 +4245,7 @@ TextDocumentSyncOptions = TypedDict('TextDocumentSyncOptions', {
 
 NotebookDocumentSyncOptions = TypedDict('NotebookDocumentSyncOptions', {
     # The notebooks to be synced
-    'notebookSelector': List[Union['__NotebookSelector_Type_26', '__NotebookSelector_Type_28']],
+    'notebookSelector': List[Union['__NotebookDocumentSyncOptions_notebookSelector_Type_1', '__NotebookDocumentSyncOptions_notebookSelector_Type_2']],
     # Whether save notification should be forwarded to
     # the server. Will only be honored if mode === `notebook`.
     'save': NotRequired[bool],
@@ -4270,7 +4267,7 @@ cell will be synced.
 
 NotebookDocumentSyncRegistrationOptions = TypedDict('NotebookDocumentSyncRegistrationOptions', {
     # The notebooks to be synced
-    'notebookSelector': List[Union['__NotebookSelector_Type_30', '__NotebookSelector_Type_32']],
+    'notebookSelector': List[Union['__NotebookDocumentSyncOptions_notebookSelector_Type_3', '__NotebookDocumentSyncOptions_notebookSelector_Type_4']],
     # Whether save notification should be forwarded to
     # the server. Will only be honored if mode === `notebook`.
     'save': NotRequired[bool],
@@ -4582,7 +4579,7 @@ GeneralClientCapabilities = TypedDict('GeneralClientCapabilities', {
     # anymore since the information is outdated).
     #
     # @since 3.17.0
-    'staleRequestSupport': NotRequired['__StaleRequestSupport_Type_34'],
+    'staleRequestSupport': NotRequired['__GeneralClientCapabilities_staleRequestSupport_Type_1'],
     # Client capabilities specific to regular expressions.
     #
     # @since 3.16.0
@@ -4655,7 +4652,7 @@ WorkspaceEditClientCapabilities = TypedDict('WorkspaceEditClientCapabilities', {
     # create file, rename file and delete file changes.
     #
     # @since 3.16.0
-    'changeAnnotationSupport': NotRequired['__ChangeAnnotationSupport_Type_35'],
+    'changeAnnotationSupport': NotRequired['__WorkspaceEditClientCapabilities_changeAnnotationSupport_Type_1'],
 })
 
 
@@ -4682,27 +4679,27 @@ WorkspaceSymbolClientCapabilities = TypedDict('WorkspaceSymbolClientCapabilities
     # Symbol request supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
     # Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
-    'symbolKind': NotRequired['__SymbolKind_Type_36'],
+    'symbolKind': NotRequired['__WorkspaceSymbolClientCapabilities_symbolKind_Type_1'],
     # The client supports tags on `SymbolInformation`.
     # Clients supporting tags have to handle unknown tags gracefully.
     #
     # @since 3.16.0
-    'tagSupport': NotRequired['__TagSupport_Type_37'],
+    'tagSupport': NotRequired['__WorkspaceSymbolClientCapabilities_tagSupport_Type_1'],
     # The client support partial workspace symbols. The client will send the
     # request `workspaceSymbol/resolve` to the server to resolve additional
     # properties.
     #
     # @since 3.17.0
-    'resolveSupport': NotRequired['__ResolveSupport_Type_38'],
+    'resolveSupport': NotRequired['__WorkspaceSymbolClientCapabilities_resolveSupport_Type_1'],
 })
-""" Client capabilities for a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest). """
+""" Client capabilities for a {@link WorkspaceSymbolRequest}. """
 
 
 ExecuteCommandClientCapabilities = TypedDict('ExecuteCommandClientCapabilities', {
     # Execute command supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" The client capabilities of a [ExecuteCommandRequest](#ExecuteCommandRequest). """
+""" The client capabilities of a {@link ExecuteCommandRequest}. """
 
 
 SemanticTokensWorkspaceClientCapabilities = TypedDict('SemanticTokensWorkspaceClientCapabilities', {
@@ -4819,8 +4816,8 @@ CompletionClientCapabilities = TypedDict('CompletionClientCapabilities', {
     'dynamicRegistration': NotRequired[bool],
     # The client supports the following `CompletionItem` specific
     # capabilities.
-    'completionItem': NotRequired['__CompletionItem_Type_39'],
-    'completionItemKind': NotRequired['__CompletionItemKind_Type_43'],
+    'completionItem': NotRequired['__CompletionClientCapabilities_completionItem_Type_1'],
+    'completionItemKind': NotRequired['__CompletionClientCapabilities_completionItemKind_Type_1'],
     # Defines how the client handles whitespace and indentation
     # when accepting a completion item that uses multi line
     # text in either `insertText` or `textEdit`.
@@ -4834,7 +4831,7 @@ CompletionClientCapabilities = TypedDict('CompletionClientCapabilities', {
     # capabilities.
     #
     # @since 3.17.0
-    'completionList': NotRequired['__CompletionList_Type_44'],
+    'completionList': NotRequired['__CompletionClientCapabilities_completionList_Type_1'],
 })
 """ Completion client capabilities """
 
@@ -4853,7 +4850,7 @@ SignatureHelpClientCapabilities = TypedDict('SignatureHelpClientCapabilities', {
     'dynamicRegistration': NotRequired[bool],
     # The client supports the following `SignatureInformation`
     # specific properties.
-    'signatureInformation': NotRequired['__SignatureInformation_Type_45'],
+    'signatureInformation': NotRequired['__SignatureHelpClientCapabilities_signatureInformation_Type_1'],
     # The client supports to send additional context information for a
     # `textDocument/signatureHelp` request. A client that opts into
     # contextSupport will also support the `retriggerCharacters` on
@@ -4862,7 +4859,7 @@ SignatureHelpClientCapabilities = TypedDict('SignatureHelpClientCapabilities', {
     # @since 3.15.0
     'contextSupport': NotRequired[bool],
 })
-""" Client Capabilities for a [SignatureHelpRequest](#SignatureHelpRequest). """
+""" Client Capabilities for a {@link SignatureHelpRequest}. """
 
 
 DeclarationClientCapabilities = TypedDict('DeclarationClientCapabilities', {
@@ -4884,7 +4881,7 @@ DefinitionClientCapabilities = TypedDict('DefinitionClientCapabilities', {
     # @since 3.14.0
     'linkSupport': NotRequired[bool],
 })
-""" Client Capabilities for a [DefinitionRequest](#DefinitionRequest). """
+""" Client Capabilities for a {@link DefinitionRequest}. """
 
 
 TypeDefinitionClientCapabilities = TypedDict('TypeDefinitionClientCapabilities', {
@@ -4917,14 +4914,14 @@ ReferenceClientCapabilities = TypedDict('ReferenceClientCapabilities', {
     # Whether references supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" Client Capabilities for a [ReferencesRequest](#ReferencesRequest). """
+""" Client Capabilities for a {@link ReferencesRequest}. """
 
 
 DocumentHighlightClientCapabilities = TypedDict('DocumentHighlightClientCapabilities', {
     # Whether document highlight supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" Client Capabilities for a [DocumentHighlightRequest](#DocumentHighlightRequest). """
+""" Client Capabilities for a {@link DocumentHighlightRequest}. """
 
 
 DocumentSymbolClientCapabilities = TypedDict('DocumentSymbolClientCapabilities', {
@@ -4932,7 +4929,7 @@ DocumentSymbolClientCapabilities = TypedDict('DocumentSymbolClientCapabilities',
     'dynamicRegistration': NotRequired[bool],
     # Specific capabilities for the `SymbolKind` in the
     # `textDocument/documentSymbol` request.
-    'symbolKind': NotRequired['__SymbolKind_Type_47'],
+    'symbolKind': NotRequired['__DocumentSymbolClientCapabilities_symbolKind_Type_1'],
     # The client supports hierarchical document symbols.
     'hierarchicalDocumentSymbolSupport': NotRequired[bool],
     # The client supports tags on `SymbolInformation`. Tags are supported on
@@ -4940,14 +4937,14 @@ DocumentSymbolClientCapabilities = TypedDict('DocumentSymbolClientCapabilities',
     # Clients supporting tags have to handle unknown tags gracefully.
     #
     # @since 3.16.0
-    'tagSupport': NotRequired['__TagSupport_Type_48'],
+    'tagSupport': NotRequired['__DocumentSymbolClientCapabilities_tagSupport_Type_1'],
     # The client supports an additional label presented in the UI when
     # registering a document symbol provider.
     #
     # @since 3.16.0
     'labelSupport': NotRequired[bool],
 })
-""" Client Capabilities for a [DocumentSymbolRequest](#DocumentSymbolRequest). """
+""" Client Capabilities for a {@link DocumentSymbolRequest}. """
 
 
 CodeActionClientCapabilities = TypedDict('CodeActionClientCapabilities', {
@@ -4958,7 +4955,7 @@ CodeActionClientCapabilities = TypedDict('CodeActionClientCapabilities', {
     # set the request can only return `Command` literals.
     #
     # @since 3.8.0
-    'codeActionLiteralSupport': NotRequired['__CodeActionLiteralSupport_Type_49'],
+    'codeActionLiteralSupport': NotRequired['__CodeActionClientCapabilities_codeActionLiteralSupport_Type_1'],
     # Whether code action supports the `isPreferred` property.
     #
     # @since 3.15.0
@@ -4977,7 +4974,7 @@ CodeActionClientCapabilities = TypedDict('CodeActionClientCapabilities', {
     # properties via a separate `codeAction/resolve` request.
     #
     # @since 3.16.0
-    'resolveSupport': NotRequired['__ResolveSupport_Type_51'],
+    'resolveSupport': NotRequired['__CodeActionClientCapabilities_resolveSupport_Type_1'],
     # Whether the client honors the change annotations in
     # text edits and resource operations returned via the
     # `CodeAction#edit` property by for example presenting
@@ -4987,14 +4984,14 @@ CodeActionClientCapabilities = TypedDict('CodeActionClientCapabilities', {
     # @since 3.16.0
     'honorsChangeAnnotations': NotRequired[bool],
 })
-""" The Client Capabilities of a [CodeActionRequest](#CodeActionRequest). """
+""" The Client Capabilities of a {@link CodeActionRequest}. """
 
 
 CodeLensClientCapabilities = TypedDict('CodeLensClientCapabilities', {
     # Whether code lens supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" The client capabilities  of a [CodeLensRequest](#CodeLensRequest). """
+""" The client capabilities  of a {@link CodeLensRequest}. """
 
 
 DocumentLinkClientCapabilities = TypedDict('DocumentLinkClientCapabilities', {
@@ -5005,7 +5002,7 @@ DocumentLinkClientCapabilities = TypedDict('DocumentLinkClientCapabilities', {
     # @since 3.15.0
     'tooltipSupport': NotRequired[bool],
 })
-""" The client capabilities of a [DocumentLinkRequest](#DocumentLinkRequest). """
+""" The client capabilities of a {@link DocumentLinkRequest}. """
 
 
 DocumentColorClientCapabilities = TypedDict('DocumentColorClientCapabilities', {
@@ -5020,21 +5017,21 @@ DocumentFormattingClientCapabilities = TypedDict('DocumentFormattingClientCapabi
     # Whether formatting supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" Client capabilities of a [DocumentFormattingRequest](#DocumentFormattingRequest). """
+""" Client capabilities of a {@link DocumentFormattingRequest}. """
 
 
 DocumentRangeFormattingClientCapabilities = TypedDict('DocumentRangeFormattingClientCapabilities', {
     # Whether range formatting supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" Client capabilities of a [DocumentRangeFormattingRequest](#DocumentRangeFormattingRequest). """
+""" Client capabilities of a {@link DocumentRangeFormattingRequest}. """
 
 
 DocumentOnTypeFormattingClientCapabilities = TypedDict('DocumentOnTypeFormattingClientCapabilities', {
     # Whether on type formatting supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
 })
-""" Client capabilities of a [DocumentOnTypeFormattingRequest](#DocumentOnTypeFormattingRequest). """
+""" Client capabilities of a {@link DocumentOnTypeFormattingRequest}. """
 
 
 RenameClientCapabilities = TypedDict('RenameClientCapabilities', {
@@ -5080,11 +5077,11 @@ FoldingRangeClientCapabilities = TypedDict('FoldingRangeClientCapabilities', {
     # Specific options for the folding range kind.
     #
     # @since 3.17.0
-    'foldingRangeKind': NotRequired['__FoldingRangeKind_Type_52'],
+    'foldingRangeKind': NotRequired['__FoldingRangeClientCapabilities_foldingRangeKind_Type_1'],
     # Specific options for the folding range.
     #
     # @since 3.17.0
-    'foldingRange': NotRequired['__FoldingRange_Type_53'],
+    'foldingRange': NotRequired['__FoldingRangeClientCapabilities_foldingRange_Type_1'],
 })
 
 
@@ -5103,7 +5100,7 @@ PublishDiagnosticsClientCapabilities = TypedDict('PublishDiagnosticsClientCapabi
     # Clients supporting tags have to handle unknown tags gracefully.
     #
     # @since 3.15.0
-    'tagSupport': NotRequired['__TagSupport_Type_54'],
+    'tagSupport': NotRequired['__PublishDiagnosticsClientCapabilities_tagSupport_Type_1'],
     # Whether the client interprets the version property of the
     # `textDocument/publishDiagnostics` notification's parameter.
     #
@@ -5145,7 +5142,7 @@ SemanticTokensClientCapabilities = TypedDict('SemanticTokensClientCapabilities',
     # `request.range` are both set to true but the server only provides a
     # range provider the client might not render a minimap correctly or might
     # even decide to not show any semantic tokens at all.
-    'requests': '__Requests_Type_55',
+    'requests': '__SemanticTokensClientCapabilities_requests_Type_1',
     # The token types that the client supports.
     'tokenTypes': List[str],
     # The token modifiers that the client supports.
@@ -5223,7 +5220,7 @@ InlayHintClientCapabilities = TypedDict('InlayHintClientCapabilities', {
     'dynamicRegistration': NotRequired[bool],
     # Indicates which properties a client can resolve lazily on an inlay
     # hint.
-    'resolveSupport': NotRequired['__ResolveSupport_Type_57'],
+    'resolveSupport': NotRequired['__InlayHintClientCapabilities_resolveSupport_Type_1'],
 })
 """ Inlay hint client capabilities.
 
@@ -5259,7 +5256,7 @@ NotebookDocumentSyncClientCapabilities = TypedDict('NotebookDocumentSyncClientCa
 
 ShowMessageRequestClientCapabilities = TypedDict('ShowMessageRequestClientCapabilities', {
     # Capabilities specific to the `MessageActionItem` type.
-    'messageActionItem': NotRequired['__MessageActionItem_Type_58'],
+    'messageActionItem': NotRequired['__ShowMessageRequestClientCapabilities_messageActionItem_Type_1'],
 })
 """ Show message request client capabilities """
 
@@ -5301,164 +5298,29 @@ MarkdownClientCapabilities = TypedDict('MarkdownClientCapabilities', {
 @since 3.16.0 """
 
 
-__PrepareRenameResult_Type_1 = TypedDict('__PrepareRenameResult_Type_1', {
-    'range': 'Range',
-    'placeholder': str,
+__CodeActionClientCapabilities_codeActionLiteralSupport_Type_1 = TypedDict('__CodeActionClientCapabilities_codeActionLiteralSupport_Type_1', {
+    # The code action kind is support with the following value
+    # set.
+    'codeActionKind': '__CodeActionClientCapabilities_codeActionLiteralSupport_codeActionKind_Type_1',
 })
 
 
-__PrepareRenameResult_Type_2 = TypedDict('__PrepareRenameResult_Type_2', {
-    'defaultBehavior': bool,
+__CodeActionClientCapabilities_codeActionLiteralSupport_codeActionKind_Type_1 = TypedDict('__CodeActionClientCapabilities_codeActionLiteralSupport_codeActionKind_Type_1', {
+    # The code action kind values the client supports. When this
+    # property exists the client also guarantees that it will
+    # handle values outside its set gracefully and falls back
+    # to a default value when unknown.
+    'valueSet': List['CodeActionKind'],
 })
 
 
-__TextDocumentContentChangeEvent_Type_3 = TypedDict('__TextDocumentContentChangeEvent_Type_3', {
-    # The range of the document that changed.
-    'range': 'Range',
-    # The optional length of the range that got replaced.
-    #
-    # @deprecated use range instead.
-    'rangeLength': NotRequired[Uint],
-    # The new text for the provided range.
-    'text': str,
+__CodeActionClientCapabilities_resolveSupport_Type_1 = TypedDict('__CodeActionClientCapabilities_resolveSupport_Type_1', {
+    # The properties that a client can resolve lazily.
+    'properties': List[str],
 })
 
 
-__TextDocumentContentChangeEvent_Type_4 = TypedDict('__TextDocumentContentChangeEvent_Type_4', {
-    # The new text of the whole document.
-    'text': str,
-})
-
-
-__MarkedString_Type_5 = TypedDict('__MarkedString_Type_5', {
-    'language': str,
-    'value': str,
-})
-
-
-__TextDocumentFilter_Type_6 = TypedDict('__TextDocumentFilter_Type_6', {
-    # A language id, like `typescript`.
-    'language': str,
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
-    'pattern': NotRequired[str],
-})
-
-
-__TextDocumentFilter_Type_7 = TypedDict('__TextDocumentFilter_Type_7', {
-    # A language id, like `typescript`.
-    'language': NotRequired[str],
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': str,
-    # A glob pattern, like `*.{ts,js}`.
-    'pattern': NotRequired[str],
-})
-
-
-__TextDocumentFilter_Type_8 = TypedDict('__TextDocumentFilter_Type_8', {
-    # A language id, like `typescript`.
-    'language': NotRequired[str],
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
-    'pattern': str,
-})
-
-
-__NotebookDocumentFilter_Type_9 = TypedDict('__NotebookDocumentFilter_Type_9', {
-    # The type of the enclosing notebook.
-    'notebookType': str,
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': NotRequired[str],
-    # A glob pattern.
-    'pattern': NotRequired[str],
-})
-
-
-__NotebookDocumentFilter_Type_10 = TypedDict('__NotebookDocumentFilter_Type_10', {
-    # The type of the enclosing notebook.
-    'notebookType': NotRequired[str],
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': str,
-    # A glob pattern.
-    'pattern': NotRequired[str],
-})
-
-
-__NotebookDocumentFilter_Type_11 = TypedDict('__NotebookDocumentFilter_Type_11', {
-    # The type of the enclosing notebook.
-    'notebookType': NotRequired[str],
-    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    'scheme': NotRequired[str],
-    # A glob pattern.
-    'pattern': str,
-})
-
-
-__Full_Type_12 = TypedDict('__Full_Type_12', {
-    # The server supports deltas for full documents.
-    'delta': NotRequired[bool],
-})
-
-
-__ClientInfo_Type_13 = TypedDict('__ClientInfo_Type_13', {
-    # The name of the client as defined by the client.
-    'name': str,
-    # The client's version as defined by the client.
-    'version': NotRequired[str],
-})
-
-
-__ServerInfo_Type_14 = TypedDict('__ServerInfo_Type_14', {
-    # The name of the server as defined by the server.
-    'name': str,
-    # The server's version as defined by the server.
-    'version': NotRequired[str],
-})
-
-
-__EditRange_Type_15 = TypedDict('__EditRange_Type_15', {
-    'insert': 'Range',
-    'replace': 'Range',
-})
-
-
-__ItemDefaults_Type_15 = TypedDict('__ItemDefaults_Type_15', {
-    # A default commit character set.
-    #
-    # @since 3.17.0
-    'commitCharacters': NotRequired[List[str]],
-    # A default edit range.
-    #
-    # @since 3.17.0
-    'editRange': NotRequired[Union['Range', '__EditRange_Type_15']],
-    # A default insert text format.
-    #
-    # @since 3.17.0
-    'insertTextFormat': NotRequired['InsertTextFormat'],
-    # A default insert text mode.
-    #
-    # @since 3.17.0
-    'insertTextMode': NotRequired['InsertTextMode'],
-    # A default data value.
-    #
-    # @since 3.17.0
-    'data': NotRequired['LSPAny'],
-})
-
-
-__CompletionItem_Type_17 = TypedDict('__CompletionItem_Type_17', {
-    # The server has support for completion item label
-    # details (see also `CompletionItemLabelDetails`) when
-    # receiving a completion item in a resolve call.
-    #
-    # @since 3.17.0
-    'labelDetailsSupport': NotRequired[bool],
-})
-
-
-__Disabled_Type_18 = TypedDict('__Disabled_Type_18', {
+__CodeAction_disabled_Type_1 = TypedDict('__CodeAction_disabled_Type_1', {
     # Human readable description of why the code action is currently disabled.
     #
     # This is displayed in the code actions UI.
@@ -5466,189 +5328,20 @@ __Disabled_Type_18 = TypedDict('__Disabled_Type_18', {
 })
 
 
-__Location_Type_19 = TypedDict('__Location_Type_19', {
-    'uri': 'DocumentUri',
-})
-
-
-__Full_Type_20 = TypedDict('__Full_Type_20', {
-    # The server supports deltas for full documents.
-    'delta': NotRequired[bool],
-})
-
-
-__Structure_Type_21 = TypedDict('__Structure_Type_21', {
-    # The change to the cell array.
-    'array': 'NotebookCellArrayChange',
-    # Additional opened cell text documents.
-    'didOpen': NotRequired[List['TextDocumentItem']],
-    # Additional closed cell text documents.
-    'didClose': NotRequired[List['TextDocumentIdentifier']],
-})
-
-
-__TextContent_Type_22 = TypedDict('__TextContent_Type_22', {
-    'document': 'VersionedTextDocumentIdentifier',
-    'changes': List['TextDocumentContentChangeEvent'],
-})
-
-
-__Cells_Type_21 = TypedDict('__Cells_Type_21', {
-    # Changes to the cell structure to add or
-    # remove cells.
-    'structure': NotRequired['__Structure_Type_21'],
-    # Changes to notebook cells properties like its
-    # kind, execution summary or metadata.
-    'data': NotRequired[List['NotebookCell']],
-    # Changes to the text content of notebook cells.
-    'textContent': NotRequired[List['__TextContent_Type_22']],
-})
-
-
-__Workspace_Type_24 = TypedDict('__Workspace_Type_24', {
-    # The server supports workspace folder.
-    #
-    # @since 3.6.0
-    'workspaceFolders': NotRequired['WorkspaceFoldersServerCapabilities'],
-    # The server is interested in notifications/requests for operations on files.
-    #
-    # @since 3.16.0
-    'fileOperations': NotRequired['FileOperationOptions'],
-})
-
-
-__CompletionItem_Type_25 = TypedDict('__CompletionItem_Type_25', {
-    # The server has support for completion item label
-    # details (see also `CompletionItemLabelDetails`) when
-    # receiving a completion item in a resolve call.
-    #
-    # @since 3.17.0
-    'labelDetailsSupport': NotRequired[bool],
-})
-
-
-__Cells_Type_26 = TypedDict('__Cells_Type_26', {
-    'language': str,
-})
-
-
-__NotebookSelector_Type_26 = TypedDict('__NotebookSelector_Type_26', {
-    # The notebook to be synced If a string
-    # value is provided it matches against the
-    # notebook type. '*' matches every notebook.
-    'notebook': Union[str, 'NotebookDocumentFilter'],
-    # The cells of the matching notebook to be synced.
-    'cells': NotRequired[List['__Cells_Type_26']],
-})
-
-
-__Cells_Type_28 = TypedDict('__Cells_Type_28', {
-    'language': str,
-})
-
-
-__NotebookSelector_Type_28 = TypedDict('__NotebookSelector_Type_28', {
-    # The notebook to be synced If a string
-    # value is provided it matches against the
-    # notebook type. '*' matches every notebook.
-    'notebook': NotRequired[Union[str, 'NotebookDocumentFilter']],
-    # The cells of the matching notebook to be synced.
-    'cells': List['__Cells_Type_28'],
-})
-
-
-__Cells_Type_30 = TypedDict('__Cells_Type_30', {
-    'language': str,
-})
-
-
-__NotebookSelector_Type_30 = TypedDict('__NotebookSelector_Type_30', {
-    # The notebook to be synced If a string
-    # value is provided it matches against the
-    # notebook type. '*' matches every notebook.
-    'notebook': Union[str, 'NotebookDocumentFilter'],
-    # The cells of the matching notebook to be synced.
-    'cells': NotRequired[List['__Cells_Type_30']],
-})
-
-
-__Cells_Type_32 = TypedDict('__Cells_Type_32', {
-    'language': str,
-})
-
-
-__NotebookSelector_Type_32 = TypedDict('__NotebookSelector_Type_32', {
-    # The notebook to be synced If a string
-    # value is provided it matches against the
-    # notebook type. '*' matches every notebook.
-    'notebook': NotRequired[Union[str, 'NotebookDocumentFilter']],
-    # The cells of the matching notebook to be synced.
-    'cells': List['__Cells_Type_32'],
-})
-
-
-__StaleRequestSupport_Type_34 = TypedDict('__StaleRequestSupport_Type_34', {
-    # The client will actively cancel the request.
-    'cancel': bool,
-    # The list of requests for which the client
-    # will retry the request if it receives a
-    # response with error code `ContentModified`
-    'retryOnContentModified': List[str],
-})
-
-
-__ChangeAnnotationSupport_Type_35 = TypedDict('__ChangeAnnotationSupport_Type_35', {
-    # Whether the client groups edits with equal labels into tree nodes,
-    # for instance all edits labelled with "Changes in Strings" would
-    # be a tree node.
-    'groupsOnLabel': NotRequired[bool],
-})
-
-
-__SymbolKind_Type_36 = TypedDict('__SymbolKind_Type_36', {
-    # The symbol kind values the client supports. When this
+__CompletionClientCapabilities_completionItemKind_Type_1 = TypedDict('__CompletionClientCapabilities_completionItemKind_Type_1', {
+    # The completion item kind values the client supports. When this
     # property exists the client also guarantees that it will
     # handle values outside its set gracefully and falls back
     # to a default value when unknown.
     #
     # If this property is not present the client only supports
-    # the symbol kinds from `File` to `Array` as defined in
+    # the completion items kinds from `Text` to `Reference` as defined in
     # the initial version of the protocol.
-    'valueSet': NotRequired[List['SymbolKind']],
+    'valueSet': NotRequired[List['CompletionItemKind']],
 })
 
 
-__TagSupport_Type_37 = TypedDict('__TagSupport_Type_37', {
-    # The tags supported by the client.
-    'valueSet': List['SymbolTag'],
-})
-
-
-__ResolveSupport_Type_38 = TypedDict('__ResolveSupport_Type_38', {
-    # The properties that a client can resolve lazily. Usually
-    # `location.range`
-    'properties': List[str],
-})
-
-
-__TagSupport_Type_39 = TypedDict('__TagSupport_Type_39', {
-    # The tags supported by the client.
-    'valueSet': List['CompletionItemTag'],
-})
-
-
-__ResolveSupport_Type_40 = TypedDict('__ResolveSupport_Type_40', {
-    # The properties that a client can resolve lazily.
-    'properties': List[str],
-})
-
-
-__InsertTextModeSupport_Type_41 = TypedDict('__InsertTextModeSupport_Type_41', {
-    'valueSet': List['InsertTextMode'],
-})
-
-
-__CompletionItem_Type_39 = TypedDict('__CompletionItem_Type_39', {
+__CompletionClientCapabilities_completionItem_Type_1 = TypedDict('__CompletionClientCapabilities_completionItem_Type_1', {
     # Client supports snippets as insert text.
     #
     # A snippet can define tab stops and placeholders with `$1`, `$2`
@@ -5671,7 +5364,7 @@ __CompletionItem_Type_39 = TypedDict('__CompletionItem_Type_39', {
     # a resolve call.
     #
     # @since 3.15.0
-    'tagSupport': NotRequired['__TagSupport_Type_39'],
+    'tagSupport': NotRequired['__CompletionClientCapabilities_completionItem_tagSupport_Type_1'],
     # Client support insert replace edit to control different behavior if a
     # completion item is inserted in the text or should replace text.
     #
@@ -5682,13 +5375,13 @@ __CompletionItem_Type_39 = TypedDict('__CompletionItem_Type_39', {
     # and `details` could be resolved lazily.
     #
     # @since 3.16.0
-    'resolveSupport': NotRequired['__ResolveSupport_Type_40'],
+    'resolveSupport': NotRequired['__CompletionClientCapabilities_completionItem_resolveSupport_Type_1'],
     # The client supports the `insertTextMode` property on
     # a completion item to override the whitespace handling mode
     # as defined by the client (see `insertTextMode`).
     #
     # @since 3.16.0
-    'insertTextModeSupport': NotRequired['__InsertTextModeSupport_Type_41'],
+    'insertTextModeSupport': NotRequired['__CompletionClientCapabilities_completionItem_insertTextModeSupport_Type_1'],
     # The client has support for completion item label
     # details (see also `CompletionItemLabelDetails`).
     #
@@ -5697,20 +5390,24 @@ __CompletionItem_Type_39 = TypedDict('__CompletionItem_Type_39', {
 })
 
 
-__CompletionItemKind_Type_43 = TypedDict('__CompletionItemKind_Type_43', {
-    # The completion item kind values the client supports. When this
-    # property exists the client also guarantees that it will
-    # handle values outside its set gracefully and falls back
-    # to a default value when unknown.
-    #
-    # If this property is not present the client only supports
-    # the completion items kinds from `Text` to `Reference` as defined in
-    # the initial version of the protocol.
-    'valueSet': NotRequired[List['CompletionItemKind']],
+__CompletionClientCapabilities_completionItem_insertTextModeSupport_Type_1 = TypedDict('__CompletionClientCapabilities_completionItem_insertTextModeSupport_Type_1', {
+    'valueSet': List['InsertTextMode'],
 })
 
 
-__CompletionList_Type_44 = TypedDict('__CompletionList_Type_44', {
+__CompletionClientCapabilities_completionItem_resolveSupport_Type_1 = TypedDict('__CompletionClientCapabilities_completionItem_resolveSupport_Type_1', {
+    # The properties that a client can resolve lazily.
+    'properties': List[str],
+})
+
+
+__CompletionClientCapabilities_completionItem_tagSupport_Type_1 = TypedDict('__CompletionClientCapabilities_completionItem_tagSupport_Type_1', {
+    # The tags supported by the client.
+    'valueSet': List['CompletionItemTag'],
+})
+
+
+__CompletionClientCapabilities_completionList_Type_1 = TypedDict('__CompletionClientCapabilities_completionList_Type_1', {
     # The client supports the following itemDefaults on
     # a completion list.
     #
@@ -5723,30 +5420,57 @@ __CompletionList_Type_44 = TypedDict('__CompletionList_Type_44', {
 })
 
 
-__ParameterInformation_Type_45 = TypedDict('__ParameterInformation_Type_45', {
-    # The client supports processing label offsets instead of a
-    # simple label string.
+__CompletionList_itemDefaults_Type_1 = TypedDict('__CompletionList_itemDefaults_Type_1', {
+    # A default commit character set.
     #
-    # @since 3.14.0
-    'labelOffsetSupport': NotRequired[bool],
+    # @since 3.17.0
+    'commitCharacters': NotRequired[List[str]],
+    # A default edit range.
+    #
+    # @since 3.17.0
+    'editRange': NotRequired[Union['Range', '__CompletionList_itemDefaults_editRange_Type_1']],
+    # A default insert text format.
+    #
+    # @since 3.17.0
+    'insertTextFormat': NotRequired['InsertTextFormat'],
+    # A default insert text mode.
+    #
+    # @since 3.17.0
+    'insertTextMode': NotRequired['InsertTextMode'],
+    # A default data value.
+    #
+    # @since 3.17.0
+    'data': NotRequired['LSPAny'],
 })
 
 
-__SignatureInformation_Type_45 = TypedDict('__SignatureInformation_Type_45', {
-    # Client supports the following content formats for the documentation
-    # property. The order describes the preferred format of the client.
-    'documentationFormat': NotRequired[List['MarkupKind']],
-    # Client capabilities specific to parameter information.
-    'parameterInformation': NotRequired['__ParameterInformation_Type_45'],
-    # The client supports the `activeParameter` property on `SignatureInformation`
-    # literal.
-    #
-    # @since 3.16.0
-    'activeParameterSupport': NotRequired[bool],
+__CompletionList_itemDefaults_editRange_Type_1 = TypedDict('__CompletionList_itemDefaults_editRange_Type_1', {
+    'insert': 'Range',
+    'replace': 'Range',
 })
 
 
-__SymbolKind_Type_47 = TypedDict('__SymbolKind_Type_47', {
+__CompletionOptions_completionItem_Type_1 = TypedDict('__CompletionOptions_completionItem_Type_1', {
+    # The server has support for completion item label
+    # details (see also `CompletionItemLabelDetails`) when
+    # receiving a completion item in a resolve call.
+    #
+    # @since 3.17.0
+    'labelDetailsSupport': NotRequired[bool],
+})
+
+
+__CompletionOptions_completionItem_Type_2 = TypedDict('__CompletionOptions_completionItem_Type_2', {
+    # The server has support for completion item label
+    # details (see also `CompletionItemLabelDetails`) when
+    # receiving a completion item in a resolve call.
+    #
+    # @since 3.17.0
+    'labelDetailsSupport': NotRequired[bool],
+})
+
+
+__DocumentSymbolClientCapabilities_symbolKind_Type_1 = TypedDict('__DocumentSymbolClientCapabilities_symbolKind_Type_1', {
     # The symbol kind values the client supports. When this
     # property exists the client also guarantees that it will
     # handle values outside its set gracefully and falls back
@@ -5759,35 +5483,13 @@ __SymbolKind_Type_47 = TypedDict('__SymbolKind_Type_47', {
 })
 
 
-__TagSupport_Type_48 = TypedDict('__TagSupport_Type_48', {
+__DocumentSymbolClientCapabilities_tagSupport_Type_1 = TypedDict('__DocumentSymbolClientCapabilities_tagSupport_Type_1', {
     # The tags supported by the client.
     'valueSet': List['SymbolTag'],
 })
 
 
-__CodeActionKind_Type_49 = TypedDict('__CodeActionKind_Type_49', {
-    # The code action kind values the client supports. When this
-    # property exists the client also guarantees that it will
-    # handle values outside its set gracefully and falls back
-    # to a default value when unknown.
-    'valueSet': List['CodeActionKind'],
-})
-
-
-__CodeActionLiteralSupport_Type_49 = TypedDict('__CodeActionLiteralSupport_Type_49', {
-    # The code action kind is support with the following value
-    # set.
-    'codeActionKind': '__CodeActionKind_Type_49',
-})
-
-
-__ResolveSupport_Type_51 = TypedDict('__ResolveSupport_Type_51', {
-    # The properties that a client can resolve lazily.
-    'properties': List[str],
-})
-
-
-__FoldingRangeKind_Type_52 = TypedDict('__FoldingRangeKind_Type_52', {
+__FoldingRangeClientCapabilities_foldingRangeKind_Type_1 = TypedDict('__FoldingRangeClientCapabilities_foldingRangeKind_Type_1', {
     # The folding range kind values the client supports. When this
     # property exists the client also guarantees that it will
     # handle values outside its set gracefully and falls back
@@ -5796,7 +5498,7 @@ __FoldingRangeKind_Type_52 = TypedDict('__FoldingRangeKind_Type_52', {
 })
 
 
-__FoldingRange_Type_53 = TypedDict('__FoldingRange_Type_53', {
+__FoldingRangeClientCapabilities_foldingRange_Type_1 = TypedDict('__FoldingRangeClientCapabilities_foldingRange_Type_1', {
     # If set, the client signals that it supports setting collapsedText on
     # folding ranges to display custom labels instead of the default text.
     #
@@ -5805,40 +5507,335 @@ __FoldingRange_Type_53 = TypedDict('__FoldingRange_Type_53', {
 })
 
 
-__TagSupport_Type_54 = TypedDict('__TagSupport_Type_54', {
+__GeneralClientCapabilities_staleRequestSupport_Type_1 = TypedDict('__GeneralClientCapabilities_staleRequestSupport_Type_1', {
+    # The client will actively cancel the request.
+    'cancel': bool,
+    # The list of requests for which the client
+    # will retry the request if it receives a
+    # response with error code `ContentModified`
+    'retryOnContentModified': List[str],
+})
+
+
+__InitializeResult_serverInfo_Type_1 = TypedDict('__InitializeResult_serverInfo_Type_1', {
+    # The name of the server as defined by the server.
+    'name': str,
+    # The server's version as defined by the server.
+    'version': NotRequired[str],
+})
+
+
+__InlayHintClientCapabilities_resolveSupport_Type_1 = TypedDict('__InlayHintClientCapabilities_resolveSupport_Type_1', {
+    # The properties that a client can resolve lazily.
+    'properties': List[str],
+})
+
+
+__MarkedString_Type_1 = TypedDict('__MarkedString_Type_1', {
+    'language': str,
+    'value': str,
+})
+
+
+__NotebookDocumentChangeEvent_cells_Type_1 = TypedDict('__NotebookDocumentChangeEvent_cells_Type_1', {
+    # Changes to the cell structure to add or
+    # remove cells.
+    'structure': NotRequired['__NotebookDocumentChangeEvent_cells_structure_Type_1'],
+    # Changes to notebook cells properties like its
+    # kind, execution summary or metadata.
+    'data': NotRequired[List['NotebookCell']],
+    # Changes to the text content of notebook cells.
+    'textContent': NotRequired[List['__NotebookDocumentChangeEvent_cells_textContent_Type_1']],
+})
+
+
+__NotebookDocumentChangeEvent_cells_structure_Type_1 = TypedDict('__NotebookDocumentChangeEvent_cells_structure_Type_1', {
+    # The change to the cell array.
+    'array': 'NotebookCellArrayChange',
+    # Additional opened cell text documents.
+    'didOpen': NotRequired[List['TextDocumentItem']],
+    # Additional closed cell text documents.
+    'didClose': NotRequired[List['TextDocumentIdentifier']],
+})
+
+
+__NotebookDocumentChangeEvent_cells_textContent_Type_1 = TypedDict('__NotebookDocumentChangeEvent_cells_textContent_Type_1', {
+    'document': 'VersionedTextDocumentIdentifier',
+    'changes': List['TextDocumentContentChangeEvent'],
+})
+
+
+__NotebookDocumentFilter_Type_1 = TypedDict('__NotebookDocumentFilter_Type_1', {
+    # The type of the enclosing notebook.
+    'notebookType': str,
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': NotRequired[str],
+    # A glob pattern.
+    'pattern': NotRequired[str],
+})
+
+
+__NotebookDocumentFilter_Type_2 = TypedDict('__NotebookDocumentFilter_Type_2', {
+    # The type of the enclosing notebook.
+    'notebookType': NotRequired[str],
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': str,
+    # A glob pattern.
+    'pattern': NotRequired[str],
+})
+
+
+__NotebookDocumentFilter_Type_3 = TypedDict('__NotebookDocumentFilter_Type_3', {
+    # The type of the enclosing notebook.
+    'notebookType': NotRequired[str],
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': NotRequired[str],
+    # A glob pattern.
+    'pattern': str,
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_Type_1 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_Type_1', {
+    # The notebook to be synced If a string
+    # value is provided it matches against the
+    # notebook type. '*' matches every notebook.
+    'notebook': Union[str, 'NotebookDocumentFilter'],
+    # The cells of the matching notebook to be synced.
+    'cells': NotRequired[List['__NotebookDocumentSyncOptions_notebookSelector_cells_Type_1']],
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_Type_2 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_Type_2', {
+    # The notebook to be synced If a string
+    # value is provided it matches against the
+    # notebook type. '*' matches every notebook.
+    'notebook': NotRequired[Union[str, 'NotebookDocumentFilter']],
+    # The cells of the matching notebook to be synced.
+    'cells': List['__NotebookDocumentSyncOptions_notebookSelector_cells_Type_2'],
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_Type_3 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_Type_3', {
+    # The notebook to be synced If a string
+    # value is provided it matches against the
+    # notebook type. '*' matches every notebook.
+    'notebook': Union[str, 'NotebookDocumentFilter'],
+    # The cells of the matching notebook to be synced.
+    'cells': NotRequired[List['__NotebookDocumentSyncOptions_notebookSelector_cells_Type_3']],
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_Type_4 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_Type_4', {
+    # The notebook to be synced If a string
+    # value is provided it matches against the
+    # notebook type. '*' matches every notebook.
+    'notebook': NotRequired[Union[str, 'NotebookDocumentFilter']],
+    # The cells of the matching notebook to be synced.
+    'cells': List['__NotebookDocumentSyncOptions_notebookSelector_cells_Type_4'],
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_cells_Type_1 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_cells_Type_1', {
+    'language': str,
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_cells_Type_2 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_cells_Type_2', {
+    'language': str,
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_cells_Type_3 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_cells_Type_3', {
+    'language': str,
+})
+
+
+__NotebookDocumentSyncOptions_notebookSelector_cells_Type_4 = TypedDict('__NotebookDocumentSyncOptions_notebookSelector_cells_Type_4', {
+    'language': str,
+})
+
+
+__PrepareRenameResult_Type_1 = TypedDict('__PrepareRenameResult_Type_1', {
+    'range': 'Range',
+    'placeholder': str,
+})
+
+
+__PrepareRenameResult_Type_2 = TypedDict('__PrepareRenameResult_Type_2', {
+    'defaultBehavior': bool,
+})
+
+
+__PublishDiagnosticsClientCapabilities_tagSupport_Type_1 = TypedDict('__PublishDiagnosticsClientCapabilities_tagSupport_Type_1', {
     # The tags supported by the client.
     'valueSet': List['DiagnosticTag'],
 })
 
 
-__Full_Type_55 = TypedDict('__Full_Type_55', {
+__SemanticTokensClientCapabilities_requests_Type_1 = TypedDict('__SemanticTokensClientCapabilities_requests_Type_1', {
+    # The client will send the `textDocument/semanticTokens/range` request if
+    # the server provides a corresponding handler.
+    'range': NotRequired[Union[bool, dict]],
+    # The client will send the `textDocument/semanticTokens/full` request if
+    # the server provides a corresponding handler.
+    'full': NotRequired[Union[bool, '__SemanticTokensClientCapabilities_requests_full_Type_1']],
+})
+
+
+__SemanticTokensClientCapabilities_requests_full_Type_1 = TypedDict('__SemanticTokensClientCapabilities_requests_full_Type_1', {
     # The client will send the `textDocument/semanticTokens/full/delta` request if
     # the server provides a corresponding handler.
     'delta': NotRequired[bool],
 })
 
 
-__Requests_Type_55 = TypedDict('__Requests_Type_55', {
-    # The client will send the `textDocument/semanticTokens/range` request if
-    # the server provides a corresponding handler.
-    'range': NotRequired[Union[bool, dict]],
-    # The client will send the `textDocument/semanticTokens/full` request if
-    # the server provides a corresponding handler.
-    'full': NotRequired[Union[bool, '__Full_Type_55']],
+__SemanticTokensOptions_full_Type_1 = TypedDict('__SemanticTokensOptions_full_Type_1', {
+    # The server supports deltas for full documents.
+    'delta': NotRequired[bool],
 })
 
 
-__ResolveSupport_Type_57 = TypedDict('__ResolveSupport_Type_57', {
-    # The properties that a client can resolve lazily.
-    'properties': List[str],
+__SemanticTokensOptions_full_Type_2 = TypedDict('__SemanticTokensOptions_full_Type_2', {
+    # The server supports deltas for full documents.
+    'delta': NotRequired[bool],
 })
 
 
-__MessageActionItem_Type_58 = TypedDict('__MessageActionItem_Type_58', {
+__ServerCapabilities_workspace_Type_1 = TypedDict('__ServerCapabilities_workspace_Type_1', {
+    # The server supports workspace folder.
+    #
+    # @since 3.6.0
+    'workspaceFolders': NotRequired['WorkspaceFoldersServerCapabilities'],
+    # The server is interested in notifications/requests for operations on files.
+    #
+    # @since 3.16.0
+    'fileOperations': NotRequired['FileOperationOptions'],
+})
+
+
+__ShowMessageRequestClientCapabilities_messageActionItem_Type_1 = TypedDict('__ShowMessageRequestClientCapabilities_messageActionItem_Type_1', {
     # Whether the client supports additional attributes which
     # are preserved and send back to the server in the
     # request's response.
     'additionalPropertiesSupport': NotRequired[bool],
+})
+
+
+__SignatureHelpClientCapabilities_signatureInformation_Type_1 = TypedDict('__SignatureHelpClientCapabilities_signatureInformation_Type_1', {
+    # Client supports the following content formats for the documentation
+    # property. The order describes the preferred format of the client.
+    'documentationFormat': NotRequired[List['MarkupKind']],
+    # Client capabilities specific to parameter information.
+    'parameterInformation': NotRequired['__SignatureHelpClientCapabilities_signatureInformation_parameterInformation_Type_1'],
+    # The client supports the `activeParameter` property on `SignatureInformation`
+    # literal.
+    #
+    # @since 3.16.0
+    'activeParameterSupport': NotRequired[bool],
+})
+
+
+__SignatureHelpClientCapabilities_signatureInformation_parameterInformation_Type_1 = TypedDict('__SignatureHelpClientCapabilities_signatureInformation_parameterInformation_Type_1', {
+    # The client supports processing label offsets instead of a
+    # simple label string.
+    #
+    # @since 3.14.0
+    'labelOffsetSupport': NotRequired[bool],
+})
+
+
+__TextDocumentContentChangeEvent_Type_1 = TypedDict('__TextDocumentContentChangeEvent_Type_1', {
+    # The range of the document that changed.
+    'range': 'Range',
+    # The optional length of the range that got replaced.
+    #
+    # @deprecated use range instead.
+    'rangeLength': NotRequired[Uint],
+    # The new text for the provided range.
+    'text': str,
+})
+
+
+__TextDocumentContentChangeEvent_Type_2 = TypedDict('__TextDocumentContentChangeEvent_Type_2', {
+    # The new text of the whole document.
+    'text': str,
+})
+
+
+__TextDocumentFilter_Type_1 = TypedDict('__TextDocumentFilter_Type_1', {
+    # A language id, like `typescript`.
+    'language': str,
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': NotRequired[str],
+    # A glob pattern, like `*.{ts,js}`.
+    'pattern': NotRequired[str],
+})
+
+
+__TextDocumentFilter_Type_2 = TypedDict('__TextDocumentFilter_Type_2', {
+    # A language id, like `typescript`.
+    'language': NotRequired[str],
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': str,
+    # A glob pattern, like `*.{ts,js}`.
+    'pattern': NotRequired[str],
+})
+
+
+__TextDocumentFilter_Type_3 = TypedDict('__TextDocumentFilter_Type_3', {
+    # A language id, like `typescript`.
+    'language': NotRequired[str],
+    # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
+    'scheme': NotRequired[str],
+    # A glob pattern, like `*.{ts,js}`.
+    'pattern': str,
+})
+
+
+__WorkspaceEditClientCapabilities_changeAnnotationSupport_Type_1 = TypedDict('__WorkspaceEditClientCapabilities_changeAnnotationSupport_Type_1', {
+    # Whether the client groups edits with equal labels into tree nodes,
+    # for instance all edits labelled with "Changes in Strings" would
+    # be a tree node.
+    'groupsOnLabel': NotRequired[bool],
+})
+
+
+__WorkspaceSymbolClientCapabilities_resolveSupport_Type_1 = TypedDict('__WorkspaceSymbolClientCapabilities_resolveSupport_Type_1', {
+    # The properties that a client can resolve lazily. Usually
+    # `location.range`
+    'properties': List[str],
+})
+
+
+__WorkspaceSymbolClientCapabilities_symbolKind_Type_1 = TypedDict('__WorkspaceSymbolClientCapabilities_symbolKind_Type_1', {
+    # The symbol kind values the client supports. When this
+    # property exists the client also guarantees that it will
+    # handle values outside its set gracefully and falls back
+    # to a default value when unknown.
+    #
+    # If this property is not present the client only supports
+    # the symbol kinds from `File` to `Array` as defined in
+    # the initial version of the protocol.
+    'valueSet': NotRequired[List['SymbolKind']],
+})
+
+
+__WorkspaceSymbolClientCapabilities_tagSupport_Type_1 = TypedDict('__WorkspaceSymbolClientCapabilities_tagSupport_Type_1', {
+    # The tags supported by the client.
+    'valueSet': List['SymbolTag'],
+})
+
+
+__WorkspaceSymbol_location_Type_1 = TypedDict('__WorkspaceSymbol_location_Type_1', {
+    'uri': 'DocumentUri',
+})
+
+
+___InitializeParams_clientInfo_Type_1 = TypedDict('___InitializeParams_clientInfo_Type_1', {
+    # The name of the client as defined by the client.
+    'name': str,
+    # The client's version as defined by the client.
+    'version': NotRequired[str],
 })
 
 # AUTOGENERATED TYPES END
@@ -5861,15 +5858,15 @@ class Request:
         self.progress = progress  # type: Union[bool, str]
 
     @classmethod
-    def initialize(cls, params: Mapping[str, Any]) -> 'Request':
+    def initialize(cls, params: InitializeParams) -> 'Request':
         return Request("initialize", params)
 
     @classmethod
-    def complete(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def complete(cls, params: CompletionParams, view: sublime.View) -> 'Request':
         return Request("textDocument/completion", params, view)
 
     @classmethod
-    def signatureHelp(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def signatureHelp(cls, params: SignatureHelpParams, view: sublime.View) -> 'Request':
         return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
@@ -5877,7 +5874,7 @@ class Request:
         return Request("textDocument/codeAction", params, view)
 
     @classmethod
-    def documentColor(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentColor(cls, params: DocumentColorParams, view: sublime.View) -> 'Request':
         return Request('textDocument/documentColor', params, view)
 
     @classmethod
@@ -5885,32 +5882,56 @@ class Request:
         return Request('textDocument/colorPresentation', params, view)
 
     @classmethod
-    def willSaveWaitUntil(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def willSaveWaitUntil(cls, params: WillSaveTextDocumentParams, view: sublime.View) -> 'Request':
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
-    def documentSymbols(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
-        return Request("textDocument/documentSymbol", params, view)
+    def documentSymbols(cls, params: DocumentSymbolParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/documentSymbol", params, view, progress=True)
 
     @classmethod
-    def documentHighlight(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentHighlight(cls, params: DocumentHighlightParams, view: sublime.View) -> 'Request':
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def documentLink(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def documentLink(cls, params: DocumentLinkParams, view: sublime.View) -> 'Request':
         return Request("textDocument/documentLink", params, view)
 
     @classmethod
-    def semanticTokensFull(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensFull(cls, params: SemanticTokensParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/full", params, view)
 
     @classmethod
-    def semanticTokensFullDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensFullDelta(cls, params: SemanticTokensDeltaParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/full/delta", params, view)
 
     @classmethod
-    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def semanticTokensRange(cls, params: SemanticTokensRangeParams, view: sublime.View) -> 'Request':
         return Request("textDocument/semanticTokens/range", params, view)
+
+    @classmethod
+    def prepareCallHierarchy(cls, params: CallHierarchyPrepareParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
+
+    @classmethod
+    def incomingCalls(cls, params: CallHierarchyIncomingCallsParams) -> 'Request':
+        return Request("callHierarchy/incomingCalls", params, None)
+
+    @classmethod
+    def outgoingCalls(cls, params: CallHierarchyOutgoingCallsParams) -> 'Request':
+        return Request("callHierarchy/outgoingCalls", params, None)
+
+    @classmethod
+    def prepareTypeHierarchy(cls, params: TypeHierarchyPrepareParams, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareTypeHierarchy", params, view, progress=True)
+
+    @classmethod
+    def supertypes(cls, params: TypeHierarchySupertypesParams) -> 'Request':
+        return Request("typeHierarchy/supertypes", params, None)
+
+    @classmethod
+    def subtypes(cls, params: TypeHierarchySubtypesParams) -> 'Request':
+        return Request("typeHierarchy/subtypes", params, None)
 
     @classmethod
     def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
@@ -5927,6 +5948,22 @@ class Request:
     @classmethod
     def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> 'Request':
         return Request('inlayHint/resolve', params, view)
+
+    @classmethod
+    def rename(cls, params: RenameParams, view: sublime.View, progress: bool = False) -> 'Request':
+        return Request('textDocument/rename', params, view, progress)
+
+    @classmethod
+    def prepareRename(cls, params: PrepareRenameParams, view: sublime.View, progress: bool = False) -> 'Request':
+        return Request('textDocument/prepareRename', params, view, progress)
+
+    @classmethod
+    def selectionRange(cls, params: SelectionRangeParams) -> 'Request':
+        return Request('textDocument/selectionRange', params)
+
+    @classmethod
+    def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> 'Request':
+        return Request("workspace/symbol", params, None, progress=True)
 
     @classmethod
     def shutdown(cls) -> 'Request':
@@ -5969,11 +6006,14 @@ class Error(Exception):
         return Error(ErrorCodes.InternalError, str(ex))
 
 
-class Response:
+T = TypeVar('T', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
+
+
+class Response(Generic[T]):
 
     __slots__ = ('request_id', 'result')
 
-    def __init__(self, request_id: Any, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
+    def __init__(self, request_id: Any, result: T) -> None:
         self.request_id = request_id
         self.result = result
 
@@ -5999,35 +6039,35 @@ class Notification:
         return Notification("initialized", {})
 
     @classmethod
-    def didOpen(cls, params: dict) -> 'Notification':
+    def didOpen(cls, params: DidOpenTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didOpen", params)
 
     @classmethod
-    def didChange(cls, params: dict) -> 'Notification':
+    def didChange(cls, params: DidChangeTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didChange", params)
 
     @classmethod
-    def willSave(cls, params: dict) -> 'Notification':
+    def willSave(cls, params: WillSaveTextDocumentParams) -> 'Notification':
         return Notification("textDocument/willSave", params)
 
     @classmethod
-    def didSave(cls, params: dict) -> 'Notification':
+    def didSave(cls, params: DidSaveTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didSave", params)
 
     @classmethod
-    def didClose(cls, params: dict) -> 'Notification':
+    def didClose(cls, params: DidCloseTextDocumentParams) -> 'Notification':
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params: dict) -> 'Notification':
+    def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> 'Notification':
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
-    def didChangeWatchedFiles(cls, params: dict) -> 'Notification':
+    def didChangeWatchedFiles(cls, params: DidChangeWatchedFilesParams) -> 'Notification':
         return Notification("workspace/didChangeWatchedFiles", params)
 
     @classmethod
-    def didChangeWorkspaceFolders(cls, params: dict) -> 'Notification':
+    def didChangeWorkspaceFolders(cls, params: DidChangeWorkspaceFoldersParams) -> 'Notification':
         return Notification("workspace/didChangeWorkspaceFolders", params)
 
     @classmethod
@@ -6087,6 +6127,9 @@ ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangePa
     'position': Position,
     'range': Range,
 })
+
+CompletionItemDefaults = __CompletionList_itemDefaults_Type_1
+CompletionEditRange = __CompletionList_itemDefaults_editRange_Type_1
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range

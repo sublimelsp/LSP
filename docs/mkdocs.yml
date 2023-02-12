@@ -4,6 +4,13 @@ repo_url: https://github.com/sublimelsp/LSP/
 edit_uri: edit/main/docs/src/
 docs_dir: 'src'
 
+plugins:
+  - search
+  - redirects:
+      redirect_maps:
+        'guides/cplusplus.md': 'https://github.com/sublimelsp/LSP-clangd'
+        'guides/client_configuration.md': 'client_configuration.md'
+
 theme:
   name: material
   palette:
@@ -29,20 +36,20 @@ markdown_extensions:
   # add tip, warning info boxes
   - admonition
 
+  - md_in_html
+
   # show # after each header
   - toc:
       permalink: '#'
 
 nav:
     - Getting Started: index.md
-    - Features: features.md
     - Language Servers: language_servers.md
+    - Features: features.md
     - Commands: commands.md
     - Keyboard Shortcuts: keyboard_shortcuts.md
     - Customization: customization.md
-    - Guides:
-      - Client Configuration: guides/client_configuration.md
-      - Setup C/C++: guides/cplusplus.md
+    - Client Configuration: client_configuration.md
     - Troubleshooting: troubleshooting.md
 
 extra:

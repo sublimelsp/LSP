@@ -1,5 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
+from .code_actions import CodeActionsByConfigName
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
@@ -19,6 +20,7 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
+from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
@@ -37,7 +39,7 @@ from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
-import functools
+from functools import partial
 import html
 import sublime
 
@@ -62,10 +64,10 @@ class LinkKind:
 
     def link(self, point: int, view: sublime.View) -> str:
         args = {'point': point}
-        link = make_command_link(self.subl_cmd_name, self.label, args, None, view)
+        link = make_command_link(self.subl_cmd_name, self.label, args, None, None, view.id())
         if self.supports_side_by_side:
             args['side_by_side'] = True
-            link += ' ' + make_command_link(self.subl_cmd_name, '◨', args, 'icon', view)
+            link += ' ' + make_command_link(self.subl_cmd_name, '◨', args, 'icon', None, view.id())
         return link
 
 
@@ -79,18 +81,20 @@ link_kinds = [
 ]
 
 
-def code_actions_content(actions_by_config: Dict[str, List[CodeActionOrCommand]]) -> str:
+def code_actions_content(actions_by_config: List[CodeActionsByConfigName]) -> str:
     formatted = []
-    for config_name, actions in actions_by_config.items():
+    for config_name, actions in actions_by_config:
         action_count = len(actions)
-        if action_count > 0:
-            href = "{}:{}".format('code-actions', config_name)
-            if action_count > 1:
-                text = "choose code action ({} available)".format(action_count)
-            else:
-                text = actions[0].get('title', 'code action')
-            formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
-                config_name, make_link(href, text)))
+        if action_count == 0:
+            continue
+        if action_count > 1:
+            text = "choose ({} available)".format(action_count)
+        else:
+            text = actions[0].get('title', 'code action')
+        href = "{}:{}".format('code-actions', config_name)
+        link = make_link(href, text)
+        formatted.append(
+            '<div class="actions">Quick Fix: {} <span class="color-muted">{}</span></div>'.format(link, config_name))
     return "".join(formatted)
 
 
@@ -114,15 +118,14 @@ class LspHoverCommand(LspTextCommand):
                 temp_point = region.begin()
         if temp_point is None:
             return
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
         hover_point = temp_point
-        wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
-        self._document_link = ('', False, None)  # type: Tuple[str, bool, Optional[sublime.Region]]
-        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
+        self._document_links = []  # type: List[DocumentLink]
+        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
@@ -140,9 +143,9 @@ class LspHoverCommand(LspTextCommand):
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
-                actions_manager.request_for_region_async(
-                    self.view, covering, self._diagnostics_by_config,
-                    functools.partial(self.handle_code_actions, listener, hover_point), manual=False)
+                actions_manager \
+                    .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
+                    .then(lambda results: self._handle_code_actions(listener, hover_point, results))
 
         sublime.set_timeout_async(run_async)
 
@@ -155,9 +158,7 @@ class LspHoverCommand(LspTextCommand):
                 Request("textDocument/hover", document_position, self.view)
             ))
             language_maps.append(session.markdown_language_id_to_st_syntax_map())
-
-        continuation = functools.partial(self._on_all_settled, listener, point, language_maps)
-        Promise.all(hover_promises).then(continuation)
+        Promise.all(hover_promises).then(partial(self._on_all_settled, listener, point, language_maps))
 
     def _create_hover_request(
         self, session: Session, point: int
@@ -204,8 +205,7 @@ class LspHoverCommand(LspTextCommand):
                 link_promises.append(sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view)).then(
                     lambda link: self._on_resolved_link(sv.session_buffer, link)))
         if link_promises:
-            continuation = functools.partial(self._on_all_document_links_resolved, listener, point)
-            Promise.all(link_promises).then(continuation)
+            Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
 
     def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> DocumentLink:
         session_buffer.update_document_link(link)
@@ -214,27 +214,14 @@ class LspHoverCommand(LspTextCommand):
     def _on_all_document_links_resolved(
         self, listener: AbstractViewListener, point: int, links: List[DocumentLink]
     ) -> None:
-        contents = []
-        link_has_standard_tooltip = True
-        for link in links:
-            target = link.get("target")
-            if not target:
-                continue
-            title = link.get("tooltip") or "Follow link"
-            if title != "Follow link":
-                link_has_standard_tooltip = False
-            contents.append('<a href="{}">{}</a>'.format(html.escape(target), html.escape(title)))
-        if len(contents) > 1:
-            link_has_standard_tooltip = False
-        link_range = range_to_region(links[0]["range"], self.view) if links else None
-        self._document_link = ('<br>'.join(contents) if contents else '', link_has_standard_tooltip, link_range)
+        self._document_links = links
         self.show_hover(listener, point, only_diagnostics=False)
 
-    def handle_code_actions(
+    def _handle_code_actions(
         self,
         listener: AbstractViewListener,
         point: int,
-        responses: Dict[str, List[CodeActionOrCommand]]
+        responses: List[CodeActionsByConfigName]
     ) -> None:
         self._actions_by_config = responses
         self.show_hover(listener, point, only_diagnostics=False)
@@ -245,6 +232,26 @@ class LspHoverCommand(LspTextCommand):
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
         actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
         return " | ".join(actions) if actions else ""
+
+    def link_content_and_range(self) -> Tuple[str, Optional[sublime.Region]]:
+        if len(self._document_links) > 1:
+            combined_region = range_to_region(self._document_links[0]["range"], self.view)
+            for link in self._document_links[1:]:
+                combined_region = combined_region.cover(range_to_region(link["range"], self.view))
+            if all(link.get("target") for link in self._document_links):
+                return '<a href="quick-panel:DocumentLink">Follow Link…</a>', combined_region
+            else:
+                return "Follow Link…", combined_region
+        elif len(self._document_links) == 1:
+            link = self._document_links[0]
+            target = link.get("target")
+            label = "Follow Link" if link.get("target", "file:").startswith("file:") else "Open in Browser"
+            title = link.get("tooltip")
+            tooltip = ' title="{}"'.format(html.escape(title)) if title else ""
+            region = range_to_region(link["range"], self.view)
+            return '<a href="{}"{}>{}</a>'.format(html.escape(target), tooltip, label) if target else label, region
+        else:
+            return "", None
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -281,17 +288,15 @@ class LspHoverCommand(LspTextCommand):
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
         contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
-        link_content, link_has_standard_tooltip, link_range = self._document_link
+        link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         prefs = userprefs()
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
             symbol_actions_content = self.symbol_actions_content(listener, point)
-            if link_content and link_has_standard_tooltip:
+            if link_content:
                 if symbol_actions_content:
                     symbol_actions_content += ' | '
                 symbol_actions_content += link_content
-            elif link_content:
-                contents += '<div class="link with-padding">' + link_content + '</div>'
             if symbol_actions_content:
                 contents += '<div class="actions">' + symbol_actions_content + '</div>'
         elif link_content:
@@ -329,36 +334,49 @@ class LspHoverCommand(LspTextCommand):
             if window:
                 open_file_uri(window, href)
         elif href.startswith('code-actions:'):
-            _, config_name = href.split(":")
-            actions = self._actions_by_config[config_name]
             self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
+            _, config_name = href.split(":")
+            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:
-                    items, selected_index = format_code_actions_for_quick_panel(actions)
+                    items, selected_index = format_code_actions_for_quick_panel(
+                        map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
                         items,
-                        lambda i: self.handle_code_action_select(config_name, i),
+                        lambda i: self.handle_code_action_select(config_name, actions, i),
                         selected_index=selected_index,
                         placeholder="Code actions")
             else:
-                self.handle_code_action_select(config_name, 0)
+                self.handle_code_action_select(config_name, actions, 0)
+        elif href == "quick-panel:DocumentLink":
+            window = self.view.window()
+            if window:
+                targets = [link["target"] for link in self._document_links]  # pyright: ignore
+
+                def on_select(targets: List[str], idx: int) -> None:
+                    if idx > -1:
+                        self._on_navigate(targets[idx], 0)
+
+                window.show_quick_panel(
+                    [parse_uri(target)[1] for target in targets], partial(on_select, targets), placeholder="Open Link")
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
             session = self.session_by_name(session_name)
             if session:
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: Range
-                sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
+                sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
         else:
             open_in_browser(href)
 
-    def handle_code_action_select(self, config_name: str, index: int) -> None:
-        if index > -1:
+    def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
+        if index == -1:
+            return
 
-            def run_async() -> None:
-                session = self.session_by_name(config_name)
-                if session:
-                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
+        def run_async() -> None:
+            session = self.session_by_name(config_name)
+            if session:
+                session.run_code_action_async(actions[index], progress=True)
 
-            sublime.set_timeout_async(run_async)
+        sublime.set_timeout_async(run_async)

@@ -1,18 +1,33 @@
-from .core.diagnostics_storage import ParsedUri, is_severity_included
-from .core.protocol import Diagnostic, DocumentUri, DiagnosticSeverity, Location
+from .core.diagnostics_storage import is_severity_included
+from .core.diagnostics_storage import ParsedUri
+from .core.paths import project_base_dir
+from .core.paths import project_path
+from .core.paths import simple_project_path
+from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentUri
+from .core.protocol import Location
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
-from .core.views import MissingUriError, uri_from_view, get_uri_and_position_from_location, to_encoded_filename
+from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
-from .core.views import diagnostic_severity, format_diagnostic_source_and_code, format_severity
+from .core.views import format_diagnostic_source_and_code
+from .core.views import format_severity
+from .core.views import get_uri_and_position_from_location
+from .core.views import MissingUriError
+from .core.views import to_encoded_filename
+from .core.views import uri_from_view
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
+import os
 import sublime
 import sublime_plugin
 
@@ -46,10 +61,16 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 uri = uri_from_view(view)
             except MissingUriError:
                 return False
+        max_severity = userprefs().diagnostics_panel_include_severity_level
         if uri:
             parsed_uri = parse_uri(uri)
-            return any(parsed_uri in session.diagnostics for session in get_sessions(self.window))
-        return any(bool(session.diagnostics) for session in get_sessions(self.window))
+            return any(diagnostic for session in get_sessions(self.window)
+                       for diagnostic in session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
+                       if is_severity_included(max_severity)(diagnostic))
+        return any(diagnostic for session in get_sessions(self.window)
+                   for diagnostics in session.diagnostics.values()
+                   for diagnostic in diagnostics
+                   if is_severity_included(max_severity)(diagnostic))
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")
@@ -63,6 +84,7 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 uri = uri_from_view(view)
             except MissingUriError:
                 return None
+            return DiagnosticUriInputHandler(self.window, view, uri)
         if not diagnostic:
             return DiagnosticInputHandler(self.window, view, uri)
         return None
@@ -71,18 +93,59 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
         return "Goto Diagnostic"
 
 
-class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
+ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
+                        List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
+
+
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+    """
+    Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
+    Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
+
+    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
+    i.e. just prepend `get_` to the regular `list_items` method.
+
+    When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
+    An optional second argument `initial_value` can be provided to preselect a value.
+    """
+
+    def __init__(
+        self, window: sublime.Window, initial_value: Optional[Union[str, sublime.ListInputItem]] = None
+    ) -> None:
+        super().__init__()
+        self._window = window
+        self._initial_value = initial_value
+
+    def list_items(self) -> ListItemsReturn:
+        if self._initial_value is not None:
+            sublime.set_timeout(self._select_and_reset)
+            return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
+        else:
+            return self.get_list_items()
+
+    def _select_and_reset(self) -> None:
+        self._initial_value = None
+        if self._window.is_valid():
+            self._window.run_command('select')
+
+    @abstractmethod
+    def get_list_items(self) -> ListItemsReturn:
+        raise NotImplementedError()
+
+
+class DiagnosticUriInputHandler(PreselectedListInputHandler):
     _preview = None  # type: Optional[sublime.View]
     uri = None  # Optional[DocumentUri]
 
-    def __init__(self, window: sublime.Window, view: sublime.View) -> None:
+    def __init__(self, window: sublime.Window, view: sublime.View, initial_value: Optional[DocumentUri] = None) -> None:
+        super().__init__(window, initial_value)
         self.window = window
         self.view = view
 
     def name(self) -> str:
         return "uri"
 
-    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
         severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
@@ -135,7 +198,7 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
         self.window.focus_view(self.view)
 
     def preview(self, value: Optional[DocumentUri]) -> str:
-        if not value:
+        if not value or not hasattr(self, 'first_locations'):
             return ""
         parsed_uri = parse_uri(value)
         session, location = self.first_locations[parsed_uri]
@@ -153,7 +216,8 @@ class DiagnosticUriInputHandler(sublime_plugin.ListInputHandler):
     def _project_path(self, parsed_uri: ParsedUri) -> str:
         scheme, path = parsed_uri
         if scheme == "file":
-            path = str(project_path(map(Path, self.window.folders()), Path(path))) or path
+            relative_path = project_path(map(Path, self.window.folders()), Path(path))
+            return str(relative_path) if relative_path else os.path.basename(path)
         return path
 
 
@@ -252,59 +316,3 @@ def truncate_message(diagnostic: Diagnostic, max_lines: int = 6) -> Diagnostic:
     diagnostic = diagnostic.copy()
     diagnostic["message"] = "\n".join(lines[:max_lines - 1]) + " …\n"
     return diagnostic
-
-
-def project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The project path of `/path/to/project/file` in the project `/path/to/project` is `file`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    _, file = folder_path
-    return file
-
-
-def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The simple project path of `/path/to/project/file` in the project `/path/to/project` is `project/file`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    folder, file = folder_path
-    return folder.name / file
-
-
-def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The inverse of `simple_project_path()`.
-    """
-    parts = file_path.parts
-    folder_name = parts[0]
-    for folder in project_folders:
-        if folder.name == folder_name:
-            return folder / Path(*parts[1:])
-    return None
-
-
-def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
-    """
-    The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`.
-    """
-    folder_path = split_project_path(project_folders, file_path)
-    if folder_path is None:
-        return None
-    folder, _ = folder_path
-    return folder.parent
-
-
-def split_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Tuple[Path, Path]]:
-    abs_path = file_path.resolve()
-    for folder in project_folders:
-        try:
-            rel_path = abs_path.relative_to(folder)
-        except ValueError:
-            continue
-        return folder, rel_path
-    return None

@@ -40,3 +40,13 @@ Before you submit your pull request, please review the following:
 
 I will try to help you get the PR in mergeable shape within a reasonable time, but it may take a few days.
 It is best if you check your GitHub notifications in the meantime!
+
+## Releasing a new version (for maintainers)
+
+* Get a log of commits since the previously released tag with `git log --format="- %s (%an)" <previous_tag>..main`
+* Filter out non-relevant and non-important commits (it's not relevant to report fixes for bugs that weren't released yet, for example)
+* Optionally group changes into Fixes/Features/etc.
+* Create a new file in `messages/` with a file name of the yet-to-be-released version and include the changes.
+* Run `./scripts/release.py build` which will bump the version and create a new commit with a new messages file included.
+* If something doesn't look right in the newly created commit, delete the newly created tag manually and git reset to the previous commit making sure that you don't lose the newly created messages file.
+* Run `GITHUB_TOKEN=<your_token> ./scripts/release.py publish` to push and create a new Github release.

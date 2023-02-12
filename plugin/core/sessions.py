@@ -27,6 +27,7 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
+from .protocol import DidChangeWorkspaceFoldersParams
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
@@ -35,12 +36,17 @@ from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
 from .protocol import GeneralClientCapabilities
+from .protocol import InitializeError
+from .protocol import InitializeParams
+from .protocol import InitializeResult
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import LSPAny
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
+from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PublishDiagnosticsParams
 from .protocol import Range
 from .protocol import Request
@@ -68,7 +74,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -81,6 +87,7 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
+from abc import abstractproperty
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -144,26 +151,26 @@ class Manager(metaclass=ABCMeta):
 
     # Observers
 
-    @abstractmethod
+    @abstractproperty
     def window(self) -> sublime.Window:
         """
         Get the window associated with this manager.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> Optional[str]:
         """
         Get the project path for the given file.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
@@ -182,19 +189,11 @@ class Manager(metaclass=ABCMeta):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def on_diagnostics_updated(self) -> None:
-        pass
-
-    @abstractmethod
-    def show_diagnostics_panel_async(self) -> None:
-        pass
-
-    @abstractmethod
-    def hide_diagnostics_panel_async(self) -> None:
-        pass
+        raise NotImplementedError()
 
     # Event callbacks
 
@@ -203,7 +202,7 @@ class Manager(metaclass=ABCMeta):
         """
         The given Session has stopped with the given exit code.
         """
-        pass
+        raise NotImplementedError()
 
 
 def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
@@ -211,7 +210,7 @@ def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
-                          config: ClientConfig) -> dict:
+                          config: ClientConfig) -> InitializeParams:
     completion_kinds = cast(List[CompletionItemKind], _enum_like_class_to_list(CompletionItemKind))
     symbol_kinds = cast(List[SymbolKind], _enum_like_class_to_list(SymbolKind))
     diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_like_class_to_list(DiagnosticTag))
@@ -266,12 +265,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "insertTextModeSupport": {
                     "valueSet": [InsertTextMode.AdjustIndentation]
                 },
-                "labelDetailsSupport": True
+                "labelDetailsSupport": True,
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
             },
-            "insertTextMode": InsertTextMode.AdjustIndentation
+            "insertTextMode": InsertTextMode.AdjustIndentation,
+            "completionList": {
+                "itemDefaults": ["editRange", "insertTextFormat", "data"]
+            }
         },
         "signatureHelp": {
             "dynamicRegistration": True,
@@ -336,12 +338,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                         CodeActionKind.RefactorExtract,
                         CodeActionKind.RefactorInline,
                         CodeActionKind.RefactorRewrite,
+                        CodeActionKind.SourceFixAll,
                         CodeActionKind.SourceOrganizeImports,
                     ]
                 }
             },
             "dataSupport": True,
-            "disabledSupport": True,
             "isPreferredSupport": True,
             "resolveSupport": {
                 "properties": [
@@ -351,7 +353,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "rename": {
             "dynamicRegistration": True,
-            "prepareSupport": True
+            "prepareSupport": True,
+            "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
         },
         "colorProvider": {
             "dynamicRegistration": True  # exceptional
@@ -393,6 +396,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
+        },
+        "callHierarchy": {
+            "dynamicRegistration": True
+        },
+        "typeHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {
@@ -457,7 +466,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": config.init_options.get_resolved(variables)
+        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
     }
 
 
@@ -500,7 +509,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -558,7 +567,9 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(
+        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+    ) -> None:
         ...
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
@@ -605,6 +616,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def purge_changes_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def on_session_initialized_async(self, session: 'Session') -> None:
         raise NotImplementedError()
 
@@ -639,7 +654,7 @@ class AbstractViewListener(metaclass=ABCMeta):
             return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
-    def on_diagnostics_updated_async(self) -> None:
+    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -870,14 +885,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
+    def on_workspace_configuration(self, params: Dict, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
         :param      params:         A ConfigurationItem for which configuration is requested.
-        :param      configuration:  The resolved configuration for given params.
+        :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
+
+        :returns: The resolved configuration for given params.
         """
-        pass
+        return configuration
 
     def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
         """
@@ -940,12 +957,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_session_end_async(self) -> None:
+    def on_session_end_async(self, exit_code: Optional[int], exception: Optional[Exception]) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
         any stored state or delete references to the session or plugin instance that would otherwise prevent the
-        instance from being garbage-collected. If the plugin hasn't crashed, a shutdown message will be send immediately
-        after this method returns.
+        instance from being garbage-collected.
+
+        If the session hasn't crashed, a shutdown message will be send immediately
+        after this method returns. In this case exit_code and exception are None.
+        If the session has crashed, the exit_code and an optional exception are provided.
+
         This API is triggered on async thread.
         """
         pass
@@ -1116,7 +1137,8 @@ class _RegistrationData:
                 return
 
 
-_WORK_DONE_PROGRESS_PREFIX = "wd"
+# This prefix should disambiguate common string generation techniques like UUID4.
+_WORK_DONE_PROGRESS_PREFIX = "$ublime-"
 
 
 class Session(TransportCallbacks):
@@ -1129,8 +1151,9 @@ class Session(TransportCallbacks):
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self.config = config
+        self.config_status_message = ''
         self.manager = weakref.ref(manager)
-        self.window = manager.window()
+        self.window = manager.window
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
@@ -1193,6 +1216,16 @@ class Session(TransportCallbacks):
             if sv.view == view:
                 return sv
         return None
+
+    def set_config_status_async(self, message: str) -> None:
+        """
+        Sets the message that is shown in parenthesis within the permanent language server status.
+
+        :param message: The message
+        """
+        self.config_status_message = message.strip()
+        for sv in self.session_views_async():
+            self.config.set_view_status(sv.view, message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
@@ -1341,7 +1374,7 @@ class Session(TransportCallbacks):
                         "added": [a.to_lsp() for a in added],
                         "removed": [r.to_lsp() for r in removed]
                     }
-                }
+                }  # type: DidChangeWorkspaceFoldersParams
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders
@@ -1362,13 +1395,16 @@ class Session(TransportCallbacks):
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
-    def _handle_initialize_success(self, result: Any) -> None:
+    def _handle_initialize_success(self, result: InitializeResult) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
+            # We've missed calling the "on_server_response_async" API as plugin was not created yet.
+            # Handle it now and use fake request ID since it shouldn't matter.
+            self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
         execute_commands = self.get_capability('executeCommandProvider.commands')
@@ -1396,7 +1432,7 @@ class Session(TransportCallbacks):
             self._init_callback(self, False)
             self._init_callback = None
 
-    def _handle_initialize_error(self, result: Any) -> None:
+    def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
@@ -1604,12 +1640,12 @@ class Session(TransportCallbacks):
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
-    def session_views_by_visibility(self) -> Tuple[List[SessionViewProtocol], List[SessionViewProtocol]]:
-        visible_session_views = []  # type: List[SessionViewProtocol]
-        not_visible_session_views = []  # type: List[SessionViewProtocol]
-        selected_sheets = []
+    def session_views_by_visibility(self) -> Tuple[Set[SessionViewProtocol], Set[SessionViewProtocol]]:
+        visible_session_views = set()  # type: Set[SessionViewProtocol]
+        not_visible_session_views = set()  # type: Set[SessionViewProtocol]
+        selected_sheets = set()  # type: Set[sublime.Sheet]
         for group in range(self.window.num_groups()):
-            selected_sheets.extend(self.window.selected_sheets_in_group(group))
+            selected_sheets = selected_sheets.union(self.window.selected_sheets_in_group(group))
         for sheet in self.window.sheets():
             view = sheet.view()
             if not view:
@@ -1618,9 +1654,9 @@ class Session(TransportCallbacks):
             if not sv:
                 continue
             if sheet in selected_sheets:
-                visible_session_views.append(sv)
+                visible_session_views.add(sv)
             else:
-                not_visible_session_views.append(sv)
+                not_visible_session_views.add(sv)
         return visible_session_views, not_visible_session_views
 
     # --- server request handlers --------------------------------------------------------------------------------------
@@ -1648,8 +1684,9 @@ class Session(TransportCallbacks):
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
             if self._plugin:
-                self._plugin.on_workspace_configuration(requested_item, configuration)
-            items.append(configuration)
+                items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
+            else:
+                items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
@@ -1699,7 +1736,8 @@ class Session(TransportCallbacks):
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            sb.on_diagnostics_async(diagnostics, params.get("version"))
+            visible_session_views, _ = self.session_views_by_visibility()
+            sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
@@ -1801,28 +1839,46 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
+    def _create_window_progress_reporter(self, token: str, value: Dict[str, Any]) -> None:
+        self._progress[token] = WindowProgressReporter(
+            window=self.window,
+            key="lspprogress{}{}".format(self.config.name, token),
+            title=value["title"],
+            message=value.get("message")
+        )
+
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
+        value = params['value']
+        kind = value['kind']
         if token not in self._progress:
+            # If the token is not in the _progress map then that could mean two things:
+            #
+            # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
+            #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it succeeds,
+            #    we can delegate to the appropriate session view instances.
+            #
+            # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
+            #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
+            #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
             try:
                 request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                 request = self._response_handlers[request_id][0]
                 self._invoke_views(request, "on_request_progress", request_id, params)
                 return
             except (IndexError, ValueError, KeyError):
+                # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
+                # dealing with possibility (2).
+                if kind == 'begin':
+                    # We are dealing with possibility (2), so create the progress reporter now.
+                    self._create_window_progress_reporter(token, value)
+                    return
                 pass
             debug('unknown $/progress token: {}'.format(token))
             return
-        value = params['value']
-        kind = value['kind']
         if kind == 'begin':
-            self._progress[token] = WindowProgressReporter(
-                window=self.window,
-                key="lspprogress{}{}".format(self.config.name, token),
-                title=value["title"],
-                message=value.get("message")
-            )
+            self._create_window_progress_reporter(token, value)
         elif kind == 'report':
             progress = self._progress[token]
             assert isinstance(progress, WindowProgressReporter)
@@ -1844,7 +1900,7 @@ class Session(TransportCallbacks):
             return
         self.exiting = True
         if self._plugin:
-            self._plugin.on_session_end_async()
+            self._plugin.on_session_end_async(None, None)
             self._plugin = None
         for sv in self.session_views_async():
             for status_key in self._status_messages.keys():
@@ -1871,7 +1927,7 @@ class Session(TransportCallbacks):
         self.transport = None
         self._response_handlers.clear()
         if self._plugin:
-            self._plugin.on_session_end_async()
+            self._plugin.on_session_end_async(exit_code, exception)
             self._plugin = None
         if self._initialize_error:
             # Override potential exit error with a saved one.
@@ -1918,6 +1974,12 @@ class Session(TransportCallbacks):
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
+
+    def send_request_task_2(self, request: Request) -> Tuple[Promise, int]:
+        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        promise, resolver = task
+        request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        return (promise, request_id)
 
     def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
         self.send_notification(Notification("$/cancelRequest", {"id": request_id}))

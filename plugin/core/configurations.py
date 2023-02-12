@@ -1,28 +1,17 @@
 from .logging import debug
 from .logging import exception_log
+from .logging import printf
 from .types import ClientConfig
-from .typing import Generator, List, Optional, Set, Dict
+from .typing import Generator, List, Optional, Set, Dict, Deque
 from .workspace import enable_in_project, disable_in_project
+from collections import deque
+from datetime import datetime, timedelta
 import sublime
 import urllib.parse
 
 
-class ConfigManager(object):
-    """Distributes language client configuration between windows"""
-
-    def __init__(self, global_configs: Dict[str, ClientConfig]) -> None:
-        self._configs = global_configs
-        self._managers = {}  # type: Dict[int, WindowConfigManager]
-
-    def for_window(self, window: sublime.Window) -> 'WindowConfigManager':
-        window_configs = WindowConfigManager(window, self._configs)
-        self._managers[window.id()] = window_configs
-        return window_configs
-
-    def update(self, config_name: Optional[str] = None) -> None:
-        for window in sublime.windows():
-            if window.id() in self._managers:
-                self._managers[window.id()].update(config_name)
+RETRY_MAX_COUNT = 5
+RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 
 
 class WindowConfigManager(object):
@@ -30,6 +19,7 @@ class WindowConfigManager(object):
         self._window = window
         self._global_configs = global_configs
         self._disabled_for_session = set()  # type: Set[str]
+        self._crashes = {}  # type: Dict[str, Deque[datetime]]
         self.all = {}  # type: Dict[str, ClientConfig]
         self.update()
 
@@ -90,6 +80,22 @@ class WindowConfigManager(object):
         else:
             disable_in_project(self._window, config_name)
         self.update(config_name)
+
+    def record_crash(self, config_name: str, exit_code: int, exception: Optional[Exception]) -> bool:
+        """
+        Signal that a session has crashed.
+
+        Returns True if the session should be restarted automatically.
+        """
+        if config_name not in self._crashes:
+            self._crashes[config_name] = deque(maxlen=RETRY_MAX_COUNT)
+        now = datetime.now()
+        self._crashes[config_name].append(now)
+        timeout = now - RETRY_COUNT_TIMEDELTA
+        crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
+        printf("{} crashed ({} / {} times in the last {} seconds), exit code {}, exception: {}".format(
+            config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception))
+        return crash_count < RETRY_MAX_COUNT
 
     def _disable_for_session(self, config_name: str) -> None:
         self._disabled_for_session.add(config_name)

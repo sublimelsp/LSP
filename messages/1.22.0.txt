@@ -1,0 +1,28 @@
+=> 1.22.0
+
+# Breaking changes
+
+- don't show diagnostics panel on save by default (#2179) (Glauco Custódio)
+
+# Features
+
+- Implement type hierarchy request (#2180) (jwortmann)
+- Implement call hierarchy request (#2151) (jwortmann)
+
+# Fixes and Improvements
+
+- Perform inlay hint action on double instead of single click (#2175) (Предраг Николић)
+- support canceling pending completions request (#2177) (Rafał Chłodnicki)
+- fix stale state or lack of updates on changing branches (#2182) (Rafał Chłodnicki)
+- Add timestamp and request duration in LSP logs (#2181) (Rafał Chłodnicki)
+- workaround for View Listeners not being attached for new transient view (#2174) (Rafał Chłodnicki)
+- Make Document Symbols behavior more consistent with built-in Goto Symbol (#2166) (jwortmann)
+- Allow missing window/workDoneProgress/create request from the server (#2159) (Raoul Wols)
+- Use "plaintext" language ID for plain text files (#2164) (Предраг Николић)
+- Don't use "escapeall" extension when formatting with mdpopups (#2163) (Rafał Chłodnicki)
+- support "force_group" and "group" arguments in "lsp_symbol_references" (#2186) (Rafał Chłodnicki)
+
+# Plugin API changes
+
+- trigger "on_server_response_async" also for "initialize" response (#2172) (Rafał Chłodnicki)
+- allow setting additional text in permanent server status (#2173) (Rafał Chłodnicki)

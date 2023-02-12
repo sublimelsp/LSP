@@ -1,21 +1,25 @@
-from .core.panels import is_panel_open
-from .core.panels import PanelName
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
 from .core.protocol import Request
+from .core.protocol import SemanticTokensDeltaParams
+from .core.protocol import SemanticTokensParams
+from .core.protocol import SemanticTokensRangeParams
+from .core.protocol import TextDocumentSaveReason
 from .core.protocol import TextDocumentSyncKind
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
 from .core.types import debounced
-from .core.types import Debouncer
+from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
+from .core.typing import cast
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import did_change
@@ -25,7 +29,6 @@ from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
-from .core.views import is_range_equal
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
@@ -69,7 +72,7 @@ class DiagnosticSeverityData:
         self.annotations = []  # type: List[str]
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = userprefs().diagnostics_gutter_marker
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class SemanticTokensData:
@@ -113,7 +116,7 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
         self.last_text_change_time = 0.0
-        self.diagnostics_debouncer = Debouncer()
+        self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.document_links = []  # type: List[DocumentLink]
         self.semantic_tokens = SemanticTokensData()
@@ -123,18 +126,6 @@ class SessionBuffer:
         self.inlay_hints_needs_refresh = False
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
-
-    def __del__(self) -> None:
-        mgr = self.session.manager()
-        if mgr and is_panel_open(mgr.window(), PanelName.Diagnostics):
-            mgr.on_diagnostics_updated()
-        self.color_phantoms.update([])
-        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
-        # in unregistering ourselves from the session.
-        if not self.session.exiting:
-            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            self._check_did_close()
-            self.session.unregister_session_buffer_async(self)
 
     @property
     def session(self) -> Session:
@@ -195,7 +186,20 @@ class SessionBuffer:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
-            self.remove_all_inlay_hints()
+            self._on_before_destroy()
+
+    def _on_before_destroy(self) -> None:
+        self.remove_all_inlay_hints()
+        wm = self.session.manager()
+        if wm:
+            wm.on_diagnostics_updated()
+        self.color_phantoms.update([])
+        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
+        # in unregistering ourselves from the session.
+        if not self.session.exiting:
+            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
+            self._check_did_close()
+            self.session.unregister_session_buffer_async(self)
 
     def register_capability_async(
         self,
@@ -276,40 +280,46 @@ class SessionBuffer:
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(view, view.change_count(), None))
+        version = view.change_count()
+        self.session.send_notification(did_change(view, version, None))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
     on_reload_async = on_revert_async
 
     def purge_changes_async(self, view: sublime.View) -> None:
-        if self.pending_changes is not None:
-            sync_kind = self.text_sync_kind()
-            if sync_kind == TextDocumentSyncKind.None_:
-                return
-            if sync_kind == TextDocumentSyncKind.Full:
-                changes = None
-                version = view.change_count()
-            else:
-                changes = self.pending_changes.changes
-                version = self.pending_changes.version
-            try:
-                notification = did_change(view, version, changes)
-                self.session.send_notification(notification)
-            except MissingUriError:
-                return  # we're closing
-            finally:
-                self.pending_changes = None
-            self._do_color_boxes_async(view, version)
-            self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
-                self._do_document_link_async(view, version)
-            self.do_inlay_hints_async(view)
-            self.session.notify_plugin_on_session_buffer_change(self)
+        if self.pending_changes is None:
+            return
+        sync_kind = self.text_sync_kind()
+        if sync_kind == TextDocumentSyncKind.None_:
+            return
+        if sync_kind == TextDocumentSyncKind.Full:
+            changes = None
+            version = view.change_count()
+        else:
+            changes = self.pending_changes.changes
+            version = self.pending_changes.version
+        try:
+            notification = did_change(view, version, changes)
+            self.session.send_notification(notification)
+        except MissingUriError:
+            return  # we're closing
+        finally:
+            self.pending_changes = None
+        self.session.notify_plugin_on_session_buffer_change(self)
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
+
+    def _on_after_change_async(self, view: sublime.View, version: int) -> None:
+        self._do_color_boxes_async(view, version)
+        self.do_semantic_tokens_async(view)
+        if userprefs().link_highlight_style in ("underline", "none"):
+            self._do_document_link_async(view, version)
+        self.do_inlay_hints_async(view)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.last_known_uri, 1))
+            self.session.send_notification(will_save(self.last_known_uri, TextDocumentSaveReason.Manual))
 
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
         if new_uri != self.last_known_uri:
@@ -323,9 +333,15 @@ class SessionBuffer:
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
 
     def some_view(self) -> Optional[sublime.View]:
+        if not self.session_views:
+            return None
+        # Prefer active view if possible
+        active_view = self.session.window.active_view()
+        for sv in self.session_views:
+            if sv.view == active_view:
+                return active_view
         for sv in self.session_views:
             return sv.view
-        return None
 
     def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
         """
@@ -351,7 +367,8 @@ class SessionBuffer:
         if response is None:  # Guard against spec violation from certain language servers
             self.color_phantoms.update([])
             return
-        self.color_phantoms.update([lsp_color_to_phantom(view, color_info) for color_info in response])
+        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
+        sublime.set_timeout(lambda: self.color_phantoms.update(phantoms))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -383,14 +400,16 @@ class SessionBuffer:
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
         for link in self.document_links:
-            if is_range_equal(link["range"], new_link_range):
+            if link["range"] == new_link_range:
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(
+        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+    ) -> None:
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         view = self.some_view()
         if view is None:
@@ -416,19 +435,26 @@ class SessionBuffer:
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))
-            self._publish_diagnostics_to_session_views(diagnostics_version, diagnostics, data_per_severity)
+            self._publish_diagnostics_to_session_views_async(
+                diagnostics_version, diagnostics, data_per_severity, visible_session_views)
 
-    def _publish_diagnostics_to_session_views(
+    def _publish_diagnostics_to_session_views_async(
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
+        visible_session_views: Set[SessionViewProtocol],
     ) -> None:
 
         def present() -> None:
-            self._present_diagnostics_async(diagnostics_version, diagnostics, data_per_severity)
+            self.diagnostics_version = diagnostics_version
+            self.diagnostics = diagnostics
+            self.data_per_severity = data_per_severity
+            self.diagnostics_are_visible = bool(diagnostics)
+            for sv in self.session_views:
+                sv.present_diagnostics_async(sv in visible_session_views)
 
-        self.diagnostics_debouncer.cancel_pending()
+        self.diagnostics_debouncer_async.cancel_pending()
 
         if self.diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
@@ -444,25 +470,11 @@ class SessionBuffer:
             if delay_in_seconds <= 0.0:
                 present()
             else:
-                self.diagnostics_debouncer.debounce(
+                self.diagnostics_debouncer_async.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
-                    async_thread=True
                 )
-
-    def _present_diagnostics_async(
-        self,
-        diagnostics_version: int,
-        diagnostics: List[Tuple[Diagnostic, sublime.Region]],
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-    ) -> None:
-        self.diagnostics_version = diagnostics_version
-        self.diagnostics = diagnostics
-        self.data_per_severity = data_per_severity
-        self.diagnostics_are_visible = bool(diagnostics)
-        for sv in self.session_views:
-            sv.present_diagnostics_async()
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
@@ -480,21 +492,21 @@ class SessionBuffer:
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
         if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
-            request = Request.semanticTokensRange(params, view)
+            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
         elif self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
-            request = Request.semanticTokensFullDelta(params, view)
+            request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.full"):
-            request = Request.semanticTokensFull(params, view)
+            request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.session.has_capability("semanticTokensProvider.range"):
             params["range"] = entire_content_range(view)
-            request = Request.semanticTokensRange(params, view)
+            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
 

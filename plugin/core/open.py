@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 import os
 import re
 import sublime
+import sublime_plugin
 import subprocess
 import webbrowser
 
@@ -86,8 +87,13 @@ def open_file(
     if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
         return Promise.resolve(view)
 
+    was_already_open = view is not None
     view = window.open_file(file, flags, group)
     if not view.is_loading():
+        if was_already_open and (flags & sublime.SEMI_TRANSIENT):
+            # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
+            # its view listeners initialized.
+            sublime_plugin.check_view_event_listeners(view)  # type: ignore
         # It's already loaded. Possibly already open in a tab.
         return Promise.resolve(view)
 
@@ -117,10 +123,10 @@ def center_selection(v: sublime.View, r: Range) -> sublime.View:
     if window:
         window.focus_view(v)
     if int(sublime.version()) >= 4124:
-        v.show_at_center(selection, animate=False)
+        v.show_at_center(selection.begin(), animate=False)
     else:
         # TODO: remove later when a stable build lands
-        v.show_at_center(selection)  # type: ignore
+        v.show_at_center(selection.begin())  # type: ignore
     return v
 
 

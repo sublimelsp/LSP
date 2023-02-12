@@ -38,7 +38,7 @@
   // warning: 2
   // info: 3
   // hint: 4
-  "show_diagnostics_panel_on_save": 2,
+  "show_diagnostics_panel_on_save": 0,
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
@@ -112,7 +112,7 @@
 
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
-  "diagnostics_gutter_marker": "dot",
+  "diagnostics_gutter_marker": "sign",
 
   // Highlight style of links to internal or external resources, like another text document
   // or a web site. Link navigation is implemented via the popup on mouse hover.

@@ -202,20 +202,9 @@
     // },
     // Toggle inlay hints
     // {
-    //     "command": "lsp_toggle_capability",
-    //     "args": {
-    //         "capability": "inlayHintProvider"
-    //     },
-    //     "keys": [
-    //         "UNBOUND"
-    //     ],
-    //     "context": [
-    //         {
-    //             "key": "lsp.session_with_capability",
-    //             "operator": "equal",
-    //             "operand": "inlayHintProvider"
-    //         }
-    //     ]
+    //     "command": "lsp_toggle_inlay_hints",
+    //     "keys": ["UNBOUND"],
+    //     "context": [{"key": "lsp.session_with_capability", "operand": "inlayHintProvider"}]
     // },
     // Expand Selection (a replacement for ST's "Expand Selection")
     // {

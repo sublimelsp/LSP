@@ -160,9 +160,6 @@
     },
     {
         "caption": "LSP: Toggle Inlay Hints",
-        "command": "lsp_toggle_capability",
-        "args": {
-            "capability": "inlayHintProvider"
-        }
+        "command": "lsp_toggle_inlay_hints",
     },
 ]

@@ -903,3 +903,140 @@ class ItemDefaultTests(TestCase):
             }
         }  # type: CompletionItem
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+
+class FormatCompletionsUnitTests(TestCase):
+
+    def _verify_completion(
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+    ) -> None:
+        item = format_completion(
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
+        self.assertEquals(item.trigger, trigger)
+        self.assertEquals(item.annotation, annotation)
+        self.assertEquals(item.details, details)
+        self.assertEquals(item.flags, flags)
+
+    def test_label(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+
+    def test_detail(self) -> None:
+        self._verify_completion(
+            {
+                "detail": "typescript",
+                "label": "readConfigFile",
+            },
+            trigger='readConfigFile',
+            annotation='typescript'
+        )
+
+    def test_label_details(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+
+    def test_filter_text_1(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+
+    def test_filter_text_2(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": ".$attrs",
+                "label": "$attrs",
+            },
+            trigger='.$attrs',
+            details='$attrs'
+        )
+
+    def test_filter_text_3(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "import { readConfigFile$1 } from 'typescript';",
+                "label": "readConfigFile",
+            },
+            trigger="import { readConfigFile$1 } from 'typescript';",
+            details='readConfigFile'
+        )
+
+    def test_filter_text_4(self) -> None:
+        # See the `test_filter_text_is_not_a_prefix_of_label` test above and
+        # also https://github.com/sublimelsp/LSP/issues/771
+        # This is probably a silly server behavior that we probably shouldn't need to support?
+        self._verify_completion(
+            {
+                "label": "Implement all members",
+                "filterText": "e",
+            },
+            trigger='e',
+            details='Implement all members'
+        )
+
+    def test_filter_text_and_label_details_1(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+
+    def test_filter_text_and_label_details_2(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner?()",
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()",
+                    "description": "BannerElement"
+                },
+            },
+            trigger='banner?()',
+            annotation='BannerElement'
+        )
+
+    def test_filter_text_and_label_details_3(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": ".$attrs",
+                "label": "$attrs",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='.$attrs',
+            details='$attrs()'
+        )
+
+    def test_filter_text_and_label_details_4(self) -> None:
+        self._verify_completion(
+            {
+                'label': 'create_texture',
+                'labelDetails': {
+                    'description': 'Texture2D',
+                    'detail': ' (uint width, uint height, ubyte* ptr)'
+                },
+                'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr)'
+            },
+            trigger='create_texture (uint width, uint height, ubyte* ptr)',
+            annotation='Texture2D'
+        )

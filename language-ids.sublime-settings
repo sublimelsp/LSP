@@ -23,6 +23,7 @@
     "source.c++": "cpp",
     "source.coffee.gulpfile": "coffeescript", // https://github.com/SublimeText/AFileIcon
     "source.cs": "csharp",
+    "source.css.tailwind": "css", // https://github.com/SublimeText/TailwindCSS
     "source.dosbatch": "bat",
     "source.fixedform-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.groovy.gradle": "groovy", // https://github.com/SublimeText/AFileIcon

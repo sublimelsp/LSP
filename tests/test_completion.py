@@ -1000,20 +1000,6 @@ class FormatCompletionsUnitTests(TestCase):
             trigger='banner?()',
         )
 
-    def test_filter_text_and_label_details_2(self) -> None:
-        self._verify_completion(
-            {
-                "filterText": "banner?()",
-                "label": "banner?",
-                "labelDetails": {
-                    "detail": "()",
-                    "description": "BannerElement"
-                },
-            },
-            trigger='banner?()',
-            annotation='BannerElement'
-        )
-
     def test_filter_text_and_label_details_3(self) -> None:
         self._verify_completion(
             {

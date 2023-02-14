@@ -297,10 +297,13 @@ class Syntax:
 
 
 class CompletionItem:
-    flags = ...  # type: int
-    details = ...  # type: str
+    trigger = ...  # type: str
     annotation = ...  # type: str
+    completion = ...  # type: str
+    completion_format = ...  # type: int
     kind = ...  # type: Tuple[int, str, str]
+    details = ...  # type: str
+    flags = ...  # type: int
 
     def __init__(
             self,

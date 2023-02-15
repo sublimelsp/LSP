@@ -18,8 +18,9 @@ import uuid
 class LspToggleInlayHintsCommand(LspWindowCommand):
     capability = 'inlayHintProvider'
 
-    def run(self) -> None:
-        enable = not self.are_enabled(self.window)
+    def run(self, enable: Optional[bool] = None) -> None:
+        if not isinstance(enable, bool):
+            enable = not self.are_enabled(self.window)
         self.window.settings().set('lsp_show_inlay_hints', enable)
         status = 'on' if enable else 'off'
         sublime.status_message('Inlay Hints are {}'.format(status))

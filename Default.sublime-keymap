@@ -201,6 +201,7 @@
     //     "context": [{"key": "lsp.session_with_capability", "operand": "typeHierarchyProvider"}]
     // },
     // Toggle inlay hints
+    // Accepts optional "enable" argument to specify the expected state instead of toggling.
     // {
     //     "command": "lsp_toggle_inlay_hints",
     //     "keys": ["UNBOUND"],

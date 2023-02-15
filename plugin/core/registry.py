@@ -122,18 +122,16 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         else:
             return None
 
-    def sessions(self) -> List[Session]:
+    def sessions(self) -> Generator[Session, None, None]:
         wm = windows.lookup(self.window)
         if not wm:
-            return []
-        sessions = []  # type: List[Session]
+            return None
         for session in wm.get_sessions():
             if self.capability and not session.has_capability(self.capability):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
-            sessions.append(session)
-        return sessions
+            yield session
 
     def session_by_name(self, session_name: str) -> Optional[Session]:
         wm = windows.lookup(self.window)

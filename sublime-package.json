@@ -683,7 +683,7 @@
             "show_inlay_hints": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names."
+              "markdownDescription": "Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names.\nThis is the default value used for new windows but can be overriden per-window using the `LSP: Toggle Inlay Hints` command from the Command Palette, Main Menu or a custom keybinding."
             },
           },
           "additionalProperties": false

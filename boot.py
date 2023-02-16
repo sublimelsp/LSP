@@ -56,6 +56,7 @@ from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand

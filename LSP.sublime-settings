@@ -143,7 +143,10 @@
   // "phantom" - show a phantom on the top when code actions are available
   "show_code_lens": "annotation",
 
-   // Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names.
+   // Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types
+   // or parameter names.
+   // This is the default value used for new windows but can be overriden per-window using the `LSP: Toggle Inlay Hints`
+   // command from the Command Palette, Main Menu or a custom keybinding.
   "show_inlay_hints": false,
 
   // Show code actions in hover popup if available

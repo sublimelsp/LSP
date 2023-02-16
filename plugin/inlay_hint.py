@@ -4,13 +4,38 @@ from .core.protocol import MarkupContent
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import Session
+from .core.settings import userprefs
 from .core.typing import cast, Optional, Union
 from .core.views import point_to_offset
 from .formatting import apply_text_edits_to_view
 import html
 import sublime
 import uuid
+
+
+class LspToggleInlayHintsCommand(LspWindowCommand):
+    capability = 'inlayHintProvider'
+
+    def run(self, enable: Optional[bool] = None) -> None:
+        if not isinstance(enable, bool):
+            enable = not self.are_enabled(self.window)
+        self.window.settings().set('lsp_show_inlay_hints', enable)
+        status = 'on' if enable else 'off'
+        sublime.status_message('Inlay Hints are {}'.format(status))
+        for session in self.sessions():
+            for sv in session.session_views_async():
+                sv.session_buffer.do_inlay_hints_async(sv.view)
+
+    def is_checked(self) -> bool:
+        return self.are_enabled(self.window)
+
+    @classmethod
+    def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
+        if not window:
+            return userprefs().show_inlay_hints
+        return bool(window.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints))
 
 
 class LspInlayHintClickCommand(LspTextCommand):

@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, TypeGuard, Union, cast
@@ -74,16 +73,16 @@ class CodeActionsManager:
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
-        def request_factory(session: Session) -> Optional[Request]:
+        def request_factory(sb: SessionBufferProtocol) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
             for sb, diags in session_buffer_diagnostics:
-                if sb.session == session:
+                if sb == sb:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, only_kinds, manual)
             return Request.codeAction(params, view)
 
-        def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
+        def response_filter(sb: SessionBufferProtocol, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter out non "quickfix" code actions unless "only_kinds" is provided.
             if only_kinds:
                 code_actions = [cast(CodeAction, a) for a in actions if not is_command(a) and not a.get('disabled')]
@@ -91,9 +90,9 @@ class CodeActionsManager:
                     for action in code_actions:
                         kind = action.get('kind')
                         if kinds_include_kind([CodeActionKind.Refactor], kind):
-                            self.refactor_actions_cache.append((session.config.name, action))
+                            self.refactor_actions_cache.append((sb.session.config.name, action))
                         elif kinds_include_kind([CodeActionKind.Source], kind):
-                            self.source_actions_cache.append((session.config.name, action))
+                            self.source_actions_cache.append((sb.session.config.name, action))
                 return [action for action in code_actions if kinds_include_kind(only_kinds, action.get('kind'))]
             if manual:
                 return [a for a in actions if not a.get('disabled')]
@@ -118,24 +117,24 @@ class CodeActionsManager:
         region = entire_content_region(view)
         session_buffer_diagnostics, _ = listener.diagnostics_intersecting_region_async(region)
 
-        def request_factory(session: Session) -> Optional[Request]:
-            session_kinds = get_session_kinds(session)
+        def request_factory(sb: SessionBufferProtocol) -> Optional[Request]:
+            session_kinds = get_session_kinds(sb)
             matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
             if not matching_kinds:
                 return None
             diagnostics = []  # type: List[Diagnostic]
             for sb, diags in session_buffer_diagnostics:
-                if sb.session == session:
+                if sb == sb:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, matching_kinds, manual=False)
             return Request.codeAction(params, view)
 
-        def response_filter(session: Session, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
+        def response_filter(sb: SessionBufferProtocol, actions: List[CodeActionOrCommand]) -> List[CodeActionOrCommand]:
             # Filter actions returned from the session so that only matching kinds are collected.
             # Since older servers don't support the "context.only" property, those will return all
             # actions that need to be then manually filtered.
-            session_kinds = get_session_kinds(session)
+            session_kinds = get_session_kinds(sb)
             matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
             return [a for a in actions if a.get('kind') in matching_kinds and not a.get('disabled')]
 
@@ -144,34 +143,36 @@ class CodeActionsManager:
     def _collect_code_actions_async(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[Session], Optional[Request]],
-        response_filter: Optional[Callable[[Session, List[CodeActionOrCommand]], List[CodeActionOrCommand]]] = None,
+        request_factory: Callable[[SessionBufferProtocol], Optional[Request]],
+        response_filter: Optional[Callable[[SessionBufferProtocol, List[CodeActionOrCommand]], List[CodeActionOrCommand]]] = None,  # noqa: E501
     ) -> Promise[List[CodeActionsByConfigName]]:
 
         def on_response(
-            session: Session, response: Union[Error, Optional[List[CodeActionOrCommand]]]
+            sb: SessionBufferProtocol, response: Union[Error, Optional[List[CodeActionOrCommand]]]
         ) -> CodeActionsByConfigName:
             actions = []
             if response and not isinstance(response, Error) and response_filter:
-                actions = response_filter(session, response)
-            return (session.config.name, actions)
+                actions = response_filter(sb, response)
+            return (sb.session.config.name, actions)
 
         tasks = []  # type: List[Promise[CodeActionsByConfigName]]
-        for session in listener.sessions_async('codeActionProvider'):
-            request = request_factory(session)
+        for sb in listener.session_buffers_async('codeActionProvider'):
+            session = sb.session
+            request = request_factory(sb)
             if request:
-                response_handler = partial(on_response, session)
+                response_handler = partial(on_response, sb)
                 task = session.send_request_task(request)  # type: Promise[Optional[List[CodeActionOrCommand]]]
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
-        return Promise.all(tasks).then(lambda sessions: list(filter(lambda session: len(session[1]), sessions)))
+        return Promise.all(tasks) \
+            .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
 
 
 actions_manager = CodeActionsManager()
 
 
-def get_session_kinds(session: Session) -> List[CodeActionKind]:
-    session_kinds = session.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
+def get_session_kinds(sb: SessionBufferProtocol) -> List[CodeActionKind]:
+    session_kinds = sb.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
     return session_kinds or []
 
 

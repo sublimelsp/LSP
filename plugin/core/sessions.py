@@ -48,6 +48,7 @@ from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PublishDiagnosticsParams
+from .protocol import RegistrationParams
 from .protocol import Range
 from .protocol import Request
 from .protocol import Response
@@ -58,6 +59,7 @@ from .protocol import SymbolTag
 from .protocol import TextDocumentClientCapabilities
 from .protocol import TextDocumentSyncKind
 from .protocol import TokenFormat
+from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceEdit
@@ -567,6 +569,12 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
+    def get_capability(self, capability: str) -> Optional[Any]:
+        ...
+
+    def has_capability(self, capability: str) -> bool:
+        ...
+
     def on_diagnostics_async(
         self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
     ) -> None:
@@ -604,15 +612,19 @@ class AbstractViewListener(metaclass=ABCMeta):
     view = cast(sublime.View, None)
 
     @abstractmethod
-    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:
+    def session_async(self, capability: str, point: Optional[int] = None) -> Optional['Session']:
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability_path: Optional[str] = None) -> Generator['Session', None, None]:
+    def sessions_async(self, capability: Optional[str] = None) -> Generator['Session', None, None]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_views_async(self) -> Iterable['SessionViewProtocol']:
+    def session_buffers_async(self, capability: Optional[str] = None) -> Generator['SessionBufferProtocol', None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Generator['SessionViewProtocol', None, None]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1739,7 +1751,7 @@ class Session(TransportCallbacks):
             visible_session_views, _ = self.session_views_by_visibility()
             sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
 
-    def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
+    def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""
         registrations = params["registrations"]
         for registration in registrations:
@@ -1747,7 +1759,7 @@ class Session(TransportCallbacks):
             if self.config.is_disabled_capability(capability_path):
                 continue
             debug("{}: registering capability:".format(self.config.name), capability_path)
-            options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
+            options = registration.get("registerOptions")
             if not isinstance(options, dict):
                 options = {}
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
@@ -1784,7 +1796,7 @@ class Session(TransportCallbacks):
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))
 
-    def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
+    def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:

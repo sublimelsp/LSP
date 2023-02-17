@@ -75,8 +75,8 @@ class CodeActionsManager:
 
         def request_factory(sb: SessionBufferProtocol) -> Optional[Request]:
             diagnostics = []  # type: List[Diagnostic]
-            for sb, diags in session_buffer_diagnostics:
-                if sb == sb:
+            for diag_sb, diags in session_buffer_diagnostics:
+                if diag_sb == sb:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, only_kinds, manual)

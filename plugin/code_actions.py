@@ -123,8 +123,8 @@ class CodeActionsManager:
             if not matching_kinds:
                 return None
             diagnostics = []  # type: List[Diagnostic]
-            for sb, diags in session_buffer_diagnostics:
-                if sb == sb:
+            for diag_sb, diags in session_buffer_diagnostics:
+                if diag_sb == sb:
                     diagnostics = diags
                     break
             params = text_document_code_action_params(view, region, diagnostics, matching_kinds, manual=False)

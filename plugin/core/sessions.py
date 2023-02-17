@@ -76,7 +76,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__

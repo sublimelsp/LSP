@@ -569,10 +569,10 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def get_capability(self, capability: str) -> Optional[Any]:
+    def get_capability(self, capability_path: str) -> Optional[Any]:
         ...
 
-    def has_capability(self, capability: str) -> bool:
+    def has_capability(self, capability_path: str) -> bool:
         ...
 
     def on_diagnostics_async(

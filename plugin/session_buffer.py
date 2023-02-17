@@ -125,7 +125,7 @@ class SessionBuffer:
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
         self._is_saving = False
-        self._has_pending_changes = False
+        self._has_changed_during_save = False
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
@@ -312,7 +312,7 @@ class SessionBuffer:
 
     def _on_after_change_async(self, view: sublime.View, version: int) -> None:
         if self._is_saving:
-            self._has_pending_changes = True
+            self._has_changed_during_save = True
             return
         self._do_color_boxes_async(view, version)
         self.do_semantic_tokens_async(view)
@@ -338,8 +338,8 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes_async(view)
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
-        if self._has_pending_changes:
-            self._has_pending_changes = False
+        if self._has_changed_during_save:
+            self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
 
     def some_view(self) -> Optional[sublime.View]:

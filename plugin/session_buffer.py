@@ -36,6 +36,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
+from .inlay_hint import LspToggleInlayHintsCommand
 from .semantic_highlighting import SemanticToken
 from functools import partial
 from weakref import WeakSet
@@ -235,8 +236,8 @@ class SessionBuffer:
         value = self.capabilities.get(capability_path)
         return value if value is not None else self.session.capabilities.get(capability_path)
 
-    def has_capability(self, capability: str) -> bool:
-        value = self.get_capability(capability)
+    def has_capability(self, capability_path: str) -> bool:
+        value = self.get_capability(capability_path)
         return value is not False and value is not None
 
     def text_sync_kind(self) -> TextDocumentSyncKind:
@@ -279,7 +280,9 @@ class SessionBuffer:
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(view, view.change_count(), None))
+        version = view.change_count()
+        self.session.send_notification(did_change(view, version, None))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
     on_reload_async = on_revert_async
 
@@ -613,9 +616,10 @@ class SessionBuffer:
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not userprefs().show_inlay_hints:
-            return
         if not self.session.has_capability("inlayHintProvider"):
+            return
+        if not LspToggleInlayHintsCommand.are_enabled(view.window()):
+            self.remove_all_inlay_hints()
             return
         params = {
             "textDocument": text_document_identifier(view),

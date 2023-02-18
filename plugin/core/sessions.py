@@ -36,7 +36,9 @@ from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
 from .protocol import GeneralClientCapabilities
+from .protocol import InitializeError
 from .protocol import InitializeParams
+from .protocol import InitializeResult
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
@@ -46,6 +48,7 @@ from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PublishDiagnosticsParams
+from .protocol import RegistrationParams
 from .protocol import Range
 from .protocol import Request
 from .protocol import Response
@@ -56,6 +59,7 @@ from .protocol import SymbolTag
 from .protocol import TextDocumentClientCapabilities
 from .protocol import TextDocumentSyncKind
 from .protocol import TokenFormat
+from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceEdit
@@ -72,7 +76,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Iterable, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -263,12 +267,15 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "insertTextModeSupport": {
                     "valueSet": [InsertTextMode.AdjustIndentation]
                 },
-                "labelDetailsSupport": True
+                "labelDetailsSupport": True,
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
             },
-            "insertTextMode": InsertTextMode.AdjustIndentation
+            "insertTextMode": InsertTextMode.AdjustIndentation,
+            "completionList": {
+                "itemDefaults": ["editRange", "insertTextFormat", "data"]
+            }
         },
         "signatureHelp": {
             "dynamicRegistration": True,
@@ -391,6 +398,12 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
+        },
+        "callHierarchy": {
+            "dynamicRegistration": True
+        },
+        "typeHierarchy": {
+            "dynamicRegistration": True
         }
     }  # type: TextDocumentClientCapabilities
     workspace_capabilites = {
@@ -556,6 +569,12 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
+    def get_capability(self, capability_path: str) -> Optional[Any]:
+        ...
+
+    def has_capability(self, capability_path: str) -> bool:
+        ...
+
     def on_diagnostics_async(
         self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
     ) -> None:
@@ -593,15 +612,19 @@ class AbstractViewListener(metaclass=ABCMeta):
     view = cast(sublime.View, None)
 
     @abstractmethod
-    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional['Session']:
+    def session_async(self, capability: str, point: Optional[int] = None) -> Optional['Session']:
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability_path: Optional[str] = None) -> Generator['Session', None, None]:
+    def sessions_async(self, capability: Optional[str] = None) -> Generator['Session', None, None]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_views_async(self) -> Iterable['SessionViewProtocol']:
+    def session_buffers_async(self, capability: Optional[str] = None) -> Generator['SessionBufferProtocol', None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Generator['SessionViewProtocol', None, None]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1140,6 +1163,7 @@ class Session(TransportCallbacks):
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self.config = config
+        self.config_status_message = ''
         self.manager = weakref.ref(manager)
         self.window = manager.window
         self.state = ClientStates.STARTING
@@ -1204,6 +1228,16 @@ class Session(TransportCallbacks):
             if sv.view == view:
                 return sv
         return None
+
+    def set_config_status_async(self, message: str) -> None:
+        """
+        Sets the message that is shown in parenthesis within the permanent language server status.
+
+        :param message: The message
+        """
+        self.config_status_message = message.strip()
+        for sv in self.session_views_async():
+            self.config.set_view_status(sv.view, message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
@@ -1373,13 +1407,16 @@ class Session(TransportCallbacks):
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
-    def _handle_initialize_success(self, result: Any) -> None:
+    def _handle_initialize_success(self, result: InitializeResult) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
+            # We've missed calling the "on_server_response_async" API as plugin was not created yet.
+            # Handle it now and use fake request ID since it shouldn't matter.
+            self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
         execute_commands = self.get_capability('executeCommandProvider.commands')
@@ -1407,7 +1444,7 @@ class Session(TransportCallbacks):
             self._init_callback(self, False)
             self._init_callback = None
 
-    def _handle_initialize_error(self, result: Any) -> None:
+    def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
@@ -1714,7 +1751,7 @@ class Session(TransportCallbacks):
             visible_session_views, _ = self.session_views_by_visibility()
             sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
 
-    def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
+    def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""
         registrations = params["registrations"]
         for registration in registrations:
@@ -1722,7 +1759,7 @@ class Session(TransportCallbacks):
             if self.config.is_disabled_capability(capability_path):
                 continue
             debug("{}: registering capability:".format(self.config.name), capability_path)
-            options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
+            options = registration.get("registerOptions")
             if not isinstance(options, dict):
                 options = {}
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
@@ -1759,7 +1796,7 @@ class Session(TransportCallbacks):
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))
 
-    def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
+    def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:
@@ -1949,6 +1986,12 @@ class Session(TransportCallbacks):
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
+
+    def send_request_task_2(self, request: Request) -> Tuple[Promise, int]:
+        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        promise, resolver = task
+        request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        return (promise, request_id)
 
     def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
         self.send_notification(Notification("$/cancelRequest", {"id": request_id}))

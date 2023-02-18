@@ -1,12 +1,15 @@
 from copy import deepcopy
+from LSP.plugin.completion import format_completion
+from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.core.protocol import CompletionItem
+from LSP.plugin.core.protocol import CompletionItemDefaults
 from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
-from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
+from unittest import TestCase
 import sublime
 
 
@@ -644,7 +647,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -653,7 +656,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }  # type: CompletionItem
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> 'Generator':
@@ -688,7 +691,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -739,7 +742,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp = {"label": label}  # type: CompletionItem
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -797,3 +800,229 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
             completion_items=[completion_item],
             insert_text='',
             expected_text='import ghjk;\nghjk')
+
+
+class ItemDefaultTests(TestCase):
+    def test_respects_defaults_for_completion(self):
+        item = {
+            'label': 'Hello'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'start': {'character': 0, 'line': 0},
+                'end': {'character': 0, 'line': 0},
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+    def test_defaults_should_not_override_completion_fields_if_present(self):
+        item = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            },
+            'insertTextFormat': InsertTextFormat.Snippet,
+            'data': ['3', '4']
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEdit': {
+                'newText': 'Hello',
+                'range': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0}
+                }
+            },
+            'insertTextFormat': InsertTextFormat.PlainText,
+            'data': ['1', '2']
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
+        item = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert'
+        }  # type: CompletionItem
+        item_defaults = {
+            'editRange': {
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            },
+        }  # type: CompletionItemDefaults
+        expected = {
+            'label': 'Hello',
+            'textEditText': 'Text to insert',
+            'textEdit': {
+                'newText': 'Text to insert',  # this text will be inserted
+                'insert': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+                'replace': {
+                    'start': {'character': 0, 'line': 0},
+                    'end': {'character': 0, 'line': 0},
+                },
+            }
+        }  # type: CompletionItem
+        self.assertEqual(completion_with_defaults(item, item_defaults), expected)
+
+
+class FormatCompletionsUnitTests(TestCase):
+
+    def _verify_completion(
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+    ) -> None:
+        item = format_completion(
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
+        self.assertEquals(item.trigger, trigger)
+        self.assertEquals(item.annotation, annotation)
+        self.assertEquals(item.details, details)
+        self.assertEquals(item.flags, flags)
+
+    def test_label(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+
+    def test_detail(self) -> None:
+        self._verify_completion(
+            {
+                "detail": "typescript",
+                "label": "readConfigFile",
+            },
+            trigger='readConfigFile',
+            annotation='typescript'
+        )
+
+    def test_label_details(self) -> None:
+        self._verify_completion(
+            {
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+
+    def test_filter_text_1(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+            },
+            trigger='banner?',
+        )
+
+    def test_filter_text_2(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": ".$attrs",
+                "label": "$attrs",
+            },
+            trigger='.$attrs',
+            details='$attrs'
+        )
+
+    def test_filter_text_3(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "import { readConfigFile$1 } from 'typescript';",
+                "label": "readConfigFile",
+            },
+            trigger="import { readConfigFile$1 } from 'typescript';",
+            details='readConfigFile'
+        )
+
+    def test_filter_text_4(self) -> None:
+        # See the `test_filter_text_is_not_a_prefix_of_label` test above and
+        # also https://github.com/sublimelsp/LSP/issues/771
+        # This is probably a silly server behavior that we probably shouldn't need to support?
+        self._verify_completion(
+            {
+                "label": "Implement all members",
+                "filterText": "e",
+            },
+            trigger='e',
+            details='Implement all members'
+        )
+
+    def test_filter_text_and_label_details_1(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": "banner",
+                "label": "banner?",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='banner?()',
+        )
+
+    def test_filter_text_and_label_details_3(self) -> None:
+        self._verify_completion(
+            {
+                "filterText": ".$attrs",
+                "label": "$attrs",
+                "labelDetails": {
+                    "detail": "()"
+                },
+            },
+            trigger='.$attrs',
+            details='$attrs()'
+        )
+
+    def test_filter_text_and_label_details_4(self) -> None:
+        self._verify_completion(
+            {
+                'label': 'create_texture',
+                'labelDetails': {
+                    'description': 'Texture2D',
+                    'detail': ' (uint width, uint height, ubyte* ptr)'
+                },
+                'detail': 'Texture2D create_texture(uint width, uint height, ubyte* ptr)'
+            },
+            trigger='create_texture (uint width, uint height, ubyte* ptr)',
+            annotation='Texture2D'
+        )

@@ -150,4 +150,16 @@
         "caption": "LSP: Run Code Lens",
         "command": "lsp_code_lens"
     },
+    {
+        "caption": "LSP: Show Call Hierarchy",
+        "command": "lsp_call_hierarchy"
+    },
+    {
+        "caption": "LSP: Show Type Hierarchy",
+        "command": "lsp_type_hierarchy"
+    },
+    {
+        "caption": "LSP: Toggle Inlay Hints",
+        "command": "lsp_toggle_inlay_hints",
+    },
 ]

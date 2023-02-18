@@ -31,6 +31,9 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Run Code Lens | unbound | `lsp_code_lens`
 | Run Refactor Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["refactor"]}`)
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
+| Show Call Hierarchy | unbound | `lsp_call_hierarchy`
+| Show Type Hierarchy | unbound | `lsp_type_hierarchy`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
+| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints` (supports optional args: `{"enable": true/false}`)
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

@@ -28,7 +28,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None,
         side_by_side: bool = False,
+        force_group: bool = True,
         fallback: bool = False,
+        group: int = -1
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -37,7 +39,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None,
         side_by_side: bool = False,
+        force_group: bool = True,
         fallback: bool = False,
+        group: int = -1
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, fallback)
@@ -49,7 +53,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
         event: Optional[dict] = None,
         point: Optional[int] = None,
         side_by_side: bool = False,
+        force_group: bool = True,
         fallback: bool = False,
+        group: int = -1
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -70,7 +76,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     self.view.substr(word_range),
                     session,
                     side_by_side,
+                    force_group,
                     fallback,
+                    group,
                     word_range.begin()
                 )
             )
@@ -82,24 +90,30 @@ class LspSymbolReferencesCommand(LspTextCommand):
         word: str,
         session: Session,
         side_by_side: bool,
+        force_group: bool,
         fallback: bool,
+        group: int,
         position: int,
         response: Optional[List[Location]]
     ) -> None:
-        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, fallback, position, response))
+        sublime.set_timeout(lambda: self._handle_response(
+            word, session, side_by_side, force_group, fallback, group, position, response))
 
     def _handle_response(
         self,
         word: str,
         session: Session,
         side_by_side: bool,
+        force_group: bool,
         fallback: bool,
+        group: int,
         position: int,
         response: Optional[List[Location]]
     ) -> None:
         if response:
             if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(word, session, response, side_by_side, position)
+                self._show_references_in_quick_panel(
+                    word, session, response, side_by_side, force_group, group, position)
             else:
                 self._show_references_in_output_panel(word, session, response)
         else:
@@ -115,11 +129,19 @@ class LspSymbolReferencesCommand(LspTextCommand):
             window.status_message("No references found")
 
     def _show_references_in_quick_panel(
-        self, word: str, session: Session, locations: List[Location], side_by_side: bool, position: int
+        self,
+        word: str,
+        session: Session,
+        locations: List[Location],
+        side_by_side: bool,
+        force_group: bool,
+        group: int,
+        position: int
     ) -> None:
         self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
+        placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
-        LocationPicker(self.view, session, locations, side_by_side, placeholder="References to " + word, kind=kind)
+        LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
         wm = windows.lookup(session.window)

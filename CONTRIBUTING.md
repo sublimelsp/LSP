@@ -43,7 +43,7 @@ It is best if you check your GitHub notifications in the meantime!
 
 ## Releasing a new version (for maintainers)
 
-* Get a log of commits since the previously released tag with `git log --format="- format:%s (%an)" <previous_tag>..main`
+* Get a log of commits since the previously released tag with `git log --format="- %s (%an)" <previous_tag>..main`
 * Filter out non-relevant and non-important commits (it's not relevant to report fixes for bugs that weren't released yet, for example)
 * Optionally group changes into Fixes/Features/etc.
 * Create a new file in `messages/` with a file name of the yet-to-be-released version and include the changes.

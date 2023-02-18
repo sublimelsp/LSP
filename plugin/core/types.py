@@ -257,7 +257,7 @@ class Settings:
         r("show_diagnostics_in_view_status", True)
         r("show_diagnostics_inline", "none")
         r("show_multiline_diagnostics_highlights", True)
-        r("show_diagnostics_panel_on_save", 2)
+        r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
         r("show_symbol_action_links", False)
@@ -804,7 +804,7 @@ class ClientConfig:
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = "{}: {}".format(self.name, message) if message else self.name
+            status = "{} ({})".format(self.name, message) if message else self.name
             view.set_status(self.status_key, status)
 
     def erase_view_status(self, view: sublime.View) -> None:

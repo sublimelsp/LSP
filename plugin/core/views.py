@@ -7,9 +7,7 @@ from .protocol import CodeActionTriggerKind
 from .protocol import Color
 from .protocol import ColorInformation
 from .protocol import Command
-from .protocol import CompletionItem
 from .protocol import CompletionItemKind
-from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
@@ -781,24 +779,33 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
+def make_link(href: str, text: Any, class_name: Optional[str] = None, tooltip: Optional[str] = None) -> str:
     if isinstance(text, str):
         text = text.replace(' ', '&nbsp;')
+    link = "<a href='{}'".format(href)
     if class_name:
-        return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
-    else:
-        return "<a href='{}'>{}</a>".format(href, text)
+        link += " class='{}'".format(class_name)
+    if tooltip:
+        link += " title='{}'".format(html.escape(tooltip))
+    link += ">{}</a>".format(text)
+    return link
 
 
-def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
-                      class_name: Optional[str] = None, view_id: Optional[int] = None) -> str:
+def make_command_link(
+    command: str,
+    text: str,
+    command_args: Optional[Dict[str, Any]] = None,
+    class_name: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    view_id: Optional[int] = None
+) -> str:
     if view_id is not None:
         cmd = "lsp_run_text_command_helper"
         args = {"view_id": view_id, "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
     else:
         cmd = command
         args = command_args
-    return make_link(sublime.command_url(cmd, args), text, class_name)
+    return make_link(sublime.command_url(cmd, args), text, class_name, tooltip)
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
@@ -1037,62 +1044,6 @@ def format_diagnostic_for_html(
     return "".join(formatted)
 
 
-def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str, view_id: int
-) -> sublime.CompletionItem:
-    # This is a hot function. Don't do heavy computations or IO in this function.
-
-    lsp_label = item['label']
-    lsp_label_details = item.get('labelDetails') or {}
-    lsp_label_detail = lsp_label_details.get('detail') or ""
-    lsp_label_description = lsp_label_details.get('description') or ""
-    lsp_filter_text = item.get('filterText') or ""
-    lsp_detail = (item.get('detail') or "").replace("\n", " ")
-
-    completion_kind = item.get('kind')
-    kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
-
-    details = []  # type: List[str]
-    if can_resolve_completion_items or item.get('documentation'):
-        details.append(make_command_link(
-            'lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}, view_id=view_id))
-
-    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
-        trigger = lsp_label + lsp_label_detail
-        annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text):
-        trigger = lsp_label
-        annotation = lsp_detail
-        if lsp_label_detail:
-            details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-    else:
-        trigger = lsp_filter_text
-        annotation = lsp_detail
-        details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-
-    if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
-        annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
-
-    insert_replace_support_html = get_insert_replace_support_html(item)
-    if insert_replace_support_html:
-        details.append(insert_replace_support_html)
-
-    completion = sublime.CompletionItem.command_completion(
-        trigger=trigger,
-        command='lsp_select_completion_item',
-        args={"item": item, "session_name": session_name},
-        annotation=annotation,
-        kind=kind,
-        details=" | ".join(details))
-    if item.get('textEdit'):
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    return completion
-
-
 def format_code_actions_for_quick_panel(
     session_actions: Iterable[Tuple[str, Union[CodeAction, Command]]]
 ) -> Tuple[List[sublime.QuickPanelItem], int]:
@@ -1106,13 +1057,3 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
-
-
-def get_insert_replace_support_html(item: CompletionItem) -> Optional[str]:
-    text_edit = item.get('textEdit')
-    if text_edit and 'insert' in text_edit and 'replace' in text_edit:
-        insert_mode = userprefs().completion_insert_mode
-        oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
-        command_url = sublime.command_url("lsp_commit_completion_with_opposite_insert_mode")
-        return "<a href='{}'>{}</a>".format(command_url, oposite_insert_mode)
-    return None

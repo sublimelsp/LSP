@@ -9,11 +9,8 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
-from .promise import Promise
 from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import Location
-from .protocol import LocationLink
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -22,10 +19,11 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import userprefs
 from .transports import create_transport
+from .tree_view import TreeViewSheet
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Union
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -34,8 +32,9 @@ from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from collections import deque
 from collections import OrderedDict
+from datetime import datetime
 from subprocess import CalledProcessError
-from time import time
+from time import perf_counter
 from weakref import ref
 from weakref import WeakSet
 import functools
@@ -77,6 +76,7 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self._server_log = []  # type: List[Tuple[str, str]]
         self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
+        self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
@@ -115,19 +115,6 @@ class WindowManager(Manager):
 
     def disable_config_async(self, config_name: str) -> None:
         self._config_manager.disable_config(config_name)
-
-    def open_location_async(
-        self,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str],
-        view: sublime.View,
-        flags: int = 0,
-        group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
-        for session in self.sessions(view):
-            if session_name is None or session_name == session.config.name:
-                return session.open_location_async(location, flags, group)
-        return Promise.resolve(None)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
@@ -554,11 +541,33 @@ class WindowRegistry:
             wm.destroy()
 
 
+class RequestTimeTracker:
+    def __init__(self) -> None:
+        self._start_times = {}  # type: Dict[int, float]
+
+    def start_tracking(self, request_id: int) -> None:
+        self._start_times[request_id] = perf_counter()
+
+    def end_tracking(self, request_id) -> str:
+        duration = '-'
+        if request_id in self._start_times:
+            start = self._start_times.pop(request_id)
+            duration_ms = perf_counter() - start
+            duration = '{}ms'.format(int(duration_ms * 1000))
+        return duration
+
+    @classmethod
+    def formatted_now(cls) -> str:
+        now = datetime.now()
+        return '{}.{:03d}'.format(now.strftime("%H:%M:%S"), int(now.microsecond / 1000))
+
+
 class PanelLogger(Logger):
 
     def __init__(self, manager: WindowManager, server_name: str) -> None:
         self._manager = ref(manager)
         self._server_name = server_name
+        self._request_time_tracker = RequestTimeTracker()
 
     def stderr_message(self, message: str) -> None:
         """
@@ -584,16 +593,19 @@ class PanelLogger(Logger):
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         if not userprefs().log_server:
             return
-        self.log(self._format_response(">>>", request_id), params)
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response(">>>", request_id, duration), params)
 
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
         if not userprefs().log_server:
             return
-        self.log(self._format_response("~~>", request_id), error.to_lsp())
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response("~~>", request_id, duration), error.to_lsp())
 
     def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
+        self._request_time_tracker.start_tracking(request_id)
         self.log(self._format_request("-->", method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
@@ -605,11 +617,13 @@ class PanelLogger(Logger):
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        self.log(self._format_response(direction, request_id), params)
+        duration = self._request_time_tracker.end_tracking(request_id)
+        self.log(self._format_response(direction, request_id, duration), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
+        self._request_time_tracker.start_tracking(request_id)
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
@@ -618,14 +632,16 @@ class PanelLogger(Logger):
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
 
-    def _format_response(self, direction: str, request_id: Any) -> str:
-        return "{} {} {}".format(direction, self._server_name, request_id)
+    def _format_response(self, direction: str, request_id: Any, duration: str) -> str:
+        return "[{}] {} {} ({}) (duration: {})".format(
+            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
 
     def _format_request(self, direction: str, method: str, request_id: Any) -> str:
-        return "{} {} {}({})".format(direction, self._server_name, method, request_id)
+        return "[{}] {} {} {} ({})".format(
+            RequestTimeTracker.formatted_now(), direction, self._server_name, method, request_id)
 
     def _format_notification(self, direction: str, method: str) -> str:
-        return "{} {} {}".format(direction, self._server_name, method)
+        return "[{}] {} {} {}".format(RequestTimeTracker.formatted_now(), direction, self._server_name, method)
 
 
 class RemoteLogger(Logger):
@@ -684,7 +700,7 @@ class RemoteLogger(Logger):
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': 'stderr',
             'params': message,
             'isError': True,
@@ -695,7 +711,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
@@ -705,7 +721,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'params': params,
             'direction': self.DIRECTION_INCOMING,
             'isError': is_error,
@@ -715,7 +731,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_INCOMING,
@@ -725,7 +741,7 @@ class RemoteLogger(Logger):
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
         })
@@ -736,14 +752,14 @@ class RemoteLogger(Logger):
             'id': request_id,
             'isError': True,
             'params': error.to_lsp(),
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'direction': self.DIRECTION_OUTGOING,
         })
 
     def outgoing_notification(self, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'method': method,
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
@@ -752,7 +768,7 @@ class RemoteLogger(Logger):
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
-            'time': round(time() * 1000),
+            'time': round(perf_counter() * 1000),
             'error': 'Unhandled notification!' if unhandled else None,
             'method': method,
             'params': params,

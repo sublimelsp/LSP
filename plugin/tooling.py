@@ -535,3 +535,26 @@ class ServerTestRunner(TransportCallbacks):
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
         sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))
+
+
+class LspOnDoubleClickCommand(sublime_plugin.TextCommand):
+    click_count = 0
+    prev_command = None  # type: Optional[str]
+    prev_args = None  # type: Optional[Dict[Any, Any]]
+
+    def run(self, edit: sublime.Edit, command: str, args: Dict[Any, Any]) -> None:
+        if self.prev_command != command or self.prev_args != args:
+            self.click_count = 0
+            self.prev_command = command
+            self.prev_args = args
+        self.click_count += 1
+        if self.click_count == 2:
+            self.view.run_command(command, args)
+            self.reset()
+            return
+        sublime.set_timeout(self.reset, 500)
+
+    def reset(self) -> None:
+        self.click_count = 0
+        self.prev_command = None
+        self.prev_args = None

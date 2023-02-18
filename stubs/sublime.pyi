@@ -63,6 +63,7 @@ INHIBIT_EXPLICIT_COMPLETIONS = ...  # type: int
 INHIBIT_REORDER = ...  # type: int
 DYNAMIC_COMPLETIONS = ...  # type: int
 COMPLETION_FLAG_KEEP_PREFIX = ...  # type: int
+COMPLETION_FORMAT_COMMAND = ...  # type: int
 DIALOG_CANCEL = ...  # type: int
 DIALOG_YES = ...  # type: int
 DIALOG_NO = ...  # type: int
@@ -296,10 +297,13 @@ class Syntax:
 
 
 class CompletionItem:
-    flags = ...  # type: int
-    details = ...  # type: str
+    trigger = ...  # type: str
     annotation = ...  # type: str
+    completion = ...  # type: str
+    completion_format = ...  # type: int
     kind = ...  # type: Tuple[int, str, str]
+    details = ...  # type: str
+    flags = ...  # type: int
 
     def __init__(
             self,
@@ -365,6 +369,9 @@ class Window:
     def active_view(self) -> 'Optional[View]':
         ...
 
+    def new_html_sheet(self, name: str, contents: str, flags: int = ..., group: int = ...) -> 'Sheet':
+        ...
+
     def run_command(self, cmd: str, args: Optional[Any] = ...) -> None:
         ...
 
@@ -390,6 +397,9 @@ class Window:
         ...
 
     def focus_view(self, view: 'View') -> None:
+        ...
+
+    def select_sheets(self, sheets: 'List[Sheet]') -> None:
         ...
 
     def get_sheet_index(self, sheet: 'Sheet') -> Tuple[int, int]:
@@ -656,7 +666,7 @@ class Sheet:
         ...
 
 
-class HtmlSheet:
+class HtmlSheet(Sheet):
     sheet_id = ...  # type: Any
 
     def __init__(self, id: Any) -> None:
@@ -872,7 +882,8 @@ class View:
     def visible_region(self) -> Region:
         ...
 
-    def show(self, x: Union[Selection, Region, int], show_surrounds: bool = ...) -> None:
+    def show(self, x: Union[Selection, Region, int], show_surrounds: bool = True, keep_to_left: bool = False,
+             animate: bool = True) -> None:
         ...
 
     def show_at_center(self, x: Union[Selection, Region, int], animate: bool = True) -> None:

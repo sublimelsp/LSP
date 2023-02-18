@@ -810,7 +810,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
-        debounced(f, after_ms, lambda: bool(self._stored_selection and self._stored_selection[0] == r), async_thread=True)
+        debounced(
+            f, after_ms, lambda: bool(self._stored_selection and self._stored_selection[0] == r), async_thread=True)
 
     def _register_async(self) -> None:
         buf = self.view.buffer()

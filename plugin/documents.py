@@ -299,12 +299,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
+    def session_buffers_async(self, capability: Optional[str] = None) -> Generator[SessionBuffer, None, None]:
+        for sv in self.session_views_async():
+            if capability is None or sv.has_capability_async(capability):
+                yield sv.session_buffer
+
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
-
-    def session_buffers_async(self) -> Generator[SessionBuffer, None, None]:
-        for sv in self.session_views_async():
-            yield sv.session_buffer
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():

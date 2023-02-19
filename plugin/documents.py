@@ -814,7 +814,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         debounced(f, after_ms, partial(self._is_selection_stable_async, r), async_thread=True)
 
     def _is_selection_stable_async(self, region: sublime.Region) -> bool:
-        print(region, self._stored_selection)
         return bool(self._stored_selection and self._stored_selection[0] == region)
 
     def _register_async(self) -> None:

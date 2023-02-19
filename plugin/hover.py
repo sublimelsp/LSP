@@ -22,11 +22,11 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
+from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
-from .core.views import first_selection_region
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link

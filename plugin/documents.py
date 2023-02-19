@@ -849,13 +849,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
-        changed_region, any_different = self._update_stored_selection_async()
-        if changed_region is None:
+        first_region, any_different = self._update_stored_selection_async()
+        if first_region is None:
             return
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
-                self._do_highlights_async, changed_region, after_ms=self.highlights_debounce_time)
+                self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
 
     def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:

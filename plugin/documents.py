@@ -36,7 +36,7 @@ from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import get_first_selection_region
+from .core.views import first_selection_region
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -352,6 +352,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_selection_modified_async(self) -> None:
         first_region, any_different = self._update_stored_selection_async()
+        print(first_region, any_different)
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
@@ -727,7 +728,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def _do_highlights_async(self) -> None:
-        region = get_first_selection_region(self.view.sel())
+        region = first_selection_region(self.view)
         if region is None:
             return
         point = region.b
@@ -868,18 +869,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         :returns:   A tuple with two elements. The first element returns the first selection region if it has changed.
                     The second element signals whether any selection region has changed.
         """
-        current_first_region = None
-        any_selection_changed = False
-        selection = self.view.sel()
-        first_region = get_first_selection_region(selection)
-        if first_region is not None:
-            if not self._stored_selection or self._stored_selection[0] != first_region:
-                current_first_region = first_region
-            current_selection = list(selection)
-            if self._stored_selection != current_selection:
-                any_selection_changed = True
-                self._stored_selection = list(selection)
-        return current_first_region, any_selection_changed
+        selection = list(self.view.sel())
+        if self._stored_selection == selection:
+            return None, False
+        changed_first_region = None
+        if selection:
+            stored_first_region = self._stored_selection[0] if self._stored_selection else None
+            current_first_region = selection[0]
+            if stored_first_region != current_first_region:
+                changed_first_region = current_first_region
+        self._stored_selection = selection
+        return changed_first_region, True
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

@@ -425,16 +425,9 @@ def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> T
     return {"uri": uri}
 
 
-def get_first_selection_region(selection: sublime.Selection) -> Optional[sublime.Region]:
-    return selection[0] if len(selection) else None
-
-
 def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:
-    """@deprecated Use :meth:`get_first_selection_region` instead."""
-    try:
-        return view.sel()[0]
-    except IndexError:
-        return None
+    selection = view.sel()
+    return selection[0] if len(selection) else None
 
 
 def has_single_nonempty_selection(view: sublime.View) -> bool:

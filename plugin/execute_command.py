@@ -3,7 +3,7 @@ from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.typing import List, Optional, Any
-from .core.views import get_first_selection_region
+from .core.views import first_selection_region
 from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier, text_document_position_params  # noqa: E501
 import sublime
 
@@ -69,7 +69,7 @@ class LspExecuteCommand(LspTextCommand):
 
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
         view = self.view  # type: sublime.View
-        region = get_first_selection_region(view.sel())
+        region = first_selection_region(view)
         for i, arg in enumerate(command_args):
             if arg in ["$document_id", "${document_id}"]:
                 command_args[i] = text_document_identifier(view)

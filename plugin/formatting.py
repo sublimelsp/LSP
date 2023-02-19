@@ -8,7 +8,7 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Callable, List, Optional, Iterator, Union
 from .core.views import entire_content_region
-from .core.views import get_first_selection_region
+from .core.views import first_selection_region
 from .core.views import has_single_nonempty_selection
 from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
@@ -121,7 +121,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.best_session(self.capability)
-        selection = get_first_selection_region(self.view.sel())
+        selection = first_selection_region(self.view)
         if session and selection is not None:
             req = text_document_range_formatting(self.view, selection)
             session.send_request(req, lambda response: apply_text_edits_to_view(response, self.view))

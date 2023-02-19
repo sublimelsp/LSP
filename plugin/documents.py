@@ -352,7 +352,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_selection_modified_async(self) -> None:
         first_region, any_different = self._update_stored_selection_async()
-        print(first_region, any_different)
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):

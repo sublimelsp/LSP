@@ -35,8 +35,8 @@ from .core.url import view_to_uri
 from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
-from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import get_first_selection_region
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -352,18 +352,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_selection_modified_async(self) -> None:
         first_region, any_different = self._update_stored_selection_async()
-        if first_region:
-            if not self._is_in_higlighted_region(first_region.b):
-                self._clear_highlight_regions()
-            if userprefs().document_highlight_style:
-                self._when_selection_remains_stable_async(self._do_highlights_async, first_region,
-                                                          after_ms=self.highlights_debounce_time)
-            self._clear_code_actions_annotation()
-            if userprefs().show_code_actions:
-                self._when_selection_remains_stable_async(self._do_code_actions_async, first_region,
-                                                          after_ms=self.code_actions_debounce_time)
-            self._update_diagnostic_in_status_bar_async()
-            self._resolve_visible_code_lenses_async()
+        if first_region is None:
+            return
+        if not self._is_in_higlighted_region(first_region.b):
+            self._clear_highlight_regions()
+        if userprefs().document_highlight_style:
+            self._when_selection_remains_stable_async(self._do_highlights_async, first_region,
+                                                      after_ms=self.highlights_debounce_time)
+        self._clear_code_actions_annotation()
+        if userprefs().show_code_actions:
+            self._when_selection_remains_stable_async(self._do_code_actions_async, first_region,
+                                                      after_ms=self.code_actions_debounce_time)
+        self._update_diagnostic_in_status_bar_async()
+        self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
@@ -726,7 +727,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def _do_highlights_async(self) -> None:
-        region = first_selection_region(self.view)
+        region = get_first_selection_region(self.view.sel())
         if region is None:
             return
         point = region.b
@@ -810,8 +811,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
-        debounced(
-            f, after_ms, lambda: bool(self._stored_selection and self._stored_selection[0] == r), async_thread=True)
+        debounced(f, after_ms, partial(self._is_selection_stable_async, r), async_thread=True)
+
+    def _is_selection_stable_async(self, region: sublime.Region) -> bool:
+        print(region, self._stored_selection)
+        return bool(self._stored_selection and self._stored_selection[0] == region)
 
     def _register_async(self) -> None:
         buf = self.view.buffer()
@@ -847,7 +851,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         changed_region, any_different = self._update_stored_selection_async()
-        if not changed_region:
+        if changed_region is None:
             return
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
@@ -862,20 +866,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         view is already closed. In that case it returns `None`. It also returns that value if there's no first
         selection.
 
-        :returns:   A tuple with two elements:
-                      - first element returns the first selection region if it has changed
-                      - second element signals whether any selection region has changed
+        :returns:   A tuple with two elements. The first element returns the first selection region if it has changed.
+                    The second element signals whether any selection region has changed.
         """
         current_first_region = None
         any_selection_changed = False
-        first_region = first_selection_region(self.view)
+        selection = self.view.sel()
+        first_region = get_first_selection_region(selection)
         if first_region is not None:
             if not self._stored_selection or self._stored_selection[0] != first_region:
                 current_first_region = first_region
-            current_selection = list(self.view.sel())
+            current_selection = list(selection)
             if self._stored_selection != current_selection:
                 any_selection_changed = True
-                self._stored_selection = list(self.view.sel())
+                self._stored_selection = list(selection)
         return current_first_region, any_selection_changed
 
     def _clear_session_views_async(self) -> None:

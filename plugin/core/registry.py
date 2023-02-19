@@ -7,7 +7,7 @@ from .sessions import Session
 from .tree_view import TreeDataProvider
 from .tree_view import TreeViewSheet
 from .typing import Optional, Any, Generator, Iterable, List, Union
-from .views import first_selection_region
+from .views import get_first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
 from .views import point_to_offset
@@ -304,7 +304,7 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     # Sort diagnostics by location
     diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']), reverse=not forward)
     if point is None:
-        region = first_selection_region(view)
+        region = get_first_selection_region(view.sel())
         point = region.b if region is not None else 0
     # Find next/previous diagnostic or wrap around and jump to the first/last one, if there are no more diagnostics in
     # this view after/before the cursor

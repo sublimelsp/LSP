@@ -22,11 +22,11 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
-from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import get_first_selection_region
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -113,7 +113,7 @@ class LspHoverCommand(LspTextCommand):
     ) -> None:
         temp_point = point
         if temp_point is None:
-            region = first_selection_region(self.view)
+            region = get_first_selection_region(self.view.sel())
             if region is not None:
                 temp_point = region.begin()
         if temp_point is None:
@@ -164,7 +164,7 @@ class LspHoverCommand(LspTextCommand):
         self, session: Session, point: int
     ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
         if session.get_capability('experimental.rangeHoverProvider'):
-            region = first_selection_region(self.view)
+            region = get_first_selection_region(self.view.sel())
             if region is not None and region.contains(point):
                 return text_document_range_params(self.view, point, region)
         return text_document_position_params(self.view, point)

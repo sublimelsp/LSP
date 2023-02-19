@@ -13,8 +13,8 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, TypeGuard, Union, cast
 from .core.views import entire_content_region
-from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import get_first_selection_region
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand
 from .save_command import SaveTask
@@ -300,7 +300,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _run_async(self, only_kinds: Optional[List[CodeActionKind]] = None) -> None:
         view = self.view
-        region = first_selection_region(view)
+        region = get_first_selection_region(view.sel())
         if region is None:
             return
         listener = windows.listener_for_view(view)
@@ -432,7 +432,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
             return None
         if event is not None and self.applies_to_context_menu(event):
             return sublime.Region(view.window_to_text((event['x'], event['y'])))
-        return first_selection_region(view)
+        return get_first_selection_region(view.sel())
 
     @staticmethod
     def applies_to_context_menu(event: Optional[dict]) -> bool:

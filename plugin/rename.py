@@ -13,7 +13,7 @@ from .core.sessions import Session
 from .core.typing import Any, Optional, Dict, List, TypeGuard
 from .core.typing import cast
 from .core.url import parse_uri
-from .core.views import first_selection_region
+from .core.views import get_first_selection_region
 from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params
@@ -84,7 +84,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             point = args.get("point")
             # guess the symbol name
             if not isinstance(point, int):
-                region = first_selection_region(self.view)
+                region = get_first_selection_region(self.view.sel())
                 if region is None:
                     return None
                 point = region.b

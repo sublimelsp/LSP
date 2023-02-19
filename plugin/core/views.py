@@ -425,11 +425,8 @@ def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> T
     return {"uri": uri}
 
 
-def get_first_selection_region(selelection: sublime.Selection) -> Optional[sublime.Region]:
-    try:
-        return selelection[0]
-    except IndexError:
-        return None
+def get_first_selection_region(selection: sublime.Selection) -> Optional[sublime.Region]:
+    return selection[0] if len(selection) else None
 
 
 def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:

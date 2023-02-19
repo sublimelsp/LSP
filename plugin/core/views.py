@@ -432,6 +432,14 @@ def get_first_selection_region(selelection: sublime.Selection) -> Optional[subli
         return None
 
 
+def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:
+    """@deprecated Use :meth:`get_first_selection_region` instead."""
+    try:
+        return view.sel()[0]
+    except IndexError:
+        return None
+
+
 def has_single_nonempty_selection(view: sublime.View) -> bool:
     selections = view.sel()
     return len(selections) == 1 and not selections[0].empty()

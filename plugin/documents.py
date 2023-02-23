@@ -153,6 +153,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
+        self._stored_selection = []  # type: List[sublime.Region]
         self._setup()
 
     def __del__(self) -> None:
@@ -167,7 +168,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._language_id = ""
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
-        self._stored_region = sublime.Region(-1, -1)
+        self._stored_selection = []
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
         self._actions_by_config = []  # type: List[CodeActionsByConfigName]
@@ -178,7 +179,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
-        self._stored_region = sublime.Region(-1, -1)
+        self._stored_selection = []
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
@@ -287,10 +288,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
-            r = self._stored_region
-            if r is not None:
+            if self._stored_selection:
                 session_buffer_diagnostics, _ = self.diagnostics_touching_point_async(
-                    r.b, userprefs().show_diagnostics_severity_level)
+                    self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
                 if session_buffer_diagnostics:
                     for _, diagnostics in session_buffer_diagnostics:
                         diag = next(iter(diagnostics), None)
@@ -351,19 +351,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
-        different, current_region = self._update_stored_region_async()
-        if different:
-            if not self._is_in_higlighted_region(current_region.b):
-                self._clear_highlight_regions()
-            if userprefs().document_highlight_style:
-                self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                          after_ms=self.highlights_debounce_time)
-            self._clear_code_actions_annotation()
-            if userprefs().show_code_actions:
-                self._when_selection_remains_stable_async(self._do_code_actions_async, current_region,
-                                                          after_ms=self.code_actions_debounce_time)
-            self._update_diagnostic_in_status_bar_async()
-            self._resolve_visible_code_lenses_async()
+        first_region, any_different = self._update_stored_selection_async()
+        if first_region is None:
+            return
+        if not self._is_in_higlighted_region(first_region.b):
+            self._clear_highlight_regions()
+        if userprefs().document_highlight_style:
+            self._when_selection_remains_stable_async(self._do_highlights_async, first_region,
+                                                      after_ms=self.highlights_debounce_time)
+        self._clear_code_actions_annotation()
+        if userprefs().show_code_actions:
+            self._when_selection_remains_stable_async(self._do_code_actions_async, first_region,
+                                                      after_ms=self.code_actions_debounce_time)
+        self._update_diagnostic_in_status_bar_async()
+        self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
@@ -518,9 +519,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def do_signature_help_async(self, manual: bool) -> None:
         session = self._get_signature_help_session()
-        if not session:
+        if not session or not self._stored_selection:
             return
-        pos = self._stored_region.a
+        pos = self._stored_selection[0].a
         triggers = []  # type: List[str]
         if not manual:
             for sb in self.session_buffers_async():
@@ -564,9 +565,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _get_signature_help_session(self) -> Optional[Session]:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
         # when a language server inserts a snippet completion.
-        pos = self._stored_region.a
-        if pos == -1:
-            return None
+        if not self._stored_selection:
+            return
+        pos = self._stored_selection[0].a
         return self.session_async("signatureHelpProvider", pos)
 
     def _on_signature_help(
@@ -616,7 +617,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
     def _do_code_actions_async(self) -> None:
-        diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
+        if not self._stored_selection:
+            return
+        diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
         actions_manager \
             .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
             .then(self._on_code_actions)
@@ -626,9 +629,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         action_lists = [actions for _, actions in responses if len(actions)]
         all_actions = [action for actions in action_lists for action in actions]
         action_count = len(all_actions)
-        if action_count == 0:
+        if action_count == 0 or not self._stored_selection:
             return
-        regions = [sublime.Region(self._stored_region.b, self._stored_region.a)]
+        region = self._stored_selection[0]
+        regions = [sublime.Region(region.b, region.a)]
         scope = ""
         icon = ""
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
@@ -807,7 +811,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
-        debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
+        debounced(f, after_ms, partial(self._is_selection_stable_async, r), async_thread=True)
+
+    def _is_selection_stable_async(self, region: sublime.Region) -> bool:
+        return bool(self._stored_selection and self._stored_selection[0] == region)
 
     def _register_async(self) -> None:
         buf = self.view.buffer()
@@ -842,31 +849,36 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
-        different, current_region = self._update_stored_region_async()
-        if not different:
+        first_region, any_different = self._update_stored_selection_async()
+        if first_region is None:
             return
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
-                self._do_highlights_async, current_region, after_ms=self.highlights_debounce_time)
+                self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
 
-    def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
+    def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:
         """
-        Stores the current first selection in a variable.
+        Stores the current selection in a variable.
         Note that due to this function (supposedly) running in the async worker thread of ST, it can happen that the
-        view is already closed. In that case it returns Region(-1, -1). It also returns that value if there's no first
+        view is already closed. In that case it returns `None`. It also returns that value if there's no first
         selection.
 
-        :returns:   A tuple with two elements. The second element is the new region, the first element signals whether
-                    the previous region was different from the newly stored region.
+        :returns:   A tuple with two elements. The first element returns the first selection region if it has changed.
+                    The second element signals whether any selection region has changed.
         """
-        current_region = first_selection_region(self.view)
-        if current_region is not None:
-            if self._stored_region != current_region:
-                self._stored_region = current_region
-                return True, current_region
-        return False, sublime.Region(-1, -1)
+        selection = list(self.view.sel())
+        if self._stored_selection == selection:
+            return None, False
+        changed_first_region = None
+        if selection:
+            stored_first_region = self._stored_selection[0] if self._stored_selection else None
+            current_first_region = selection[0]
+            if stored_first_region != current_first_region:
+                changed_first_region = current_first_region
+        self._stored_selection = selection
+        return changed_first_region, True
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

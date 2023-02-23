@@ -290,9 +290,38 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 
 ## LaTeX
 
+### TexLab
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
 
-Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
+### LTeX
+
+Spell check can be provided by [LSP-ltex-ls](https://github.com/sublimelsp/LSP-ltex-ls).
+
+### Digestif
+
+1. Follow [installation instructions for Digestif](https://github.com/astoff/digestif#installation) to install the server, and make sure it is available in your PATH.
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"digestif"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "digestif": {
+                "enabled": true,
+                "command": ["digestif"],
+                "selector": "text.tex.latex"
+            }
+        }
+    }
+    ```
+
+3. To enable auto-completions for the relevant situations in LaTeX files, adjust Sublime's `"auto_complete_selector"` setting (`Preferences > Settings`); for example
+
+    ```json
+    {
+        "auto_complete_selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc, text.tex constant.other.citation, text.tex constant.other.reference, text.tex support.function, text.tex variable.parameter.function",
+    }
+    ```
 
 ## Lisp
 

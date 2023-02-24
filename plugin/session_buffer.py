@@ -124,6 +124,8 @@ class SessionBuffer:
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
+        self._is_saving = False
+        self._has_changed_during_save = False
         self._check_did_open(view)
         self._session.register_session_buffer_async(self)
 
@@ -309,6 +311,9 @@ class SessionBuffer:
         sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
     def _on_after_change_async(self, view: sublime.View, version: int) -> None:
+        if self._is_saving:
+            self._has_changed_during_save = True
+            return
         self._do_color_boxes_async(view, version)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):
@@ -316,12 +321,14 @@ class SessionBuffer:
         self.do_inlay_hints_async(view)
 
     def on_pre_save_async(self, view: sublime.View) -> None:
+        self._is_saving = True
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
             self.session.send_notification(will_save(self.last_known_uri, TextDocumentSaveReason.Manual))
 
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
+        self._is_saving = False
         if new_uri != self.last_known_uri:
             self._check_did_close()
             self.last_known_uri = new_uri
@@ -331,6 +338,9 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes_async(view)
                 self.session.send_notification(did_save(view, include_text, self.last_known_uri))
+        if self._has_changed_during_save:
+            self._has_changed_during_save = False
+            self._on_after_change_async(view, view.change_count())
 
     def some_view(self) -> Optional[sublime.View]:
         if not self.session_views:

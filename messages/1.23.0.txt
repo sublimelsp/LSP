@@ -1,8 +1,8 @@
 => 1.23.0
 
 --- WARNING ---
-To ensure that everything works properly after the LSP package is updated, it's strongly recommended to restart
-Sublime Text once it finished updating all packages.
+To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
+Sublime Text once it finishes updating all packages.
 --- WARNING ---
 
 # Breaking changes

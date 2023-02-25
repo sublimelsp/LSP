@@ -149,7 +149,7 @@ class SessionView:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
-            triggers = [t for t in triggers if self.session.config.name != t.get("server", "")]
+            triggers = [t for t in triggers if isinstance(t, dict) and self.session.config.name != t.get("server", "")]
             settings.set(self.AC_TRIGGERS_KEY, triggers)
 
     def _setup_auto_complete_triggers(self, settings: sublime.Settings) -> None:

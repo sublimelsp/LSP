@@ -170,6 +170,8 @@ class SessionView:
             new_triggers = []  # type: List[Dict[str, str]]
             name = self.session.config.name
             for trigger in triggers:
+                if not isinstance(trigger, dict):
+                    continue
                 if trigger.get("server", "") == name and trigger.get("registration_id", "") == registration_id:
                     continue
                 new_triggers.append(trigger)

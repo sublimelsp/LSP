@@ -4,13 +4,9 @@ from .core.protocol import CallHierarchyIncomingCall
 from .core.protocol import CallHierarchyItem
 from .core.protocol import CallHierarchyOutgoingCall
 from .core.protocol import CallHierarchyPrepareParams
-from .core.protocol import DocumentUri
 from .core.protocol import Error
-from .core.protocol import LSPAny
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import SymbolKind
-from .core.protocol import SymbolTag
 from .core.protocol import TextDocumentPositionParams
 from .core.protocol import TypeHierarchyItem
 from .core.protocol import TypeHierarchyPrepareParams
@@ -21,7 +17,7 @@ from .core.registry import new_tree_view_sheet
 from .core.sessions import Session
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
-from .core.typing import Callable, List, NotRequired, Optional, TypedDict, Union
+from .core.typing import Callable, List, Optional, Union
 from .core.typing import cast
 from .core.views import make_command_link
 from .core.views import SYMBOL_KINDS
@@ -33,21 +29,14 @@ import sublime
 import weakref
 
 
-CallHierarchyItemHelper = TypedDict('CallHierarchyItemHelper', {
-    'name': str,
-    'kind': SymbolKind,
-    'tags': NotRequired[List[SymbolTag]],
-    'detail': NotRequired[str],
-    'uri': DocumentUri,
-    'range': Range,
-    'selectionRange': Range,
-    'data': NotRequired[LSPAny],
-    # A custom field to store the first call location, given in CallHierarchyIncomingCall.fromRanges.
-    '_$ublime_call_range': NotRequired[Range]
-})
+class CallHierarchyIncomingCallItem:
+
+    def __init__(self, item: CallHierarchyItem, call_range: Range) -> None:
+        self.item = item
+        self.call_range = call_range
 
 
-HierarchyItem = Union[CallHierarchyItem, CallHierarchyItemHelper, TypeHierarchyItem]
+HierarchyItem = Union[CallHierarchyItem, CallHierarchyIncomingCallItem, TypeHierarchyItem]
 
 
 class HierarchyDataProvider(TreeDataProvider):
@@ -56,7 +45,7 @@ class HierarchyDataProvider(TreeDataProvider):
         self,
         weaksession: 'weakref.ref[Session]',
         request: Callable[..., Request],
-        request_handler: Callable[..., List[HierarchyItem]],
+        request_handler: Callable,
         root_elements: List[HierarchyItem]
     ) -> None:
         self.weaksession = weaksession
@@ -72,13 +61,16 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         if not session:
             return Promise.resolve([])
-        if '_$ublime_call_range' in element:
-            element = cast(CallHierarchyItemHelper, element.copy())
-            del element['_$ublime_call_range']
+        if isinstance(element, CallHierarchyIncomingCallItem):
+            element = element.item
         return session.send_request_task(self.request({'item': element})).then(self.request_handler)
 
     def get_tree_item(self, element: HierarchyItem) -> TreeItem:
-        selection_range = element.get('_$ublime_call_range', element['selectionRange'])
+        if isinstance(element, CallHierarchyIncomingCallItem):
+            selection_range = element.call_range
+            element = element.item
+        else:
+            selection_range = element['selectionRange']
         command_url = sublime.command_url('lsp_open_location', {
             'location': {
                 'targetUri': element['uri'],
@@ -114,21 +106,20 @@ def make_data_provider(
 
 def incoming_calls_handler(
     response: Union[List[CallHierarchyIncomingCall], None, Error]
-) -> List[CallHierarchyItemHelper]:
+) -> List[CallHierarchyIncomingCallItem]:
     if isinstance(response, list):
-        items = []  # type: List[CallHierarchyItemHelper]
+        items = []  # type: List[CallHierarchyIncomingCallItem]
         for incoming_call in response:
-            item = cast(CallHierarchyItemHelper, incoming_call['from'])
             from_ranges = incoming_call['fromRanges']
-            if from_ranges:
-                item['_$ublime_call_range'] = from_ranges[0]
-            items.append(item)
+            item = incoming_call['from']
+            call_range = from_ranges[0] if from_ranges else item['selectionRange']
+            items.append(CallHierarchyIncomingCallItem(item, call_range))
         return items
     return []
 
 
 def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[CallHierarchyItem]:
-    return [incoming_call['to'] for incoming_call in response] if isinstance(response, list) else []
+    return [outgoing_call['to'] for outgoing_call in response] if isinstance(response, list) else []
 
 
 def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[TypeHierarchyItem]:
@@ -218,6 +209,8 @@ class LspHierarchyToggleCommand(LspWindowCommand):
 def open_first(window: sublime.Window, session_name: str, items: List[HierarchyItem]) -> None:
     if items and window.is_valid():
         item = items[0]
+        if isinstance(item, CallHierarchyIncomingCallItem):
+            item = item.item
         window.run_command('lsp_open_location', {
             'location': {
                 'targetUri': item['uri'],

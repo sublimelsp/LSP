@@ -1268,7 +1268,6 @@ class Session(TransportCallbacks):
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, None, visible_session_views)
 
-
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
 

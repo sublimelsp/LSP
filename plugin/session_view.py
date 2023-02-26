@@ -53,6 +53,7 @@ class SessionView:
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
+            self._session.register_session_buffer_async(session_buffer)
         else:
             session_buffer.add_session_view(self)
         self._session_buffer = session_buffer

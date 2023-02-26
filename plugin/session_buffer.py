@@ -127,7 +127,6 @@ class SessionBuffer:
         self._is_saving = False
         self._has_changed_during_save = False
         self._check_did_open(view)
-        self._session.register_session_buffer_async(self)
 
     @property
     def session(self) -> Session:

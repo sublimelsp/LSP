@@ -29,14 +29,14 @@ import sublime
 import weakref
 
 
-class CallHierarchyIncomingCallItem:
+class CallHierarchyItemWrapper:
 
     def __init__(self, item: CallHierarchyItem, call_range: Range) -> None:
         self.item = item
         self.call_range = call_range
 
 
-HierarchyItem = Union[CallHierarchyItem, CallHierarchyIncomingCallItem, TypeHierarchyItem]
+HierarchyItem = Union[CallHierarchyItem, CallHierarchyItemWrapper, TypeHierarchyItem]
 
 
 class HierarchyDataProvider(TreeDataProvider):
@@ -61,12 +61,12 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         if not session:
             return Promise.resolve([])
-        if isinstance(element, CallHierarchyIncomingCallItem):
+        if isinstance(element, CallHierarchyItemWrapper):
             element = element.item
         return session.send_request_task(self.request({'item': element})).then(self.request_handler)
 
     def get_tree_item(self, element: HierarchyItem) -> TreeItem:
-        if isinstance(element, CallHierarchyIncomingCallItem):
+        if isinstance(element, CallHierarchyItemWrapper):
             selection_range = element.call_range
             element = element.item
         else:
@@ -106,14 +106,14 @@ def make_data_provider(
 
 def incoming_calls_handler(
     response: Union[List[CallHierarchyIncomingCall], None, Error]
-) -> List[CallHierarchyIncomingCallItem]:
+) -> List[CallHierarchyItemWrapper]:
     if isinstance(response, list):
-        items = []  # type: List[CallHierarchyIncomingCallItem]
+        items = []  # type: List[CallHierarchyItemWrapper]
         for incoming_call in response:
             from_ranges = incoming_call['fromRanges']
             item = incoming_call['from']
             call_range = from_ranges[0] if from_ranges else item['selectionRange']
-            items.append(CallHierarchyIncomingCallItem(item, call_range))
+            items.append(CallHierarchyItemWrapper(item, call_range))
         return items
     return []
 
@@ -209,7 +209,7 @@ class LspHierarchyToggleCommand(LspWindowCommand):
 def open_first(window: sublime.Window, session_name: str, items: List[HierarchyItem]) -> None:
     if items and window.is_valid():
         item = items[0]
-        if isinstance(item, CallHierarchyIncomingCallItem):
+        if isinstance(item, CallHierarchyItemWrapper):
             item = item.item
         window.run_command('lsp_open_location', {
             'location': {

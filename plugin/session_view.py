@@ -53,10 +53,11 @@ class SessionView:
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
+            self._session_buffer = session_buffer
             self._session.register_session_buffer_async(session_buffer)
         else:
+            self._session_buffer = session_buffer
             session_buffer.add_session_view(self)
-        self._session_buffer = session_buffer
         session.register_session_view_async(self)
         session.config.set_view_status(self._view, session.config_status_message)
         if self._session.has_capability(self.HOVER_PROVIDER_KEY):

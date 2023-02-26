@@ -219,7 +219,7 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()
         return listener.get_uri() if listener else None
 

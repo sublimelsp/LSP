@@ -490,7 +490,7 @@ class SessionViewProtocol(Protocol):
     def session_buffer(self) -> 'SessionBufferProtocol':
         ...
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         ...
 
     def get_language_id(self) -> Optional[str]:
@@ -678,7 +678,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_uri(self) -> str:
+    def get_uri(self) -> DocumentUri:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1255,6 +1255,19 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
+        # On next task as we need to wait let Session Buffer get registered in Session View.
+        sublime.set_timeout_async(lambda: self._publish_diagnostics_to_session_buffer_async(sb))
+
+    def _publish_diagnostics_to_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
+        uri = sb.get_uri()
+        if not uri:
+            return
+        diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
+        if not diagnostics:
+            return
+        visible_session_views, _ = self.session_views_by_visibility()
+        sb.on_diagnostics_async(diagnostics, None, visible_session_views)
+
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)

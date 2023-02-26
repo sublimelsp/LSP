@@ -157,7 +157,7 @@ class SessionBuffer:
             self.session.send_notification(did_close(uri=self.last_known_uri))
             self.opened = False
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         for sv in self.session_views:
             return sv.get_uri()
         return None

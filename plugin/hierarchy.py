@@ -103,19 +103,19 @@ def make_data_provider(
 
 def incoming_calls_handler(response: Union[List[CallHierarchyIncomingCall], None, Error]) -> List[HierarchyData]:
     return [
-        to_hierarchy_item(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
+        to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
 def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[HierarchyData]:
-    return [to_hierarchy_item(call['to']) for call in response] if isinstance(response, list) else []
+    return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
 def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[HierarchyData]:
-    return [to_hierarchy_item(item) for item in response] if isinstance(response, list) else []
+    return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 
-def to_hierarchy_item(
+def to_hierarchy_data(
     item: Union[CallHierarchyItem, TypeHierarchyItem], selection_range: Optional[Range] = None
 ) -> HierarchyData:
     return {
@@ -192,7 +192,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
         session = weaksession()
         if not session:
             return
-        hierarchy_items = [to_hierarchy_item(item) for item in response]
+        hierarchy_items = [to_hierarchy_data(item) for item in response]
         header = make_header(session.config.name, sheet_name, 1, hierarchy_items)
         data_provider = make_data_provider(weaksession, sheet_name, 1, hierarchy_items)
         new_tree_view_sheet(self._window, sheet_name, data_provider, header)

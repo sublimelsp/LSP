@@ -1255,7 +1255,7 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
-        # On next task as we need to wait let Session Buffer get registered in Session View.
+        # On next task as we need to let SessionBuffer get registered in SessionView.
         sublime.set_timeout_async(lambda: self._publish_diagnostics_to_session_buffer_async(sb))
 
     def _publish_diagnostics_to_session_buffer_async(self, sb: SessionBufferProtocol) -> None:

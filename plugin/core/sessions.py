@@ -1255,17 +1255,17 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
-        self._publish_diagnostics_to_session_buffer_async(sb)
-
-    def _publish_diagnostics_to_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         uri = sb.get_uri()
-        if not uri:
-            return
-        diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
-        if not diagnostics:
-            return
+        if uri:
+            diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
+            if diagnostics:
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
+
+    def _publish_diagnostics_to_session_buffer_async(
+        self, sb: SessionBufferProtocol, diagnostics: List[Diagnostic], version: Optional[int]
+    ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
-        sb.on_diagnostics_async(diagnostics, None, visible_session_views)
+        sb.on_diagnostics_async(diagnostics, version, visible_session_views)
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -1759,8 +1759,7 @@ class Session(TransportCallbacks):
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            visible_session_views, _ = self.session_views_by_visibility()
-            sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

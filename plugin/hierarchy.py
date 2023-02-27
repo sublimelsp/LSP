@@ -166,9 +166,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
             self.request(params, self.view), partial(self._handle_response_async, weakref.ref(session)))
 
     def _handle_response_async(
-        self,
-        weaksession: 'weakref.ref[Session]',
-        response: Union[List[CallHierarchyItem], List[TypeHierarchyItem], None]
+        self, weaksession: 'weakref.ref[Session]', response: Optional[List[HierarchyItem]]
     ) -> None:
         if not self._window or not self._window.is_valid():
             return

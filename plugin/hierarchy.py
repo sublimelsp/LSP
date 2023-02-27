@@ -4,11 +4,9 @@ from .core.protocol import CallHierarchyIncomingCall
 from .core.protocol import CallHierarchyItem
 from .core.protocol import CallHierarchyOutgoingCall
 from .core.protocol import CallHierarchyPrepareParams
-from .core.protocol import DocumentUri
 from .core.protocol import Error
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import SymbolKind
 from .core.protocol import TextDocumentPositionParams
 from .core.protocol import TypeHierarchyItem
 from .core.protocol import TypeHierarchyPrepareParams

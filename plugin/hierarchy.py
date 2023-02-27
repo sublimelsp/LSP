@@ -31,7 +31,7 @@ import weakref
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
-HirarchyItemWrapper = TypedDict('HirarchyItemWrapper', {
+HierarchyItemWrapper = TypedDict('HierarchyItemWrapper', {
     'item': HierarchyItem,
     'selectionRange': Range,
 })
@@ -43,8 +43,8 @@ class HierarchyDataProvider(TreeDataProvider):
         self,
         weaksession: 'weakref.ref[Session]',
         request: Callable[..., Request],
-        request_handler: Callable[..., List[HirarchyItemWrapper]],
-        root_elements: List[HirarchyItemWrapper]
+        request_handler: Callable[..., List[HierarchyItemWrapper]],
+        root_elements: List[HierarchyItemWrapper]
     ) -> None:
         self.weaksession = weaksession
         self.request = request
@@ -53,7 +53,7 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         self.session_name = session.config.name if session else None
 
-    def get_children(self, element: Optional[HirarchyItemWrapper]) -> Promise[List[HirarchyItemWrapper]]:
+    def get_children(self, element: Optional[HierarchyItemWrapper]) -> Promise[List[HierarchyItemWrapper]]:
         if element is None:
             return Promise.resolve(self.root_elements)
         session = self.weaksession()
@@ -61,7 +61,7 @@ class HierarchyDataProvider(TreeDataProvider):
             return Promise.resolve([])
         return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
 
-    def get_tree_item(self, element: HirarchyItemWrapper) -> TreeItem:
+    def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']
         selectionRange = element['selectionRange']
         command_url = sublime.command_url('lsp_open_location', {
@@ -84,7 +84,7 @@ class HierarchyDataProvider(TreeDataProvider):
 
 
 def make_data_provider(
-    weaksession: 'weakref.ref[Session]', sheet_name: str, direction: int, response: List[HirarchyItemWrapper]
+    weaksession: 'weakref.ref[Session]', sheet_name: str, direction: int, response: List[HierarchyItemWrapper]
 ) -> HierarchyDataProvider:
     if sheet_name == "Call Hierarchy":
         request = Request.incomingCalls if direction == 1 else Request.outgoingCalls
@@ -97,23 +97,23 @@ def make_data_provider(
     return HierarchyDataProvider(weaksession, request, handler, response)
 
 
-def incoming_calls_handler(response: Union[List[CallHierarchyIncomingCall], None, Error]) -> List[HirarchyItemWrapper]:
+def incoming_calls_handler(response: Union[List[CallHierarchyIncomingCall], None, Error]) -> List[HierarchyItemWrapper]:
     return [
         to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
-def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[HirarchyItemWrapper]:
+def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[HierarchyItemWrapper]:
     return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
-def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[HirarchyItemWrapper]:
+def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[HierarchyItemWrapper]:
     return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 
 def to_hierarchy_data(
     item: Union[CallHierarchyItem, TypeHierarchyItem], selection_range: Optional[Range] = None
-) -> HirarchyItemWrapper:
+) -> HierarchyItemWrapper:
     return {
         'item': item,
         'selectionRange': selection_range or item['selectionRange'],
@@ -192,7 +192,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
 class LspHierarchyToggleCommand(LspWindowCommand):
 
     def run(
-        self, session_name: str, sheet_name: str, direction: int, root_elements: List[HirarchyItemWrapper]
+        self, session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItemWrapper]
     ) -> None:
         session = self.session_by_name(session_name)
         if not session:
@@ -203,7 +203,7 @@ class LspHierarchyToggleCommand(LspWindowCommand):
         open_first(self.window, session.config.name, root_elements)
 
 
-def open_first(window: sublime.Window, session_name: str, items: List[HirarchyItemWrapper]) -> None:
+def open_first(window: sublime.Window, session_name: str, items: List[HierarchyItemWrapper]) -> None:
     if items and window.is_valid():
         item = items[0]['item']
         window.run_command('lsp_open_location', {

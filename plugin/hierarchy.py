@@ -68,7 +68,7 @@ class HierarchyDataProvider(TreeDataProvider):
             'location': {
                 'targetUri': item['uri'],
                 'targetRange': item['range'],
-                'targetSelectionRange': selectionRange or item['selectionRange']
+                'targetSelectionRange': selectionRange
             },
             'session_name': self.session_name,
             'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT

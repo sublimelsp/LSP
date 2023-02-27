@@ -34,12 +34,8 @@ import weakref
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
 HierarchyData = TypedDict('HierarchyData', {
-    'detail': Optional[str],
-    'kind': SymbolKind,
-    'name': str,
-    'range': Range,
+    'item': HierarchyItem,
     'selectionRange': Range,
-    'uri': DocumentUri,
 })
 
 
@@ -59,30 +55,32 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         self.session_name = session.config.name if session else None
 
-    def get_children(self, element: Optional[HierarchyData]) -> Promise[List[HierarchyData]]:
-        if element is None:
+    def get_children(self, data: Optional[HierarchyData]) -> Promise[List[HierarchyData]]:
+        if data is None:
             return Promise.resolve(self.root_elements)
         session = self.weaksession()
         if not session:
             return Promise.resolve([])
-        return session.send_request_task(self.request({'item': element})).then(self.request_handler)
+        return session.send_request_task(self.request({'item': data['item']})).then(self.request_handler)
 
-    def get_tree_item(self, element: HierarchyData) -> TreeItem:
+    def get_tree_item(self, data: HierarchyData) -> TreeItem:
+        item = data['item']
+        selectionRange = data['selectionRange']
         command_url = sublime.command_url('lsp_open_location', {
             'location': {
-                'targetUri': element['uri'],
-                'targetRange': element['range'],
-                'targetSelectionRange': element['selectionRange']
+                'targetUri': item['uri'],
+                'targetRange': item['range'],
+                'targetSelectionRange': selectionRange or item['selectionRange']
             },
             'session_name': self.session_name,
             'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
         })
-        path = simple_path(self.weaksession(), element['uri'])
+        path = simple_path(self.weaksession(), item['uri'])
         return TreeItem(
-            element['name'],
-            kind=SYMBOL_KINDS.get(element['kind'], sublime.KIND_AMBIGUOUS),
-            description=element['detail'] or '',
-            tooltip="{}:{}".format(path, element['selectionRange']['start']['line'] + 1),
+            item['name'],
+            kind=SYMBOL_KINDS.get(item['kind'], sublime.KIND_AMBIGUOUS),
+            description=item.get('detail', ''),
+            tooltip="{}:{}".format(path, item['selectionRange']['start']['line'] + 1),
             command_url=command_url
         )
 
@@ -119,12 +117,8 @@ def to_hierarchy_data(
     item: Union[CallHierarchyItem, TypeHierarchyItem], selection_range: Optional[Range] = None
 ) -> HierarchyData:
     return {
-        'detail': item.get('detail'),
-        'name': item['name'],
-        'kind': item['kind'],
-        'range': item['range'],
+        'item': item,
         'selectionRange': selection_range or item['selectionRange'],
-        'uri': item['uri'],
     }
 
 
@@ -139,11 +133,11 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
         raise NotImplementedError('{} not implemented'.format(sheet_name))
     new_direction = 2 if direction == 1 else 1
     return '{}: {} {}'.format(sheet_name, label, make_command_link('lsp_hierarchy_toggle', "⇄", {
-            'session_name': session_name,
-            'sheet_name': sheet_name,
-            'direction': new_direction,
-            'root_elements': root_elements
-        }, tooltip=tooltip))
+        'session_name': session_name,
+        'sheet_name': sheet_name,
+        'direction': new_direction,
+        'root_elements': root_elements
+    }, tooltip=tooltip))
 
 
 class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
@@ -215,7 +209,7 @@ class LspHierarchyToggleCommand(LspWindowCommand):
 
 def open_first(window: sublime.Window, session_name: str, items: List[HierarchyData]) -> None:
     if items and window.is_valid():
-        item = items[0]
+        item = items[0]['item']
         window.run_command('lsp_open_location', {
             'location': {
                 'targetUri': item['uri'],

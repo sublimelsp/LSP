@@ -79,7 +79,7 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         return self.mock_uri
 
     def get_language_id(self) -> Optional[str]:

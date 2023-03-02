@@ -53,9 +53,11 @@ class SessionView:
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
+            self._session_buffer = session_buffer
+            self._session.register_session_buffer_async(session_buffer)
         else:
+            self._session_buffer = session_buffer
             session_buffer.add_session_view(self)
-        self._session_buffer = session_buffer
         session.register_session_view_async(self)
         session.config.set_view_status(self._view, session.config_status_message)
         if self._session.has_capability(self.HOVER_PROVIDER_KEY):
@@ -152,7 +154,7 @@ class SessionView:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
-            triggers = [t for t in triggers if self.session.config.name != t.get("server", "")]
+            triggers = [t for t in triggers if isinstance(t, dict) and self.session.config.name != t.get("server", "")]
             settings.set(self.AC_TRIGGERS_KEY, triggers)
 
     def _setup_auto_complete_triggers(self, settings: sublime.Settings) -> None:
@@ -173,6 +175,8 @@ class SessionView:
             new_triggers = []  # type: List[Dict[str, str]]
             name = self.session.config.name
             for trigger in triggers:
+                if not isinstance(trigger, dict):
+                    continue
                 if trigger.get("server", "") == name and trigger.get("registration_id", "") == registration_id:
                     continue
                 new_triggers.append(trigger)
@@ -222,7 +226,7 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()
         return listener.get_uri() if listener else None
 

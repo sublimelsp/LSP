@@ -127,7 +127,6 @@ class SessionBuffer:
         self._is_saving = False
         self._has_changed_during_save = False
         self._check_did_open(view)
-        self._session.register_session_buffer_async(self)
 
     @property
     def session(self) -> Session:
@@ -157,7 +156,7 @@ class SessionBuffer:
             self.session.send_notification(did_close(uri=self.last_known_uri))
             self.opened = False
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         for sv in self.session_views:
             return sv.get_uri()
         return None

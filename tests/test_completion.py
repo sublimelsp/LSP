@@ -946,6 +946,33 @@ class FormatCompletionsUnitTests(TestCase):
             trigger='banner?()',
         )
 
+    def test_label_details_2(self) -> None:
+        self._verify_completion(
+            {
+                "label": "NaiveDateTime",
+                "labelDetails": {
+                    "detail": "struct",
+                    "description": "NaiveDateTime"
+                },
+            },
+            trigger='NaiveDateTime',
+            annotation='NaiveDateTime',
+            details='struct'
+        )
+
+    def test_label_details_3(self) -> None:
+        self._verify_completion(
+            {
+                "label": "NaiveDateTime",
+                "labelDetails": {
+                    "detail": " struct",
+                    "description": "NaiveDateTime"
+                },
+            },
+            trigger='NaiveDateTime struct',
+            annotation='NaiveDateTime'
+        )
+
     def test_filter_text_1(self) -> None:
         self._verify_completion(
             {

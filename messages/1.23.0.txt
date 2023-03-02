@@ -1,0 +1,29 @@
+=> 1.23.0
+
+--- WARNING ---
+To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
+Sublime Text once it finishes updating all packages.
+--- WARNING ---
+
+# Breaking changes
+
+- removed bundled `rust-analyzer` client config - install https://packagecontrol.io/packages/LSP-rust-analyzer instead
+- removed bundled `clangd` client config - install https://packagecontrol.io/packages/LSP-clangd instead
+- removed bundled `gopls` client config - install https://packagecontrol.io/packages/LSP-gopls instead
+
+If you had one of those configs enabled in your LSP Settings then it will no longer do anything. You can
+restore the removed config from https://github.com/sublimelsp/LSP/pull/2206 into your LSP Settings but we
+instead recommend installing the relevant helper package which takes care of managing the server dependency
+and includes all necessary settings that the server can use.
+
+# Features
+
+- ...
+
+# Fixes and Improvements
+
+- ...
+
+# Plugin API changes
+
+- ...

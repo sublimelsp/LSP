@@ -255,7 +255,9 @@ class DiagnosticLines:
         blocks = []
         for key, line in stacks.items():
             block = {'line': key, 'content': [], 'region': line['region']}
-            for i, (diagnostic_type, data) in enumerate(reversed(line['stack'])):
+            for i, stack in enumerate(reversed(line['stack'])):
+                diagnostic_type = stack['kind']
+                data = stack['data']
                 if diagnostic_type != StackKind.DIAGNOSTIC:
                     continue
                 diagnostic = data
@@ -291,8 +293,8 @@ class DiagnosticLines:
         multi = 0
         current_index = 0
         while current_index < index:
-            diagnostic_type = line[current_index][0]
-            data = line[current_index][1]
+            diagnostic_type = line[current_index]['kind']
+            data = line[current_index]['data']
             if diagnostic_type == StackKind.SPACE:
                 if multi == 0:
                     left.append({'class': '', 'content': data})
@@ -302,7 +304,7 @@ class DiagnosticLines:
                         'content': self.SYMBOLS['HORIZONTAL'] * len(data)
                         })
             elif diagnostic_type == StackKind.DIAGNOSTIC:
-                if current_index+1 != len(line) and line[current_index+1][0] != StackKind.OVERLAP:
+                if current_index + 1 != len(line) and line[current_index + 1]['kind'] != StackKind.OVERLAP:
                     left.append(
                         {
                             "class": self.HIGHLIGHTS[self._get_severity(data)],

@@ -112,16 +112,15 @@ class DiagnosticLines:
 
     def __init__(self, view: sublime.View, highlight_line_background: bool = False) -> None:
         self._view = view
-        self._diagnostics = []  # type: List[Diagnostic]
         self._highlight_line_background = highlight_line_background
         self._phantoms = sublime.PhantomSet(view, 'lsp_lines')
 
     def update(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
-        self._diagnostics = self._sort_diagnostics(self._preprocess_diagnostic(diagnostics))
-        self._line_stacks = self._generate_line_stacks(self._diagnostics)
-        self._blocks = self._generate_diagnostic_blocks(self._line_stacks)
+        sorted_diagnostics = self._sort_diagnostics(self._preprocess_diagnostic(diagnostics))
+        line_stacks = self._generate_line_stacks(sorted_diagnostics)
+        blocks = self._generate_diagnostic_blocks(line_stacks)
         phantoms = []  # Type: List[sublime.Phantom]
-        for block in self._blocks:
+        for block in blocks:
             content = self._generate_region_html(block)
             phantoms.append(sublime.Phantom(block['region'], content, sublime.LAYOUT_BELOW))
         self._phantoms.update(phantoms)

@@ -1,15 +1,8 @@
 from .core.protocol import Diagnostic
-from .core.typing import Dict, List, NotRequired, Optional, StrEnum, Tuple, TypedDict, Union
+from .core.typing import Dict, List, NotRequired, Optional, Tuple, TypedDict, Union
 from .core.views import range_to_region
 from itertools import chain
 import sublime
-
-
-class StackKind(StrEnum):
-    SPACE = 'space'
-    DIAGNOSTIC = 'diagnostic'
-    OVERLAP = 'overlap'
-    BLANK = 'blank'
 
 
 class StackItemBlank:

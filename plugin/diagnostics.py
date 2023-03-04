@@ -12,30 +12,36 @@ class StackKind(StrEnum):
     BLANK = 'blank'
 
 
-StackItemDiagnostic = TypedDict('StackItemDiagnostic', {
-    'kind': Literal[StackKind.DIAGNOSTIC],
-    'data': Diagnostic,
-})
+class StackItemBlank:
 
-StackItemSpace = TypedDict('StackItemSpace', {
-    'kind': Literal[StackKind.SPACE],
-    'data': str,
-})
+    __slots__ = ('diagnostic', )
 
-StackItemOverlap = TypedDict('StackItemOverlap', {
-    'kind': Literal[StackKind.OVERLAP],
-    'data': None,
-})
+    def __init__(self, diagnostic: Diagnostic) -> None:
+        self.diagnostic = diagnostic
 
-StackItem = Union[
-    StackItemDiagnostic,
-    StackItemSpace,
-    StackItemOverlap,
-    # Tuple[Literal[StackKind.SPACE], str],
-    # Tuple[Literal[StackKind.OVERLAP], None],
-    # Tuple[Literal[StackKind.DIAGNOSTIC], Diagnostic],
-    # Tuple[Literal[StackKind.BLANK], Diagnostic],
-]
+
+class StackItemDiagnostic:
+
+    __slots__ = ('diagnostic', )
+
+    def __init__(self, diagnostic: Diagnostic) -> None:
+        self.diagnostic = diagnostic
+
+
+class StackItemOverlap:
+
+        __slots__ = ()
+
+
+class StackItemSpace:
+
+    __slots__ = ('text', )
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+StackItem = Union[StackItemDiagnostic, StackItemSpace, StackItemOverlap]
 
 LineStack = TypedDict('LineStack', {
     'region': Optional[sublime.Region],
@@ -175,18 +181,18 @@ class DiagnosticLines:
             # Check if the diagnostic is on a new line
             if current_line != prev_lnum:
                 # If so, add an empty space to the stack
-                stack.append({'kind': StackKind.SPACE, 'data': ''})
+                stack.append(StackItemSpace(''))
             elif current_col != prev_col:
                 # If not on a new line but on a new column, add spacing to the stack
                 # Calculate the spacing by subtracting the previous column from the current column, minus 1 (to account
                 # for 0-based index)
                 spacing = (current_col - prev_col) - 1
-                stack.append({'kind': StackKind.SPACE, 'data': ' ' * spacing})
+                stack.append(StackItemSpace(' ' * spacing))
             else:
                 # If the diagnostic is on the same exact spot as the previous one, add an overlap to the stack
-                stack.append({'kind': StackKind.OVERLAP, 'data': None})
+                stack.append(StackItemOverlap())
             # If not blank, add the diagnostic to the stack
-            stack.append({'kind': StackKind.DIAGNOSTIC, 'data': diagnostic})
+            stack.append(StackItemDiagnostic(diagnostic))
             # Update the previous line number and column for the next iteration
             prev_lnum = current_line
             prev_col = current_col
@@ -199,12 +205,10 @@ class DiagnosticLines:
         blocks = []
         for key, line in stacks.items():
             block = {'line': key, 'content': [], 'region': line['region']}
-            for i, stack in enumerate(reversed(line['stack'])):
-                diagnostic_type = stack['kind']
-                data = stack['data']
-                if diagnostic_type != StackKind.DIAGNOSTIC:
+            for i, item in enumerate(reversed(line['stack'])):
+                if not isinstance(item, StackItemDiagnostic):
                     continue
-                diagnostic = data
+                diagnostic = item.diagnostic
                 index = len(line['stack']) - 1 - i
                 left, overlap, multi = self._generate_left_side(line['stack'], index, diagnostic)
                 center = self._generate_center(overlap, multi, diagnostic)
@@ -237,42 +241,42 @@ class DiagnosticLines:
         multi = 0
         current_index = 0
         while current_index < index:
-            diagnostic_type = line[current_index]['kind']
-            data = line[current_index]['data']
-            if diagnostic_type == StackKind.SPACE:
+            item = line[current_index]
+            if isinstance(item, StackItemSpace):
                 if multi == 0:
-                    left.append({'class': '', 'content': data})
+                    left.append({'class': '', 'content': item.text})
                 else:
                     left.append({
                         'class': self.HIGHLIGHTS[self._get_severity(diagnostic)],
-                        'content': self.SYMBOLS['HORIZONTAL'] * len(data)
+                        'content': self.SYMBOLS['HORIZONTAL'] * len(item.text)
                         })
-            elif diagnostic_type == StackKind.DIAGNOSTIC:
-                if current_index + 1 != len(line) and line[current_index + 1]['kind'] != StackKind.OVERLAP:
+            elif isinstance(item, StackItemDiagnostic):
+                next_item =line[current_index + 1]
+                if current_index + 1 != len(line) and not isinstance(next_item, StackItemOverlap):
                     left.append(
                         {
-                            "class": self.HIGHLIGHTS[self._get_severity(data)],
+                            "class": self.HIGHLIGHTS[self._get_severity(item.diagnostic)],
                             "content": self.SYMBOLS['VERTICAL'],
                         }
                     )
                 overlap = False
-            elif diagnostic_type == StackKind.BLANK:
+            elif isinstance(item, StackItemBlank):
                 if multi == 0:
                     left.append(
                         {
-                            "class": self.HIGHLIGHTS[self._get_severity(data)],
+                            "class": self.HIGHLIGHTS[self._get_severity(item.diagnostic)],
                             "content": self.SYMBOLS['BOTTOM_LEFT'],
                         }
                     )
                 else:
                     left.append(
                         {
-                            "class": self.HIGHLIGHTS[self._get_severity(data)],
+                            "class": self.HIGHLIGHTS[self._get_severity(item.diagnostic)],
                             "content": self.SYMBOLS['UPSIDE_DOWN_T'],
                         }
                     )
                 multi += 1
-            elif diagnostic_type == StackKind.OVERLAP:
+            elif isinstance(item, StackItemOverlap):
                 overlap = True
             current_index += 1
         return left, overlap, multi

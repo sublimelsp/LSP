@@ -1,5 +1,5 @@
 from .core.protocol import Diagnostic
-from .core.typing import Dict, List, Literal, NotRequired, Optional, StrEnum, Tuple, TypedDict, Union
+from .core.typing import Dict, List, NotRequired, Optional, StrEnum, Tuple, TypedDict, Union
 from .core.views import range_to_region
 from itertools import chain
 import sublime
@@ -30,7 +30,7 @@ class StackItemDiagnostic:
 
 class StackItemOverlap:
 
-        __slots__ = ()
+    __slots__ = ()
 
 
 class StackItemSpace:
@@ -251,7 +251,7 @@ class DiagnosticLines:
                         'content': self.SYMBOLS['HORIZONTAL'] * len(item.text)
                         })
             elif isinstance(item, StackItemDiagnostic):
-                next_item =line[current_index + 1]
+                next_item = line[current_index + 1]
                 if current_index + 1 != len(line) and not isinstance(next_item, StackItemOverlap):
                     left.append(
                         {

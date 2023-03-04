@@ -46,6 +46,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .diagnostics import DiagnosticLines
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -296,7 +297,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for _, diagnostics in self._diagnostics_async(allow_stale=True):
             all_diagnostics.extend(diagnostics)
         self._diagnostic_lines.update(all_diagnostics)
-
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:

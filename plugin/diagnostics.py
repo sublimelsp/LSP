@@ -11,6 +11,7 @@ class StackKind(StrEnum):
     OVERLAP = 'overlap'
     BLANK = 'blank'
 
+
 StackItemDiagnostic = TypedDict('StackItemDiagnostic', {
     'kind': Literal[StackKind.DIAGNOSTIC],
     'data': Diagnostic,
@@ -300,4 +301,3 @@ class DiagnosticLines:
     def _get_severity(self, diagnostic: Diagnostic) -> int:
         # Default to error if no severity.
         return diagnostic.get('severity', 1)
-

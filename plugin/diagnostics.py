@@ -56,6 +56,7 @@ DiagnosticBlock = TypedDict('DiagnosticBlock', {
 
 
 class DiagnosticLines:
+
     CSS = '''
         .inline-block {
             display: inline-block;
@@ -85,6 +86,7 @@ class DiagnosticLines:
             background-color: color(var(--greenish) alpha(0.1))
         }
     '''.strip()
+
     HIGHLIGHTS = {
         1: 'error',
         2: 'warning',

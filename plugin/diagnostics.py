@@ -122,8 +122,8 @@ class DiagnosticLines:
         for block in blocks:
             content = self._generate_region_html(block)
             phantoms.append(sublime.Phantom(block['region'], content, sublime.LAYOUT_BELOW))
-        x, y_before = self._view.text_to_layout(self._view.sel()[0].begin())
-        _, y_viewport_before = self._view.viewport_position()
+        _, y_before = self._view.text_to_layout(self._view.sel()[0].begin())
+        x, y_viewport_before = self._view.viewport_position()
         self._phantoms.update(phantoms)
         _, y_after = self._view.text_to_layout(self._view.sel()[0].begin())
         y_shift = y_after - y_before

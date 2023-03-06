@@ -122,7 +122,14 @@ class DiagnosticLines:
         for block in blocks:
             content = self._generate_region_html(block)
             phantoms.append(sublime.Phantom(block['region'], content, sublime.LAYOUT_BELOW))
+        x, y_before = self._view.text_to_layout(self._view.sel()[0].begin())
+        _, y_viewport_before = self._view.viewport_position()
         self._phantoms.update(phantoms)
+        _, y_after = self._view.text_to_layout(self._view.sel()[0].begin())
+        y_shift = y_after - y_before
+        if y_shift != 0:
+            new_y = y_viewport_before + y_shift
+            self._view.set_viewport_position((x, new_y), animate=False)
 
     def clear(self) -> None:
         self._phantoms = sublime.PhantomSet(self._view, 'lsp-lines')

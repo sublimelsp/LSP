@@ -296,7 +296,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
         for _, diagnostics in self._diagnostics_async(allow_stale=True):
             all_diagnostics.extend(diagnostics)
-        self._diagnostic_lines.update(all_diagnostics)
+        self._diagnostic_lines.update_async(all_diagnostics)
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:

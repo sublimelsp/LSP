@@ -117,14 +117,17 @@ class DiagnosticLines:
         self._highlight_line_background = highlight_line_background
         self._phantoms = sublime.PhantomSet(view, 'lsp_lines')
 
-    def update(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
+    def update_async(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
         sorted_diagnostics = self._sort_diagnostics(self._preprocess_diagnostic(diagnostics))
         line_stacks = self._generate_line_stacks(sorted_diagnostics)
         blocks = self._generate_diagnostic_blocks(line_stacks)
-        phantoms = []  # Type: List[sublime.Phantom]
+        phantoms = []  # type: List[sublime.Phantom]
         for block in blocks:
             content = self._generate_region_html(block)
             phantoms.append(sublime.Phantom(block['region'], content, sublime.LAYOUT_BELOW))
+        sublime.set_timeout(lambda: self._update_sync(phantoms))
+
+    def _update_sync(self, phantoms: List[sublime.Phantom]) -> None:
         _, y_before = self._view.text_to_layout(self._view.sel()[0].begin())
         x, y_viewport_before = self._view.viewport_position()
         self._phantoms.update(phantoms)

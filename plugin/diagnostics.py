@@ -2,6 +2,7 @@ from .core.protocol import Diagnostic
 from .core.typing import Dict, List, NotRequired, Optional, Tuple, TypedDict, Union
 from .core.views import range_to_region
 from itertools import chain
+import html
 import sublime
 
 
@@ -148,7 +149,7 @@ class DiagnosticLines:
                 if self._highlight_line_background:
                     css_classes.append('{0}_bg'.format(item_class))
                 row_items.append('<div class="{0}">{1}</div>'.format(
-                    ' '.join(css_classes), item.get('content', '').replace(" ", "&nbsp;")))
+                    ' '.join(css_classes), html.escape(item.get('content', '')).replace(" ", "&nbsp;")))
             lines.append('<div>{0}</div>'.format(''.join(row_items)))
         return '\n'.join(lines)
 

@@ -175,7 +175,7 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_present_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         """
         Should the diagnostics for this URI be shown in the view? Return a reason why not
         """
@@ -1751,7 +1751,7 @@ class Session(TransportCallbacks):
         if not mgr:
             return
         uri = params["uri"]
-        reason = mgr.should_present_diagnostics(uri)
+        reason = mgr.should_present_diagnostics(uri, self.config)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         diagnostics = params["diagnostics"]

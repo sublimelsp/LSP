@@ -344,11 +344,11 @@ class WindowManager(Manager):
                     candidate = folder
         return candidate
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_present_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         scheme, path = parse_uri(uri)
         if scheme != "file":
             return None
-        if not self._workspace.contains(path):
+        if not configuration.show_non_project_diagnostics and not self._workspace.contains(path):
             return "not inside window folders"
         view = self._window.active_view()
         if not view:

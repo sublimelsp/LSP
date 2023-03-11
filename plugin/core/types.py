@@ -651,6 +651,7 @@ class ClientConfig:
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
                  semantic_tokens: Optional[Dict[str, str]] = None,
+                 show_non_project_diagnostics: bool = False,
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -676,6 +677,7 @@ class ClientConfig:
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
         self.semantic_tokens = semantic_tokens
+        self.show_non_project_diagnostics = show_non_project_diagnostics
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -708,6 +710,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
+            show_non_project_diagnostics=bool(s.get("show_non_project_diagnostics", False)),
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -737,6 +740,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
+            show_non_project_diagnostics=d.get("show_non_project_diagnostics", False),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -766,6 +770,8 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
+            show_non_project_diagnostics=override.get(
+                "show_non_project_diagnostics", src_config.show_non_project_diagnostics),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

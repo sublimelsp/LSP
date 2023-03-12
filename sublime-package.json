@@ -298,6 +298,11 @@
                 }
               ]
             },
+            "ClientShowNonProjectDiagnostics": {
+              "markdownDescription": "Whether diagnostics are reported for files that are not contained within the project folders.",
+              "type": "boolean",
+              "default": false,
+            },
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
@@ -360,6 +365,9 @@
                 },
                 "feature_selector": {
                   "$ref": "#/definitions/useSelectorInstead"
+                },
+                "show_non_project_diagnostics": {
+                  "$ref": "#/definitions/ClientShowNonProjectDiagnostics"
                 },
                 "syntaxes": {
                   "type": "array",
@@ -742,6 +750,9 @@
             },
             "schemes": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSchemes"
+            },
+            "show_non_project_diagnostics": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientShowNonProjectDiagnostics"
             },
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"

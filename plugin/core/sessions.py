@@ -175,7 +175,7 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri) -> Optional[str]:
         """
         Should the diagnostics for this URI be shown in the view? Return a reason why not
         """
@@ -370,6 +370,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "codeDescriptionSupport": True,
             "dataSupport": True
         },
+        "diagnostic": {
+            "dynamicRegistration": True,
+            "relatedDocumentSupport": True
+        },
         "selectionRange": {
             "dynamicRegistration": True
         },
@@ -434,6 +438,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "refreshSupport": True
         },
         "semanticTokens": {
+            "refreshSupport": True
+        },
+        "diagnostics": {
             "refreshSupport": True
         }
     }  # type: WorkspaceClientCapabilities
@@ -602,6 +609,12 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        ...
+
+    def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
+        ...
+
+    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
 
@@ -1745,13 +1758,22 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 
+    def m_workspace_diagnostic_refresh(self, params: None, request_id: Any) -> None:
+        """handles the workspace/diagnostic/refresh request"""
+        self.send_response(Response(request_id, None))
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_document_diagnostic_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_document_diagnostic_pending_refresh()
+
     def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
         mgr = self.manager()
         if not mgr:
             return
         uri = params["uri"]
-        reason = mgr.should_present_diagnostics(uri)
+        reason = mgr.should_ignore_diagnostics(uri)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         diagnostics = params["diagnostics"]

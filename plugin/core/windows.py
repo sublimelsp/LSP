@@ -344,7 +344,7 @@ class WindowManager(Manager):
                     candidate = folder
         return candidate
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri) -> Optional[str]:
         scheme, path = parse_uri(uri)
         if scheme != "file":
             return None

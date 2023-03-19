@@ -444,9 +444,9 @@ class SessionBuffer:
             return
         if version is None:
             version = view.change_count()
-        if self.session.has_capability("diagnosticProvider"):
+        if self.has_capability("diagnosticProvider"):
             params = {'textDocument': text_document_identifier(view)}  # type: DocumentDiagnosticParams
-            identifier = self.session.get_capability("diagnosticProvider.identifier")
+            identifier = self.get_capability("diagnosticProvider.identifier")
             if identifier:
                 params['identifier'] = identifier
             if self.document_diagnostic_result_id:

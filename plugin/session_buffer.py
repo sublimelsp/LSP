@@ -237,6 +237,8 @@ class SessionBuffer:
         if view is not None:
             if capability_path.startswith("textDocumentSync."):
                 self._check_did_open(view)
+            elif capability_path.startswith("diagnosticProvider"):
+                self.do_document_diagnostic_async(view, view.change_count())
 
     def unregister_capability_async(
         self,

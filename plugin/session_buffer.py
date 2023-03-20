@@ -366,7 +366,7 @@ class SessionBuffer:
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
     def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
-        if self.session.has_capability("colorProvider"):
+        if self.has_capability("colorProvider"):
             self.session.send_request_async(
                 Request.documentColor(document_color_params(view), view),
                 self._if_view_unchanged(self._on_color_boxes_async, version)
@@ -382,7 +382,7 @@ class SessionBuffer:
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
     def _do_document_link_async(self, view: sublime.View, version: int) -> None:
-        if self.session.has_capability("documentLinkProvider"):
+        if self.has_capability("documentLinkProvider"):
             self.session.send_request_async(
                 Request.documentLink({'textDocument': text_document_identifier(view)}, view),
                 self._if_view_unchanged(self._on_document_link_async, version)
@@ -490,7 +490,7 @@ class SessionBuffer:
     def do_semantic_tokens_async(self, view: sublime.View, only_viewport: bool = False) -> None:
         if not userprefs().semantic_highlighting:
             return
-        if not self.session.has_capability("semanticTokensProvider"):
+        if not self.has_capability("semanticTokensProvider"):
             return
         # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
         if "background" not in view.style_for_scope("meta.semantic-token"):
@@ -499,21 +499,21 @@ class SessionBuffer:
             self.session.cancel_request(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
-        if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
+        if only_viewport and self.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
-        elif self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+        elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
-        elif self.session.has_capability("semanticTokensProvider.full"):
+        elif self.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-        elif self.session.has_capability("semanticTokensProvider.range"):
+        elif self.has_capability("semanticTokensProvider.range"):
             params["range"] = entire_content_range(view)
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
@@ -625,7 +625,7 @@ class SessionBuffer:
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not self.session.has_capability("inlayHintProvider"):
+        if not self.has_capability("inlayHintProvider"):
             return
         if not LspToggleInlayHintsCommand.are_enabled(view.window()):
             self.remove_all_inlay_hints()

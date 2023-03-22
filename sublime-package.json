@@ -298,8 +298,8 @@
                 }
               ]
             },
-            "ClientShowNonProjectDiagnostics": {
-              "markdownDescription": "Whether diagnostics are reported for files that are not contained within the project folders.",
+            "ClientHideNonProjectDiagnostics": {
+              "markdownDescription": "Whether diagnostics are ignored for files that are not within the project folders.",
               "type": "boolean",
               "default": false,
             },
@@ -366,8 +366,8 @@
                 "feature_selector": {
                   "$ref": "#/definitions/useSelectorInstead"
                 },
-                "show_non_project_diagnostics": {
-                  "$ref": "#/definitions/ClientShowNonProjectDiagnostics"
+                "hide_non_project_diagnostics": {
+                  "$ref": "#/definitions/ClientHideNonProjectDiagnostics"
                 },
                 "syntaxes": {
                   "type": "array",
@@ -751,8 +751,8 @@
             "schemes": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSchemes"
             },
-            "show_non_project_diagnostics": {
-              "$ref": "sublime://settings/LSP#/definitions/ClientShowNonProjectDiagnostics"
+            "hide_non_project_diagnostics": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientHideNonProjectDiagnostics"
             },
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"

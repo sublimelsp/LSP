@@ -973,6 +973,37 @@ class FormatCompletionsUnitTests(TestCase):
             annotation='NaiveDateTime'
         )
 
+    def test_label_details_4(self) -> None:
+        # More relevant "labelDetails.description" ends up in the annotation rather than "detail".
+        self._verify_completion(
+            {
+                "detail": "Auto-import",
+                "label": "escape",
+                "labelDetails": {
+                    "description": "html"
+                },
+            },
+            trigger='escape',
+            annotation='html',
+            details='Auto-import',
+        )
+
+    def test_label_details_5(self) -> None:
+        # filterText overrides label if doesn't match label+labelDetails.detail
+        self._verify_completion(
+            {
+                "detail": "Auto-import",
+                "filterText": "escapeNew",
+                "label": "escape",
+                "labelDetails": {
+                    "detail": "(str)",
+                },
+            },
+            trigger='escapeNew',
+            annotation='Auto-import',
+            details='escape(str)',
+        )
+
     def test_filter_text_1(self) -> None:
         self._verify_completion(
             {

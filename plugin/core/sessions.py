@@ -175,7 +175,7 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_present_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         """
         Should the diagnostics for this URI be shown in the view? Return a reason why not
         """
@@ -490,7 +490,7 @@ class SessionViewProtocol(Protocol):
     def session_buffer(self) -> 'SessionBufferProtocol':
         ...
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         ...
 
     def get_language_id(self) -> Optional[str]:
@@ -678,7 +678,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_uri(self) -> str:
+    def get_uri(self) -> DocumentUri:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1255,6 +1255,17 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
+        uri = sb.get_uri()
+        if uri:
+            diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
+            if diagnostics:
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
+
+    def _publish_diagnostics_to_session_buffer_async(
+        self, sb: SessionBufferProtocol, diagnostics: List[Diagnostic], version: Optional[int]
+    ) -> None:
+        visible_session_views, _ = self.session_views_by_visibility()
+        sb.on_diagnostics_async(diagnostics, version, visible_session_views)
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -1740,7 +1751,7 @@ class Session(TransportCallbacks):
         if not mgr:
             return
         uri = params["uri"]
-        reason = mgr.should_present_diagnostics(uri)
+        reason = mgr.should_present_diagnostics(uri, self.config)
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         diagnostics = params["diagnostics"]
@@ -1748,8 +1759,7 @@ class Session(TransportCallbacks):
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            visible_session_views, _ = self.session_views_by_visibility()
-            sb.on_diagnostics_async(diagnostics, params.get("version"), visible_session_views)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

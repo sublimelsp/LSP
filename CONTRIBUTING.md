@@ -1,4 +1,4 @@
-# Contributor guidelines
+# Contributor Guidelines
 
 ## Before you start
 
@@ -10,17 +10,17 @@ Sublime Text users may appreciate IDE-like features, but a significant number of
 
 Please feel free to create an issue before coding:
 
-* If you are unsure your proposal is suitable
+* If you are unsure if your proposal is suitable
 * If you are unsure your solution will be technically sound
 
 The issues also allow you to gather some feedback and help from other contributors.
 
 ## Coding
 
-Sublime Text 3 bundles a Python 3.3, please be sure to set up your environment to match.
-LSP uses flake8 and mypy to provide some code quality assurances.
+Sublime Text bundles a Python 3.3, please be sure to set up your environment to match.
+LSP uses `LSP-pyright`, `flake8` and `mypy` to provide some code quality assurances.
 Run `tox` to check your work.
-Consider using LSP-pyright or pyls as a language server.
+Consider using `LSP-pyright` or `LSP-pylsp` as a language server.
 To reload the plugin, save the file boot.py.
 Saving any other file does not reload the plugin.
 
@@ -38,7 +38,7 @@ Before you submit your pull request, please review the following:
 * Is it a bug fix? Please link the issue or attach repro, logs, screenshots etc.
 * Is it a feature? Please attach screenshots / GIFs for visual changes.
 
-I will try to help you get the PR in mergeable shape within a reasonable time, but it may take a few days.
+We will try to help you get the PR in a mergeable shape within a reasonable time, but it may take a few days.
 It is best if you check your GitHub notifications in the meantime!
 
 ## Releasing a new version (for maintainers)

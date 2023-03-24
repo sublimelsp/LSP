@@ -53,9 +53,11 @@ class SessionView:
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
+            self._session_buffer = session_buffer
+            self._session.register_session_buffer_async(session_buffer)
         else:
+            self._session_buffer = session_buffer
             session_buffer.add_session_view(self)
-        self._session_buffer = session_buffer
         session.register_session_view_async(self)
         session.config.set_view_status(self._view, session.config_status_message)
         if self._session.has_capability(self.HOVER_PROVIDER_KEY):
@@ -221,7 +223,7 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()
         return listener.get_uri() if listener else None
 
@@ -354,7 +356,7 @@ class SessionView:
         if self._code_lenses.is_empty():
             return
         promises = [Promise.resolve(None)]  # type: List[Promise[None]]
-        if self.session.get_capability('codeLensProvider.resolveProvider'):
+        if self.get_capability_async('codeLensProvider.resolveProvider'):
             for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
                 request = Request("codeLens/resolve", code_lens.data, self.view)
                 callback = functools.partial(code_lens.resolve, self.view)

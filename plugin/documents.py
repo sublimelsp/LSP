@@ -63,7 +63,8 @@ SUBLIME_WORD_MASK = 515
 
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), and not a special view like a console, output panel or find-in-files panels.
-    return not v.sheet().is_transient() and v.element() is None
+    is_widget = v.settings().get('is_widget')
+    return not v.sheet().is_transient() and v.element() is None and not is_widget
 
 
 def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:

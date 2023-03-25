@@ -31,7 +31,7 @@ class MockManager(Manager):
     def get_project_path(self, file_name: str) -> Optional[str]:
         return None
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_present_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         return None
 
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:

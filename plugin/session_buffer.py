@@ -25,7 +25,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, TypeGuard, Union
+from .core.typing import Any, Callable, Iterable, Optional, List, Protocol, Set, Dict, Tuple, TypeGuard, Union
 from .core.typing import cast
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
@@ -54,6 +54,11 @@ import time
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
+
+
+class CallableWithOptionalArguments(Protocol):
+    def __call__(self, *args: Any) -> None:
+        ...
 
 
 def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticServerCancellationData]:
@@ -374,7 +379,7 @@ class SessionBuffer:
         for sv in self.session_views:
             return sv.view
 
-    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
+    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
         """
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
@@ -475,8 +480,7 @@ class SessionBuffer:
             # Retrigger the request after a short delay, but only if there were no additional changes to the buffer (in
             # that case the request will be retriggered automatically anyway)
             version = view.change_count()
-            sublime.set_timeout_async(
-                lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
+            sublime.set_timeout_async(self._if_view_unchanged(self.do_document_diagnostic_async, version), 500)
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.document_diagnostic_needs_refresh = needs_refresh

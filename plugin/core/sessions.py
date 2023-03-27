@@ -370,10 +370,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "codeDescriptionSupport": True,
             "dataSupport": True
         },
-        # "diagnostic": {
-        #     "dynamicRegistration": True,
-        #     "relatedDocumentSupport": True
-        # },
+        "diagnostic": {
+            "dynamicRegistration": True,
+            "relatedDocumentSupport": True
+        },
         "selectionRange": {
             "dynamicRegistration": True
         },
@@ -440,9 +440,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "semanticTokens": {
             "refreshSupport": True
         },
-        # "diagnostics": {
-        #     "refreshSupport": True
-        # }
+        "diagnostics": {
+            "refreshSupport": True
+        }
     }  # type: WorkspaceClientCapabilities
     window_capabilities = {
         "showDocument": {

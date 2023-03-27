@@ -480,7 +480,8 @@ class SessionBuffer:
             # Retrigger the request after a short delay, but only if there were no additional changes to the buffer (in
             # that case the request will be retriggered automatically anyway)
             version = view.change_count()
-            sublime.set_timeout_async(self._if_view_unchanged(self.do_document_diagnostic_async, version), 500)
+            sublime.set_timeout_async(
+                lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.document_diagnostic_needs_refresh = needs_refresh

@@ -341,14 +341,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_code_actions_async()
         for sv in self.session_views_async():
             if sv.code_lenses_needs_refresh:
-                sv.set_code_lenses_pending_refresh(False)
+                sv.set_code_lenses_pending_refresh(needs_refresh=False)
                 sv.start_code_lenses_async()
         for sb in self.session_buffers_async():
+            if sb.document_diagnostic_needs_refresh:
+                sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
+                sb.do_document_diagnostic_async(self.view)
             if sb.semantic_tokens.needs_refresh:
-                sb.set_semantic_tokens_pending_refresh(False)
+                sb.set_semantic_tokens_pending_refresh(needs_refresh=False)
                 sb.do_semantic_tokens_async(self.view)
             if sb.inlay_hints_needs_refresh:
-                sb.set_inlay_hints_pending_refresh(False)
+                sb.set_inlay_hints_pending_refresh(needs_refresh=False)
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:

@@ -5970,6 +5970,14 @@ class Request(Generic[R]):
         return Request("workspace/symbol", params, None, progress=True)
 
     @classmethod
+    def documentDiagnostic(cls, params: DocumentDiagnosticParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/diagnostic', params, view)
+
+    @classmethod
+    def workspaceDiagnostic(cls, params: WorkspaceDiagnosticParams) -> 'Request':
+        return Request('workspace/diagnostic', params)
+
+    @classmethod
     def shutdown(cls) -> 'Request':
         return Request("shutdown")
 

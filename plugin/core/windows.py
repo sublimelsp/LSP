@@ -348,7 +348,7 @@ class WindowManager(Manager):
         scheme, path = parse_uri(uri)
         if scheme != "file":
             return None
-        if configuration.hide_non_project_diagnostics and not self._workspace.contains(path):
+        if configuration.diagnostics_mode == "workspace" and not self._workspace.contains(path):
             return "not inside window folders"
         view = self._window.active_view()
         if not view:

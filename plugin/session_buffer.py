@@ -25,6 +25,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
+from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .core.typing import Any, Callable, Iterable, Optional, List, Protocol, Set, Dict, Tuple, TypeGuard, Union
 from .core.typing import cast
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -135,7 +136,7 @@ class SessionBuffer:
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
-        self.document_diagnostic_result_id = None  # type: Optional[str]
+        self._document_diagnostic_result_id = None  # type: Optional[str]
         self.document_diagnostic_needs_refresh = False
         self.last_text_change_time = 0.0
         self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -215,7 +216,7 @@ class SessionBuffer:
 
     def _on_before_destroy(self) -> None:
         self.remove_all_inlay_hints()
-        if self.has_capability("diagnosticProvider"):
+        if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
             self.session.m_textDocument_publishDiagnostics({'uri': self.last_known_uri, 'diagnostics': []})
         wm = self.session.manager()
         if wm:
@@ -343,6 +344,8 @@ class SessionBuffer:
             return
         self._do_color_boxes_async(view, version)
         self.do_document_diagnostic_async(view, version)
+        if self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
+            debounced(self.session.do_workspace_diagnostics_async, WORKSPACE_DIAGNOSTICS_TIMEOUT, async_thread=True)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):
             self._do_document_link_async(view, version)
@@ -444,6 +447,15 @@ class SessionBuffer:
                 break
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
+
+    # TODO: store somewhere else
+    @property
+    def document_diagnostic_result_id(self) -> Optional[str]:
+        return self._document_diagnostic_result_id
+
+    @document_diagnostic_result_id.setter
+    def document_diagnostic_result_id(self, value: Optional[str]) -> None:
+        self._document_diagnostic_result_id = value
 
     def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
         mgr = self.session.manager()

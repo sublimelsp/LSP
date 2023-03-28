@@ -28,6 +28,7 @@ from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DidChangeWorkspaceFoldersParams
+from .protocol import DocumentDiagnosticReportKind
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
@@ -47,6 +48,7 @@ from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
+from .protocol import PreviousResultId
 from .protocol import PublishDiagnosticsParams
 from .protocol import RegistrationParams
 from .protocol import Range
@@ -62,6 +64,10 @@ from .protocol import TokenFormat
 from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
+from .protocol import WorkspaceDiagnosticParams
+from .protocol import WorkspaceDiagnosticReport
+from .protocol import WorkspaceDocumentDiagnosticReport
+from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
@@ -76,7 +82,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
@@ -99,6 +105,12 @@ import weakref
 
 InitCallback = Callable[['Session', bool], None]
 T = TypeVar('T')
+
+
+def is_workspace_full_document_diagnostic_report(
+    report: WorkspaceDocumentDiagnosticReport
+) -> TypeGuard[WorkspaceFullDocumentDiagnosticReport]:
+    return report['kind'] == DocumentDiagnosticReportKind.Full
 
 
 def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
@@ -612,6 +624,15 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
+        ...
+
+    # TODO better store somewhere else
+    @property
+    def document_diagnostic_result_id(self) -> Optional[str]:
+        ...
+
+    @document_diagnostic_result_id.setter
+    def document_diagnostic_result_id(self, value: Optional[str]) -> None:
         ...
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
@@ -1694,6 +1715,41 @@ class Session(TransportCallbacks):
             else:
                 not_visible_session_views.add(sv)
         return visible_session_views, not_visible_session_views
+
+    def do_workspace_diagnostics_async(self) -> None:
+        # TODO: support partial results
+        # TODO: cancel pending request
+        # For now we can only gather the previous result ids from the SessionBuffers which still exist.
+        # TODO: maybe store result ids per URI somewhere else, so they are preserved even for closed files.
+        previous_result_ids = []  # type: List[PreviousResultId]
+        for sb in self.session_buffers_async():
+            uri = sb.get_uri()
+            if uri and sb.document_diagnostic_result_id is not None:
+                previous_result_ids.append({'uri': uri, 'value': sb.document_diagnostic_result_id})
+        params = {'previousResultIds': previous_result_ids}  # type: WorkspaceDiagnosticParams
+        identifier = self.get_capability("diagnosticProvider.identifier")
+        if identifier:
+            params['identifier'] = identifier
+        self.send_request_async(Request.workspaceDiagnostic(params), self._on_workspace_diagnostics_async)
+
+    def _on_workspace_diagnostics_async(self, response: WorkspaceDiagnosticReport) -> None:
+        for diagnostic_report in response['items']:
+            uri = diagnostic_report['uri']
+            version = diagnostic_report['version']
+            sb = self.get_session_buffer_for_uri_async(uri)
+            if sb:
+                # Skip if outdated
+                if isinstance(version, int):
+                    sv = sb.some_view()  # pyright: ignore
+                    if sv and version != sv.view.change_count():
+                        continue
+                sb.document_diagnostic_result_id = diagnostic_report.get('resultId')
+            # Skip if unchanged
+            if not is_workspace_full_document_diagnostic_report(diagnostic_report):
+                continue
+            # TODO: maybe skip for actively edited file, because the results from textDocument/diagnostic should be
+            # sufficient and more current
+            self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

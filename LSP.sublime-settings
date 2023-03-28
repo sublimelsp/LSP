@@ -293,6 +293,15 @@
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },
+  //
+  //     // Sets the diagnostics mode:
+  //     // "open_files" - if the server supports `diagnosticProvider`, diagnostics
+  //     //     are requested only for files which are opened in the editor and they
+  //     //     are cleared when the file gets closed.
+  //     // "workspace" - if the server supports `diagnosticProvider.workspaceDiagnostics`,
+  //     //     diagnostics are requested for all files in the project folders. Diagnostics
+  //     //     reported for files not within the project folders are ignored.
+  //     "diagnostics_mode": "open_files",
   //   }
   // }
   "clients": {},

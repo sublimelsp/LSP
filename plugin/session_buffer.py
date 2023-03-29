@@ -1,6 +1,5 @@
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticServerCancellationData
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentDiagnosticParams
 from .core.protocol import DocumentDiagnosticReport
@@ -18,6 +17,7 @@ from .core.protocol import SemanticTokensParams
 from .core.protocol import SemanticTokensRangeParams
 from .core.protocol import TextDocumentSaveReason
 from .core.protocol import TextDocumentSyncKind
+from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
@@ -60,10 +60,6 @@ HUGE_FILE_SIZE = 50000
 class CallableWithOptionalArguments(Protocol):
     def __call__(self, *args: Any) -> None:
         ...
-
-
-def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticServerCancellationData]:
-    return isinstance(data, dict) and 'retriggerRequest' in data
 
 
 def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:

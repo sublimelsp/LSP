@@ -24,6 +24,7 @@ from .protocol import Command
 from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
+from .protocol import DiagnosticServerCancellationData
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
@@ -44,6 +45,7 @@ from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import LSPAny
+from .protocol import LSPErrorCodes
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
@@ -82,6 +84,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
+from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
@@ -111,6 +114,10 @@ def is_workspace_full_document_diagnostic_report(
     report: WorkspaceDocumentDiagnosticReport
 ) -> TypeGuard[WorkspaceFullDocumentDiagnosticReport]:
     return report['kind'] == DocumentDiagnosticReportKind.Full
+
+
+def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticServerCancellationData]:
+    return isinstance(data, dict) and 'retriggerRequest' in data
 
 
 def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
@@ -1199,6 +1206,8 @@ class Session(TransportCallbacks):
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids = {}  # type: Dict[DocumentUri, Optional[str]]
+        self.workspace_diagnostics_pending_response = None  # type: Optional[int]
+        self.workspace_diagnostics_server_is_busy = False
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
@@ -1716,7 +1725,11 @@ class Session(TransportCallbacks):
         return visible_session_views, not_visible_session_views
 
     def do_workspace_diagnostics_async(self) -> None:
-        # TODO: cancel pending request
+        if self.workspace_diagnostics_server_is_busy:
+            # Do nothing; a new request is already queued
+            return
+        if self.workspace_diagnostics_pending_response:
+            self.cancel_request(self.workspace_diagnostics_pending_response)
         previous_result_ids = [
             {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
             if result_id is not None
@@ -1725,13 +1738,20 @@ class Session(TransportCallbacks):
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
             params['identifier'] = identifier
-        self.send_request_async(Request.workspaceDiagnostic(params), self._on_workspace_diagnostics_async)
+        self.workspace_diagnostics_pending_response = self.send_request_async(
+            Request.workspaceDiagnostic(params),
+            self._on_workspace_diagnostics_async,
+            self._on_workspace_diagnostics_error_async)
 
     def _on_workspace_diagnostics_async(self, response: WorkspaceDiagnosticReport) -> None:
+        self.workspace_diagnostics_pending_response = None
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
             version = diagnostic_report['version']
             # Skip if outdated
+            # Note: this is just a necessary, but not a sufficient condition whether the diagnostics are likely accurate
+            # for this particular file, because another file could have changed in the meanwhile and affected the
+            # diagnostics in this file. But in that case a new workspace diagnostics request is already queued.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
                 if sb:
@@ -1747,6 +1767,19 @@ class Session(TransportCallbacks):
             # TODO: maybe skip for actively edited file, because the results from textDocument/diagnostic should be
             # sufficient and more current
             self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
+
+    def _on_workspace_diagnostics_error_async(self, error: Error) -> None:
+        self.workspace_diagnostics_pending_response = None
+        if error.code == LSPErrorCodes.ServerCancelled and is_diagnostic_server_cancellation_data(error.data) and \
+                error.data['retriggerRequest']:
+            # Retrigger the request after an increased delay, and prevent new requests of this type in the meanwhile
+            self.workspace_diagnostics_server_is_busy = True
+
+            def _retrigger_request() -> None:
+                self.workspace_diagnostics_server_is_busy = False
+                self.do_workspace_diagnostics_async()
+
+            sublime.set_timeout_async(_retrigger_request, 2 * WORKSPACE_DIAGNOSTICS_TIMEOUT)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

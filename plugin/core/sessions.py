@@ -1484,6 +1484,9 @@ class Session(TransportCallbacks):
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
+        if self.config.diagnostics_mode == "workspace" and \
+                self.has_capability('diagnosticProvider.workspaceDiagnostics'):
+            self.do_workspace_diagnostics_async()
 
     def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))

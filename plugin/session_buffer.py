@@ -343,7 +343,8 @@ class SessionBuffer:
             return
         self._do_color_boxes_async(view, version)
         self.do_document_diagnostic_async(view, version)
-        if self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
+        if self.session.config.diagnostics_mode == "workspace" and \
+                self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
             debounced(self.session.do_workspace_diagnostics_async, WORKSPACE_DIAGNOSTICS_TIMEOUT, async_thread=True)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):

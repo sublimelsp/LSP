@@ -136,7 +136,6 @@ class SessionBuffer:
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
-        self._document_diagnostic_result_id = None  # type: Optional[str]
         self.document_diagnostic_needs_refresh = False
         self.last_text_change_time = 0.0
         self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -448,15 +447,6 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    # TODO: store somewhere else
-    @property
-    def document_diagnostic_result_id(self) -> Optional[str]:
-        return self._document_diagnostic_result_id
-
-    @document_diagnostic_result_id.setter
-    def document_diagnostic_result_id(self, value: Optional[str]) -> None:
-        self._document_diagnostic_result_id = value
-
     def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
         mgr = self.session.manager()
         if not mgr:
@@ -470,8 +460,9 @@ class SessionBuffer:
             identifier = self.get_capability("diagnosticProvider.identifier")
             if identifier:
                 params['identifier'] = identifier
-            if self.document_diagnostic_result_id:
-                params['previousResultId'] = self.document_diagnostic_result_id
+            result_id = self.session.diagnostics_result_ids.get(self.last_known_uri)
+            if result_id is not None:
+                params['previousResultId'] = result_id
             self.session.send_request_async(
                 Request.documentDiagnostic(params, view),
                 self._if_view_unchanged(self.on_document_diagnostic, version),
@@ -479,7 +470,7 @@ class SessionBuffer:
             )
 
     def on_document_diagnostic(self, view: Optional[sublime.View], response: DocumentDiagnosticReport) -> None:
-        self.document_diagnostic_result_id = response.get('resultId')
+        self.session.diagnostics_result_ids[self.last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
                 {'uri': self.last_known_uri, 'diagnostics': response['items']})

@@ -626,15 +626,6 @@ class SessionBufferProtocol(Protocol):
     def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
         ...
 
-    # TODO better store somewhere else
-    @property
-    def document_diagnostic_result_id(self) -> Optional[str]:
-        ...
-
-    @document_diagnostic_result_id.setter
-    def document_diagnostic_result_id(self, value: Optional[str]) -> None:
-        ...
-
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
@@ -1204,6 +1195,7 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
+        self.diagnostics_result_ids = {}  # type: Dict[DocumentUri, Optional[str]]
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
@@ -1719,13 +1711,10 @@ class Session(TransportCallbacks):
 
     def do_workspace_diagnostics_async(self) -> None:
         # TODO: cancel pending request
-        # For now we can only gather the previous result ids from the SessionBuffers which still exist.
-        # TODO: maybe store result ids per URI somewhere else, so they are preserved even for closed files.
-        previous_result_ids = []  # type: List[PreviousResultId]
-        for sb in self.session_buffers_async():
-            uri = sb.get_uri()
-            if uri and sb.document_diagnostic_result_id is not None:
-                previous_result_ids.append({'uri': uri, 'value': sb.document_diagnostic_result_id})
+        previous_result_ids = [
+            {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
+            if result_id is not None
+        ]  # type: List[PreviousResultId]
         params = {'previousResultIds': previous_result_ids}  # type: WorkspaceDiagnosticParams
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
@@ -1743,7 +1732,9 @@ class Session(TransportCallbacks):
                     sv = sb.some_view()  # pyright: ignore
                     if sv and version != sv.view.change_count():
                         continue
-                sb.document_diagnostic_result_id = diagnostic_report.get('resultId')
+            # TODO: make sure the URIs from the server and stored in the SessionBuffer have the same format (like same
+            # casing of drive letter, etc.)
+            self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             # Skip if unchanged
             if not is_workspace_full_document_diagnostic_report(diagnostic_report):
                 continue

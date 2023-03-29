@@ -1183,8 +1183,9 @@ class _RegistrationData:
                 return
 
 
-# This prefix should disambiguate common string generation techniques like UUID4.
-_WORK_DONE_PROGRESS_PREFIX = "$ublime-"
+# This prefixes should disambiguate common string generation techniques like UUID4.
+_WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
+_PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
 class Session(TransportCallbacks):
@@ -1717,7 +1718,6 @@ class Session(TransportCallbacks):
         return visible_session_views, not_visible_session_views
 
     def do_workspace_diagnostics_async(self) -> None:
-        # TODO: support partial results
         # TODO: cancel pending request
         # For now we can only gather the previous result ids from the SessionBuffers which still exist.
         # TODO: maybe store result ids per URI somewhere else, so they are preserved even for closed files.
@@ -1951,6 +1951,16 @@ class Session(TransportCallbacks):
         """handles the $/progress notification"""
         token = params['token']
         value = params['value']
+        # Partial Result Progress
+        # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#partialResults
+        if token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
+            request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
+            request = self._response_handlers[request_id][0]
+            if request.method == "workspace/diagnostic":
+                self._on_workspace_diagnostics_async(value)
+            return
+        # Work Done Progress
+        # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress
         kind = value['kind']
         if token not in self._progress:
             # If the token is not in the _progress map then that could mean two things:
@@ -2052,6 +2062,8 @@ class Session(TransportCallbacks):
         request_id = self.request_id
         if request.progress and isinstance(request.params, dict):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        if request.partial_results and isinstance(request.params, dict):
+            request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:

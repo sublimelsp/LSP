@@ -571,6 +571,9 @@ class SessionBufferProtocol(Protocol):
     def get_view_in_group(self, group: int) -> sublime.View:
         ...
 
+    def some_view(self) -> Optional[sublime.View]:
+        ...
+
     def register_capability_async(
         self,
         registration_id: str,
@@ -1174,7 +1177,7 @@ class _RegistrationData:
                 return
 
 
-# This prefixes should disambiguate common string generation techniques like UUID4.
+# These prefixes should disambiguate common string generation techniques like UUID4.
 _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
@@ -1725,12 +1728,12 @@ class Session(TransportCallbacks):
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
             version = diagnostic_report['version']
-            sb = self.get_session_buffer_for_uri_async(uri)
-            if sb:
-                # Skip if outdated
-                if isinstance(version, int):
-                    sv = sb.some_view()  # pyright: ignore
-                    if sv and version != sv.view.change_count():
+            # Skip if outdated
+            if isinstance(version, int):
+                sb = self.get_session_buffer_for_uri_async(uri)
+                if sb:
+                    view = sb.some_view()
+                    if view and version != view.change_count():
                         continue
             # TODO: make sure the URIs from the server and stored in the SessionBuffer have the same format (like same
             # casing of drive letter, etc.)

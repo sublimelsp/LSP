@@ -36,7 +36,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
 
 ## Clojure
 
-1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
+1. Download [clojure-lsp](https://clojure-lsp.io/installation/).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"clojure-lsp"` client configuration to the `"clients"`:
 
     ```json
@@ -44,7 +44,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
         "clients": {
             "clojure-lsp": {
                 "enabled": true,
-                "command": ["java", "-jar", "/PATH/TO/clojure-lsp"], // Update the PATH
+                "command": ["/PATH/TO/clojure-lsp"], // Update the PATH
                 "selector": "source.clojure",
                 "initializationOptions": {}
             }
@@ -52,7 +52,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
     }
     ```
 
-!!! info "See available [initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions)."
+!!! info "See available [initializationOptions](https://clojure-lsp.io/settings/#initializationoptions)."
 
 ## CSS
 

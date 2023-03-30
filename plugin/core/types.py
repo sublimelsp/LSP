@@ -21,7 +21,7 @@ import urllib.parse
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
-WORKSPACE_DIAGNOSTICS_TIMEOUT = 5000  # milliseconds
+WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"

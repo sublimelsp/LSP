@@ -1726,11 +1726,13 @@ class Session(TransportCallbacks):
         return visible_session_views, not_visible_session_views
 
     def do_workspace_diagnostics_async(self) -> None:
-        if self.workspace_diagnostics_server_is_busy:
-            # Do nothing; a new request is already queued
-            return
         if self.workspace_diagnostics_pending_response:
-            self.cancel_request(self.workspace_diagnostics_pending_response)
+            # The server is probably leaving the request open intentionally, in order to continuously stream updates via
+            # $/progress notifications.
+            return
+        if self.workspace_diagnostics_server_is_busy:
+            # A new request is already queued.
+            return
         previous_result_ids = [
             {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
             if result_id is not None
@@ -1744,15 +1746,19 @@ class Session(TransportCallbacks):
             self._on_workspace_diagnostics_async,
             self._on_workspace_diagnostics_error_async)
 
-    def _on_workspace_diagnostics_async(self, response: WorkspaceDiagnosticReport) -> None:
-        self.workspace_diagnostics_pending_response = None
+    def _on_workspace_diagnostics_async(
+        self, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
+    ) -> None:
+        if reset_pending_response:
+            self.workspace_diagnostics_pending_response = None
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
             version = diagnostic_report['version']
             # Skip if outdated
-            # Note: this is just a necessary, but not a sufficient condition whether the diagnostics are likely accurate
-            # for this particular file, because another file could have changed in the meanwhile and affected the
-            # diagnostics in this file. But in that case a new workspace diagnostics request is already queued.
+            # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
+            # file are likely not accurate anymore, because changes in another file in the meanwhile could have affected
+            # the diagnostics in this file. If this is the case, a new request is already queued, or updated partial
+            # results will be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
                 if sb:
@@ -1765,8 +1771,6 @@ class Session(TransportCallbacks):
             # Skip if unchanged
             if not is_workspace_full_document_diagnostic_report(diagnostic_report):
                 continue
-            # TODO: maybe skip for actively edited file, because the results from textDocument/diagnostic should be
-            # sufficient and more current
             self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
     def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
@@ -1774,14 +1778,15 @@ class Session(TransportCallbacks):
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                # Retrigger the request after an increased delay, and prevent new requests of this type in the meanwhile
+                # Retrigger the request after a short delay, and prevent new requests of this type in the meanwhile. The
+                # delay is used in order to prevent infinite cycles of cancel -> retrigger, in case the server is busy.
                 self.workspace_diagnostics_server_is_busy = True
 
                 def _retrigger_request() -> None:
                     self.workspace_diagnostics_server_is_busy = False
                     self.do_workspace_diagnostics_async()
 
-                sublime.set_timeout_async(_retrigger_request, 2 * WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
@@ -1989,7 +1994,7 @@ class Session(TransportCallbacks):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
-                self._on_workspace_diagnostics_async(value)
+                self._on_workspace_diagnostics_async(value, reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress

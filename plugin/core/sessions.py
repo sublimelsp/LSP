@@ -1724,6 +1724,8 @@ class Session(TransportCallbacks):
                 not_visible_session_views.add(sv)
         return visible_session_views, not_visible_session_views
 
+    # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
+
     def do_workspace_diagnostics_async(self) -> None:
         if self.workspace_diagnostics_pending_response:
             # The server is probably leaving the request open intentionally, in order to continuously stream updates via
@@ -1749,12 +1751,14 @@ class Session(TransportCallbacks):
             self.workspace_diagnostics_pending_response = None
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
-            version = diagnostic_report['version']
+            # Note: 'version' is mandatory, but some language servers or vscode-languageserver-node libraries have
+            # serialization bugs with null values.
+            version = diagnostic_report.get('version')
             # Skip if outdated
             # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
             # file are likely not accurate anymore, because changes in another file in the meanwhile could have affected
             # the diagnostics in this file. If this is the case, a new request is already queued, or updated partial
-            # results will be streamed by the server.
+            # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
                 if sb:

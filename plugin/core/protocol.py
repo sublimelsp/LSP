@@ -6123,6 +6123,13 @@ class Point(object):
         }
 
 
+ResponseError = TypedDict('ResponseError', {
+    'code': int,
+    'message': str,
+    'data': NotRequired['LSPAny']
+})
+
+
 CodeLensExtended = TypedDict('CodeLensExtended', {
     # The range in which this code lens is valid. Should only span a single line.
     'range': 'Range',

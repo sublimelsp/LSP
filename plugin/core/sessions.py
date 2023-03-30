@@ -56,6 +56,7 @@ from .protocol import RegistrationParams
 from .protocol import Range
 from .protocol import Request
 from .protocol import Response
+from .protocol import ResponseError
 from .protocol import SemanticTokenModifiers
 from .protocol import SemanticTokenTypes
 from .protocol import SymbolKind
@@ -1768,18 +1769,19 @@ class Session(TransportCallbacks):
             # sufficient and more current
             self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
-    def _on_workspace_diagnostics_error_async(self, error: Error) -> None:
+    def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
         self.workspace_diagnostics_pending_response = None
-        if error.code == LSPErrorCodes.ServerCancelled and is_diagnostic_server_cancellation_data(error.data) and \
-                error.data['retriggerRequest']:
-            # Retrigger the request after an increased delay, and prevent new requests of this type in the meanwhile
-            self.workspace_diagnostics_server_is_busy = True
+        if error['code'] == LSPErrorCodes.ServerCancelled:
+            data = error.get('data')
+            if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
+                # Retrigger the request after an increased delay, and prevent new requests of this type in the meanwhile
+                self.workspace_diagnostics_server_is_busy = True
 
-            def _retrigger_request() -> None:
-                self.workspace_diagnostics_server_is_busy = False
-                self.do_workspace_diagnostics_async()
+                def _retrigger_request() -> None:
+                    self.workspace_diagnostics_server_is_busy = False
+                    self.do_workspace_diagnostics_async()
 
-            sublime.set_timeout_async(_retrigger_request, 2 * WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                sublime.set_timeout_async(_retrigger_request, 2 * WORKSPACE_DIAGNOSTICS_TIMEOUT)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

@@ -6,12 +6,12 @@ from .core.protocol import DocumentDiagnosticReport
 from .core.protocol import DocumentDiagnosticReportKind
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
-from .core.protocol import Error
 from .core.protocol import FullDocumentDiagnosticReport
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
 from .core.protocol import LSPErrorCodes
 from .core.protocol import Request
+from .core.protocol import ResponseError
 from .core.protocol import SemanticTokensDeltaParams
 from .core.protocol import SemanticTokensParams
 from .core.protocol import SemanticTokensRangeParams
@@ -476,14 +476,15 @@ class SessionBuffer:
             if sb:
                 cast(SessionBuffer, sb).on_document_diagnostic(None, cast(DocumentDiagnosticReport, diagnostic_report))
 
-    def _on_document_diagnostic_error(self, view: sublime.View, error: Error) -> None:
-        if error.code == LSPErrorCodes.ServerCancelled and is_diagnostic_server_cancellation_data(error.data) and \
-                error.data['retriggerRequest']:
-            # Retrigger the request after a short delay, but only if there were no additional changes to the buffer (in
-            # that case the request will be retriggered automatically anyway)
-            version = view.change_count()
-            sublime.set_timeout_async(
-                lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
+    def _on_document_diagnostic_error(self, view: sublime.View, error: ResponseError) -> None:
+        if error['code'] == LSPErrorCodes.ServerCancelled:
+            data = error.get('data')
+            if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
+                # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
+                # (in that case the request will be retriggered automatically anyway)
+                version = view.change_count()
+                sublime.set_timeout_async(
+                    lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.document_diagnostic_needs_refresh = needs_refresh

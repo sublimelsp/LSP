@@ -1208,7 +1208,6 @@ class Session(TransportCallbacks):
         self.diagnostics = DiagnosticsStorage()
         self.diagnostics_result_ids = {}  # type: Dict[DocumentUri, Optional[str]]
         self.workspace_diagnostics_pending_response = None  # type: Optional[int]
-        self.workspace_diagnostics_server_is_busy = False
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
@@ -1730,9 +1729,6 @@ class Session(TransportCallbacks):
             # The server is probably leaving the request open intentionally, in order to continuously stream updates via
             # $/progress notifications.
             return
-        if self.workspace_diagnostics_server_is_busy:
-            # A new request is already queued.
-            return
         previous_result_ids = [
             {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
             if result_id is not None
@@ -1774,19 +1770,20 @@ class Session(TransportCallbacks):
             self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
     def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
-        self.workspace_diagnostics_pending_response = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                # Retrigger the request after a short delay, and prevent new requests of this type in the meanwhile. The
-                # delay is used in order to prevent infinite cycles of cancel -> retrigger, in case the server is busy.
-                self.workspace_diagnostics_server_is_busy = True
+                # Retrigger the request after a short delay, but don't reset the pending response variable for this
+                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
+                # infinite cycles of cancel -> retrigger, in case the server is busy.
 
                 def _retrigger_request() -> None:
-                    self.workspace_diagnostics_server_is_busy = False
+                    self.workspace_diagnostics_pending_response = None
                     self.do_workspace_diagnostics_async()
 
                 sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                return
+        self.workspace_diagnostics_pending_response = None
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

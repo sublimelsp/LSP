@@ -1749,10 +1749,14 @@ class Session(TransportCallbacks):
     ) -> None:
         if reset_pending_response:
             self.workspace_diagnostics_pending_response = None
+        if not response['items']:
+            return
+        window = sublime.active_window()
+        active_view = window.active_view() if window else None
+        active_view_path = active_view.file_name() if active_view else None
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
-            # Note: 'version' is mandatory, but some language servers or vscode-languageserver-node libraries have
-            # serialization bugs with null values.
+            # Note: 'version' is mandatory, but some language servers have serialization bugs with null values.
             version = diagnostic_report.get('version')
             # Skip if outdated
             # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
@@ -1771,6 +1775,11 @@ class Session(TransportCallbacks):
             # Skip if unchanged
             if not is_workspace_full_document_diagnostic_report(diagnostic_report):
                 continue
+            # Skip for active view
+            if active_view_path:
+                scheme, path = parse_uri(uri)
+                if scheme == 'file' and path == active_view_path:
+                    continue
             self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
     def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:

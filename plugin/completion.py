@@ -78,7 +78,8 @@ def format_completion(
         trigger = lsp_label
         if lsp_label_description:
             annotation = lsp_label_description
-            details.append(html.escape(lsp_detail))
+            if lsp_detail:
+                details.append(html.escape(lsp_detail))
         else:
             annotation = lsp_detail
         if lsp_label_detail:

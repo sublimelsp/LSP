@@ -1760,10 +1760,10 @@ class Session(TransportCallbacks):
             # Normalize URI
             scheme, path = parse_uri(uri)
             if scheme == 'file':
+                # Skip for active view
+                if path == active_view_path:
+                    continue
                 uri = unparse_uri((scheme, path))
-            # Skip for active view
-            if scheme == 'file' and path == active_view_path:
-                continue
             # Note: 'version' is a mandatory field, but some language servers have serialization bugs with null values.
             version = diagnostic_report.get('version')
             # Skip if outdated

@@ -89,6 +89,7 @@ from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
+from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_storage_path
@@ -1756,7 +1757,14 @@ class Session(TransportCallbacks):
         active_view_path = active_view.file_name() if active_view else None
         for diagnostic_report in response['items']:
             uri = diagnostic_report['uri']
-            # Note: 'version' is mandatory, but some language servers have serialization bugs with null values.
+            # Normalize URI
+            scheme, path = parse_uri(uri)
+            if scheme == 'file':
+                uri = unparse_uri((scheme, path))
+            # Skip for active view
+            if scheme == 'file' and path == active_view_path:
+                continue
+            # Note: 'version' is a mandatory field, but some language servers have serialization bugs with null values.
             version = diagnostic_report.get('version')
             # Skip if outdated
             # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
@@ -1769,18 +1777,9 @@ class Session(TransportCallbacks):
                     view = sb.some_view()
                     if view and version != view.change_count():
                         continue
-            # TODO: make sure the URIs from the server and stored in the SessionBuffer have the same format (like same
-            # casing of drive letter, etc.)
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
-            # Skip if unchanged
-            if not is_workspace_full_document_diagnostic_report(diagnostic_report):
-                continue
-            # Skip for active view
-            if active_view_path:
-                scheme, path = parse_uri(uri)
-                if scheme == 'file' and path == active_view_path:
-                    continue
-            self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
+            if is_workspace_full_document_diagnostic_report(diagnostic_report):
+                self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
     def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:

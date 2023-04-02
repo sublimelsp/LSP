@@ -154,6 +154,11 @@ class SessionBuffer:
     def session_views(self) -> 'WeakSet[SessionViewProtocol]':
         return self._session_views
 
+    @property
+    def version(self) -> Optional[int]:
+        view = self.some_view()
+        return view.change_count() if view else None
+
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
             language_id = self.get_language_id()

@@ -571,6 +571,10 @@ class SessionBufferProtocol(Protocol):
     def session_views(self) -> 'WeakSet[SessionViewProtocol]':
         ...
 
+    @property
+    def version(self) -> Optional[int]:
+        ...
+
     def get_uri(self) -> Optional[str]:
         ...
 
@@ -578,9 +582,6 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def get_view_in_group(self, group: int) -> sublime.View:
-        ...
-
-    def some_view(self) -> Optional[sublime.View]:
         ...
 
     def register_capability_async(
@@ -1773,10 +1774,8 @@ class Session(TransportCallbacks):
             # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
-                if sb:
-                    view = sb.some_view()
-                    if view and version != view.change_count():
-                        continue
+                if sb and sb.version != version:
+                    continue
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
                 self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})

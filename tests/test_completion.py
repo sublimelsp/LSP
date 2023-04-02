@@ -708,7 +708,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=False,
-            expected_regex=r"^f\(X&amp; x\) \| does things$",
+            expected_regex=r"^f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
@@ -726,7 +726,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\) \| does things$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",  # noqa: E501
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )
@@ -971,6 +971,37 @@ class FormatCompletionsUnitTests(TestCase):
             },
             trigger='NaiveDateTime struct',
             annotation='NaiveDateTime'
+        )
+
+    def test_label_details_4(self) -> None:
+        # More relevant "labelDetails.description" ends up in the annotation rather than "detail".
+        self._verify_completion(
+            {
+                "detail": "Auto-import",
+                "label": "escape",
+                "labelDetails": {
+                    "description": "html"
+                },
+            },
+            trigger='escape',
+            annotation='html',
+            details='Auto-import',
+        )
+
+    def test_label_details_5(self) -> None:
+        # filterText overrides label if doesn't match label+labelDetails.detail
+        self._verify_completion(
+            {
+                "detail": "Auto-import",
+                "filterText": "escapeNew",
+                "label": "escape",
+                "labelDetails": {
+                    "detail": "(str)",
+                },
+            },
+            trigger='escapeNew',
+            annotation='Auto-import',
+            details='escape(str)',
         )
 
     def test_filter_text_1(self) -> None:

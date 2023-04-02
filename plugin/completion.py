@@ -74,19 +74,20 @@ def format_completion(
             # labelDetails.detail is likely a function signature
             trigger = lsp_label + lsp_label_detail
         annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text):
-        trigger = lsp_label
-        annotation = lsp_detail
-        if lsp_label_detail:
+    else:
+        if lsp_label.startswith(lsp_filter_text):
+            trigger = lsp_label
+            if lsp_label_detail:
+                details.append(html.escape(lsp_label + lsp_label_detail))
+        else:
+            trigger = lsp_filter_text
             details.append(html.escape(lsp_label + lsp_label_detail))
         if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-    else:
-        trigger = lsp_filter_text
-        annotation = lsp_detail
-        details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
+            annotation = lsp_label_description
+            if lsp_detail:
+                details.append(html.escape(lsp_detail))
+        else:
+            annotation = lsp_detail
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
         annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
     text_edit = item.get('textEdit', item_defaults.get('editRange'))

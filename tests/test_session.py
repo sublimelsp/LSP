@@ -61,7 +61,7 @@ class MockLogger(Logger):
     def outgoing_notification(self, method: str, params: Any) -> None:
         pass
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:

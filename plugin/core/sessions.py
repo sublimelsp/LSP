@@ -1105,7 +1105,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
         pass
 
     @abstractmethod
@@ -2079,6 +2079,9 @@ class Session(TransportCallbacks):
                 self._logger.incoming_notification(method, result, res[0] is None)
                 return res
         elif "id" in payload:
+            if payload["id"] is None:
+                self._logger.incoming_response(None, payload.get("error"), True)
+                return (None, None, None, None, None)
             response_id = int(payload["id"])
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, result, is_error)

@@ -13,6 +13,13 @@ html {
 to `Packages/User/mdpopups.css`.
 See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-popups/) for more details.
 
+## Inlay Hints
+
+The style for inlay hints is defined in a [inlay_hints.css](https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css) file in the root directory of the LSP package.
+If you would like to adjust the inlay hints style, you can create an [override](https://www.sublimetext.com/docs/packages.html#overriding-files-from-a-zipped-package) for this file.
+But be aware that by doing this, you might miss out future changes in this file, in case of updates in a new release of the LSP package.
+So consider to use a package like [OverrideAudit](https://packagecontrol.io/packages/OverrideAudit) in order to get a notification when that happens.
+
 ## Keyboard shortcuts (key bindings)
 
 LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` command in the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice. Check also the overview of available [Keyboard Shortcuts](keyboard_shortcuts.md).

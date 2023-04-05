@@ -15,8 +15,8 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 ## Inlay Hints
 
-The style for inlay hints is defined in a [inlay_hints.css](https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css) file in the root directory of the LSP package.
-If you would like to adjust the inlay hints style, you can create an [override](https://www.sublimetext.com/docs/packages.html#overriding-files-from-a-zipped-package) for this file.
+The style for inlay hints is defined in a [`inlay_hints.css`](https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css) file in the root directory of the LSP package.
+If you would like to adjust the inlay hints style, you can create an [override](https://www.sublimetext.com/docs/packages.html#overriding-files-from-a-zipped-package) for this file (a restart of Sublime Text is required to apply the changes).
 But be aware that by doing this, you might miss out future changes in this file, in case of updates in a new release of the LSP package.
 So consider to use a package like [OverrideAudit](https://packagecontrol.io/packages/OverrideAudit) in order to get a notification when that happens.
 

@@ -514,6 +514,7 @@
                 "background",
                 "underline",
                 "stippled",
+                "outline",
                 ""
               ],
               "default": "underline",

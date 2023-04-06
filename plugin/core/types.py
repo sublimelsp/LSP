@@ -306,7 +306,7 @@ class Settings:
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
         elif style_str == "outline":
-            return sublime.DRAW_NO_FILL, sublime.DRAW_OUTLINED | sublime.DRAW_NO_FILL
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL
         elif style_str == "stippled":
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:

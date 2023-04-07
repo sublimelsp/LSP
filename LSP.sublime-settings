@@ -173,7 +173,7 @@
   "document_highlight_style": "underline",
 
   // Highlight style of the word or range for which a hover popup is shown.
-  // Valid values are "background", "underline", "stippled", or "".
+  // Valid values are "background", "underline", "stippled", "outline", or "".
   // When set to the empty string (""), no highlighting is applied.
   // See https://lsp.sublimetext.io/customization/#hover-highlights for how to
   // customize the color.

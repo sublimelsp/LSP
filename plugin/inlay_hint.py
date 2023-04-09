@@ -1,3 +1,4 @@
+from .core.css import css
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintLabelPart
 from .core.protocol import MarkupContent
@@ -102,18 +103,9 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
     <body id="lsp-inlay-hint">
         <style>
             .inlay-hint {{
-                color: color(var(--foreground) alpha(0.6));
-                background-color: color(var(--foreground) alpha(0.08));
-                border-radius: 4px;
-                padding: 0.05em 4px;
-                font-size: 0.9em;
                 font-family: {font};
             }}
-
-            .inlay-hint a {{
-                color: color(var(--foreground) alpha(0.6));
-                text-decoration: none;
-            }}
+            {css}
         </style>
         <div class="inlay-hint">
             {label}
@@ -121,6 +113,7 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
     </body>
     """.format(
         font=font,
+        css=css().inlay_hints,
         label=label
     )
     return html

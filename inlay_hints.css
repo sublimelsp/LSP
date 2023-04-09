@@ -1,0 +1,12 @@
+.inlay-hint {
+    color: color(var(--foreground) alpha(0.6));
+    background-color: color(var(--foreground) alpha(0.08));
+    border-radius: 4px;
+    padding: 0.05em 4px;
+    font-size: 0.9em;
+}
+
+.inlay-hint a {
+    color: color(var(--foreground) alpha(0.6));
+    text-decoration: none;
+}

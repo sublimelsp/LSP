@@ -548,7 +548,7 @@ class RequestTimeTracker:
     def start_tracking(self, request_id: int) -> None:
         self._start_times[request_id] = perf_counter()
 
-    def end_tracking(self, request_id) -> str:
+    def end_tracking(self, request_id: int) -> str:
         duration = '-'
         if request_id in self._start_times:
             start = self._start_times.pop(request_id)
@@ -613,11 +613,11 @@ class PanelLogger(Logger):
             return
         self.log(self._format_notification(" ->", method), params)
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id) if request_id is not None else "-"
         self.log(self._format_response(direction, request_id, duration), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
@@ -717,7 +717,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,

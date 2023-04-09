@@ -21,7 +21,6 @@ from .core.settings import userprefs
 from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast, Any, TypeGuard
 from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
-from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -69,6 +68,7 @@ def format_completion(
             # labelDetails.detail is likely a type annotation
             # Don't append it to the trigger: https://github.com/sublimelsp/LSP/issues/2169
             trigger = lsp_label
+
             details.append(html.escape(lsp_label_detail))
         else:
             # labelDetails.detail is likely a function signature

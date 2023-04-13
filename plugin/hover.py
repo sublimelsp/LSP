@@ -260,7 +260,7 @@ class LspHoverCommand(LspTextCommand):
             formatted.append('<div class="diagnostics">')
             for diagnostic in diagnostics:
                 by_severity.setdefault(diagnostic_severity(diagnostic), []).append(
-                    format_diagnostic_for_html(self.view, sb.session.config, diagnostic, self._base_dir))
+                    format_diagnostic_for_html(sb.session.config, diagnostic, self._base_dir))
             for items in by_severity.values():
                 formatted.extend(items)
             formatted.append("</div>")

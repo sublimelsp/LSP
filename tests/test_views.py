@@ -1,6 +1,8 @@
 from copy import deepcopy
+from LSP.plugin.core.protocol import CodeActionKind
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
+from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
@@ -342,7 +344,7 @@ class ViewsTest(DeferrableTestCase):
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         diagnostic = {
             "message": "oops",
-            "severity": 1,
+            "severity": DiagnosticSeverity.Error,
             "range": {
                 "start": {
                     "character": 0,
@@ -359,14 +361,14 @@ class ViewsTest(DeferrableTestCase):
             view=self.view,
             region=sublime.Region(0, 1),
             diagnostics=[diagnostic],
-            only_kinds=["refactor"]
+            only_kinds=[CodeActionKind.Refactor]
         )
         self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
     def test_format_diagnostic_for_html(self) -> None:
         diagnostic1 = {
             "message": "oops",
-            "severity": 1,
+            "severity": DiagnosticSeverity.Error,
             # The relatedInformation is present here, but it's an empty list.
             # This should have the same behavior as having no relatedInformation present.
             "relatedInformation": [],
@@ -389,8 +391,8 @@ class ViewsTest(DeferrableTestCase):
         client_config = make_stdio_test_config()
         # They should result in the same minihtml.
         self.assertEqual(
-            format_diagnostic_for_html(self.view, client_config, diagnostic1, "/foo/bar"),
-            format_diagnostic_for_html(self.view, client_config, diagnostic2, "/foo/bar")
+            format_diagnostic_for_html(client_config, diagnostic1, "/foo/bar"),
+            format_diagnostic_for_html(client_config, diagnostic2, "/foo/bar")
         )
 
     def test_escaped_newline_in_markdown(self) -> None:

@@ -21,7 +21,6 @@ from .core.settings import userprefs
 from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast, Any, TypeGuard
 from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
-from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -63,7 +62,7 @@ def format_completion(
         args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
             view_id, index, session_name)
         href = 'subl:lsp_run_text_command_helper {}'.format(args)
-        details.append(make_link(href, 'More'))
+        details.append("<a href='{}'>More</a>".format(href))
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         if lsp_label_detail[0].isalnum() and lsp_label.startswith(lsp_filter_text):
             # labelDetails.detail is likely a type annotation

@@ -62,13 +62,12 @@ def format_completion(
         args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
             view_id, index, session_name)
         href = 'subl:lsp_run_text_command_helper {}'.format(args)
-        details.append("<a href='{}'>More</a>".format(href))
+        details.append('<a href="{}">More</a>'.format(href))
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         if lsp_label_detail[0].isalnum() and lsp_label.startswith(lsp_filter_text):
             # labelDetails.detail is likely a type annotation
             # Don't append it to the trigger: https://github.com/sublimelsp/LSP/issues/2169
             trigger = lsp_label
-
             details.append(html.escape(lsp_label_detail))
         else:
             # labelDetails.detail is likely a function signature

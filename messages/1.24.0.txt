@@ -5,5 +5,5 @@ Sublime Text once it finishes updating all packages. ⚠️
 
 # Breaking changes
 
-- Diagnostics for files that are not withing the project folders are no longer ignored.
+- Diagnostics for files that are not within the project folders are no longer ignored.
   You can set `"diagnostics_mode": "workspace"` in server-specific configuration to enable old behavior.

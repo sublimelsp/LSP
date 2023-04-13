@@ -522,6 +522,7 @@
                 "background",
                 "underline",
                 "stippled",
+                "outline",
                 ""
               ],
               "default": "underline",
@@ -532,6 +533,7 @@
                 "background",
                 "underline",
                 "stippled",
+                "outline",
                 ""
               ],
               "default": "",

@@ -215,6 +215,8 @@ class SessionBuffer:
 
     def _on_before_destroy(self) -> None:
         self.remove_all_inlay_hints()
+        if self.has_capability("diagnosticProvider"):
+            self.session.m_textDocument_publishDiagnostics({'uri': self.last_known_uri, 'diagnostics': []})
         wm = self.session.manager()
         if wm:
             wm.on_diagnostics_updated()

@@ -255,7 +255,7 @@ class DiagnosticLines:
                     left.append({
                         'class': self.HIGHLIGHTS[self._get_severity(diagnostic)],
                         'content': self.SYMBOLS['HORIZONTAL'] * len(item.text)
-                        })
+                    })
             elif isinstance(item, StackItemDiagnostic):
                 next_item = line[current_index + 1]
                 if current_index + 1 != len(line) and not isinstance(next_item, StackItemOverlap):

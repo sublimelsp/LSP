@@ -1,10 +1,17 @@
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
+from .core.protocol import DiagnosticServerCancellationData
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentDiagnosticParams
+from .core.protocol import DocumentDiagnosticReport
+from .core.protocol import DocumentDiagnosticReportKind
 from .core.protocol import DocumentLink
 from .core.protocol import DocumentUri
+from .core.protocol import Error
+from .core.protocol import FullDocumentDiagnosticReport
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintParams
+from .core.protocol import LSPErrorCodes
 from .core.protocol import Request
 from .core.protocol import SemanticTokensDeltaParams
 from .core.protocol import SemanticTokensParams
@@ -18,7 +25,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Set, Dict, Tuple, Union
+from .core.typing import Any, Callable, Iterable, Optional, List, Protocol, Set, Dict, Tuple, TypeGuard, Union
 from .core.typing import cast
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
@@ -47,6 +54,19 @@ import time
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
+
+
+class CallableWithOptionalArguments(Protocol):
+    def __call__(self, *args: Any) -> None:
+        ...
+
+
+def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticServerCancellationData]:
+    return isinstance(data, dict) and 'retriggerRequest' in data
+
+
+def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:
+    return response['kind'] == DocumentDiagnosticReportKind.Full
 
 
 class PendingChanges:
@@ -115,6 +135,8 @@ class SessionBuffer:
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
+        self.document_diagnostic_result_id = None  # type: Optional[str]
+        self.document_diagnostic_needs_refresh = False
         self.last_text_change_time = 0.0
         self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
@@ -144,11 +166,13 @@ class SessionBuffer:
                 return
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
-            self._do_color_boxes_async(view, view.change_count())
+            version = view.change_count()
+            self._do_color_boxes_async(view, version)
+            self.do_document_diagnostic_async(view, version)
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             self.do_inlay_hints_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
-                self._do_document_link_async(view, view.change_count())
+                self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
     def _check_did_close(self) -> None:
@@ -191,6 +215,8 @@ class SessionBuffer:
 
     def _on_before_destroy(self) -> None:
         self.remove_all_inlay_hints()
+        if self.has_capability("diagnosticProvider"):
+            self.session.m_textDocument_publishDiagnostics({'uri': self.last_known_uri, 'diagnostics': []})
         wm = self.session.manager()
         if wm:
             wm.on_diagnostics_updated()
@@ -218,6 +244,8 @@ class SessionBuffer:
         if view is not None:
             if capability_path.startswith("textDocumentSync."):
                 self._check_did_open(view)
+            elif capability_path.startswith("diagnosticProvider"):
+                self.do_document_diagnostic_async(view, view.change_count())
 
     def unregister_capability_async(
         self,
@@ -314,6 +342,7 @@ class SessionBuffer:
             self._has_changed_during_save = True
             return
         self._do_color_boxes_async(view, version)
+        self.do_document_diagnostic_async(view, version)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):
             self._do_document_link_async(view, version)
@@ -352,7 +381,7 @@ class SessionBuffer:
         for sv in self.session_views:
             return sv.view
 
-    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> Callable[[Any], None]:
+    def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
         """
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
@@ -366,7 +395,7 @@ class SessionBuffer:
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
     def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
-        if self.session.has_capability("colorProvider"):
+        if self.has_capability("colorProvider"):
             self.session.send_request_async(
                 Request.documentColor(document_color_params(view), view),
                 self._if_view_unchanged(self._on_color_boxes_async, version)
@@ -382,7 +411,7 @@ class SessionBuffer:
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
     def _do_document_link_async(self, view: sublime.View, version: int) -> None:
-        if self.session.has_capability("documentLinkProvider"):
+        if self.has_capability("documentLinkProvider"):
             self.session.send_request_async(
                 Request.documentLink({'textDocument': text_document_identifier(view)}, view),
                 self._if_view_unchanged(self._on_document_link_async, version)
@@ -413,6 +442,51 @@ class SessionBuffer:
                 self.document_links.remove(link)
                 self.document_links.append(new_link)
                 break
+
+    # --- textDocument/diagnostic --------------------------------------------------------------------------------------
+
+    def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
+        mgr = self.session.manager()
+        if not mgr:
+            return
+        if mgr.should_ignore_diagnostics(self.last_known_uri, self.session.config):
+            return
+        if version is None:
+            version = view.change_count()
+        if self.has_capability("diagnosticProvider"):
+            params = {'textDocument': text_document_identifier(view)}  # type: DocumentDiagnosticParams
+            identifier = self.get_capability("diagnosticProvider.identifier")
+            if identifier:
+                params['identifier'] = identifier
+            if self.document_diagnostic_result_id:
+                params['previousResultId'] = self.document_diagnostic_result_id
+            self.session.send_request_async(
+                Request.documentDiagnostic(params, view),
+                self._if_view_unchanged(self.on_document_diagnostic, version),
+                self._if_view_unchanged(self._on_document_diagnostic_error, version)
+            )
+
+    def on_document_diagnostic(self, view: Optional[sublime.View], response: DocumentDiagnosticReport) -> None:
+        self.document_diagnostic_result_id = response.get('resultId')
+        if is_full_document_diagnostic_report(response):
+            self.session.m_textDocument_publishDiagnostics(
+                {'uri': self.last_known_uri, 'diagnostics': response['items']})
+        for uri, diagnostic_report in response.get('relatedDocuments', {}):
+            sb = self.session.get_session_buffer_for_uri_async(uri)
+            if sb:
+                cast(SessionBuffer, sb).on_document_diagnostic(None, cast(DocumentDiagnosticReport, diagnostic_report))
+
+    def _on_document_diagnostic_error(self, view: sublime.View, error: Error) -> None:
+        if error.code == LSPErrorCodes.ServerCancelled and is_diagnostic_server_cancellation_data(error.data) and \
+                error.data['retriggerRequest']:
+            # Retrigger the request after a short delay, but only if there were no additional changes to the buffer (in
+            # that case the request will be retriggered automatically anyway)
+            version = view.change_count()
+            sublime.set_timeout_async(
+                lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
+
+    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.document_diagnostic_needs_refresh = needs_refresh
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -490,7 +564,7 @@ class SessionBuffer:
     def do_semantic_tokens_async(self, view: sublime.View, only_viewport: bool = False) -> None:
         if not userprefs().semantic_highlighting:
             return
-        if not self.session.has_capability("semanticTokensProvider"):
+        if not self.has_capability("semanticTokensProvider"):
             return
         # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
         if "background" not in view.style_for_scope("meta.semantic-token"):
@@ -499,21 +573,21 @@ class SessionBuffer:
             self.session.cancel_request(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
-        if only_viewport and self.session.has_capability("semanticTokensProvider.range"):
+        if only_viewport and self.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
-        elif self.semantic_tokens.result_id and self.session.has_capability("semanticTokensProvider.full.delta"):
+        elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
             params["previousResultId"] = self.semantic_tokens.result_id
             request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
-        elif self.session.has_capability("semanticTokensProvider.full"):
+        elif self.has_capability("semanticTokensProvider.full"):
             request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-        elif self.session.has_capability("semanticTokensProvider.range"):
+        elif self.has_capability("semanticTokensProvider.range"):
             params["range"] = entire_content_range(view)
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
@@ -625,7 +699,7 @@ class SessionBuffer:
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        if not self.session.has_capability("inlayHintProvider"):
+        if not self.has_capability("inlayHintProvider"):
             return
         if not LspToggleInlayHintsCommand.are_enabled(view.window()):
             self.remove_all_inlay_hints()

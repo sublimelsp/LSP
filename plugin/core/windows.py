@@ -344,11 +344,11 @@ class WindowManager(Manager):
                     candidate = folder
         return candidate
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         scheme, path = parse_uri(uri)
         if scheme != "file":
             return None
-        if not self._workspace.contains(path):
+        if configuration.hide_non_project_diagnostics and not self._workspace.contains(path):
             return "not inside window folders"
         view = self._window.active_view()
         if not view:
@@ -548,7 +548,7 @@ class RequestTimeTracker:
     def start_tracking(self, request_id: int) -> None:
         self._start_times[request_id] = perf_counter()
 
-    def end_tracking(self, request_id) -> str:
+    def end_tracking(self, request_id: int) -> str:
         duration = '-'
         if request_id in self._start_times:
             start = self._start_times.pop(request_id)
@@ -613,11 +613,11 @@ class PanelLogger(Logger):
             return
         self.log(self._format_notification(" ->", method), params)
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id) if request_id is not None else "-"
         self.log(self._format_response(direction, request_id, duration), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
@@ -717,7 +717,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,

@@ -31,7 +31,7 @@ class MockManager(Manager):
     def get_project_path(self, file_name: str) -> Optional[str]:
         return None
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         return None
 
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
@@ -61,7 +61,7 @@ class MockLogger(Logger):
     def outgoing_notification(self, method: str, params: Any) -> None:
         pass
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:

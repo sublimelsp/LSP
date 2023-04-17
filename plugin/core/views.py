@@ -780,13 +780,12 @@ def text2html(content: str) -> str:
 
 
 def make_link(href: str, text: Any, class_name: Optional[str] = None, tooltip: Optional[str] = None) -> str:
-    if isinstance(text, str):
-        text = text.replace(' ', '&nbsp;')
     link = "<a href='{}'".format(href)
     if class_name:
         link += " class='{}'".format(class_name)
     if tooltip:
         link += " title='{}'".format(html.escape(tooltip))
+    text = text2html(str(text)).replace(' ', '&nbsp;')
     link += ">{}</a>".format(text)
     return link
 
@@ -996,44 +995,36 @@ def _format_diagnostic_related_info(
     location = info["location"]
     return '<a href="{}">{}</a>: {}'.format(
         location_to_href(config, location),
-        location_to_human_readable(config, base_dir, location),
-        info["message"]
+        text2html(location_to_human_readable(config, base_dir, location)),
+        text2html(info["message"])
     )
 
 
-def _with_color(text: Any, hexcolor: str) -> str:
-    return '<span style="color: {};">{}</span>'.format(hexcolor, text)
+def _with_color(text: str, hexcolor: str) -> str:
+    return '<span style="color: {};">{}</span>'.format(hexcolor, text2html(text))
 
 
-def format_diagnostic_for_html(
-    view: sublime.View,
-    config: ClientConfig,
-    diagnostic: Diagnostic,
-    base_dir: Optional[str] = None
-) -> str:
+def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
     formatted = [
         '<pre class="',
         DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1],
         '">',
         text2html(diagnostic["message"])
     ]
-    code_description = diagnostic.get("codeDescription")
-    if "code" in diagnostic:
-        code = [_with_color("(", "color(var(--foreground) alpha(0.6))")]
-        if code_description:
-            code.append(make_link(code_description["href"], diagnostic.get("code")))
-        else:
-            code.append(_with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))"))
-        code.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
-    else:
-        code = None
+    code = diagnostic.get("code")
     source = diagnostic.get("source")
-    if source or code:
+    if source or code is not None:
         formatted.append(" ")
     if source:
         formatted.append(_with_color(source, "color(var(--foreground) alpha(0.6))"))
-    if code:
-        formatted.extend(code)
+    if code is not None:
+        formatted.append(_with_color("(", "color(var(--foreground) alpha(0.6))"))
+        code_description = diagnostic.get("codeDescription")
+        if code_description:
+            formatted.append(make_link(code_description["href"], str(code)))
+        else:
+            formatted.append(_with_color(str(code), "color(var(--foreground) alpha(0.6))"))
+        formatted.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         formatted.append('<pre class="related_info">')

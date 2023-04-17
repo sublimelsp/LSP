@@ -307,6 +307,8 @@ class Settings:
     def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
+        elif style_str == "outline":
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL
         elif style_str == "stippled":
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
@@ -653,6 +655,7 @@ class ClientConfig:
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
                  semantic_tokens: Optional[Dict[str, str]] = None,
+                 hide_non_project_diagnostics: bool = False,
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -678,6 +681,7 @@ class ClientConfig:
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
         self.semantic_tokens = semantic_tokens
+        self.hide_non_project_diagnostics = hide_non_project_diagnostics
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -710,6 +714,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
+            hide_non_project_diagnostics=bool(s.get("hide_non_project_diagnostics", False)),
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -739,6 +744,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
+            hide_non_project_diagnostics=d.get("hide_non_project_diagnostics", False),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -768,6 +774,8 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
+            hide_non_project_diagnostics=override.get(
+                "hide_non_project_diagnostics", src_config.hide_non_project_diagnostics),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

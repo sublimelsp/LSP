@@ -1,5 +1,7 @@
 from .protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
+from .types import matches_pattern
+from .types import sublime_pattern_to_glob
 from .typing import Any, List, Union
 from .url import filename_to_uri
 import sublime
@@ -56,9 +58,32 @@ class ProjectFolders(object):
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self.folders = self._window.folders()  # type: List[str]
+        # Per-folder ignore patterns. The list order matches the order of self.folders.
+        self._folders_exclude_patterns = []  # type: List[List[str]]
+        self._update_exclude_patterns(self.folders)
+
+    def _update_exclude_patterns(self, folders: List[str]) -> None:
+        self._folders_exclude_patterns = []
+        project_data = self._window.project_data()
+        if not isinstance(project_data, dict):
+            return
+        for i, folder in enumerate(project_data.get('folders', [])):
+            exclude_patterns = []
+            self._folders_exclude_patterns.append(exclude_patterns)
+            # Use canoncial path from `window.folders` rather than potentially relative path from project data.
+            path = folders[i]
+            for pattern in folder.get('folder_exclude_patterns', []):
+                if pattern.startswith('//'):
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True, path))
+                elif pattern.startswith('/'):
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True))
+                else:
+                    exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
+                    exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
 
     def update(self) -> bool:
         new_folders = self._window.folders()
+        self._update_exclude_patterns(new_folders)
         added, removed = diff(self.folders, new_folders)
         if added or removed:
             self.folders = new_folders
@@ -68,8 +93,22 @@ class ProjectFolders(object):
     def includes_path(self, file_path: str) -> bool:
         if self.folders:
             return any(is_subpath_of(file_path, folder) for folder in self.folders)
-        else:
-            return True
+        return True
+
+    def includes_excluded_path(self, file_path: str) -> bool:
+        """Path is excluded if it's within one or more workspace folders and in at least one of the folders it's not
+        excluded using `folder_exclude_patterns`."""
+        if not self.folders:
+            return False
+        is_excluded = False
+        for i, folder in enumerate(self.folders):
+            if not is_subpath_of(file_path, folder):
+                continue
+            exclude_patterns = self._folders_exclude_patterns[i]
+            is_excluded = matches_pattern(file_path, exclude_patterns)
+            if is_excluded:
+                break
+        return is_excluded
 
     def contains(self, view_or_file_name: Union[str, sublime.View]) -> bool:
         file_path = view_or_file_name.file_name() if isinstance(view_or_file_name, sublime.View) else view_or_file_name

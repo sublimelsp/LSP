@@ -447,17 +447,22 @@
               "default": true,
               "markdownDescription": "Show the diagnostics description of the code under the cursor in status bar if available."
             },
-            "show_diagnostics_inline": {
-              "default": "none",
-              "enum": [
-                "at-cursor",
-                "none"
-              ],
-              "markdownEnumDescriptions": [
-                "Show diagnostics that intersect with the current selection / cursor inline. When using this value it's recommended to not use the `\"annotation\"` value for the `show_code_actions` option as then the code action annotations will show over the diagnostic annotations.",
-                "Don't show diagnostics inline."
-              ],
-              "markdownDescription": "Show the diagnostics as inline annotations."
+            "show_diagnostics": {
+              "default": ["highlight"],
+              "type": "array",
+              "items": {
+                "enum": [
+                  "highlight",
+                  "annotation",
+                  "phantom"
+                ]
+              },
+              "uniqueItems": true,
+              // "markdownEnumDescriptions": [
+              //   "Show diagnostics that intersect with the current selection / cursor inline. When using this value it's recommended to not use the `\"annotation\"` value for the `show_code_actions` option as then the code action annotations will show over the diagnostic annotations.",
+              //   "Don't show diagnostics inline."
+              // ],
+              "markdownDescription": "How to the diagnostics should be displayed."
             },
             "show_diagnostics_severity_level": {
               "type": "integer",

@@ -42,6 +42,8 @@ from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
+from abc import ABCMeta
+from abc import abstractmethod
 import html
 import itertools
 import linecache
@@ -278,6 +280,14 @@ SEMANTIC_TOKENS_MAP = {
     "operator": "keyword.operator.lsp",
     "decorator": "variable.annotation.lsp",
 }
+
+
+class RegionProvider(metaclass=ABCMeta):
+
+    @classmethod
+    @abstractmethod
+    def initialize_region_keys(cls) -> None:
+        raise NotImplementedError()
 
 
 class InvalidUriSchemeException(Exception):
@@ -870,23 +880,20 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
 
 
 def format_diagnostics_for_annotation(
-    diagnostics: List[Diagnostic], view: sublime.View
-) -> Tuple[List[sublime.Region], List[str]]:
-    regions = []
+    diagnostics: List[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
+) -> Tuple[List[str], str]:
+    css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
+    scope = DIAGNOSTIC_SEVERITY[severity - 1][2]
+    color = view.style_for_scope(scope).get('foreground') or 'red'
     annotations = []
     for diagnostic in diagnostics:
-        lsp_range = diagnostic.get('range')
-        if not lsp_range:
-            continue
         message = text2html(diagnostic.get('message') or '')
         source = diagnostic.get('source')
-        css_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
         line = "[{}] {}".format(source, message) if source else message
         content = '<body id="annotation" class="{1}"><style>{0}</style><div class="{2}">{3}</div></body>'.format(
             lsp_css().annotations, lsp_css().annotations_classname, css_class, line)
-        regions.append(range_to_region(lsp_range, view))
         annotations.append(content)
-    return (regions, annotations)
+    return (annotations, color)
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:

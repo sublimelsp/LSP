@@ -3,6 +3,7 @@ from .core.active_request import ActiveRequest
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
+from .core.protocol import DiagnosticSeverity
 from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
@@ -13,6 +14,7 @@ from .core.settings import userprefs
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
+from .diagnostics import DiagnosticsView
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -149,6 +151,7 @@ class SessionView:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("underline", "stippled"):
             self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
+        DiagnosticsView.initialize_region_keys(self.view)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

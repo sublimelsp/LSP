@@ -32,13 +32,11 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_diagnostics_for_annotation
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -47,6 +45,7 @@ from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
 from .diagnostics import DiagnosticLines
+from .diagnostics import DiagnosticsView
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -126,7 +125,6 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
-    INLINE_DIAGNOSTIC_REGION_KEY = "lsp_d-annotations"
     code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
@@ -159,6 +157,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
+        self._diagnostics_view = DiagnosticsView(self.view)
         self._diagnostic_lines = DiagnosticLines(self.view, highlight_line_background=False)
         self._setup()
 
@@ -288,15 +287,23 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if is_view_visible and userprefs().show_code_actions:
             self._do_code_actions_async()
         self._update_diagnostic_in_status_bar_async()
-        self._update_inline_diagnostics_async()
         window = self.view.window()
         is_active_view = window and window.active_view() == self.view
         if is_active_view and self.view.change_count() == self._change_count_on_last_save:
             self._toggle_diagnostics_panel_if_needed_async()
+        show_diagnostics = userprefs().show_diagnostics
         all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        for _, diagnostics in self._diagnostics_async(allow_stale=True):
-            all_diagnostics.extend(diagnostics)
-        self._diagnostic_lines.update_async(all_diagnostics)
+        print('show_diagnostics', show_diagnostics)
+        if 'phantom' in show_diagnostics or 'annotation' in show_diagnostics:
+            for _, diagnostics in self._diagnostics_async(allow_stale=True):
+                all_diagnostics.extend(diagnostics)
+        if 'phantom' in show_diagnostics:
+            self._diagnostic_lines.update_async(all_diagnostics)
+        else:
+            self._diagnostic_lines.clear()
+        self._diagnostics_view.clear_annotations_async()
+        if 'annotation' in show_diagnostics:
+            self._diagnostics_view.update_diagnostic_annotations_async(all_diagnostics)
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -310,28 +317,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
-
-    def _update_inline_diagnostics_async(self) -> None:
-        selections_diagnostics = []  # type: List[Diagnostic]
-        for r in self.view.sel():
-            session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
-            for _, diagnostics in session_buffer_diagnostics:
-                selections_diagnostics.extend(diagnostics)
-        self.view.erase_regions(self.INLINE_DIAGNOSTIC_REGION_KEY)
-        if userprefs().show_diagnostics_inline != 'at-cursor':
-            return
-        if selections_diagnostics:
-            sorted_diagnostics = sorted(selections_diagnostics, key=lambda d: d.get('severity', 1))
-            first_diagnostic = sorted_diagnostics[0]
-            lsp_range = first_diagnostic.get('range')
-            if lsp_range:
-                scope = DIAGNOSTIC_SEVERITY[first_diagnostic.get('severity', 1) - 1][2]
-                icon = ""
-                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-                annotation_color = self.view.style_for_scope(scope).get('foreground') or 'red'
-                regions, annotations = format_diagnostics_for_annotation(sorted_diagnostics, self.view)
-                self.view.add_regions(
-                    self.INLINE_DIAGNOSTIC_REGION_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def session_buffers_async(self, capability: Optional[str] = None) -> Generator[SessionBuffer, None, None]:
         for sv in self.session_views_async():
@@ -388,9 +373,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
-        first_region, any_different = self._update_stored_selection_async()
-        if any_different:
-            self._update_inline_diagnostics_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
@@ -888,7 +871,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
-        first_region, any_different = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         self._clear_highlight_regions()

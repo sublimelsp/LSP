@@ -43,11 +43,8 @@
 
   // --- Diagnostics --------------------------------------------------------------------
 
-  // Show the diagnostics as inline annotations.
-  // When using the "at-cursor" value it's recommended to not use the "annotation"
-  // value for the "show_code_actions" option as then the code action annotations will
-  // show over the diagnostic annotations.
-  "show_diagnostics_inline": "none",
+  // How to the diagnostics should be displayed.
+  "show_diagnostics": ["highlight", "annotation", "phantom"],
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,

@@ -106,7 +106,7 @@ class ProjectFolders(object):
                 continue
             exclude_patterns = self._folders_exclude_patterns[i]
             is_excluded = matches_pattern(file_path, exclude_patterns)
-            if is_excluded:
+            if not is_excluded:
                 break
         return is_excluded
 

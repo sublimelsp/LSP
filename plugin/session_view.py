@@ -4,6 +4,7 @@ from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
 from .core.protocol import DiagnosticTag
+from .core.protocol import AnnotatedTextEdit
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request

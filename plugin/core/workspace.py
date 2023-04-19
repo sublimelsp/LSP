@@ -69,7 +69,6 @@ class ProjectFolders(object):
             return
         for i, folder in enumerate(project_data.get('folders', [])):
             exclude_patterns = []
-            self._folders_exclude_patterns.append(exclude_patterns)
             # Use canoncial path from `window.folders` rather than potentially relative path from project data.
             path = folders[i]
             for pattern in folder.get('folder_exclude_patterns', []):
@@ -80,6 +79,7 @@ class ProjectFolders(object):
                 else:
                     exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
                     exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
+            self._folders_exclude_patterns.append(exclude_patterns)
 
     def update(self) -> bool:
         new_folders = self._window.folders()

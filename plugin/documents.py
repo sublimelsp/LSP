@@ -293,7 +293,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._toggle_diagnostics_panel_if_needed_async()
         show_diagnostics = userprefs().show_diagnostics
         all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        print('show_diagnostics', show_diagnostics)
         if 'phantom' in show_diagnostics or 'annotation' in show_diagnostics:
             for _, diagnostics in self._diagnostics_async(allow_stale=True):
                 all_diagnostics.extend(diagnostics)

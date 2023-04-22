@@ -629,6 +629,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
+        self._actions_by_config = responses
         action_count = 0
         first_action_title = ''
         for _, actions in responses:
@@ -647,7 +648,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         annotations = []
         annotation_color = ""
-        self._actions_by_config = responses
         if userprefs().show_code_actions == 'bulb':
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'

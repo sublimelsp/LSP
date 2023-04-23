@@ -37,7 +37,7 @@ from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import make_command_link
+from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -629,10 +629,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
-        # flatten list
-        action_lists = [actions for _, actions in responses if len(actions)]
-        all_actions = [action for actions in action_lists for action in actions]
-        action_count = len(all_actions)
+        self._actions_by_config = responses
+        action_count = 0
+        first_action_title = ''
+        for _, actions in responses:
+            count = len(actions)
+            if count == 0:
+                continue
+            action_count += count
+            if not first_action_title:
+                first_action_title = actions[0]['title']
         if action_count == 0 or not self._stored_selection:
             return
         region = self._stored_selection[0]
@@ -646,18 +652,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
-            self._actions_by_config = responses
         else:  # 'annotation'
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = all_actions[0]['title']
-                title = "<br>".join(textwrap.wrap(title, width=30))
-            code_actions_link = make_command_link(
-                'lsp_code_actions', title, {"code_actions_by_config": responses}, view_id=self.view.id())
+                title = "<br>".join(textwrap.wrap(first_action_title, width=30))
+            code_actions_link = make_link('code-actions:', title)
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
-        self.view.add_regions(SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
+        self.view.add_regions(
+            SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color,
+            on_navigate=self._on_code_actions_annotation_click
+        )
+
+    def _on_code_actions_annotation_click(self, href: str) -> None:
+        if href == 'code-actions:' and self._actions_by_config:
+            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._actions_by_config})
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)

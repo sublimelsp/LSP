@@ -5985,12 +5985,14 @@ class Request(Generic[R]):
         return self.method + " " + str(self.params)
 
     def to_payload(self, id: int) -> Dict[str, Any]:
-        return {
+        payload = {
             "jsonrpc": "2.0",
             "id": id,
             "method": self.method,
-            "params": self.params
         }
+        if self.params is not None:
+            payload["params"] = self.params
+        return payload
 
 
 class Error(Exception):
@@ -6030,12 +6032,11 @@ class Response(Generic[T]):
         self.result = result
 
     def to_payload(self) -> Dict[str, Any]:
-        r = {
+        return {
             "id": self.request_id,
             "jsonrpc": "2.0",
             "result": self.result
         }
-        return r
 
 
 class Notification:
@@ -6090,11 +6091,13 @@ class Notification:
         return self.method + " " + str(self.params)
 
     def to_payload(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "jsonrpc": "2.0",
             "method": self.method,
-            "params": self.params
         }
+        if self.params is not None:
+            payload["params"] = self.params
+        return payload
 
 
 class Point(object):

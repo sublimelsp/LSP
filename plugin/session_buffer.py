@@ -465,12 +465,17 @@ class SessionBuffer:
                 params['previousResultId'] = self.document_diagnostic_result_id
             self.document_diagnostic_pending_response = self.session.send_request_async(
                 Request.documentDiagnostic(params, view),
-                self._if_view_unchanged(self.on_document_diagnostic, version),
-                self._if_view_unchanged(self._on_document_diagnostic_error, version)
+                partial(self._on_document_diagnostic_async, version),
+                partial(self._on_document_diagnostic_error_async, version)
             )
 
-    def on_document_diagnostic(self, view: Optional[sublime.View], response: DocumentDiagnosticReport) -> None:
+    def _on_document_diagnostic_async(self, version: int, response: DocumentDiagnosticReport) -> None:
         self.document_diagnostic_pending_response = None
+        self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
+
+    def _apply_document_diagnostic_async(
+        self, view: Optional[sublime.View], response: DocumentDiagnosticReport
+    ) -> None:
         self.document_diagnostic_result_id = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
@@ -478,15 +483,15 @@ class SessionBuffer:
         for uri, diagnostic_report in response.get('relatedDocuments', {}):
             sb = self.session.get_session_buffer_for_uri_async(uri)
             if sb:
-                cast(SessionBuffer, sb).on_document_diagnostic(None, cast(DocumentDiagnosticReport, diagnostic_report))
+                cast(SessionBuffer, sb)._apply_document_diagnostic_async(
+                    None, cast(DocumentDiagnosticReport, diagnostic_report))
 
-    def _on_document_diagnostic_error(self, view: sublime.View, error: Error) -> None:
+    def _on_document_diagnostic_error_async(self, version: int, error: Error) -> None:
         self.document_diagnostic_pending_response = None
         if error.code == LSPErrorCodes.ServerCancelled and is_diagnostic_server_cancellation_data(error.data) and \
                 error.data['retriggerRequest']:
             # Retrigger the request after a short delay, but only if there were no additional changes to the buffer (in
             # that case the request will be retriggered automatically anyway)
-            version = view.change_count()
             sublime.set_timeout_async(
                 lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
 

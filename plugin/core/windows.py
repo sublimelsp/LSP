@@ -359,19 +359,10 @@ class WindowManager(Manager):
         if matches_pattern(path, settings.get("file_exclude_patterns")):
             return "matches a pattern in file_exclude_patterns"
         patterns = [sublime_pattern_to_glob(pattern, True) for pattern in settings.get("folder_exclude_patterns") or []]
-        project_data = self.window.project_data()
-        if project_data:
-            for folder in project_data.get('folders', []):
-                for pattern in folder.get('folder_exclude_patterns', []):
-                    if pattern.startswith('//'):
-                        patterns.append(sublime_pattern_to_glob(pattern, True, folder['path']))
-                    elif pattern.startswith('/'):
-                        patterns.append(sublime_pattern_to_glob(pattern, True))
-                    else:
-                        patterns.append(sublime_pattern_to_glob('//' + pattern, True, folder['path']))
-                        patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, folder['path']))
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
+        if self._workspace.includes_excluded_path(path):
+            return "matches a project's folder_exclude_patterns"
         return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:

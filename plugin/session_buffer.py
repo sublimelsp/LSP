@@ -133,6 +133,7 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
+        self.document_diagnostic_pending_response = None  # type: Optional[int]
         self.last_text_change_time = 0.0
         self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
@@ -458,6 +459,8 @@ class SessionBuffer:
         if version is None:
             version = view.change_count()
         if self.has_capability("diagnosticProvider"):
+            if self.document_diagnostic_pending_response:
+                self.session.cancel_request(self.document_diagnostic_pending_response)
             params = {'textDocument': text_document_identifier(view)}  # type: DocumentDiagnosticParams
             identifier = self.get_capability("diagnosticProvider.identifier")
             if identifier:
@@ -465,13 +468,19 @@ class SessionBuffer:
             result_id = self.session.diagnostics_result_ids.get(self.last_known_uri)
             if result_id is not None:
                 params['previousResultId'] = result_id
-            self.session.send_request_async(
+            self.document_diagnostic_pending_response = self.session.send_request_async(
                 Request.documentDiagnostic(params, view),
-                self._if_view_unchanged(self.on_document_diagnostic, version),
-                self._if_view_unchanged(self._on_document_diagnostic_error, version)
+                partial(self._on_document_diagnostic_async, version),
+                partial(self._on_document_diagnostic_error_async, version)
             )
 
-    def on_document_diagnostic(self, view: Optional[sublime.View], response: DocumentDiagnosticReport) -> None:
+    def _on_document_diagnostic_async(self, version: int, response: DocumentDiagnosticReport) -> None:
+        self.document_diagnostic_pending_response = None
+        self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
+
+    def _apply_document_diagnostic_async(
+        self, view: Optional[sublime.View], response: DocumentDiagnosticReport
+    ) -> None:
         self.session.diagnostics_result_ids[self.last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
@@ -479,15 +488,16 @@ class SessionBuffer:
         for uri, diagnostic_report in response.get('relatedDocuments', {}):
             sb = self.session.get_session_buffer_for_uri_async(uri)
             if sb:
-                cast(SessionBuffer, sb).on_document_diagnostic(None, cast(DocumentDiagnosticReport, diagnostic_report))
+                cast(SessionBuffer, sb)._apply_document_diagnostic_async(
+                    None, cast(DocumentDiagnosticReport, diagnostic_report))
 
-    def _on_document_diagnostic_error(self, view: sublime.View, error: ResponseError) -> None:
+    def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
+        self.document_diagnostic_pending_response = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                 # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
                 # (in that case the request will be retriggered automatically anyway)
-                version = view.change_count()
                 sublime.set_timeout_async(
                     lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
 

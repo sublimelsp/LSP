@@ -450,6 +450,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if not session_view:
                 return not operand
             return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+        elif key == "lsp.in_highlight_region" and operator == sublime.OP_EQUAL:
+            try:
+                position = self.view.sel()[-1].b
+            except IndexError:
+                return not operand
+            return operand == self._is_in_higlighted_region(position)
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:

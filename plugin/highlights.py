@@ -28,7 +28,7 @@ class LspFindUnderExpandCommand(LspTextCommand):
                 if region == last_selection_region:
                     break
             else:
-                self.view.run_command('find_under_expand')
+                self.view.run_command('find_under_expand_skip' if skip else 'find_under_expand')
                 return
             if skip:
                 selections.subtract(region)

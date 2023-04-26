@@ -21,13 +21,14 @@ class LspFindUnderExpandCommand(LspTextCommand):
         if last_selection_region.empty():
             for region in highlight_regions:
                 if region.contains(last_selection_region.b):
-                    self.view.sel().add(region)
+                    selections.add(region)
                     return
         else:
             for idx, region in enumerate(highlight_regions):
                 if region == last_selection_region:
                     break
             else:
+                self.view.run_command('find_under_expand')
                 return
             if skip:
                 selections.subtract(region)

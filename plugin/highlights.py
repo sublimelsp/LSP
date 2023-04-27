@@ -4,6 +4,20 @@ import itertools
 import sublime
 
 
+class LspFindAllUnderCommand(LspTextCommand):
+
+    capability = 'documentHighlightProvider'
+
+    def run(self, edit: sublime.Edit) -> None:
+        highlight_regions = itertools.chain.from_iterable(
+            [self.view.get_regions("lsp_highlight_{}s".format(kind)) for kind in DOCUMENT_HIGHLIGHT_KINDS.values()]
+        )
+        self.view.sel().add_all(highlight_regions)
+
+    def want_event(self) -> bool:
+        return False
+
+
 class LspFindUnderExpandCommand(LspTextCommand):
 
     capability = 'documentHighlightProvider'
@@ -36,7 +50,7 @@ class LspFindUnderExpandCommand(LspTextCommand):
                 selections.add(highlight_regions[idx + 1])
                 self.last_sel_idx += 1
             else:
-                self.view.sel().add(highlight_regions[0])
+                selections.add(highlight_regions[0])
                 self.last_sel_idx = 0
 
     def want_event(self) -> bool:
@@ -49,3 +63,6 @@ class LspFindUnderExpandSkipCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit) -> None:
         self.view.run_command('lsp_find_under_expand', {'skip': True})
+
+    def want_event(self) -> bool:
+        return False

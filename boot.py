@@ -54,6 +54,7 @@ from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hierarchy import LspCallHierarchyCommand
 from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.highlights import LspFindAllUnderCommand
 from .plugin.highlights import LspFindUnderExpandCommand
 from .plugin.highlights import LspFindUnderExpandSkipCommand
 from .plugin.hover import LspHoverCommand

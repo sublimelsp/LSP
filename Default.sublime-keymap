@@ -213,19 +213,19 @@
     //     "command": "lsp_expand_selection",
     //     "context": [{"key": "lsp.session_with_capability", "operand": "selectionRangeProvider"}]
     // },
-    // Quick Find All (an alternative for ST's "Quick Find All", using only the related highlights)
+    // Quick Find All (an alternative to ST's "Quick Find All", using only the related highlights)
     // {
     //     "keys": ["alt+f3"],  // macOS: "ctrl+super+g"
     //     "command": "lsp_find_all_under",
     //     "context": [{"key": "lsp.in_highlight_region"}]
     // },
-    // Quick Add Next (an alternative for ST's "Quick Add Next", using only the related highlights)
+    // Quick Add Next (an alternative to ST's "Quick Add Next", using only the related highlights)
     // {
     //     "keys": ["primary+d"],
     //     "command": "lsp_find_under_expand",
     //     "context": [{"key": "lsp.in_highlight_region"}]
     // },
-    // Quick Skip Next (an alternative for ST's "Quick Skip Next", using only the related highlights)
+    // Quick Skip Next (an alternative to ST's "Quick Skip Next", using only the related highlights)
     // {
     //     "keys": ["primary+k", "primary+d"],
     //     "command": "lsp_find_under_expand_skip",

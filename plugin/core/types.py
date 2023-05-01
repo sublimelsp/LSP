@@ -773,8 +773,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
-            diagnostics_mode=override.get(
-                "diagnostics_mode", src_config.diagnostics_mode),
+            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

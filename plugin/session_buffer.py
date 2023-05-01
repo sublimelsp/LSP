@@ -136,6 +136,7 @@ class SessionBuffer:
         self.document_diagnostic_pending_response = None  # type: Optional[int]
         self.last_text_change_time = 0.0
         self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
+        self.workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self.document_links = []  # type: List[DocumentLink]
         self.semantic_tokens = SemanticTokensData()
@@ -346,8 +347,10 @@ class SessionBuffer:
         self._do_color_boxes_async(view, version)
         self.do_document_diagnostic_async(view, version)
         if self.session.config.diagnostics_mode == "workspace" and \
+                not self.session.workspace_diagnostics_pending_response and \
                 self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            debounced(self.session.do_workspace_diagnostics_async, WORKSPACE_DIAGNOSTICS_TIMEOUT, async_thread=True)
+            self.workspace_diagnostics_debouncer_async.debounce(
+                self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):
             self._do_document_link_async(view, version)

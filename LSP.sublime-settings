@@ -299,10 +299,10 @@
   //     //     If the server supports `diagnosticProvider`, diagnostics are
   //     //     requested only for files which are opened in the editor and they
   //     //     are cleared when the file gets closed.
-  //     // "workspace" - Diagnostics reported for files not within the project
-  //     //     folders are ignored. If the server supports
-  //     //     `diagnosticProvider.workspaceDiagnostics`, diagnostics are
-  //     //     requested for all files in the project folders.
+  //     // "workspace" - If there are project folders (folders in the side bar),
+  //     //     diagnostics for files not within those folders are ignored.
+  //     //     If the server supports `diagnosticProvider.workspaceDiagnostics`,
+  //     //     diagnostics are requested for all files in the project folders.
   //     "diagnostics_mode": "open_files",
   //   }
   // }

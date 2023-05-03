@@ -5845,19 +5845,21 @@ R = TypeVar('R')
 
 class Request(Generic[R]):
 
-    __slots__ = ('method', 'params', 'view', 'progress')
+    __slots__ = ('method', 'params', 'view', 'progress', 'partial_results')
 
     def __init__(
         self,
         method: str,
         params: Any = None,
         view: Optional[sublime.View] = None,
-        progress: bool = False
+        progress: bool = False,
+        partial_results: bool = False
     ) -> None:
         self.method = method
         self.params = params
         self.view = view
         self.progress = progress  # type: Union[bool, str]
+        self.partial_results = partial_results
 
     @classmethod
     def initialize(cls, params: InitializeParams) -> 'Request':
@@ -5975,7 +5977,7 @@ class Request(Generic[R]):
 
     @classmethod
     def workspaceDiagnostic(cls, params: WorkspaceDiagnosticParams) -> 'Request':
-        return Request('workspace/diagnostic', params)
+        return Request('workspace/diagnostic', params, partial_results=True)
 
     @classmethod
     def shutdown(cls) -> 'Request':
@@ -6122,6 +6124,13 @@ class Point(object):
             "line": self.row,
             "character": self.col
         }
+
+
+ResponseError = TypedDict('ResponseError', {
+    'code': int,
+    'message': str,
+    'data': NotRequired['LSPAny']
+})
 
 
 CodeLensExtended = TypedDict('CodeLensExtended', {

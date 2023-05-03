@@ -298,10 +298,18 @@
                 }
               ]
             },
-            "ClientHideNonProjectDiagnostics": {
-              "markdownDescription": "Whether diagnostics are ignored for files that are not within the project folders.",
-              "type": "boolean",
-              "default": false,
+            "ClientDiagnosticsMode": {
+              "markdownDescription": "Controls whether diagnostics are ignored for files that are not within the project folders. If the server supports \"pull diagnostics\", this also controls whether diagnostics are requested only for open files, or for all files contained in the project folders.",
+              "type": "string",
+              "enum": [
+                "open_files",
+                "workspace"
+              ],
+              "markdownEnumDescriptions": [
+                "Diagnostics are requested only for open files and they are cleared when the file closes.",
+                "Diagnostics are requested for all files in the project folders (only for servers with `diagnosticProvider.workspaceDiagnostics` capability). Diagnostics for files not within the project folders are ignored."
+              ],
+              "default": "open_files"
             },
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
@@ -366,8 +374,8 @@
                 "feature_selector": {
                   "$ref": "#/definitions/useSelectorInstead"
                 },
-                "hide_non_project_diagnostics": {
-                  "$ref": "#/definitions/ClientHideNonProjectDiagnostics"
+                "diagnostics_mode": {
+                  "$ref": "#/definitions/ClientDiagnosticsMode"
                 },
                 "syntaxes": {
                   "type": "array",
@@ -753,8 +761,8 @@
             "schemes": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSchemes"
             },
-            "hide_non_project_diagnostics": {
-              "$ref": "sublime://settings/LSP#/definitions/ClientHideNonProjectDiagnostics"
+            "diagnostics_mode": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientDiagnosticsMode"
             },
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"

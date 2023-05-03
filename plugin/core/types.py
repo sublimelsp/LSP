@@ -21,6 +21,7 @@ import urllib.parse
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
+WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
@@ -653,7 +654,7 @@ class ClientConfig:
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
                  semantic_tokens: Optional[Dict[str, str]] = None,
-                 hide_non_project_diagnostics: bool = False,
+                 diagnostics_mode: str = "open_files",
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -679,7 +680,7 @@ class ClientConfig:
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
         self.semantic_tokens = semantic_tokens
-        self.hide_non_project_diagnostics = hide_non_project_diagnostics
+        self.diagnostics_mode = diagnostics_mode
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -712,7 +713,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
-            hide_non_project_diagnostics=bool(s.get("hide_non_project_diagnostics", False)),
+            diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -742,7 +743,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
-            hide_non_project_diagnostics=d.get("hide_non_project_diagnostics", False),
+            diagnostics_mode=d.get("diagnostics_mode", "open_files"),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -772,8 +773,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
-            hide_non_project_diagnostics=override.get(
-                "hide_non_project_diagnostics", src_config.hide_non_project_diagnostics),
+            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

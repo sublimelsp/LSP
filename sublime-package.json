@@ -528,6 +528,11 @@
               "default": "underline",
               "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor.\n\nSee https://lsp.sublimetext.io/customization/#document-highlights for how to customize the color."
             },
+            "show_multiline_document_highlights": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show document highlights spanning multiple lines in the view (as outlines)."
+            },
             "hover_highlight_style": {
               "enum": [
                 "background",

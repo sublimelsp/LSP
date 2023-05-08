@@ -757,8 +757,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         kind2regions = {}  # type: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]]
         for highlight in response:
             r = range_to_region(highlight["range"], self.view)
+            multiline = len(self.view.split_by_newlines(r)) > 1
+            if multiline and not userprefs().show_multiline_document_highlights:
+                continue
             kind = highlight.get("kind", DocumentHighlightKind.Text)
-            kind2regions.setdefault((kind, len(self.view.split_by_newlines(r)) > 1), []).append(r)
+            kind2regions.setdefault((kind, multiline), []).append(r)
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()

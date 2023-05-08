@@ -758,7 +758,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for highlight in response:
             r = range_to_region(highlight["range"], self.view)
             multiline = len(self.view.split_by_newlines(r)) > 1
-            if multiline and not userprefs().document_highlight_multiline:
+            if multiline and not userprefs().show_multiline_document_highlights:
                 continue
             kind = highlight.get("kind", DocumentHighlightKind.Text)
             kind2regions.setdefault((kind, multiline), []).append(r)

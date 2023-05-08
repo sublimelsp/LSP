@@ -174,7 +174,7 @@
 
   // Show document highlights spanning multiple lines in the view (as outlines).
   // See also: "document_highlight_style".
-  "document_highlight_multiline": true,
+  "show_multiline_document_highlights": true,
 
   // Highlight style of the word or range for which a hover popup is shown.
   // Valid values are "background", "underline", "stippled", "outline", or "".

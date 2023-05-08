@@ -172,7 +172,8 @@
   // customize the color.
   "document_highlight_style": "underline",
 
-  // Enable highlighting on multiline blocks
+  // Show document highlights spanning multiple lines in the view (as outlines).
+  // See also: "document_highlight_style".
   "document_highlight_multiline": true,
 
   // Highlight style of the word or range for which a hover popup is shown.

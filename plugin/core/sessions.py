@@ -1556,8 +1556,8 @@ class Session(TransportCallbacks):
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
-        # Handle VSCode-specific command for triggering AC/sighelp
         command_name = command['command']
+        # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and source_view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
             sublime.set_timeout(lambda: source_view.run_command("auto_complete"))

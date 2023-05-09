@@ -1593,7 +1593,7 @@ class Session(TransportCallbacks):
         )
 
     def run_code_action_async(
-        self, code_action: Union[Command, CodeAction], source_view: Optional[sublime.View], progress: bool
+        self, code_action: Union[Command, CodeAction], progress: bool, source_view: Optional[sublime.View] = None
     ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):

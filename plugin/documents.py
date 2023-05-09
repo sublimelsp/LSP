@@ -697,7 +697,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         def run_async() -> None:
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(actions[index], self.view, progress=True)
+                session.run_code_action_async(actions[index], progress=True, source_view=self.view)
 
         sublime.set_timeout_async(run_async)
 

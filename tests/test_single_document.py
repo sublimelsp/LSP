@@ -347,7 +347,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         sublime.set_timeout_async(
             lambda: self.session.execute_command(
                 {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]},
-                progress=False
+                progress=False,
+                source_view=self.view,
             ).then(promise.fulfill)
         )
         yield from self.await_promise(promise)

@@ -1548,7 +1548,7 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, source_view: Optional[sublime.View], progress: bool
+        self, command: ExecuteCommandParams, progress: bool, source_view: Optional[sublime.View] = None
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1603,7 +1603,7 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, source_view, progress)
+            return self.execute_command(command_params, progress, source_view)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1720,7 +1720,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, source_view, progress=False))
+            return promise.then(
+                lambda _: self.execute_command(execute_command, progress=False, source_view=source_view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:

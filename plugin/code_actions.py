@@ -253,12 +253,13 @@ class CodeActionOnSaveTask(SaveTask):
     def _handle_response_async(self, responses: List[CodeActionsByConfigName]) -> None:
         if self._cancelled:
             return
-        document_version = self._task_runner.view.change_count()
+        view = self._task_runner.view
+        document_version = view.change_count()
         tasks = []  # type: List[Promise]
         for config_name, code_actions in responses:
             session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
             if session:
-                tasks.extend([session.run_code_action_async(action, progress=False) for action in code_actions])
+                tasks.extend([session.run_code_action_async(action, view, progress=False) for action in code_actions])
         Promise.all(tasks).then(lambda _: self._on_code_actions_completed(document_version))
 
     def _on_code_actions_completed(self, previous_document_version: int) -> None:
@@ -345,7 +346,7 @@ class LspCodeActionsCommand(LspTextCommand):
             config_name, action = actions[index]
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(action, progress=True) \
+                session.run_code_action_async(action, self.view, progress=True) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
         sublime.set_timeout_async(run_async)
@@ -409,7 +410,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
             config_name, action = self.actions_cache[id]
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(action, progress=True) \
+                session.run_code_action_async(action, self.view, progress=True) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:

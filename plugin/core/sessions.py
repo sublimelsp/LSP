@@ -49,6 +49,7 @@ from .protocol import LSPErrorCodes
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
+from .protocol import Position
 from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PreviousResultId
 from .protocol import PublishDiagnosticsParams
@@ -95,6 +96,7 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
+from .views import position_to_offset
 from .views import SEMANTIC_TOKENS_MAP
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -1545,13 +1547,42 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def execute_command(self, command: ExecuteCommandParams, progress: bool) -> Promise:
+    def execute_command(
+        self, command: ExecuteCommandParams, source_view: Optional[sublime.View], progress: bool
+    ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
+        # Handle VSCode-specific command for triggering AC/sighelp
+        command_name = command['command']
+        if command_name == "editor.action.triggerSuggest" and source_view:
+            # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
+            sublime.set_timeout(lambda: source_view.run_command("auto_complete"))
+            return Promise.resolve(None)
+        if command_name == "editor.action.rename" and source_view:
+            command_args = command.get('arguments')
+            offset = None
+            if isinstance(command_args, list) and len(command_args) >= 2:
+                position = cast(Position, command_args[1])
+                offset = position_to_offset(position, source_view)
+            source_view.run_command("lsp_symbol_rename", {'position': offset})
+            return Promise.resolve(None)
+        if command_name == "editor.action.triggerParameterHints" and source_view:
+
+            def run_async() -> None:
+                session_view = self.session_view_for_view_async(source_view)
+                if not session_view:
+                    return
+                listener = session_view.listener()
+                if not listener:
+                    return
+                listener.do_signature_help_async(manual=False)
+
+            sublime.set_timeout_async(run_async)
+            return Promise.resolve(None)
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
             lambda resolve: self.send_request(
@@ -1561,7 +1592,9 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: Union[Command, CodeAction], progress: bool) -> Promise:
+    def run_code_action_async(
+        self, code_action: Union[Command, CodeAction], source_view: Optional[sublime.View], progress: bool
+    ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast(Command, code_action)
@@ -1570,12 +1603,13 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress)
+            return self.execute_command(command_params, source_view, progress)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+        return self._maybe_resolve_code_action(code_action) \
+            .then(lambda code_action: self._apply_code_action_async(code_action, source_view))
 
     def open_uri_async(
         self,
@@ -1667,7 +1701,9 @@ class Session(TransportCallbacks):
             return self.send_request_task(request)
         return Promise.resolve(code_action)
 
-    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise[None]:
+    def _apply_code_action_async(
+        self, code_action: Union[CodeAction, Error, None], source_view: Optional[sublime.View]
+    ) -> Promise[None]:
         if not code_action:
             return Promise.resolve(None)
         if isinstance(code_action, Error):
@@ -1684,7 +1720,7 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, False))
+            return promise.then(lambda _: self.execute_command(execute_command, source_view, progress=False))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:

@@ -91,6 +91,16 @@
   // See also: "diagnostics_delay_ms".
   "diagnostics_additional_delay_auto_complete_ms": 0,
 
+  // A dictionary of diagnostic messages to ignore.
+  //
+  // To completely ignore the message "Cannot find name 'SuspenseList'."
+  //
+  //    "diagnostics_ignored_messages": {
+  //        "Cannot find name 'SuspenseList'.":true
+  //    }
+  "diagnostics_ignored_messages": {},
+
+
   // Highlight style of code diagnostics.
   // Can be a string, or a mapping of string->string for severity-based styling.
   // Valid string values are "box", "underline", "stippled", "squiggly" or "".

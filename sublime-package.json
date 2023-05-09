@@ -481,6 +481,10 @@
               "minimum": 0,
               "markdownDescription": "Add an additional delay when the auto-complete widget is currently visible. Just like `\"diagnostics_delay_ms\"`, the unit is milliseconds. The total amount of delay would be `diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms`."
             },
+            "diagnostics_ignored_messages": {
+              "type": "object",
+              "markdownDescription": "A dictionary of diagnostic messages to ignore. Example of an ignored message: `\"diagnostics_ignored_messages\": {\"Cannot find name 'SuspenseList'.\":true}`."
+            },
             "diagnostics_highlight_style": {
               "oneOf": [
                 {

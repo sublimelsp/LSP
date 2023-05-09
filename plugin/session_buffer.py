@@ -523,6 +523,13 @@ class SessionBuffer:
             diagnostics_version = version
             diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
             for diagnostic in raw_diagnostics:
+                if (
+                    "message" in diagnostic
+                    and diagnostic["message"]
+                    in userprefs().diagnostics_ignored_messages
+                    and userprefs().diagnostics_ignored_messages[diagnostic["message"]]
+                ):
+                    continue
                 region = range_to_region(diagnostic["range"], view)
                 severity = diagnostic_severity(diagnostic)
                 key = (severity, len(view.split_by_newlines(region)) > 1)

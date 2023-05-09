@@ -1,7 +1,6 @@
 from .protocol import Diagnostic
 from .protocol import Location
 from .protocol import LocationLink
-from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .tree_view import TreeDataProvider
@@ -10,7 +9,6 @@ from .typing import Optional, Any, Generator, Iterable, List, Union
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
-from .views import point_to_offset
 from .views import position_to_offset
 from .views import uri_from_view
 from .windows import WindowManager

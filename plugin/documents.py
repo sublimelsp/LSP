@@ -652,10 +652,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
         else:  # 'annotation'
-            if action_count > 1:
-                title = '{} code actions'.format(action_count)
-            else:
-                title = first_action_title
+            title = '{} code actions'.format(action_count) if action_count > 1 else first_action_title
             code_actions_link = make_link('code-actions:', title)
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]

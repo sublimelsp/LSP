@@ -53,7 +53,6 @@ from weakref import WeakValueDictionary
 import itertools
 import sublime
 import sublime_plugin
-import textwrap
 import weakref
 import webbrowser
 

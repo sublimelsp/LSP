@@ -295,7 +295,7 @@ class SessionView:
             for tag, regions in data.regions_with_tag.items():
                 tag_scope = self.diagnostics_tag_scope(tag)
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
-                if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
+                if tag_scope:
                     self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                 else:
                     non_tag_regions.extend(regions)

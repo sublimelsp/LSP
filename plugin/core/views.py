@@ -1008,7 +1008,8 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     if related_infos:
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += _html_element("pre", info, class_name="related_info", escape=False)
-    return _html_element("pre", html, class_name=DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1])
+    severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
+    return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
 def format_code_actions_for_quick_panel(

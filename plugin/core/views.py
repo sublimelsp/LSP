@@ -980,7 +980,7 @@ def _format_diagnostic_related_info(
     )
 
 
-def _html_element(name: str, text: str, class_name: Optional[str] = None, escape=True) -> str:
+def _html_element(name: str, text: str, class_name: Optional[str] = None, escape: bool = True) -> str:
     return '<{0}{2}>{1}</{0}>'.format(
         name,
         text2html(text) if escape else text,

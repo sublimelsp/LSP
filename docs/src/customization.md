@@ -37,7 +37,7 @@ If you want to bind some action to a mouse, open `Preferences / Browser Packages
 | Linux    | `/User/Default (Linux).sublime-mousemap` |
 | Mac      | `/User/Default (OSX).sublime-mousemap` |
 
-Here is an example of mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
+Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
 
 ```js
 [

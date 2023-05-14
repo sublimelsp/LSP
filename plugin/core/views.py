@@ -980,39 +980,35 @@ def _format_diagnostic_related_info(
     )
 
 
-def _with_color(text: str, hexcolor: str) -> str:
-    return '<span style="color: {};">{}</span>'.format(hexcolor, text2html(text))
+def _html_element(name: str, text: str, class_name: Optional[str] = None, escape=True) -> str:
+    return '<{0}{2}>{1}</{0}>'.format(
+        name,
+        text2html(text) if escape else text,
+        ' class="{}"'.format(text2html(class_name)) if class_name else ''
+    )
 
 
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
-    formatted = [
-        '<pre class="',
-        DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1],
-        '">',
-        text2html(diagnostic["message"])
-    ]
+    html = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
-        formatted.append(" ")
-    if source:
-        formatted.append(_with_color(source, "color(var(--foreground) alpha(0.6))"))
-    if code is not None:
-        formatted.append(_with_color("(", "color(var(--foreground) alpha(0.6))"))
-        code_description = diagnostic.get("codeDescription")
-        if code_description:
-            formatted.append(make_link(code_description["href"], str(code)))
-        else:
-            formatted.append(_with_color(str(code), "color(var(--foreground) alpha(0.6))"))
-        formatted.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
+        html += " "
+        if source:
+            html += _html_element("span", source, class_name="color-muted")
+        if code is not None:
+            html += _html_element("span", "(", class_name="color-muted")
+            code_description = diagnostic.get("codeDescription")
+            if code_description:
+                html += make_link(code_description["href"], str(code))
+            else:
+                html += _html_element("span", str(code), class_name="color-muted")
+            html += _html_element("span", ")", class_name="color-muted")
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        formatted.append('<pre class="related_info">')
-        formatted.append("<br>".join(_format_diagnostic_related_info(config, info, base_dir)
-                                     for info in related_infos))
-        formatted.append("</pre>")
-    formatted.append("</pre>")
-    return "".join(formatted)
+        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
+        html += _html_element("pre", info, class_name="related_info", escape=False)
+    return _html_element("pre", html, class_name=DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1])
 
 
 def format_code_actions_for_quick_panel(

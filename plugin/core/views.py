@@ -310,7 +310,7 @@ def get_storage_path() -> str:
     Its path is '$DATA/Package Storage', where $DATA means:
 
     - on macOS: ~/Library/Application Support/Sublime Text
-    - on Windows: %AppData%/Sublime Text/Roaming
+    - on Windows: %LocalAppData%/Sublime Text
     - on Linux: $XDG_CONFIG_DIR/sublime-text
     """
     return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))

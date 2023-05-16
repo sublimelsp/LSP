@@ -68,7 +68,11 @@ class SigHelp:
         formatted = []  # type: List[str]
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
-        formatted.extend(self._render_label(view, signature))
+        self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
+        self._active_parameter_color = view.style_for_scope("variable.parameter.sighelp.active.lsp")["foreground"]
+        self._inactive_parameter_color = view.style_for_scope("variable.parameter.sighelp.lsp")["foreground"]
+        self._emphasize_active_parameter = self._active_parameter_color == self._inactive_parameter_color
+        formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
 
@@ -96,7 +100,7 @@ class SigHelp:
             len(self._signatures),
         )
 
-    def _render_label(self, view: sublime.View, signature: SignatureInformation) -> List[str]:
+    def _render_label(self, signature: SignatureInformation) -> List[str]:
         formatted = []  # type: List[str]
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
@@ -124,13 +128,13 @@ class SigHelp:
                     start += prev
                     end = start + len(rawlabel)
                 if prev < start:
-                    formatted.append(_function(view, label[prev:start]))
-                formatted.append(_parameter(view, label[start:end], i == active_parameter_index))
+                    formatted.append(self._function(label[prev:start]))
+                formatted.append(self._parameter(label[start:end], i == active_parameter_index))
                 prev = end
             if end < len(label):
-                formatted.append(_function(view, label[end:]))
+                formatted.append(self._function(label[end:]))
         else:
-            formatted.append(_function(view, label))
+            formatted.append(self._function(label))
         formatted.append("</pre></div>")
         return formatted
 
@@ -169,19 +173,17 @@ class SigHelp:
             return minihtml(view, documentation, allowed_formats, self._language_map)
         return None
 
+    def _function(self, content: str) -> str:
+        return _wrap_with_color(content, self._function_color, False)
 
-def _function(view: sublime.View, content: str) -> str:
-    return _wrap_with_scope_style(view, content, "entity.name.function.sighelp.lsp", False)
-
-
-def _parameter(view: sublime.View, content: str, emphasize: bool) -> str:
-    scope = "variable.parameter.sighelp.active.lsp" if emphasize else "variable.parameter.sighelp.lsp"
-    return _wrap_with_scope_style(view, content, scope, emphasize)
+    def _parameter(self, content: str, emphasize: bool) -> str:
+        color = self._active_parameter_color if emphasize else self._inactive_parameter_color
+        return _wrap_with_color(content, color, self._emphasize_active_parameter and emphasize)
 
 
-def _wrap_with_scope_style(view: sublime.View, content: str, scope: str, emphasize: bool) -> str:
+def _wrap_with_color(content: str, color: str, emphasize: bool) -> str:
     return '<span style="color: {}{}">{}</span>'.format(
-        view.style_for_scope(scope)["foreground"],
+        color,
         '; font-weight: bold; text-decoration: underline' if emphasize else '',
         html.escape(content, quote=False)
     )

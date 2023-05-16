@@ -220,6 +220,9 @@ The color scheme rule only works if the "background" color is (marginally) diffe
 | `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
 | `variable.parameter.sighelp.active.lsp` | Function argument which is currently highlighted in the signature help popup |
 
+!!! note
+    If the color scheme utilizes different (foreground) colors for the scopes of active and non-active parameters, the active parameter will not additionally be rendered with bold and underlined font style.
+
 ### Annotations
 
 | scope | description |

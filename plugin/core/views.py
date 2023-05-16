@@ -993,17 +993,14 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
-        html += " "
+        meta_info = " "
         if source:
-            html += _html_element("span", source, class_name="color-muted")
+            meta_info += text2html(source)
         if code is not None:
-            html += _html_element("span", "(", class_name="color-muted")
             code_description = diagnostic.get("codeDescription")
-            if code_description:
-                html += make_link(code_description["href"], str(code))
-            else:
-                html += _html_element("span", str(code), class_name="color-muted")
-            html += _html_element("span", ")", class_name="color-muted")
+            meta_info += "({})".format(
+                make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
+        html += _html_element("span", meta_info, class_name="color-muted", escape=False)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)

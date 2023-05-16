@@ -47,6 +47,10 @@ class SigHelp:
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
         self._active_parameter_index = self._state.get("activeParameter") or 0
+        self._function_color = "white"
+        self._active_parameter_color = "white"
+        self._inactive_parameter_color = "white"
+        self._emphasize_active_parameter = True
 
     @classmethod
     def from_lsp(

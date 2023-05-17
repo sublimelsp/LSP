@@ -7,6 +7,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentUri
 from .core.protocol import Location
+from .core.protocol import Point
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -15,11 +16,13 @@ from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
+from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html
 from .core.views import format_diagnostic_source_and_code
 from .core.views import format_severity
 from .core.views import get_uri_and_position_from_location
 from .core.views import MissingUriError
+from .core.views import point_to_offset
 from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from abc import ABCMeta
@@ -27,10 +30,14 @@ from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
+import operator
 import os
 import sublime
 import sublime_plugin
 
+
+SessionIndex = int
+SelectedIndex = int
 
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
@@ -93,8 +100,9 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
         return "Goto Diagnostic"
 
 
-ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
-                        List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
+ListItemsReturn = Union[List[str], Tuple[List[str], SelectedIndex],
+                        List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], SelectedIndex],
+                        List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], SelectedIndex]]
 
 
 class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
@@ -145,7 +153,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def name(self) -> str:
         return "uri"
 
-    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], SelectedIndex]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
         severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
@@ -221,10 +229,11 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         return path
 
 
-class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
+class DiagnosticInputHandler(PreselectedListInputHandler):
     _preview = None  # type: Optional[sublime.View]
 
     def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri) -> None:
+        super().__init__(window, initial_value=None)
         self.window = window
         self.view = view
         self.sessions = list(get_sessions(window))
@@ -233,21 +242,34 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def name(self) -> str:
         return "diagnostic"
 
-    def list_items(self) -> List[sublime.ListInputItem]:
-        list_items = []
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], SelectedIndex]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
+        diagnostics = []  # type: List[Tuple[SessionIndex, Diagnostic]]
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),
                                      session.diagnostics.diagnostics_by_parsed_uri(self.parsed_uri)):
-                lines = diagnostic["message"].splitlines()
-                first_line = lines[0] if lines else ""
-                if len(lines) > 1:
-                    first_line += " …"
-                text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
-                annotation = format_diagnostic_source_and_code(diagnostic)
-                kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
-                list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
-        return list_items
+                diagnostics.append((i, diagnostic))
+        # Sort diagnostics by location.
+        diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d[1]['range']['start']))
+        selected_index = 0
+        selection_region = first_selection_region(self.view)
+        selection_offset = selection_region.b if selection_region is not None else 0
+        list_items = []  # type: List[sublime.ListInputItem]
+        for i, diagnostic_tuple in enumerate(diagnostics):
+            diagnostic = diagnostic_tuple[1]
+            lines = diagnostic["message"].splitlines()
+            first_line = lines[0] if lines else ""
+            if len(lines) > 1:
+                first_line += " …"
+            text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
+            annotation = format_diagnostic_source_and_code(diagnostic)
+            kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
+            list_items.append(sublime.ListInputItem(text, diagnostic_tuple, annotation=annotation, kind=kind))
+            # Pick as a selected index if before or equal the first selection point.
+            range_start_offset = point_to_offset(Point.from_lsp(diagnostic['range']['start']), self.view)
+            if range_start_offset <= selection_offset:
+                selected_index = i
+        return (list_items, selected_index)
 
     def placeholder(self) -> str:
         return "Select diagnostic"
@@ -255,7 +277,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         return None if args.get("diagnostic") else sublime_plugin.BackInputHandler()  # type: ignore
 
-    def confirm(self, value: Optional[Tuple[int, Diagnostic]]) -> None:
+    def confirm(self, value: Optional[Tuple[SessionIndex, Diagnostic]]) -> None:
         if not value:
             return
         i, diagnostic = value
@@ -272,7 +294,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             self._preview.close()
         self.window.focus_view(self.view)
 
-    def preview(self, value: Optional[Tuple[int, Diagnostic]]) -> Union[str, sublime.Html]:
+    def preview(self, value: Optional[Tuple[SessionIndex, Diagnostic]]) -> Union[str, sublime.Html]:
         if not value:
             return ""
         i, diagnostic = value

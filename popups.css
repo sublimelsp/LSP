@@ -23,7 +23,7 @@
     border-radius: 0;
 }
 .color-muted {
-    color: color(var(--foreground) alpha(0.50));
+    color: color(var(--foreground) alpha(0.6));
 }
 .diagnostics {
     margin-bottom: 0.5rem;

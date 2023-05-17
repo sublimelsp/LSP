@@ -5845,19 +5845,21 @@ R = TypeVar('R')
 
 class Request(Generic[R]):
 
-    __slots__ = ('method', 'params', 'view', 'progress')
+    __slots__ = ('method', 'params', 'view', 'progress', 'partial_results')
 
     def __init__(
         self,
         method: str,
         params: Any = None,
         view: Optional[sublime.View] = None,
-        progress: bool = False
+        progress: bool = False,
+        partial_results: bool = False
     ) -> None:
         self.method = method
         self.params = params
         self.view = view
         self.progress = progress  # type: Union[bool, str]
+        self.partial_results = partial_results
 
     @classmethod
     def initialize(cls, params: InitializeParams) -> 'Request':
@@ -5975,7 +5977,7 @@ class Request(Generic[R]):
 
     @classmethod
     def workspaceDiagnostic(cls, params: WorkspaceDiagnosticParams) -> 'Request':
-        return Request('workspace/diagnostic', params)
+        return Request('workspace/diagnostic', params, partial_results=True)
 
     @classmethod
     def shutdown(cls) -> 'Request':
@@ -5985,12 +5987,14 @@ class Request(Generic[R]):
         return self.method + " " + str(self.params)
 
     def to_payload(self, id: int) -> Dict[str, Any]:
-        return {
+        payload = {
             "jsonrpc": "2.0",
             "id": id,
             "method": self.method,
-            "params": self.params
         }
+        if self.params is not None:
+            payload["params"] = self.params
+        return payload
 
 
 class Error(Exception):
@@ -6030,12 +6034,11 @@ class Response(Generic[T]):
         self.result = result
 
     def to_payload(self) -> Dict[str, Any]:
-        r = {
+        return {
             "id": self.request_id,
             "jsonrpc": "2.0",
             "result": self.result
         }
-        return r
 
 
 class Notification:
@@ -6090,11 +6093,13 @@ class Notification:
         return self.method + " " + str(self.params)
 
     def to_payload(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "jsonrpc": "2.0",
             "method": self.method,
-            "params": self.params
         }
+        if self.params is not None:
+            payload["params"] = self.params
+        return payload
 
 
 class Point(object):
@@ -6119,6 +6124,13 @@ class Point(object):
             "line": self.row,
             "character": self.col
         }
+
+
+ResponseError = TypedDict('ResponseError', {
+    'code': int,
+    'message': str,
+    'data': NotRequired['LSPAny']
+})
 
 
 CodeLensExtended = TypedDict('CodeLensExtended', {

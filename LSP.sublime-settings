@@ -175,6 +175,10 @@
   // customize the color.
   "document_highlight_style": "underline",
 
+  // Show document highlights spanning multiple lines in the view (as outlines).
+  // See also: "document_highlight_style".
+  "show_multiline_document_highlights": true,
+
   // Highlight style of the word or range for which a hover popup is shown.
   // Valid values are "background", "underline", "stippled", "outline", or "".
   // When set to the empty string (""), no highlighting is applied.
@@ -296,6 +300,17 @@
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },
+  //
+  //     // Sets the diagnostics mode:
+  //     // "open_files" - All diagnostics reported from the server are shown.
+  //     //     If the server supports `diagnosticProvider`, diagnostics are
+  //     //     requested only for files which are opened in the editor and they
+  //     //     are cleared when the file gets closed.
+  //     // "workspace" - If there are project folders (folders in the side bar),
+  //     //     diagnostics for files not within those folders are ignored.
+  //     //     If the server supports `diagnosticProvider.workspaceDiagnostics`,
+  //     //     diagnostics are requested for all files in the project folders.
+  //     "diagnostics_mode": "open_files",
   //   }
   // }
   "clients": {},

@@ -320,8 +320,8 @@ def get_storage_path() -> str:
     Its path is '$DATA/Package Storage', where $DATA means:
 
     - on macOS: ~/Library/Application Support/Sublime Text
-    - on Windows: %AppData%/Sublime Text/Roaming
-    - on Linux: $XDG_CONFIG_DIR/sublime-text
+    - on Windows: %LocalAppData%/Sublime Text
+    - on Linux: ~/.cache/sublime-text
     """
     return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
 
@@ -1007,39 +1007,33 @@ def _format_diagnostic_related_info(
     )
 
 
-def _with_color(text: str, hexcolor: str) -> str:
-    return '<span style="color: {};">{}</span>'.format(hexcolor, text2html(text))
+def _html_element(name: str, text: str, class_name: Optional[str] = None, escape: bool = True) -> str:
+    return '<{0}{2}>{1}</{0}>'.format(
+        name,
+        text2html(text) if escape else text,
+        ' class="{}"'.format(text2html(class_name)) if class_name else ''
+    )
 
 
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
-    formatted = [
-        '<pre class="',
-        DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1],
-        '">',
-        text2html(diagnostic["message"])
-    ]
+    html = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
-        formatted.append(" ")
-    if source:
-        formatted.append(_with_color(source, "color(var(--foreground) alpha(0.6))"))
-    if code is not None:
-        formatted.append(_with_color("(", "color(var(--foreground) alpha(0.6))"))
-        code_description = diagnostic.get("codeDescription")
-        if code_description:
-            formatted.append(make_link(code_description["href"], str(code)))
-        else:
-            formatted.append(_with_color(str(code), "color(var(--foreground) alpha(0.6))"))
-        formatted.append(_with_color(")", "color(var(--foreground) alpha(0.6))"))
+        meta_info = ""
+        if source:
+            meta_info += text2html(source)
+        if code is not None:
+            code_description = diagnostic.get("codeDescription")
+            meta_info += "({})".format(
+                make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
+        html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        formatted.append('<pre class="related_info">')
-        formatted.append("<br>".join(_format_diagnostic_related_info(config, info, base_dir)
-                                     for info in related_infos))
-        formatted.append("</pre>")
-    formatted.append("</pre>")
-    return "".join(formatted)
+        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
+        html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
+    severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
+    return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
 def format_code_actions_for_quick_panel(

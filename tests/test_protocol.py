@@ -43,7 +43,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(payload["jsonrpc"], "2.0")
         self.assertEqual(payload["id"], 1)
         self.assertEqual(payload["method"], "shutdown")
-        self.assertEqual(payload["params"], None)
+        self.assertNotIn('params', payload)
 
 
 class NotificationTests(unittest.TestCase):
@@ -62,4 +62,4 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(payload["jsonrpc"], "2.0")
         self.assertNotIn("id", payload)
         self.assertEqual(payload["method"], "exit")
-        self.assertEqual(payload["params"], None)
+        self.assertNotIn('params', payload)

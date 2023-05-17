@@ -24,10 +24,12 @@ from .protocol import Command
 from .protocol import CompletionItemKind
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
+from .protocol import DiagnosticServerCancellationData
 from .protocol import DiagnosticSeverity
 from .protocol import DiagnosticTag
 from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DidChangeWorkspaceFoldersParams
+from .protocol import DocumentDiagnosticReportKind
 from .protocol import DocumentLink
 from .protocol import DocumentUri
 from .protocol import Error
@@ -43,15 +45,18 @@ from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import LSPAny
+from .protocol import LSPErrorCodes
 from .protocol import LSPObject
 from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
+from .protocol import PreviousResultId
 from .protocol import PublishDiagnosticsParams
 from .protocol import RegistrationParams
 from .protocol import Range
 from .protocol import Request
 from .protocol import Response
+from .protocol import ResponseError
 from .protocol import SemanticTokenModifiers
 from .protocol import SemanticTokenTypes
 from .protocol import SymbolKind
@@ -62,6 +67,10 @@ from .protocol import TokenFormat
 from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
 from .protocol import WorkspaceClientCapabilities
+from .protocol import WorkspaceDiagnosticParams
+from .protocol import WorkspaceDiagnosticReport
+from .protocol import WorkspaceDocumentDiagnosticReport
+from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
@@ -76,9 +85,11 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
+from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
+from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_storage_path
@@ -99,6 +110,16 @@ import weakref
 
 InitCallback = Callable[['Session', bool], None]
 T = TypeVar('T')
+
+
+def is_workspace_full_document_diagnostic_report(
+    report: WorkspaceDocumentDiagnosticReport
+) -> TypeGuard[WorkspaceFullDocumentDiagnosticReport]:
+    return report['kind'] == DocumentDiagnosticReportKind.Full
+
+
+def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticServerCancellationData]:
+    return isinstance(data, dict) and 'retriggerRequest' in data
 
 
 def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
@@ -548,6 +569,10 @@ class SessionBufferProtocol(Protocol):
 
     @property
     def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+        ...
+
+    @property
+    def version(self) -> Optional[int]:
         ...
 
     def get_uri(self) -> Optional[str]:
@@ -1162,8 +1187,9 @@ class _RegistrationData:
                 return
 
 
-# This prefix should disambiguate common string generation techniques like UUID4.
-_WORK_DONE_PROGRESS_PREFIX = "$ublime-"
+# These prefixes should disambiguate common string generation techniques like UUID4.
+_WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
+_PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
 class Session(TransportCallbacks):
@@ -1182,6 +1208,8 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
+        self.diagnostics_result_ids = {}  # type: Dict[DocumentUri, Optional[str]]
+        self.workspace_diagnostics_pending_response = None  # type: Optional[int]
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
@@ -1467,6 +1495,9 @@ class Session(TransportCallbacks):
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
+        if self.config.diagnostics_mode == "workspace" and \
+                self.has_capability('diagnosticProvider.workspaceDiagnostics'):
+            self.do_workspace_diagnostics_async()
 
     def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
@@ -1695,6 +1726,76 @@ class Session(TransportCallbacks):
                 not_visible_session_views.add(sv)
         return visible_session_views, not_visible_session_views
 
+    # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
+
+    def do_workspace_diagnostics_async(self) -> None:
+        if self.workspace_diagnostics_pending_response:
+            # The server is probably leaving the request open intentionally, in order to continuously stream updates via
+            # $/progress notifications.
+            return
+        previous_result_ids = [
+            {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
+            if result_id is not None
+        ]  # type: List[PreviousResultId]
+        params = {'previousResultIds': previous_result_ids}  # type: WorkspaceDiagnosticParams
+        identifier = self.get_capability("diagnosticProvider.identifier")
+        if identifier:
+            params['identifier'] = identifier
+        self.workspace_diagnostics_pending_response = self.send_request_async(
+            Request.workspaceDiagnostic(params),
+            self._on_workspace_diagnostics_async,
+            self._on_workspace_diagnostics_error_async)
+
+    def _on_workspace_diagnostics_async(
+        self, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
+    ) -> None:
+        if reset_pending_response:
+            self.workspace_diagnostics_pending_response = None
+        if not response['items']:
+            return
+        window = sublime.active_window()
+        active_view = window.active_view() if window else None
+        active_view_path = active_view.file_name() if active_view else None
+        for diagnostic_report in response['items']:
+            uri = diagnostic_report['uri']
+            # Normalize URI
+            scheme, path = parse_uri(uri)
+            if scheme == 'file':
+                # Skip for active view
+                if path == active_view_path:
+                    continue
+                uri = unparse_uri((scheme, path))
+            # Note: 'version' is a mandatory field, but some language servers have serialization bugs with null values.
+            version = diagnostic_report.get('version')
+            # Skip if outdated
+            # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
+            # file are likely not accurate anymore, because changes in another file in the meanwhile could have affected
+            # the diagnostics in this file. If this is the case, a new request is already queued, or updated partial
+            # results are expected to be streamed by the server.
+            if isinstance(version, int):
+                sb = self.get_session_buffer_for_uri_async(uri)
+                if sb and sb.version != version:
+                    continue
+            self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
+            if is_workspace_full_document_diagnostic_report(diagnostic_report):
+                self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
+
+    def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
+        if error['code'] == LSPErrorCodes.ServerCancelled:
+            data = error.get('data')
+            if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
+                # Retrigger the request after a short delay, but don't reset the pending response variable for this
+                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
+                # infinite cycles of cancel -> retrigger, in case the server is busy.
+
+                def _retrigger_request() -> None:
+                    self.workspace_diagnostics_pending_response = None
+                    self.do_workspace_diagnostics_async()
+
+                sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                return
+        self.workspace_diagnostics_pending_response = None
+
     # --- server request handlers --------------------------------------------------------------------------------------
 
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
@@ -1895,6 +1996,16 @@ class Session(TransportCallbacks):
         """handles the $/progress notification"""
         token = params['token']
         value = params['value']
+        # Partial Result Progress
+        # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#partialResults
+        if token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
+            request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
+            request = self._response_handlers[request_id][0]
+            if request.method == "workspace/diagnostic":
+                self._on_workspace_diagnostics_async(value, reset_pending_response=False)
+            return
+        # Work Done Progress
+        # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress
         kind = value['kind']
         if token not in self._progress:
             # If the token is not in the _progress map then that could mean two things:
@@ -1996,6 +2107,8 @@ class Session(TransportCallbacks):
         request_id = self.request_id
         if request.progress and isinstance(request.params, dict):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        if request.partial_results and isinstance(request.params, dict):
+            request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:

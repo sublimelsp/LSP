@@ -1,4 +1,4 @@
-=> 1.23.0
+=> 1.24.0
 
 ⚠️ To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
 Sublime Text once it finishes updating all packages. ⚠️
@@ -7,3 +7,27 @@ Sublime Text once it finishes updating all packages. ⚠️
 
 - Diagnostics for files that are not within the project folders are no longer ignored.
   You can set `"diagnostics_mode": "workspace"` in server-specific configuration to enable old behavior.
+
+# New features
+
+- Add support for pull diagnostics (#2221) (jwortmann)
+- Add "outline" as an option for "document_highlight_style" (#2234) (Terminal)
+- add "show_multiline_document_highlights" setting (#2247) (Tito)
+
+# Fixes
+
+- Fix handling of folder_exclude_patterns in projects (#2237) (Rafał Chłodnicki)
+- html-escape diagnostic-related strings (#2228) (Rafał Chłodnicki)
+- Fix exception for null response id (#2233) (jwortmann)
+- Fix some features might not work with dynamical registration (#2222) (jwortmann)
+
+# Improvements
+
+- use class for diagnostic info instead of hardcoding color (#2257) (Rafał Chłodnicki)
+- Use regular font style in sighelp popup if already highlighted by color scheme (#2259) (jwortmann)
+- Add support and mode for workspace pull diagnostics (#2225) (jwortmann)
+- don't send params for requests/notifications that don't expect them (#2240) (Rafał Chłodnicki)
+- optimize creation of code actions annotation region (#2239) (Rafał Chłodnicki)
+- Allow style overrides for inlay_hints.css (#2232) (jwortmann)
+- Improve label detail support in completions (#2212) (ryuukk)
+- Update clojure-lsp docs (#2226) (Raffael Stein)

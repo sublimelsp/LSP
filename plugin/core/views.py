@@ -309,7 +309,7 @@ def get_storage_path() -> str:
     The "Package Storage" is a way to store server data without influencing the behavior of Sublime Text's "catalog".
     Its path is '$DATA/Package Storage', where $DATA means:
 
-    - on macOS: ~/Library/Application Support/Sublime Text
+    - on macOS: '~/Library/Application Support/Sublime Text'
     - on Windows: %LocalAppData%/Sublime Text
     - on Linux: ~/.cache/sublime-text
     """

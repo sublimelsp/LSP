@@ -34,30 +34,6 @@ class WindowConfigManager(object):
         self._change_listeners = WeakSet()  # type: WeakSet[WindowConfigChangeListener]
         self._reload_configs()
 
-    def _reload_configs(self, updated_config_name: Optional[str] = None) -> None:
-        project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        if updated_config_name is None:
-            self.all.clear()
-        for name, config in self._global_configs.items():
-            if updated_config_name and updated_config_name != name:
-                continue
-            overrides = project_settings.pop(name, None)
-            if isinstance(overrides, dict):
-                debug("applying .sublime-project override for", name)
-            else:
-                overrides = {}
-            if name in self._disabled_for_session:
-                overrides["enabled"] = False
-            self.all[name] = ClientConfig.from_config(config, overrides)
-        for name, c in project_settings.items():
-            if updated_config_name and updated_config_name != name:
-                continue
-            debug("loading project-only configuration", name)
-            try:
-                self.all[name] = ClientConfig.from_dict(name, c)
-            except Exception as ex:
-                exception_log("failed to load project-only configuration {}".format(name), ex)
-
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:
         self._change_listeners.add(listener)
 
@@ -81,6 +57,30 @@ class WindowConfigManager(object):
                     yield config
         except (IndexError, RuntimeError):
             pass
+
+    def _reload_configs(self, updated_config_name: Optional[str] = None) -> None:
+        project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
+        if updated_config_name is None:
+            self.all.clear()
+        for name, config in self._global_configs.items():
+            if updated_config_name and updated_config_name != name:
+                continue
+            overrides = project_settings.pop(name, None)
+            if isinstance(overrides, dict):
+                debug("applying .sublime-project override for", name)
+            else:
+                overrides = {}
+            if name in self._disabled_for_session:
+                overrides["enabled"] = False
+            self.all[name] = ClientConfig.from_config(config, overrides)
+        for name, c in project_settings.items():
+            if updated_config_name and updated_config_name != name:
+                continue
+            debug("loading project-only configuration", name)
+            try:
+                self.all[name] = ClientConfig.from_dict(name, c)
+            except Exception as ex:
+                exception_log("failed to load project-only configuration {}".format(name), ex)
 
     def update(self, updated_config_name: Optional[str] = None) -> None:
         self._reload_configs(updated_config_name)

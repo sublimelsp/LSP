@@ -30,7 +30,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -41,7 +42,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, fallback)

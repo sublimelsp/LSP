@@ -49,8 +49,9 @@ class SigHelp:
         self._active_parameter_index = self._state.get("activeParameter") or 0
         self._function_color = "white"
         self._active_parameter_color = "white"
+        self._active_parameter_bold = True
+        self._active_parameter_underline = True
         self._inactive_parameter_color = "white"
-        self._emphasize_active_parameter = True
 
     @classmethod
     def from_lsp(
@@ -73,9 +74,15 @@ class SigHelp:
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
         self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
-        self._active_parameter_color = view.style_for_scope("variable.parameter.sighelp.active.lsp")["foreground"]
+        active_parameter_style = view.style_for_scope("variable.parameter.sighelp.active.lsp")
+        self._active_parameter_color = active_parameter_style["foreground"]
         self._inactive_parameter_color = view.style_for_scope("variable.parameter.sighelp.lsp")["foreground"]
-        self._emphasize_active_parameter = self._active_parameter_color == self._inactive_parameter_color
+        if self._active_parameter_color == self._inactive_parameter_color:
+            self._active_parameter_bold = True
+            self._active_parameter_underline = True
+        else:
+            self._active_parameter_bold = active_parameter_style.get('bold', False)
+            self._active_parameter_underline = active_parameter_style.get('underline', False)
         formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
@@ -178,16 +185,19 @@ class SigHelp:
         return None
 
     def _function(self, content: str) -> str:
-        return _wrap_with_color(content, self._function_color, False)
+        return _wrap_with_color(content, self._function_color)
 
-    def _parameter(self, content: str, emphasize: bool) -> str:
-        color = self._active_parameter_color if emphasize else self._inactive_parameter_color
-        return _wrap_with_color(content, color, self._emphasize_active_parameter and emphasize)
+    def _parameter(self, content: str, active: bool) -> str:
+        if active:
+            return _wrap_with_color(
+                content, self._active_parameter_color, self._active_parameter_bold, self._active_parameter_underline)
+        return _wrap_with_color(content, self._inactive_parameter_color)
 
 
-def _wrap_with_color(content: str, color: str, emphasize: bool) -> str:
-    return '<span style="color: {}{}">{}</span>'.format(
-        color,
-        '; font-weight: bold; text-decoration: underline' if emphasize else '',
-        html.escape(content, quote=False)
-    )
+def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:
+    style = 'color: {}'.format(color)
+    if bold:
+        style += '; font-weight: bold'
+    if underline:
+        style += '; text-decoration: underline'
+    return '<span style="{}">{}</span>'.format(style, html.escape(content, quote=False))

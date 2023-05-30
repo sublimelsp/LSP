@@ -30,7 +30,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -41,7 +42,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, fallback)
@@ -55,7 +57,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -65,7 +68,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
             params = {
                 'textDocument': position_params['textDocument'],
                 'position': position_params['position'],
-                'context': {"includeDeclaration": False},
+                'context': {
+                    "includeDeclaration": include_declaration,
+                },
             }
             request = Request("textDocument/references", params, self.view, progress=True)
             word_range = self.view.word(pos)

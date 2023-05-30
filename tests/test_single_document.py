@@ -348,7 +348,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             lambda: self.session.execute_command(
                 {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]},
                 progress=False,
-                source_view=self.view,
+                view=self.view,
             ).then(promise.fulfill)
         )
         yield from self.await_promise(promise)

@@ -1548,7 +1548,7 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, progress: bool, source_view: Optional[sublime.View] = None
+        self, command: ExecuteCommandParams, progress: bool, view: Optional[sublime.View] = None
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1558,22 +1558,14 @@ class Session(TransportCallbacks):
                 return promise
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
-        if command_name == "editor.action.triggerSuggest" and source_view:
+        if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
-            sublime.set_timeout(lambda: source_view.run_command("auto_complete"))
+            sublime.set_timeout(lambda: view.run_command("auto_complete"))
             return Promise.resolve(None)
-        if command_name == "editor.action.rename" and source_view:
-            command_args = command.get('arguments')
-            offset = None
-            if isinstance(command_args, list) and len(command_args) >= 2:
-                position = cast(Position, command_args[1])
-                offset = position_to_offset(position, source_view)
-            source_view.run_command("lsp_symbol_rename", {'position': offset})
-            return Promise.resolve(None)
-        if command_name == "editor.action.triggerParameterHints" and source_view:
+        if command_name == "editor.action.triggerParameterHints" and view:
 
             def run_async() -> None:
-                session_view = self.session_view_for_view_async(source_view)
+                session_view = self.session_view_for_view_async(view)
                 if not session_view:
                     return
                 listener = session_view.listener()
@@ -1593,7 +1585,7 @@ class Session(TransportCallbacks):
         )
 
     def run_code_action_async(
-        self, code_action: Union[Command, CodeAction], progress: bool, source_view: Optional[sublime.View] = None
+        self, code_action: Union[Command, CodeAction], progress: bool, view: Optional[sublime.View] = None
     ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
@@ -1603,13 +1595,13 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress, source_view)
+            return self.execute_command(command_params, progress, view)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action) \
-            .then(lambda code_action: self._apply_code_action_async(code_action, source_view))
+            .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
     def open_uri_async(
         self,
@@ -1702,7 +1694,7 @@ class Session(TransportCallbacks):
         return Promise.resolve(code_action)
 
     def _apply_code_action_async(
-        self, code_action: Union[CodeAction, Error, None], source_view: Optional[sublime.View]
+        self, code_action: Union[CodeAction, Error, None], view: Optional[sublime.View]
     ) -> Promise[None]:
         if not code_action:
             return Promise.resolve(None)
@@ -1721,7 +1713,7 @@ class Session(TransportCallbacks):
             if arguments is not None:
                 execute_command['arguments'] = arguments
             return promise.then(
-                lambda _: self.execute_command(execute_command, progress=False, source_view=source_view))
+                lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:

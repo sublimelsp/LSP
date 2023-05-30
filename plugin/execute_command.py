@@ -35,7 +35,7 @@ class LspExecuteCommand(LspTextCommand):
                     return
                 self.handle_success_async(response, command_name)
 
-            session.execute_command(params, progress=True, source_view=self.view).then(handle_response)
+            session.execute_command(params, progress=True, view=self.view).then(handle_response)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

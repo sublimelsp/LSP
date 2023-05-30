@@ -260,7 +260,7 @@ class CodeActionOnSaveTask(SaveTask):
             session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
             if session:
                 tasks.extend([
-                    session.run_code_action_async(action, progress=False, source_view=view) for action in code_actions
+                    session.run_code_action_async(action, progress=False, view=view) for action in code_actions
                 ])
         Promise.all(tasks).then(lambda _: self._on_code_actions_completed(document_version))
 
@@ -348,7 +348,7 @@ class LspCodeActionsCommand(LspTextCommand):
             config_name, action = actions[index]
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(action, progress=True, source_view=self.view) \
+                session.run_code_action_async(action, progress=True, view=self.view) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
         sublime.set_timeout_async(run_async)
@@ -412,7 +412,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
             config_name, action = self.actions_cache[id]
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(action, progress=True, source_view=self.view) \
+                session.run_code_action_async(action, progress=True, view=self.view) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:

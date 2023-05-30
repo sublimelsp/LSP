@@ -37,7 +37,7 @@ If you want to bind some action to a mouse, open `Preferences / Browser Packages
 | Linux    | `/User/Default (Linux).sublime-mousemap` |
 | Mac      | `/User/Default (OSX).sublime-mousemap` |
 
-Here is an example mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
+Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
 
 ```js
 [
@@ -68,10 +68,10 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 ## Inlay Hints
 
-The style for inlay hints is defined in a [`inlay_hints.css`](https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css) file in the root directory of the LSP package.
+The styles for inlay hints are defined in the [`inlay_hints.css`](https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css) file in the root directory of the LSP package.
 If you would like to adjust the inlay hints style, you can create an [override](https://www.sublimetext.com/docs/packages.html#overriding-files-from-a-zipped-package) for this file (a restart of Sublime Text is required to apply the changes).
-But be aware that by doing this, you might miss out future changes in this file, in case of updates in a new release of the LSP package.
-So consider to use a package like [OverrideAudit](https://packagecontrol.io/packages/OverrideAudit) in order to get a notification when that happens.
+But be aware that by doing this, you might miss out on future changes in this file, in case of updates in a new release of the LSP package.
+So consider using a package like [OverrideAudit](https://packagecontrol.io/packages/OverrideAudit) to get a notification when that happens.
 
 ## Color scheme customizations
 
@@ -79,12 +79,12 @@ Some features use TextMate scopes to control the colors (underline, background o
 Colors can be customized by adding a rule for these scopes into your color scheme.
 There is an example in the [official ST documentation](https://www.sublimetext.com/docs/color_schemes.html#customization) which explains how to do that.
 
-The following tables give an overview about the scope names used by LSP.
+The following tables give an overview of the scope names used by LSP.
 
 ### Semantic Highlighting
 
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
-    Language servers which support semantic highlighting are for example *clangd* and *rust-analyzer*.
+    Language servers that support semantic highlighting are for example *clangd* and *rust-analyzer*.
 
 In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
 LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
@@ -101,7 +101,7 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 }
 ```
 
-Furthermore it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
+Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
 | scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenTypes) |
 | ----- | ------------------ |
@@ -130,10 +130,10 @@ Furthermore it is possible to adjust the colors for semantic tokens by applying 
 
 By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the scopes specified above, the latter will take precedence.
 
-Language servers can also add their own custom token types, which are not defined in the protocol.
-A "LSP-*" helper package (or user) can provide a "semantic_tokens" mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
-Keys of this mapping should be the token types and values should be the corresponding scopes.
-Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenModifiers) can be addressed by apending the modifier after a dot.
+Language servers can also add their custom token types, which are not defined in the protocol.
+An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
+The keys of this mapping should be the token types and values should be the corresponding scopes.
+Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
 
 ```json
 {
@@ -146,10 +146,10 @@ Semantic tokens with exactly one [token modifier](https://microsoft.github.io/la
 ```
 
 The color for custom token types can also be adjusted via a color scheme rule for the scope `meta.semantic-token.<token-type>`, where `<token-type>` is the name of the custom token type, but with all letters lowercased (similar to the listed scopes in the table above).
-To target tokens with one modifier, use the scope `meta.semantic-token.<token-type>.<token-modifier>` (all lowercased).
+To target tokens with one modifier, use the scope `meta.semantic-token.<token-type>.<token-modifier>` (all lowercase).
 Currently, semantic tokens with more than one modifier cannot be styled reliably.
 
-If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via the regular syntax highlighting.
+If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via regular syntax highlighting.
 
 ### Document Highlights
 
@@ -194,7 +194,7 @@ Diagnostics will also optionally include the following scopes:
 | `markup.unnecessary.lsp` | Unnecessary         | Unused or unnecessary code  |
 | `markup.deprecated.lsp`  | Deprecated          | Deprecated or obsolete code |
 
-Those scopes can be used to, for example, gray-out the text color of unused code, if the server supports that.
+Those scopes can be used to, for example, gray out the text color of unused code, if the server supports that.
 
 For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
 
@@ -204,13 +204,13 @@ For example, to add a custom rule for `Mariana` color scheme, select `UI: Custom
         {
             "scope": "markup.unnecessary.lsp",
             "foreground": "color(rgb(255, 255, 255) alpha(0.4))",
-            "background": "color(var(blue3) alpha(0.9))"
+            "background": "#00000101"
         }
     ]
 }
 ```
 
-The color scheme rule only works if the "background" color is different from the global background of the scheme. So for other color schemes, ideally pick a background color that is as close as possible, but marginally different from the original background.
+The color scheme rule only works if the "background" color is (marginally) different from the original color scheme background.
 
 ### Signature Help
 
@@ -219,6 +219,10 @@ The color scheme rule only works if the "background" color is different from the
 | `entity.name.function.sighelp.lsp` | Function name in the signature help popup |
 | `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
 | `variable.parameter.sighelp.active.lsp` | Function argument which is currently highlighted in the signature help popup |
+
+!!! note
+    If there is no special rule for the active parameter in the color scheme, it will be rendered with bold and underlined font style.
+    But if the color scheme defines a different `"foreground"` color for the active parameter, the style follows the `"font_style"` property from the color scheme rule.
 
 ### Annotations
 

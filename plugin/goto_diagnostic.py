@@ -282,7 +282,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         if scheme == "file":
             self._preview = open_location(session, self._get_location(diagnostic), flags=sublime.TRANSIENT)
             base_dir = project_base_dir(map(Path, self.window.folders()), Path(path))
-        return diagnostic_html(self.view, session.config, truncate_message(diagnostic), base_dir)
+        return diagnostic_html(session.config, truncate_message(diagnostic), base_dir)
 
     def _get_location(self, diagnostic: Diagnostic) -> Location:
         return diagnostic_location(self.parsed_uri, diagnostic)
@@ -301,8 +301,7 @@ def open_location(session: Session, location: Location, flags: int = 0, group: i
     return session.window.open_file(file_name, flags=flags | sublime.ENCODED_POSITION, group=group)
 
 
-def diagnostic_html(view: sublime.View, config: ClientConfig, diagnostic: Diagnostic,
-                    base_dir: Optional[Path]) -> sublime.Html:
+def diagnostic_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[Path]) -> sublime.Html:
     content = format_diagnostic_for_html(
         config, truncate_message(diagnostic), None if base_dir is None else str(base_dir))
     return sublime.Html('<style>{}</style><div class="diagnostics {}">{}</div>'.format(

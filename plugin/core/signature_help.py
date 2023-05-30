@@ -47,6 +47,11 @@ class SigHelp:
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
         self._active_parameter_index = self._state.get("activeParameter") or 0
+        self._function_color = "white"
+        self._active_parameter_color = "white"
+        self._active_parameter_bold = True
+        self._active_parameter_underline = True
+        self._inactive_parameter_color = "white"
 
     @classmethod
     def from_lsp(
@@ -68,7 +73,17 @@ class SigHelp:
         formatted = []  # type: List[str]
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
-        formatted.extend(self._render_label(view, signature))
+        self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
+        active_parameter_style = view.style_for_scope("variable.parameter.sighelp.active.lsp")
+        self._active_parameter_color = active_parameter_style["foreground"]
+        self._inactive_parameter_color = view.style_for_scope("variable.parameter.sighelp.lsp")["foreground"]
+        if self._active_parameter_color == self._inactive_parameter_color:
+            self._active_parameter_bold = True
+            self._active_parameter_underline = True
+        else:
+            self._active_parameter_bold = active_parameter_style.get('bold', False)
+            self._active_parameter_underline = active_parameter_style.get('underline', False)
+        formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
 
@@ -96,7 +111,7 @@ class SigHelp:
             len(self._signatures),
         )
 
-    def _render_label(self, view: sublime.View, signature: SignatureInformation) -> List[str]:
+    def _render_label(self, signature: SignatureInformation) -> List[str]:
         formatted = []  # type: List[str]
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
@@ -124,13 +139,13 @@ class SigHelp:
                     start += prev
                     end = start + len(rawlabel)
                 if prev < start:
-                    formatted.append(_function(view, label[prev:start]))
-                formatted.append(_parameter(view, label[start:end], i == active_parameter_index))
+                    formatted.append(self._function(label[prev:start]))
+                formatted.append(self._parameter(label[start:end], i == active_parameter_index))
                 prev = end
             if end < len(label):
-                formatted.append(_function(view, label[end:]))
+                formatted.append(self._function(label[end:]))
         else:
-            formatted.append(_function(view, label))
+            formatted.append(self._function(label))
         formatted.append("</pre></div>")
         return formatted
 
@@ -169,19 +184,20 @@ class SigHelp:
             return minihtml(view, documentation, allowed_formats, self._language_map)
         return None
 
+    def _function(self, content: str) -> str:
+        return _wrap_with_color(content, self._function_color)
 
-def _function(view: sublime.View, content: str) -> str:
-    return _wrap_with_scope_style(view, content, "entity.name.function.sighelp.lsp", False)
+    def _parameter(self, content: str, active: bool) -> str:
+        if active:
+            return _wrap_with_color(
+                content, self._active_parameter_color, self._active_parameter_bold, self._active_parameter_underline)
+        return _wrap_with_color(content, self._inactive_parameter_color)
 
 
-def _parameter(view: sublime.View, content: str, emphasize: bool) -> str:
-    scope = "variable.parameter.sighelp.active.lsp" if emphasize else "variable.parameter.sighelp.lsp"
-    return _wrap_with_scope_style(view, content, scope, emphasize)
-
-
-def _wrap_with_scope_style(view: sublime.View, content: str, scope: str, emphasize: bool) -> str:
-    return '<span style="color: {}{}">{}</span>'.format(
-        view.style_for_scope(scope)["foreground"],
-        '; font-weight: bold; text-decoration: underline' if emphasize else '',
-        html.escape(content, quote=False)
-    )
+def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:
+    style = 'color: {}'.format(color)
+    if bold:
+        style += '; font-weight: bold'
+    if underline:
+        style += '; text-decoration: underline'
+    return '<span style="{}">{}</span>'.format(style, html.escape(content, quote=False))

@@ -163,10 +163,10 @@ class LspHoverCommand(LspTextCommand):
     def _create_hover_request(
         self, session: Session, point: int
     ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
-        if session.get_capability('experimental.rangeHoverProvider'):
+        if session.get_capability('experimental.hoverRange'):
             region = first_selection_region(self.view)
             if region is not None and region.contains(point):
-                return text_document_range_params(self.view, point, region)
+                return text_document_range_params(self.view, region)
         return text_document_position_params(self.view, point)
 
     def _on_all_settled(

@@ -466,12 +466,10 @@ def text_document_position_params(view: sublime.View, location: int) -> TextDocu
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
 
 
-def text_document_range_params(view: sublime.View, location: int,
-                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
+def text_document_range_params(view: sublime.View, region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
     return {
         "textDocument": text_document_identifier(view),
-        "position": position(view, location),
-        "range": region_to_range(view, region)
+        "position": region_to_range(view, region),
     }
 
 

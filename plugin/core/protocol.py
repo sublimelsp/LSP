@@ -6146,11 +6146,6 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
     'session_name': str
 })
 
-ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangeParams', {
-    'textDocument': TextDocumentIdentifier,
-    'position': Range,
-})
-
 CompletionItemDefaults = __CompletionList_itemDefaults_Type_1
 CompletionEditRange = __CompletionList_itemDefaults_editRange_Type_1
 

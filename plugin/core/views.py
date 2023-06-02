@@ -18,7 +18,6 @@ from .protocol import DidSaveTextDocumentParams
 from .protocol import DocumentColorParams
 from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
-from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -464,13 +463,6 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Vers
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
-
-
-def text_document_range_params(view: sublime.View, region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
-    return {
-        "textDocument": text_document_identifier(view),
-        "position": region_to_range(view, region),
-    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:

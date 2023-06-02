@@ -11,11 +11,9 @@ from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union

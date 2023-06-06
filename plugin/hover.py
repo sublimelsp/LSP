@@ -7,16 +7,13 @@ from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
 from .core.protocol import Error
-from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
@@ -35,7 +32,6 @@ from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
-from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
@@ -153,21 +149,11 @@ class LspHoverCommand(LspTextCommand):
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         language_maps = []  # type: List[Optional[MarkdownLangMap]]
         for session in listener.sessions_async('hoverProvider'):
-            document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
-                Request("textDocument/hover", document_position, self.view)
+                Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
             ))
             language_maps.append(session.markdown_language_id_to_st_syntax_map())
         Promise.all(hover_promises).then(partial(self._on_all_settled, listener, point, language_maps))
-
-    def _create_hover_request(
-        self, session: Session, point: int
-    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
-        if session.get_capability('experimental.rangeHoverProvider'):
-            region = first_selection_region(self.view)
-            if region is not None and region.contains(point):
-                return text_document_range_params(self.view, point, region)
-        return text_document_position_params(self.view, point)
 
     def _on_all_settled(
         self,

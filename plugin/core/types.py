@@ -2,8 +2,8 @@ from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKind
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Literal, Union, Set, Tuple
-from .typing import cast, TypedDict, TypeVar
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
+from .typing import cast
 from .url import filename_to_uri
 from .url import parse_uri
 from wcmatch.glob import BRACE

@@ -3,7 +3,6 @@ from .core.active_request import ActiveRequest
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
-from .core.protocol import DiagnosticSeverity
 from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
@@ -14,7 +13,6 @@ from .core.settings import userprefs
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import text_document_identifier
-from .diagnostics import DiagnosticsView
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary

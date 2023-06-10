@@ -142,7 +142,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.assertEquals(entire_content(self.view), 'const x = 1;')
         self.assertEquals(self.view.is_dirty(), False)
 
-    def test_applies_in_two_iterations(self) -> Generator:
+    def test_applies_only_one_pass(self) -> Generator:
         self.insert_characters('const x = 1')
         initial_change_count = self.view.change_count()
         yield from self.await_client_notification(
@@ -179,7 +179,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.view.run_command('lsp_save')
         # Wait for the view to be saved
         yield lambda: not self.view.is_dirty()
-        self.assertEquals(entire_content(self.view), 'const x = 1;\nAnd again!')
+        self.assertEquals(entire_content(self.view), 'const x = 1;')
 
     def test_applies_immediately_after_text_change(self) -> Generator:
         self.insert_characters('const x = 1')

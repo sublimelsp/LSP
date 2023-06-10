@@ -253,20 +253,12 @@ class CodeActionOnSaveTask(SaveTask):
     def _handle_response_async(self, responses: List[CodeActionsByConfigName]) -> None:
         if self._cancelled:
             return
-        document_version = self._task_runner.view.change_count()
         tasks = []  # type: List[Promise]
         for config_name, code_actions in responses:
             session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
             if session:
                 tasks.extend([session.run_code_action_async(action, progress=False) for action in code_actions])
-        Promise.all(tasks).then(lambda _: self._on_code_actions_completed(document_version))
-
-    def _on_code_actions_completed(self, previous_document_version: int) -> None:
-        if previous_document_version != self._task_runner.view.change_count():
-            # Give on_text_changed_async a chance to trigger.
-            sublime.set_timeout_async(self._request_code_actions_async)
-        else:
-            self._on_complete()
+        Promise.all(tasks).then(lambda _: self._on_complete())
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)

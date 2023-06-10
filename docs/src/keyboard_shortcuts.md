@@ -9,7 +9,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | ------- | -------- | ------- |
 | Auto Complete | <kbd>ctrl</kbd> <kbd>space</kbd> (also on macOS) | `auto_complete`
 | Expand Selection | unbound | `lsp_expand_selection`
-| Find References | <kbd>shift</kbd> <kbd>f12</kbd> | `lsp_symbol_references`
+| Find References | <kbd>shift</kbd> <kbd>f12</kbd> | `lsp_symbol_references` (supports optional args: `{"include_declaration": true/false}`)
 | Follow Link | unbound | `lsp_open_link`
 | Format File | unbound | `lsp_format_document`
 | Format Selection | unbound | `lsp_format_document_range`

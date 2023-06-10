@@ -21,8 +21,17 @@ from weakref import WeakValueDictionary
 import functools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]  # type: List[int]
 HOVER_HIGHLIGHT_KEY = "lsp_hover_highlight"
+
+
+class TagData:
+    __slots__ = ('key', 'regions', 'scope')
+
+    def __init__(self, key: str, regions: List[sublime.Region] = [], scope: str = '') -> None:
+        self.key = key
+        self.regions = regions
+        self.scope = scope
 
 
 class SessionView:
@@ -292,9 +301,7 @@ class SessionView:
     def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         key = self.diagnostics_key(severity, multiline)
-        key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
-        for key_tag in key_tags.values():
-            self.view.erase_regions(key_tag)
+        tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
         data = self.session_buffer.data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
@@ -302,7 +309,8 @@ class SessionView:
                 tag_scope = self.diagnostics_tag_scope(tag)
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                 if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
-                    self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
+                    tags[tag].regions = regions
+                    tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
             self.view.add_regions("{}_icon".format(key), non_tag_regions, data.scope, data.icon, ICON_FLAGS)
@@ -310,6 +318,11 @@ class SessionView:
         else:
             self.view.erase_regions("{}_icon".format(key))
             self.view.erase_regions("{}_underline".format(key))
+        for data in tags.values():
+            if data.regions:
+                self.view.add_regions(data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE)
+            else:
+                self.view.erase_regions(data.key)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)

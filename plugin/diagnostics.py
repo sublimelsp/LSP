@@ -4,11 +4,10 @@ from .core.typing import Dict, List, Tuple
 from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
-from .core.views import RegionProvider
 import sublime
 
 
-class DiagnosticsView(RegionProvider):
+class DiagnosticsView():
     ANNOTATIONS_REGION_KEY = "lsp_d-annotations"
 
     @classmethod

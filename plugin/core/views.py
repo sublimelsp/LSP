@@ -41,8 +41,6 @@ from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
-from abc import ABCMeta
-from abc import abstractmethod
 import html
 import itertools
 import linecache
@@ -279,14 +277,6 @@ SEMANTIC_TOKENS_MAP = {
     "operator": "keyword.operator.lsp",
     "decorator": "variable.annotation.lsp",
 }
-
-
-class RegionProvider(metaclass=ABCMeta):
-
-    @classmethod
-    @abstractmethod
-    def initialize_region_keys(cls) -> None:
-        raise NotImplementedError()
 
 
 class InvalidUriSchemeException(Exception):

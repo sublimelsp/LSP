@@ -110,7 +110,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
-    :param      condition:     The condition that must evaluate to True in order to run the funtion
+    :param      condition:     The condition that must evaluate to True in order to run the function
     :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
                                main thread
     """
@@ -142,7 +142,7 @@ class DebouncerNonThreadSafe:
     the callback function will only be called once, after `timeout_ms` since the last call.
 
     This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
-    was choosen during initialization through the `async_thread` argument.
+    was chosen during initialization through the `async_thread` argument.
     """
 
     def __init__(self, async_thread: bool) -> None:
@@ -158,7 +158,7 @@ class DebouncerNonThreadSafe:
 
         :param      f:             The function to possibly run
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
-        :param      condition:     The condition that must evaluate to True in order to run the funtion
+        :param      condition:     The condition that must evaluate to True in order to run the function
         """
 
         def run(debounce_id: int) -> None:

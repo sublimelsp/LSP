@@ -469,7 +469,7 @@
                 "Show all diagnostic regions using highlights. Also see `diagnostics_highlight_style`.",
                 "Show diagnostics as annotations anchored at the right side of the corresponding line. When using this value it's recommended to not use the `\"annotation\"` value for the `show_code_actions` option as it's not possible to enforce which one is shown first then.",
               ],
-              "markdownDescription": "How to the diagnostics should be displayed."
+              "markdownDescription": "How to display diagnostics."
             },
             "show_diagnostics_severity_level": {
               "type": "integer",

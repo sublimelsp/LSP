@@ -17,7 +17,7 @@ class DiagnosticsView():
     def __init__(self, view: sublime.View) -> None:
         self._view = view
 
-    def clear_annotations_async(self) -> None:
+    def clear_annotations(self) -> None:
         for severity in DIAGNOSTIC_KINDS.keys():
             self._view.erase_regions(self._annotation_key(severity))
 

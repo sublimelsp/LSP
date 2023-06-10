@@ -287,10 +287,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         is_active_view = window and window.active_view() == self.view
         if is_active_view and self.view.change_count() == self._change_count_on_last_save:
             self._toggle_diagnostics_panel_if_needed_async()
-        show_diagnostics = userprefs().show_diagnostics
-        all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        self._diagnostics_view.clear_annotations_async()
-        if 'annotation' in show_diagnostics:
+        self._diagnostics_view.clear_annotations()
+        if 'annotation' in userprefs().show_diagnostics:
+            all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
             for _, diagnostics in self._diagnostics_async(allow_stale=True):
                 all_diagnostics.extend(diagnostics)
             self._diagnostics_view.update_diagnostic_annotations_async(all_diagnostics)

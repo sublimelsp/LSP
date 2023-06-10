@@ -160,7 +160,6 @@ class SessionView:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("underline", "stippled"):
             self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
-        DiagnosticsView.initialize_region_keys(self.view)
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

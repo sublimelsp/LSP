@@ -5,7 +5,6 @@ from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
 from .core.views import range_to_region
-from .core.views import RegionProvider
 from itertools import chain
 import html
 import sublime
@@ -313,14 +312,8 @@ class DiagnosticLines:
         ]
 
 
-class DiagnosticsView(RegionProvider):
+class DiagnosticsView():
     ANNOTATIONS_REGION_KEY = "lsp_d-annotations"
-
-    @classmethod
-    def initialize_region_keys(cls, view: sublime.View) -> None:
-        r = [sublime.Region(0, 0)]
-        for severity in DIAGNOSTIC_KINDS.keys():
-            view.add_regions(cls._annotation_key(severity), r)
 
     @classmethod
     def _annotation_key(cls, severity: DiagnosticSeverity) -> str:

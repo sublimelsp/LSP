@@ -44,7 +44,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
-from .diagnostics import DiagnosticLines
 from .diagnostics import DiagnosticsView
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
@@ -157,7 +156,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
         self._diagnostics_view = DiagnosticsView(self.view)
-        self._diagnostic_lines = DiagnosticLines(self.view, highlight_line_background=False)
         self._setup()
 
     def __del__(self) -> None:
@@ -187,7 +185,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
-        self._diagnostic_lines.clear()
 
     def _reset(self) -> None:
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
@@ -292,15 +289,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._toggle_diagnostics_panel_if_needed_async()
         show_diagnostics = userprefs().show_diagnostics
         all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        if 'phantom' in show_diagnostics or 'annotation' in show_diagnostics:
-            for _, diagnostics in self._diagnostics_async(allow_stale=True):
-                all_diagnostics.extend(diagnostics)
-        if 'phantom' in show_diagnostics:
-            self._diagnostic_lines.update_async(all_diagnostics)
-        else:
-            self._diagnostic_lines.clear()
         self._diagnostics_view.clear_annotations_async()
         if 'annotation' in show_diagnostics:
+            for _, diagnostics in self._diagnostics_async(allow_stale=True):
+                all_diagnostics.extend(diagnostics)
             self._diagnostics_view.update_diagnostic_annotations_async(all_diagnostics)
 
     def _update_diagnostic_in_status_bar_async(self) -> None:

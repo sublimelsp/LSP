@@ -883,7 +883,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     :param      diagnostic:  The diagnostic
     :returns:   Tuple of (content, optional offset, optional code, optional href)
                 When the last three elements are optional, don't show an inline phantom
-                When the last three elemenst are not optional, show an inline phantom
+                When the last three elements are not optional, show an inline phantom
                 using the information given.
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)

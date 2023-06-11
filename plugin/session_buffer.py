@@ -532,7 +532,6 @@ class SessionBuffer:
                 sv.present_diagnostics_async(sv in visible_session_views, data_per_severity)
 
         self._diagnostics_debouncer_async.cancel_pending()
-
         if self._diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
             present()

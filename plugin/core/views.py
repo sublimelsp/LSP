@@ -279,6 +279,19 @@ SEMANTIC_TOKENS_MAP = {
 }
 
 
+class DiagnosticSeverityData:
+
+    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
+
+    def __init__(self, severity: int) -> None:
+        self.regions = []  # type: List[sublime.Region]
+        self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
+        self.annotations = []  # type: List[str]
+        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
+        if userprefs().diagnostics_gutter_marker != "sign":
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+
+
 class InvalidUriSchemeException(Exception):
     def __init__(self, uri: str) -> None:
         self.uri = uri

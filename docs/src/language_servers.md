@@ -144,8 +144,8 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## Fortran
 
-1. Install the [ Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
-2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server#installation).
+1. Install the [ModernFortran](https://packagecontrol.io/packages/ModernFortran) or the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+2. Install the [fortls](https://fortls.fortran-lang.org/quickstart.html#download) language server.
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"fortls"` client configuration to the `"clients"`:
 
     ```json
@@ -153,15 +153,14 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
         "clients": {
             "fortls": {
                 "enabled": true,
-                "command": ["fortls"],
-                "selector": "source.modern-fortran | source.fixedform-fortran"
+                "command": ["fortls", "--notify_init"],
+                "selector": "source.fortran | source.modern-fortran | source.fixedform-fortran"
             }
         }
     }
     ```
 
-!!! info "See available [configuration options](https://github.com/hansec/fortran-language-server#language-server-settings)."
-    For example set `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
+!!! info "See available [configuration options](https://fortls.fortran-lang.org/options.html)."
 
 ## Go
 

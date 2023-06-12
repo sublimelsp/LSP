@@ -43,14 +43,6 @@
 
   // --- Diagnostics --------------------------------------------------------------------
 
-  // How to display diagnostics.
-  // Allowed options:
-  // - "highlight" - Show all diagnostic regions using highlights. Also see `diagnostics_highlight_style`.
-  // - "annotation" - Show diagnostics as annotations anchored at the right side of the corresponding line.
-  //                  When using this value it's recommended to not use the "annotation" value for the `show_code_actions`
-  //                  option as it's not possible to enforce which one is shown first then.
-  "show_diagnostics": ["highlight"],
-
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 
@@ -122,6 +114,11 @@
   // Show diagnostics spanning multiple lines in the view (as outlines).
   // See also: "diagnostics_highlight_style".
   "show_multiline_diagnostics_highlights": true,
+
+  // Show diagnostics as annotations anchored at the right side of the corresponding line.
+  // When enabled, it's recommended not to use the "annotation" value for the
+  // `show_code_actions` option as it's impossible to enforce which one gets shown first.
+  "show_diagnostics_annotations": false,
 
   // --- Hover popup --------------------------------------------------------------------
 

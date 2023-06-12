@@ -455,21 +455,10 @@
               "default": true,
               "markdownDescription": "Show the diagnostics description of the code under the cursor in status bar if available."
             },
-            "show_diagnostics": {
-              "default": ["highlight"],
-              "type": "array",
-              "items": {
-                "enum": [
-                  "highlight",
-                  "annotation",
-                ]
-              },
-              "uniqueItems": true,
-              "markdownEnumDescriptions": [
-                "Show all diagnostic regions using highlights. Also see `diagnostics_highlight_style`.",
-                "Show diagnostics as annotations anchored at the right side of the corresponding line. When using this value it's recommended to not use the `\"annotation\"` value for the `show_code_actions` option as it's not possible to enforce which one is shown first then.",
-              ],
-              "markdownDescription": "How to display diagnostics."
+            "show_diagnostics_annotations": {
+              "default": false,
+              "type": "boolean",
+              "markdownDescription": "Show diagnostics as annotations anchored at the right side of the corresponding line. When enabled, it's recommended not to use the `\"annotation\"` value for the `show_code_actions` option as it's impossible to enforce which one gets shown first."
             },
             "show_diagnostics_severity_level": {
               "type": "integer",

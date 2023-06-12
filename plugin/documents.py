@@ -44,7 +44,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
-from .diagnostics import DiagnosticsView
+from .diagnostics import DiagnosticsAnnotationsView
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -155,7 +155,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
-        self._diagnostics_view = DiagnosticsView(self.view)
+        self._diagnostics_view = DiagnosticsAnnotationsView(self.view)
         self._setup()
 
     def __del__(self) -> None:

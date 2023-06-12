@@ -7,7 +7,7 @@ from .core.views import format_diagnostics_for_annotation
 import sublime
 
 
-class DiagnosticsView():
+class DiagnosticsAnnotationsView():
     ANNOTATIONS_REGION_KEY = "lsp_d-annotations"
 
     @classmethod

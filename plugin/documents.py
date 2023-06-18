@@ -44,7 +44,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
-from .diagnostics import DiagnosticsAnnotationsView
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -155,7 +154,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
-        self._diagnostics_view = DiagnosticsAnnotationsView(self.view)
         self._setup()
 
     def __del__(self) -> None:
@@ -287,12 +285,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         is_active_view = window and window.active_view() == self.view
         if is_active_view and self.view.change_count() == self._change_count_on_last_save:
             self._toggle_diagnostics_panel_if_needed_async()
-        self._diagnostics_view.clear_annotations()
-        if userprefs().show_diagnostics_annotations:
-            all_diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-            for _, diagnostics in self._diagnostics_async(allow_stale=True):
-                all_diagnostics.extend(diagnostics)
-            self._diagnostics_view.update_diagnostic_annotations_async(all_diagnostics)
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:

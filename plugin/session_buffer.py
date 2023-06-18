@@ -1,6 +1,5 @@
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentDiagnosticParams
 from .core.protocol import DocumentDiagnosticReport
 from .core.protocol import DocumentDiagnosticReportKind
@@ -28,8 +27,8 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .core.typing import Any, Callable, Iterable, Optional, List, Protocol, Set, Dict, Tuple, TypeGuard, Union
 from .core.typing import cast
-from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
+from .core.views import DiagnosticSeverityData
 from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
@@ -79,19 +78,6 @@ class PendingChanges:
         self.changes.extend(changes)
 
 
-class DiagnosticSeverityData:
-
-    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
-
-    def __init__(self, severity: int) -> None:
-        self.regions = []  # type: List[sublime.Region]
-        self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
-        self.annotations = []  # type: List[str]
-        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
-        if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
-
-
 class SemanticTokensData:
 
     __slots__ = (
@@ -124,21 +110,20 @@ class SessionBuffer:
         self._session = session_view.session
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_views.add(session_view)
-        self.last_known_uri = uri
-        self.id = buffer_id
-        self.pending_changes = None  # type: Optional[PendingChanges]
+        self._last_known_uri = uri
+        self._id = buffer_id
+        self._pending_changes = None  # type: Optional[PendingChanges]
         self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        self.data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
-        self.diagnostics_are_visible = False
+        self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
-        self.document_diagnostic_pending_response = None  # type: Optional[int]
-        self.last_text_change_time = 0.0
-        self.diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
-        self.workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
-        self.color_phantoms = sublime.PhantomSet(view, "lsp_color")
-        self.document_links = []  # type: List[DocumentLink]
+        self._document_diagnostic_pending_response = None  # type: Optional[int]
+        self._last_text_change_time = 0.0
+        self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
+        self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
+        self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
+        self._document_links = []  # type: List[DocumentLink]
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys = {}  # type: Dict[str, int]
         self._last_semantic_region_key = 0
@@ -180,7 +165,7 @@ class SessionBuffer:
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
-            self.session.send_notification(did_close(uri=self.last_known_uri))
+            self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 
     def get_uri(self) -> Optional[DocumentUri]:
@@ -219,11 +204,11 @@ class SessionBuffer:
     def _on_before_destroy(self) -> None:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.m_textDocument_publishDiagnostics({'uri': self.last_known_uri, 'diagnostics': []})
+            self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
         wm = self.session.manager()
         if wm:
             wm.on_diagnostics_updated()
-        self.color_phantoms.update([])
+        self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
@@ -291,7 +276,7 @@ class SessionBuffer:
 
     def on_text_changed_async(self, view: sublime.View, change_count: int,
                               changes: Iterable[sublime.TextChange]) -> None:
-        self.last_text_change_time = time.time()
+        self._last_text_change_time = time.time()
         last_change = list(changes)[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
@@ -300,18 +285,18 @@ class SessionBuffer:
             pass
         else:
             purge = False
-            if self.pending_changes is None:
-                self.pending_changes = PendingChanges(change_count, changes)
+            if self._pending_changes is None:
+                self._pending_changes = PendingChanges(change_count, changes)
                 purge = True
-            elif self.pending_changes.version < change_count:
-                self.pending_changes.update(change_count, changes)
+            elif self._pending_changes.version < change_count:
+                self._pending_changes.update(change_count, changes)
                 purge = True
             if purge:
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def on_revert_async(self, view: sublime.View) -> None:
-        self.pending_changes = None  # Don't bother with pending changes
+        self._pending_changes = None  # Don't bother with pending changes
         version = view.change_count()
         self.session.send_notification(did_change(view, version, None))
         sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
@@ -319,7 +304,7 @@ class SessionBuffer:
     on_reload_async = on_revert_async
 
     def purge_changes_async(self, view: sublime.View) -> None:
-        if self.pending_changes is None:
+        if self._pending_changes is None:
             return
         sync_kind = self.text_sync_kind()
         if sync_kind == TextDocumentSyncKind.None_:
@@ -328,15 +313,15 @@ class SessionBuffer:
             changes = None
             version = view.change_count()
         else:
-            changes = self.pending_changes.changes
-            version = self.pending_changes.version
+            changes = self._pending_changes.changes
+            version = self._pending_changes.version
         try:
             notification = did_change(view, version, changes)
             self.session.send_notification(notification)
         except MissingUriError:
             return  # we're closing
         finally:
-            self.pending_changes = None
+            self._pending_changes = None
         self.session.notify_plugin_on_session_buffer_change(self)
         sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
@@ -349,7 +334,7 @@ class SessionBuffer:
         if self.session.config.diagnostics_mode == "workspace" and \
                 not self.session.workspace_diagnostics_pending_response and \
                 self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            self.workspace_diagnostics_debouncer_async.debounce(
+            self._workspace_diagnostics_debouncer_async.debounce(
                 self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
         self.do_semantic_tokens_async(view)
         if userprefs().link_highlight_style in ("underline", "none"):
@@ -361,19 +346,19 @@ class SessionBuffer:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.last_known_uri, TextDocumentSaveReason.Manual))
+            self.session.send_notification(will_save(self._last_known_uri, TextDocumentSaveReason.Manual))
 
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
         self._is_saving = False
-        if new_uri != self.last_known_uri:
+        if new_uri != self._last_known_uri:
             self._check_did_close()
-            self.last_known_uri = new_uri
+            self._last_known_uri = new_uri
             self._check_did_open(view)
         else:
             send_did_save, include_text = self.should_notify_did_save()
             if send_did_save:
                 self.purge_changes_async(view)
-                self.session.send_notification(did_save(view, include_text, self.last_known_uri))
+                self.session.send_notification(did_save(view, include_text, self._last_known_uri))
         if self._has_changed_during_save:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
@@ -411,10 +396,10 @@ class SessionBuffer:
 
     def _on_color_boxes_async(self, view: sublime.View, response: List[ColorInformation]) -> None:
         if response is None:  # Guard against spec violation from certain language servers
-            self.color_phantoms.update([])
+            self._color_phantoms.update([])
             return
         phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
-        sublime.set_timeout(lambda: self.color_phantoms.update(phantoms))
+        sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -426,18 +411,18 @@ class SessionBuffer:
             )
 
     def _on_document_link_async(self, view: sublime.View, response: Optional[List[DocumentLink]]) -> None:
-        self.document_links = response or []
-        if self.document_links and userprefs().link_highlight_style == "underline":
+        self._document_links = response or []
+        if self._document_links and userprefs().link_highlight_style == "underline":
             view.add_regions(
                 "lsp_document_link",
-                [range_to_region(link["range"], view) for link in self.document_links],
+                [range_to_region(link["range"], view) for link in self._document_links],
                 scope="markup.underline.link.lsp",
                 flags=DOCUMENT_LINK_FLAGS)
         else:
             view.erase_regions("lsp_document_link")
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
-        for link in self.document_links:
+        for link in self._document_links:
             if range_to_region(link["range"], view).contains(point):
                 return link
         else:
@@ -445,10 +430,10 @@ class SessionBuffer:
 
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
-        for link in self.document_links:
+        for link in self._document_links:
             if link["range"] == new_link_range:
-                self.document_links.remove(link)
-                self.document_links.append(new_link)
+                self._document_links.remove(link)
+                self._document_links.append(new_link)
                 break
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
@@ -457,37 +442,37 @@ class SessionBuffer:
         mgr = self.session.manager()
         if not mgr:
             return
-        if mgr.should_ignore_diagnostics(self.last_known_uri, self.session.config):
+        if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
         if version is None:
             version = view.change_count()
         if self.has_capability("diagnosticProvider"):
-            if self.document_diagnostic_pending_response:
-                self.session.cancel_request(self.document_diagnostic_pending_response)
+            if self._document_diagnostic_pending_response:
+                self.session.cancel_request(self._document_diagnostic_pending_response)
             params = {'textDocument': text_document_identifier(view)}  # type: DocumentDiagnosticParams
             identifier = self.get_capability("diagnosticProvider.identifier")
             if identifier:
                 params['identifier'] = identifier
-            result_id = self.session.diagnostics_result_ids.get(self.last_known_uri)
+            result_id = self.session.diagnostics_result_ids.get(self._last_known_uri)
             if result_id is not None:
                 params['previousResultId'] = result_id
-            self.document_diagnostic_pending_response = self.session.send_request_async(
+            self._document_diagnostic_pending_response = self.session.send_request_async(
                 Request.documentDiagnostic(params, view),
                 partial(self._on_document_diagnostic_async, version),
                 partial(self._on_document_diagnostic_error_async, version)
             )
 
     def _on_document_diagnostic_async(self, version: int, response: DocumentDiagnosticReport) -> None:
-        self.document_diagnostic_pending_response = None
+        self._document_diagnostic_pending_response = None
         self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
 
     def _apply_document_diagnostic_async(
         self, view: Optional[sublime.View], response: DocumentDiagnosticReport
     ) -> None:
-        self.session.diagnostics_result_ids[self.last_known_uri] = response.get('resultId')
+        self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
-                {'uri': self.last_known_uri, 'diagnostics': response['items']})
+                {'uri': self._last_known_uri, 'diagnostics': response['items']})
         for uri, diagnostic_report in response.get('relatedDocuments', {}):
             sb = self.session.get_session_buffer_for_uri_async(uri)
             if sb:
@@ -495,7 +480,7 @@ class SessionBuffer:
                     None, cast(DocumentDiagnosticReport, diagnostic_report))
 
     def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
-        self.document_diagnostic_pending_response = None
+        self._document_diagnostic_pending_response = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
@@ -512,67 +497,53 @@ class SessionBuffer:
     def on_diagnostics_async(
         self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
     ) -> None:
-        data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         view = self.some_view()
         if view is None:
             return
         change_count = view.change_count()
         if version is None:
             version = change_count
-        if version == change_count:
-            diagnostics_version = version
-            diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-            for diagnostic in raw_diagnostics:
-                region = range_to_region(diagnostic["range"], view)
-                severity = diagnostic_severity(diagnostic)
-                key = (severity, len(view.split_by_newlines(region)) > 1)
-                data = data_per_severity.get(key)
-                if data is None:
-                    data = DiagnosticSeverityData(severity)
-                    data_per_severity[key] = data
-                tags = diagnostic.get('tags', [])
-                if tags:
-                    for tag in tags:
-                        data.regions_with_tag.setdefault(tag, []).append(region)
-                else:
-                    data.regions.append(region)
-                diagnostics.append((diagnostic, region))
-            self._publish_diagnostics_to_session_views_async(
-                diagnostics_version, diagnostics, data_per_severity, visible_session_views)
-
-    def _publish_diagnostics_to_session_views_async(
-        self,
-        diagnostics_version: int,
-        diagnostics: List[Tuple[Diagnostic, sublime.Region]],
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
-        visible_session_views: Set[SessionViewProtocol],
-    ) -> None:
+        if version != change_count:
+            return
+        diagnostics_version = version
+        diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
+        data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
+        for diagnostic in raw_diagnostics:
+            region = range_to_region(diagnostic["range"], view)
+            severity = diagnostic_severity(diagnostic)
+            key = (severity, len(view.split_by_newlines(region)) > 1)
+            data = data_per_severity.get(key)
+            if data is None:
+                data = DiagnosticSeverityData(severity)
+                data_per_severity[key] = data
+            tags = diagnostic.get('tags', [])
+            if tags:
+                for tag in tags:
+                    data.regions_with_tag.setdefault(tag, []).append(region)
+            else:
+                data.regions.append(region)
+            diagnostics.append((diagnostic, region))
 
         def present() -> None:
             self.diagnostics_version = diagnostics_version
             self.diagnostics = diagnostics
-            self.data_per_severity = data_per_severity
-            self.diagnostics_are_visible = bool(diagnostics)
+            self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
-                sv.present_diagnostics_async(sv in visible_session_views)
+                sv.present_diagnostics_async(sv in visible_session_views, data_per_severity)
 
-        self.diagnostics_debouncer_async.cancel_pending()
-
-        if self.diagnostics_are_visible:
+        self._diagnostics_debouncer_async.cancel_pending()
+        if self._diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
             present()
         else:
             # There were no diagnostics visible before. Show them a bit later.
-            delay_in_seconds = userprefs().diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
-            view = self.some_view()
-            if view is None:
-                return
+            delay_in_seconds = userprefs().diagnostics_delay_ms / 1000.0 + self._last_text_change_time - time.time()
             if view.is_auto_complete_visible():
                 delay_in_seconds += userprefs().diagnostics_additional_delay_auto_complete_ms / 1000.0
             if delay_in_seconds <= 0.0:
                 present()
             else:
-                self.diagnostics_debouncer_async.debounce(
+                self._diagnostics_debouncer_async.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
@@ -758,4 +729,4 @@ class SessionBuffer:
     # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())
+        return '{}:{}:{}'.format(self.session.config.name, self._id, self.get_uri())

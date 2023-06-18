@@ -103,7 +103,7 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 
 Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
-| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenTypes) |
+| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) |
 | ----- | ------------------ |
 | `meta.semantic-token.namespace` | namespace |
 | `meta.semantic-token.type` | type |
@@ -133,7 +133,7 @@ By default, LSP will assign scopes based on the [scope naming guideline](https:/
 Language servers can also add their custom token types, which are not defined in the protocol.
 An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
 The keys of this mapping should be the token types and values should be the corresponding scopes.
-Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
+Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
 
 ```json
 {

@@ -14,6 +14,7 @@ from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
+from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
@@ -51,6 +52,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
+        self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
         self._active_requests = {}  # type: Dict[int, ActiveRequest]
         self._listener = ref(listener)
@@ -96,6 +98,9 @@ class SessionView:
             self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, True)))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
+        listener = self.listener()
+        if listener:
+            listener.on_diagnostics_updated_async(False)
 
     @property
     def session(self) -> Session:
@@ -156,6 +161,7 @@ class SessionView:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("underline", "stippled"):
             self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
+        self._diagnostic_annotations.initialize_region_keys()
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
@@ -293,6 +299,7 @@ class SessionView:
                 data_per_severity, sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
             self._draw_diagnostics(
                 data_per_severity, sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async(is_view_visible)

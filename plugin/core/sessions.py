@@ -822,7 +822,7 @@ class AbstractPlugin(metaclass=ABCMeta):
     def storage_path(cls) -> str:
         """
         The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
-        You should have an additional subdirectory preferrably the same name as your plugin. For instance:
+        You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
         ```python
         from LSP.plugin import AbstractPlugin

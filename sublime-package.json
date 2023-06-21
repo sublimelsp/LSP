@@ -462,6 +462,24 @@
               "maximum": 4,
               "markdownDescription": "Show highlights and gutter markers in the file views for diagnostics with level equal to or less than:\n\n- _none_: `0`,\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
             },
+            "show_diagnostics_annotations_severity_level": {
+              "default": 0,
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "markdownDescription": "Show diagnostics as annotations with level equal to or less than given value.\n\nWhen enabled, it's recommended not to use the `\"annotation\"` value for the `show_code_actions` option as it's impossible to enforce which one gets shown first.",
+              "markdownEnumDescriptions": [
+                "never show",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
             "diagnostics_panel_include_severity_level": {
               "type": "integer",
               "minimum": 1,

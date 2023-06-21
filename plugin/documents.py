@@ -249,7 +249,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another region
                 # which is exclusive (at region end) and we want an inclusive behavior in this case.
-                if region.contains(candidate.a) or region.contains(candidate.b):
+                if region.intersects(candidate) or region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
@@ -354,7 +354,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
-        first_region, any_different = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
@@ -862,7 +862,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
-        first_region, any_different = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         self._clear_highlight_regions()

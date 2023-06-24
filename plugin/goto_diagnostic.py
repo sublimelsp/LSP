@@ -234,7 +234,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         return "diagnostic"
 
     def list_items(self) -> List[sublime.ListInputItem]:
-        list_items = []
+        list_items = []  # type: List[sublime.ListInputItem]
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),

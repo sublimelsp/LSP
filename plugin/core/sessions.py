@@ -91,6 +91,7 @@ from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
+from .views import DiagnosticSeverityData
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
@@ -539,7 +540,9 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self, is_view_visible: bool) -> None:
+    def present_diagnostics_async(
+        self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
+    ) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -819,7 +822,7 @@ class AbstractPlugin(metaclass=ABCMeta):
     def storage_path(cls) -> str:
         """
         The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
-        You should have an additional subdirectory preferrably the same name as your plugin. For instance:
+        You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
         ```python
         from LSP.plugin import AbstractPlugin

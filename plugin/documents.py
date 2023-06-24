@@ -4,14 +4,14 @@ from .code_actions import CodeActionsByConfigName
 from .completion import QueryCompletionsTask
 from .core.logging import debug
 from .core.panels import PanelName
-from .core.protocol import Diagnostic
+from .core.protocol import Diagnostic, LinkedEditingRanges
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import DocumentHighlightParams
 from .core.protocol import DocumentUri
 from .core.protocol import Request
-from .core.protocol import SignatureHelp
+from .core.protocol import SignatureHelp, LinkedEditingRangeParams, TextEdit
 from .core.protocol import SignatureHelpContext
 from .core.protocol import SignatureHelpParams
 from .core.protocol import SignatureHelpTriggerKind
@@ -173,6 +173,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._lightbulb_line = None  # type: Optional[int]
         self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._registered = False
+        self.linked_edits = None  # type: Optional[LinkedEditingRanges]
 
     def _cleanup(self) -> None:
         settings = self.view.settings()
@@ -357,6 +358,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
+        if not self._is_in_linked_region(first_region.b):
+            self._do_linked_editing()
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
         if userprefs().document_highlight_style:
@@ -735,6 +738,29 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if any(region.contains(point) for region in regions):
                 return True
         return False
+
+    def _is_in_linked_region(self, point: int) -> bool:
+        if not self.linked_edits:
+            return False
+        regions = map(lambda range: range_to_region(range, self.view) , self.linked_edits['ranges'])
+        if any(region.contains(point) for region in regions):
+            return True
+        return False
+
+    def _do_linked_editing(self) -> None:
+        region = first_selection_region(self.view)
+        if region is None:
+            return
+        point = region.b
+        session = self.session_async("linkedEditingRangeProvider", point)
+        if session:
+            print('request')
+            params = cast(LinkedEditingRangeParams, text_document_position_params(self.view, point))
+            request = Request.linkedEditingRange(params, self.view)
+            session.send_request_async(request, self._on_linked_editing)
+
+    def _on_linked_editing(self, res: LinkedEditingRanges):
+        self.linked_edits = res
 
     def _do_highlights_async(self) -> None:
         region = first_selection_region(self.view)

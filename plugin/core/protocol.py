@@ -5948,6 +5948,10 @@ class Request(Generic[R]):
         return Request("documentLink/resolve", params, view)
 
     @classmethod
+    def linkedEditingRange(cls, params: LinkedEditingRangeParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/linkedEditingRange', params, view)
+
+    @classmethod
     def inlayHint(cls, params: InlayHintParams, view: sublime.View) -> 'Request':
         return Request('textDocument/inlayHint', params, view)
 

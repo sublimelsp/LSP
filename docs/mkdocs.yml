@@ -30,7 +30,10 @@ markdown_extensions:
   - pymdownx.tabbed
 
   # higlight code block
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      extend_pygments_lang:
+        - name: jsonc
+          lang: json
   - pymdownx.superfences
 
   # add tip, warning info boxes

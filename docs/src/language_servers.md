@@ -39,7 +39,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
 1. Download [clojure-lsp](https://clojure-lsp.io/installation/).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"clojure-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "clojure-lsp": {
@@ -63,7 +63,7 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 1. Install the [D Language Server](https://github.com/Pure-D/serve-d#installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"serve-d"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "serve-d": {
@@ -100,7 +100,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"erlang-ls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "erlang-ls": {
@@ -124,7 +124,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 4. Open `Preferences > Package Settings > LSP > Settings` and add the `"fsautocomplete"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "fsautocomplete": {
@@ -148,7 +148,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 2. Install the [fortls](https://fortls.fortran-lang.org/quickstart.html#download) language server.
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"fortls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "fortls": {
@@ -175,7 +175,7 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 2. Launch the Godot Editor on the project you are working on and leave it running.
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "godot-lsp": {
@@ -197,7 +197,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"haskell-language-server"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "haskell-language-server": {
@@ -240,7 +240,7 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 1. Install the [quick-lint-js LSP server](https://quick-lint-js.com/install/cli/) for JavaScript.
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"quick-lint-js"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "quick-lint-js": {
@@ -270,7 +270,7 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"kotlinls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "kotlinls": {
@@ -302,7 +302,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/sublimelsp/LSP-l
 1. Follow [installation instructions for Digestif](https://github.com/astoff/digestif#installation) to install the server, and make sure it is available in your PATH.
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"digestif"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "digestif": {
@@ -316,7 +316,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/sublimelsp/LSP-l
 
 3. To enable auto-completions for the relevant situations in LaTeX files, adjust Sublime's `"auto_complete_selector"` setting (`Preferences > Settings`); for example
 
-    ```json
+    ```jsonc
     {
         "auto_complete_selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc, text.tex constant.other.citation, text.tex constant.other.reference, text.tex support.function, text.tex variable.parameter.function",
     }
@@ -327,7 +327,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/sublimelsp/LSP-l
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"cc-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "cc-lsp": {
@@ -359,7 +359,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark"` client configuration to the `"clients"`:
 
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "markmark": {
@@ -379,7 +379,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"reason"` client configuration to the `"clients"`:
 
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "reason": {
@@ -408,7 +408,7 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
 1. Install [Phpactor globally](https://phpactor.readthedocs.io/en/master/usage/standalone.html#installation-global).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"phpactor"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "phpactor": {
@@ -450,7 +450,7 @@ There are multiple options:
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "ruby": {
@@ -478,7 +478,7 @@ There are multiple options:
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"sorbet"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "sorbet": {
@@ -511,7 +511,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     ```
 3.  Open `Preferences > Package Settings > LSP > Settings` and add the `"diagnostic-ls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "diagnostic-ls": {
@@ -569,7 +569,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "steep": {
@@ -624,7 +624,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
 2. Install the [Vala Language Server](https://github.com/Prince781/vala-language-server)
 3. Add Vala Langauge Server to LSP settings:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "vala-language-server": {

@@ -4,7 +4,7 @@ LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` comman
 
 If you want to create a new key binding that is different from the ones that are already included, you might want to make it active only when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running. In that case, you can make use of the `lsp.session_with_capability` context. For example, the following key binding overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
 
-```js
+```jsonc
 {
     "command": "lsp_document_symbols",
     "keys": [
@@ -39,7 +39,7 @@ If you want to bind some action to a mouse, open `Preferences / Browser Packages
 
 Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
 
-```js
+```jsonc
 [
     {
         "button": "button1",
@@ -90,7 +90,7 @@ In order to support semantic highlighting, the color scheme requires a special r
 LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
 If you use a custom color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
 
-```json
+```jsonc
 {
     "rules": [
         {
@@ -135,7 +135,7 @@ An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in 
 The keys of this mapping should be the token types and values should be the corresponding scopes.
 Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
 
-```json
+```jsonc
 {
     "semantic_tokens": {
         "magicFunction": "support.function.builtin",
@@ -198,7 +198,7 @@ Those scopes can be used to, for example, gray out the text color of unused code
 
 For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
 
-```json
+```jsonc
 {
     "rules": [
         {

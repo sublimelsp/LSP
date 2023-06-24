@@ -29,8 +29,11 @@ markdown_extensions:
   # tabs for ST4 and ST3 content
   - pymdownx.tabbed
 
-  # higlight code block
-  - pymdownx.highlight
+  # highlight code blocks
+  - pymdownx.highlight:
+      extend_pygments_lang:
+        - name: jsonc
+          lang: json
   - pymdownx.superfences
 
   # add tip, warning info boxes

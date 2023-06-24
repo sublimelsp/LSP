@@ -14,7 +14,7 @@ If your language server is missing or not configured correctly, you need to add/
 
 Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```js
+```jsonc
 {
   // General settings
   "show_diagnostics_panel_on_save": 0,
@@ -79,7 +79,7 @@ The port number can be inserted into the server's startup `command` in your clie
 
 Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
 
-```json
+```jsonc
 {
   "folders":
   [
@@ -97,7 +97,7 @@ Also global language server settings can be added or overridden per-project by a
 
 > **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
-```json
+```jsonc
 {
   "folders":
   [

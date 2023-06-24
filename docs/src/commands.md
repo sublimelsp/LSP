@@ -19,7 +19,7 @@ For LSP servers that can handle [workspace/executeCommand](https://microsoft.git
 
 Example:
 
-```js
+```jsonc
 [
   // ...
   {

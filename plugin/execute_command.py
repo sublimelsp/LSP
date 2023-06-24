@@ -1,10 +1,13 @@
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
-from .core.registry import windows
 from .core.typing import List, Optional, Any
 from .core.views import first_selection_region
-from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier, text_document_position_params  # noqa: E501
+from .core.views import offset_to_point
+from .core.views import region_to_range
+from .core.views import text_document_identifier
+from .core.views import text_document_position_params
+from .core.views import uri_from_view
 import sublime
 
 
@@ -19,18 +22,6 @@ class LspExecuteCommand(LspTextCommand):
             command_args: Optional[List[Any]] = None,
             session_name: Optional[str] = None,
             event: Optional[dict] = None) -> None:
-        # Handle VSCode-specific command for triggering AC/sighelp
-        if command_name == "editor.action.triggerSuggest":
-            # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
-            return sublime.set_timeout(lambda: self.view.run_command("auto_complete"))
-        if command_name == "editor.action.triggerParameterHints":
-
-            def run_async() -> None:
-                listener = windows.listener_for_view(self.view)
-                if listener:
-                    listener.do_signature_help_async(manual=False)
-
-            return sublime.set_timeout_async(run_async)
         session = self.session_by_name(session_name if session_name else self.session_name)
         if session and command_name:
             params = {"command": command_name}  # type: ExecuteCommandParams
@@ -44,7 +35,7 @@ class LspExecuteCommand(LspTextCommand):
                     return
                 self.handle_success_async(response, command_name)
 
-            session.execute_command(params, progress=True).then(handle_response)
+            session.execute_command(params, progress=True, view=self.view).then(handle_response)
 
     def handle_success_async(self, result: Any, command_name: str) -> None:
         """

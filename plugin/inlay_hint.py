@@ -2,14 +2,13 @@ from .core.css import css
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintLabelPart
 from .core.protocol import MarkupContent
-from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import cast, Optional, Union
-from .core.views import point_to_offset
+from .core.views import position_to_offset
 from .formatting import apply_text_edits_to_view
 import html
 import sublime
@@ -88,7 +87,7 @@ class LspInlayHintClickCommand(LspTextCommand):
 
 def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Session) -> sublime.Phantom:
     position = inlay_hint["position"]
-    region = sublime.Region(point_to_offset(Point.from_lsp(position), view))
+    region = sublime.Region(position_to_offset(position, view))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
     p = sublime.Phantom(region, content, sublime.LAYOUT_INLINE)

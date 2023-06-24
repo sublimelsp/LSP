@@ -1548,13 +1548,34 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def execute_command(self, command: ExecuteCommandParams, progress: bool) -> Promise:
+    def execute_command(
+        self, command: ExecuteCommandParams, progress: bool, view: Optional[sublime.View] = None
+    ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
+        command_name = command['command']
+        # Handle VSCode-specific command for triggering AC/sighelp
+        if command_name == "editor.action.triggerSuggest" and view:
+            # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
+            sublime.set_timeout(lambda: view.run_command("auto_complete"))
+            return Promise.resolve(None)
+        if command_name == "editor.action.triggerParameterHints" and view:
+
+            def run_async() -> None:
+                session_view = self.session_view_for_view_async(view)
+                if not session_view:
+                    return
+                listener = session_view.listener()
+                if not listener:
+                    return
+                listener.do_signature_help_async(manual=False)
+
+            sublime.set_timeout_async(run_async)
+            return Promise.resolve(None)
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
             lambda resolve: self.send_request(
@@ -1564,7 +1585,9 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: Union[Command, CodeAction], progress: bool) -> Promise:
+    def run_code_action_async(
+        self, code_action: Union[Command, CodeAction], progress: bool, view: Optional[sublime.View] = None
+    ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast(Command, code_action)
@@ -1573,12 +1596,13 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress)
+            return self.execute_command(command_params, progress, view)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+        return self._maybe_resolve_code_action(code_action) \
+            .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
     def open_uri_async(
         self,
@@ -1670,7 +1694,9 @@ class Session(TransportCallbacks):
             return self.send_request_task(request)
         return Promise.resolve(code_action)
 
-    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise[None]:
+    def _apply_code_action_async(
+        self, code_action: Union[CodeAction, Error, None], view: Optional[sublime.View]
+    ) -> Promise[None]:
         if not code_action:
             return Promise.resolve(None)
         if isinstance(code_action, Error):
@@ -1687,7 +1713,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, False))
+            return promise.then(
+                lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:

@@ -351,6 +351,10 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
+def position_to_offset(position: Position, view: sublime.View) -> int:
+    return point_to_offset(Point.from_lsp(position), view)
+
+
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0
@@ -363,9 +367,7 @@ def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
 
 
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
-    start = Point.from_lsp(range['start'])
-    end = Point.from_lsp(range['end'])
-    return sublime.Region(point_to_offset(start, view), point_to_offset(end, view))
+    return sublime.Region(position_to_offset(range['start'], view), position_to_offset(range['end'], view))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:

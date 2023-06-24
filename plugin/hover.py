@@ -363,6 +363,6 @@ class LspHoverCommand(LspTextCommand):
         def run_async() -> None:
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(actions[index], progress=True)
+                session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)

@@ -252,7 +252,13 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
     }
     ```
 
-### TypeScript
+### Rome
+
+> Rome unifies your development stack by combining the functionality of separate tools. Supports linting and formatting.
+
+Follow installation instructions on [LSP-rome](https://github.com/sublimelsp/LSP-rome).
+
+### TypeScript Language Server
 
 Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
 
@@ -430,11 +436,21 @@ There are multiple options:
 
 ### Pyright
 
+> A full-featured, standards-based static type checker for Python. It is designed for high performance and can be used with large Python source bases.
+
 Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
-### Python LSP Server
+### Python LSP Server (pylsp)
+
+> A [Jedi](https://github.com/davidhalter/jedi)-powered language server that also supports running various linters through built-in plugins.
 
 Follow installation instructions on [LSP-pylsp](https://github.com/sublimelsp/LSP-pylsp).
+
+### LSP-ruff
+
+> An extremely fast Python linter and code transformation tool, written in Rust.
+
+Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP-ruff).
 
 ## R
 
@@ -605,6 +621,10 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 ## Terraform
 
 Follow installation instructions on [LSP-terraform](https://github.com/sublimelsp/LSP-terraform).
+
+## TypeScript
+
+See [Javascript/TypeScript](#javascripttypescript).
 
 ## Vue
 

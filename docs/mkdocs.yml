@@ -29,7 +29,7 @@ markdown_extensions:
   # tabs for ST4 and ST3 content
   - pymdownx.tabbed
 
-  # higlight code block
+  # highlight code blocks
   - pymdownx.highlight:
       extend_pygments_lang:
         - name: jsonc

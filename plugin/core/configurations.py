@@ -32,7 +32,7 @@ class WindowConfigManager(object):
         self._crashes = {}  # type: Dict[str, Deque[datetime]]
         self.all = {}  # type: Dict[str, ClientConfig]
         self._change_listeners = WeakSet()  # type: WeakSet[WindowConfigChangeListener]
-        self._reload_configs()
+        self._reload_configs(notify_listeners=False)
 
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:
         self._change_listeners.add(listener)
@@ -58,7 +58,10 @@ class WindowConfigManager(object):
         except (IndexError, RuntimeError):
             pass
 
-    def _reload_configs(self, updated_config_name: Optional[str] = None) -> None:
+    def update(self, updated_config_name: Optional[str] = None) -> None:
+        self._reload_configs(updated_config_name, notify_listeners=True)
+
+    def _reload_configs(self, updated_config_name: Optional[str] = None, notify_listeners: bool = False) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         if updated_config_name is None:
             self.all.clear()
@@ -81,11 +84,9 @@ class WindowConfigManager(object):
                 self.all[name] = ClientConfig.from_dict(name, c)
             except Exception as ex:
                 exception_log("failed to load project-only configuration {}".format(name), ex)
-
-    def update(self, updated_config_name: Optional[str] = None) -> None:
-        self._reload_configs(updated_config_name)
-        for listener in self._change_listeners:
-            listener.on_configs_changed(updated_config_name)
+        if notify_listeners:
+            for listener in self._change_listeners:
+                listener.on_configs_changed(updated_config_name)
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):

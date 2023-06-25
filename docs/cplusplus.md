@@ -84,5 +84,4 @@ of treating header files as translation units.
 
 Another way to let your language server know what the include dirs are is by hand-writing a compile_flags.txt file in
 your source root. Each line is one flag. This can be useful for projects that e.g. only have a Visual Studio solution
-file. For more information, see [these instructions](https://releases.llvm.org/8.0.0/tools/clang/tools/extra/docs/clangd/Installation.html#compile-flags-txt). Creating this file by hand is a reasonable place to start if your project is quite
-simple.
+file. For more information, see [these instructions](https://releases.llvm.org/8.0.0/tools/clang/tools/extra/docs/clangd/Installation.html#compile-flags-txt). Creating this file by hand is a reasonable place to start if your project is quite simple.

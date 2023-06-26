@@ -397,6 +397,10 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
     }
     ```
 
+## Odin
+
+Follow installation instructions on [ols](https://github.com/DanielGavin/ols/).
+
 ## PromQL
 
 Follow installation instructions on [LSP-promql](https://github.com/prometheus-community/sublimelsp-promql).

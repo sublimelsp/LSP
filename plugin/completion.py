@@ -97,7 +97,7 @@ def format_completion(
         details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
     # https://github.com/sublimehq/sublime_text/issues/6033
     # replaces . with a different one that looks the same
-    trigger = trigger.replace(".", "ꓸ")
+    trigger = trigger.replace(".", "․")
     completion = sublime.CompletionItem(
         trigger,
         annotation,

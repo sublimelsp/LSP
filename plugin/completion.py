@@ -95,6 +95,9 @@ def format_completion(
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
         command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
         details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
+    # https://github.com/sublimehq/sublime_text/issues/6033
+    # replaces . with a different one that looks the same
+    trigger = trigger.replace(".", "ꓸ")
     completion = sublime.CompletionItem(
         trigger,
         annotation,

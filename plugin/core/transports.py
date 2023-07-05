@@ -66,13 +66,16 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
         try:
             body = reader.read(int(headers.get("Content-Length")))
         except TypeError:
-            # Expected error on process stopping. Stop the read loop.
-            raise StopLoopError()
+            if str(headers) == '\n':
+                # Expected on process stopping. Gracefully stop the transport.
+                raise StopLoopError()
+            else:
+                # Propagate server's output to the UI.
+                raise Exception("Unexpected payload in server's stdout:\n\n{}".format(headers))
         try:
             return self._decode(body)
         except Exception as ex:
-            exception_log("JSON decode error", ex)
-            return None
+            raise Exception("JSON decode error: {}".format(ex))
 
     @staticmethod
     def _encode(data: Dict[str, Any]) -> bytes:
@@ -135,6 +138,7 @@ class ProcessTransport(Transport[T]):
         self._join_thread(self._stderr_thread)
 
     def _read_loop(self) -> None:
+        exception = None
         try:
             while self._reader:
                 payload = self._processor.read_data(self._reader)
@@ -152,8 +156,11 @@ class ProcessTransport(Transport[T]):
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
-            exception_log("Unexpected exception", ex)
-        self._send_queue.put_nowait(None)
+            exception = ex
+        if exception:
+            self._end(exception)
+        else:
+            self._send_queue.put_nowait(None)
 
     def _end(self, exception: Optional[Exception]) -> None:
         exit_code = 0

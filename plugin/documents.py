@@ -853,7 +853,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             view_id = view.id()
             if view_id == self_id:
                 continue
-            listeners = list(sublime_plugin.view_event_listeners[view_id])
+            listeners = list(sublime_plugin.view_event_listeners.get(view_id, []))
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)

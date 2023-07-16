@@ -110,8 +110,8 @@ class ProcessTransport(Transport[T]):
         self._reader_thread.start()
         self._writer_thread.start()
 
-        self._stderr = process.stderr if process is not None else None
-        if self._stderr is not None:
+        if process is not None:
+            self._stderr = process.stderr
             self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
             self._stderr_thread.start()
 

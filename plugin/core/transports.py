@@ -95,23 +95,25 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
-                 writer: IO[bytes], stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
+                 writer: IO[bytes], processor: AbstractProcessor[T],
                  callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
         self._socket = socket
         self._reader = reader
         self._writer = writer
-        self._stderr = stderr
         self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
-        self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
         self._callback_object = weakref.ref(callback_object)
         self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
         self._reader_thread.start()
         self._writer_thread.start()
-        self._stderr_thread.start()
+
+        self._stderr = process.stderr if process is not None else None
+        if self._stderr is not None:
+            self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
+            self._stderr_thread.start()
 
     def send(self, payload: T) -> None:
         self._send_queue.put_nowait(payload)
@@ -170,7 +172,7 @@ class ProcessTransport(Transport[T]):
                 exit_code = self._process.wait(1)
             except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
                 pass
-        if self._process.poll() is None:
+        if self._process is not None and self._process.poll() is None:
             try:
                 # The process didn't stop itself. Terminate!
                 self._process.kill()
@@ -258,7 +260,8 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             start_subprocess
         )
     else:
-        process = start_subprocess()
+        if config.command:
+            process = start_subprocess()
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:
@@ -271,7 +274,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     if not reader or not writer:
         raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
     return ProcessTransport(
-        config.name, process, sock, reader, writer, process.stderr, json_rpc_processor, callback_object)  # type: ignore
+        config.name, process, sock, reader, writer, json_rpc_processor, callback_object)  # type: ignore
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

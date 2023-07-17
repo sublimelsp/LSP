@@ -83,6 +83,9 @@ The following tables give an overview of the scope names used by LSP.
 
 ### Semantic Highlighting
 
+!!! note
+    Semantic highlighting is disabled by default. To enable it, set `"semantic_highlighting": true` in your LSP user settings.
+
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
     Language servers that support semantic highlighting are for example *clangd* and *rust-analyzer*.
 

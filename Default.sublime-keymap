@@ -213,6 +213,12 @@
     //     "command": "lsp_expand_selection",
     //     "context": [{"key": "lsp.session_with_capability", "operand": "selectionRangeProvider"}]
     // },
+    // Fold around caret position
+    // {
+    //     "keys": ["UNBOUND"],
+    //     "command": "lsp_fold",
+    //     "context": [{"key": "lsp.session_with_capability", "operand": "foldingRangeProvider"}]
+    // },
     //==== Internal key-bindings ====
     {
         "keys": ["<character>"],

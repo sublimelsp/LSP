@@ -5968,6 +5968,10 @@ class Request(Generic[R]):
         return Request('textDocument/selectionRange', params)
 
     @classmethod
+    def foldingRange(cls, params: FoldingRangeParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/foldingRange', params, view)
+
+    @classmethod
     def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> 'Request':
         return Request("workspace/symbol", params, None, progress=True)
 

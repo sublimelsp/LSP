@@ -91,7 +91,7 @@ class LspFoldCommand(LspTextCommand):
                     FoldingRangeKind.Region: "LSP: Fold this region",
                     'array': "LSP: Fold this array",  # used by LSP-json
                     'object': "LSP: Fold this object",  # used by LSP-json
-                }.get(folding_range.get('kind', FoldingRangeKind.Region), "LSP: Fold this region")
+                }.get(folding_range.get('kind', ''), "LSP: Fold")
         return "LSP <debug>"  # is_visible will return False
 
     def run(

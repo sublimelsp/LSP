@@ -108,9 +108,7 @@ class LspFoldCommand(LspTextCommand):
             else:
                 selection = self.view.sel()
                 if len(selection) != 1 or not selection[0].empty():
-                    window = self.view.window()
-                    if window:
-                        window.status_message("Selection must be empty")
+                    self.view.run_command('fold_unfold')
                     return
                 pt = selection[0].b
             session = self.best_session(self.capability)

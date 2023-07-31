@@ -81,7 +81,7 @@ class LspFoldCommand(LspTextCommand):
             pt = selection[0].b
         for folding_range in sorted(self.folding_ranges, key=lambda r: r['startLine'], reverse=True):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if region.contains(pt):
+            if region.contains(pt) and not self.view.is_folded(region):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
                 # self.is_visible and self.run
                 self.folding_region = region
@@ -129,7 +129,7 @@ class LspFoldCommand(LspTextCommand):
             return
         for folding_range in sorted(response, key=lambda r: r['startLine'], reverse=True):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if region.contains(point):
+            if region.contains(point) and not self.view.is_folded(region):
                 self.view.fold(region)
                 return
         else:

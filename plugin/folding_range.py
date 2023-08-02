@@ -25,6 +25,20 @@ def folding_range_to_range(folding_range: FoldingRange) -> Range:
     }
 
 
+def sorted_folding_ranges(folding_ranges: List[FoldingRange]) -> List[FoldingRange]:
+    # Sort by reversed position and from innermost to outermost (if nested)
+    return sorted(
+        folding_ranges,
+        key=lambda r: (
+            r['startLine'],
+            r.get('startCharacter', UINT_MAX),
+            -r['endLine'],
+            -r.get('endCharacter', UINT_MAX)
+        ),
+        reverse=True
+    )
+
+
 class LspFoldCommand(LspTextCommand):
 
     capability = 'foldingRangeProvider'
@@ -79,7 +93,7 @@ class LspFoldCommand(LspTextCommand):
             if len(selection) != 1 or not selection[0].empty():
                 return "LSP <debug>"  # is_visible will return False
             pt = selection[0].b
-        for folding_range in sorted(self.folding_ranges, key=lambda r: r['startLine'], reverse=True):
+        for folding_range in sorted_folding_ranges(self.folding_ranges):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
             if region.contains(pt) and not self.view.is_folded(region):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
@@ -127,7 +141,7 @@ class LspFoldCommand(LspTextCommand):
             if window:
                 window.status_message("Code Folding not available")
             return
-        for folding_range in sorted(response, key=lambda r: r['startLine'], reverse=True):
+        for folding_range in sorted_folding_ranges(response):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
             if region.contains(point) and not self.view.is_folded(region):
                 self.view.fold(region)

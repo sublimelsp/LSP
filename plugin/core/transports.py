@@ -262,6 +262,9 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     else:
         if config.command:
             process = start_subprocess()
+        elif not config.tcp_port:
+            raise RuntimeError("Failed to provide command or tcp_port, at least one of them has to be configured")
+
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:

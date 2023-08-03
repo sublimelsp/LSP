@@ -65,6 +65,8 @@ The vast majority of language servers can communicate over stdio. To use stdio, 
 
 Some language servers can also act as a TCP server accepting incoming TCP connections. So: the language server subprocess is started by this package, and the subprocess will then open a TCP listener port. The editor can then connect as a client and initiate the communication. To use this mode, set `tcp_port` to a positive number designating the port to connect to on `localhost`.
 
+Optionally in this case, you can omit the `command` setting if you don't want Sublime LSP to manage the language server process and you'll take care of it yourself. 
+
 ### TCP - localhost - editor acts as a TCP server
 
 Some _LSP servers_ instead expect the _LSP client_ to act as a _TCP server_. The _LSP server_ will then connect as a _TCP client_, after which the _LSP client_ is expected to initiate the communication. To use this mode, set `tcp_port` to a negative number designating the port to bind to for accepting new TCP connections.

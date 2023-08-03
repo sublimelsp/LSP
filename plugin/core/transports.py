@@ -137,7 +137,9 @@ class ProcessTransport(Transport[T]):
         self.close()
         self._join_thread(self._writer_thread)
         self._join_thread(self._reader_thread)
-        self._join_thread(self._stderr_thread)
+        
+        if self._stderr_thread is not None:
+            self._join_thread(self._stderr_thread)
 
     def _read_loop(self) -> None:
         exception = None

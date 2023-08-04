@@ -630,6 +630,36 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
 
 See [Javascript/TypeScript](#javascripttypescript).
 
+## Typst
+
+1. Install the [Typst](https://packagecontrol.io/packages/Typst) package from Package Control for syntax highlighting.
+2. Download the [typst-lsp](https://github.com/nvarner/typst-lsp/releases) language server executable for your platform.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "typst-lsp": {
+                "enabled": true,
+                "command": ["C:\\path\\to\\typst-lsp-win32-x64.exe"],  // adjust this path according to your platform/setup
+                "selector": "text.typst"
+            }
+        }
+    }
+    ```
+4. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
+
+    ```jsonc
+    {
+        "auto_complete_triggers":
+        [
+            {"selector": "text.html, text.xml", "characters": "<"},
+            {"selector": "punctuation.accessor", "rhs_empty": true},
+            {"selector": "text.typst", "characters": "#", "rhs_empty": true},
+        ],
+    }
+    ```
+
 ## Vue
 
 There are multiple options:

@@ -592,6 +592,14 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     }, view, progress=True)
 
 
+def text_document_ranges_formatting(view: sublime.View) -> Request:
+    return Request("textDocument/rangesFormatting", {
+        "textDocument": text_document_identifier(view),
+        "options": formatting_options(view.settings()),
+        "ranges": [region_to_range(view, region) for region in view.sel() if not region.empty()]
+    }, view, progress=True)
+
+
 def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),

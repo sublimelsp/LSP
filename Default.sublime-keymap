@@ -217,6 +217,7 @@
     // {
     //     "keys": ["UNBOUND"],
     //     "command": "lsp_fold",
+    //     "args": {"strict": true},
     //     "context": [{"key": "lsp.session_with_capability", "operand": "foldingRangeProvider"}]
     // },
     //==== Internal key-bindings ====

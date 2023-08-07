@@ -40,6 +40,17 @@ def sorted_folding_ranges(folding_ranges: List[FoldingRange]) -> List[FoldingRan
 
 
 class LspFoldCommand(LspTextCommand):
+    """A command to fold at the current caret position or at a given point.
+
+    Command arguments:
+
+    - `manual`: Should be `true` when invoked from the command palette or via key binding, and `false` for menu items.
+    - `hidden`: Can be used for a hidden menu item with the purpose to run a request and store the response.
+    - `strict`: Allows to configure the folding behavior; `true` means to fold only when the caret is contained within
+                the folded region (like ST built-in `fold` command), and `false` will fold a region even if the caret is
+                anywhere else on the starting line.
+    - `point`:  Can be used instead of the caret position, measured as character offset in the document.
+    """
 
     capability = 'foldingRangeProvider'
     folding_ranges = []  # type: List[FoldingRange]
@@ -47,7 +58,12 @@ class LspFoldCommand(LspTextCommand):
     folding_region = None  # type: Optional[sublime.Region]
 
     def is_visible(
-        self, manual: bool = True, hidden: bool = False, event: Optional[dict] = None, point: Optional[int] = None
+        self,
+        manual: bool = True,
+        hidden: bool = False,
+        strict: bool = True,
+        event: Optional[dict] = None,
+        point: Optional[int] = None
     ) -> bool:
         if manual:
             return True
@@ -78,7 +94,12 @@ class LspFoldCommand(LspTextCommand):
         self.folding_ranges = response or []
 
     def description(
-        self, manual: bool = True, hidden: bool = False, event: Optional[dict] = None, point: Optional[int] = None
+        self,
+        manual: bool = True,
+        hidden: bool = False,
+        strict: bool = True,
+        event: Optional[dict] = None,
+        point: Optional[int] = None
     ) -> str:
         if manual:
             return "LSP: Fold"
@@ -95,7 +116,9 @@ class LspFoldCommand(LspTextCommand):
             pt = selection[0].b
         for folding_range in sorted_folding_ranges(self.folding_ranges):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if region.contains(pt) and not self.view.is_folded(region):
+            if (strict and region.contains(pt) or
+                    not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt)) and \
+                    not self.view.is_folded(region):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
                 # self.is_visible and self.run
                 self.folding_region = region
@@ -113,6 +136,7 @@ class LspFoldCommand(LspTextCommand):
         edit: sublime.Edit,
         manual: bool = True,
         hidden: bool = False,
+        strict: bool = True,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> None:
@@ -130,12 +154,12 @@ class LspFoldCommand(LspTextCommand):
                 params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
-                    partial(self._handle_response_manual_async, pt)
+                    partial(self._handle_response_manual_async, pt, strict)
                 )
         elif self.folding_region is not None:
             self.view.fold(self.folding_region)
 
-    def _handle_response_manual_async(self, point: int, response: Optional[List[FoldingRange]]) -> None:
+    def _handle_response_manual_async(self, point: int, strict: bool, response: Optional[List[FoldingRange]]) -> None:
         if not response:
             window = self.view.window()
             if window:
@@ -143,7 +167,9 @@ class LspFoldCommand(LspTextCommand):
             return
         for folding_range in sorted_folding_ranges(response):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if region.contains(point) and not self.view.is_folded(region):
+            if (strict and region.contains(point) or
+                    not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point)) and \
+                    not self.view.is_folded(region):
                 self.view.fold(region)
                 return
         else:

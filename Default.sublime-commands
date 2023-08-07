@@ -162,4 +162,9 @@
         "caption": "LSP: Toggle Inlay Hints",
         "command": "lsp_toggle_inlay_hints",
     },
+    // {
+    //     "caption": "LSP: Fold All Block Comments",
+    //     "command": "lsp_fold_all",
+    //     "args": {"kind": "comment"}
+    // },
 ]

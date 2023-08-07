@@ -176,3 +176,25 @@ class LspFoldCommand(LspTextCommand):
             window = self.view.window()
             if window:
                 window.status_message("Code Folding not available")
+
+
+class LspFoldAllCommand(LspTextCommand):
+
+    capability = 'foldingRangeProvider'
+
+    def run(self, edit: sublime.Edit, kind: Optional[str] = None, event: Optional[dict] = None) -> None:
+        session = self.best_session(self.capability)
+        if session:
+            params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+            session.send_request_async(
+                Request.foldingRange(params, self.view), partial(self._handle_response_async, kind))
+
+    def _handle_response_async(self, kind: Optional[str], response: Optional[List[FoldingRange]]) -> None:
+        if not response:
+            return
+        regions = [
+            range_to_region(folding_range_to_range(folding_range), self.view)
+            for folding_range in response if not kind or kind == folding_range.get('kind')
+        ]
+        if regions:
+            self.view.fold(regions)

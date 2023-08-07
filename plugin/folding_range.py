@@ -196,5 +196,10 @@ class LspFoldAllCommand(LspTextCommand):
             range_to_region(folding_range_to_range(folding_range), self.view)
             for folding_range in response if not kind or kind == folding_range.get('kind')
         ]
+        if not regions:
+            return
+        # Don't fold regions which contain the caret or selection
+        selections = self.view.sel()
+        regions = [region for region in regions if not any(region.intersects(selection) for selection in selections)]
         if regions:
             self.view.fold(regions)

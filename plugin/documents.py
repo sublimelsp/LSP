@@ -790,12 +790,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_initial_folding_ranges(self, kinds: List[str], response: Optional[List[FoldingRange]]) -> None:
         if not response:
             return
-        for kind in kinds:
-            regions = [
-                range_to_region(folding_range_to_range(folding_range), self.view)
-                for folding_range in response if kind == folding_range.get('kind')
-            ]
-            self.view.fold(regions)
+        regions = [
+            range_to_region(folding_range_to_range(folding_range), self.view)
+            for kind in kinds
+            for folding_range in response if kind == folding_range.get('kind')
+        ]
+        self.view.fold(regions)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

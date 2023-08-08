@@ -747,6 +747,7 @@
                   }
                 ]
               },
+              "uniqueItems": true,
               "markdownDescription": "Determines ranges which initially should be folded when a document is opened, provided that the language server has support for this."
             }
           },

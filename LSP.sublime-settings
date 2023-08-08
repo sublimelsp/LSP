@@ -212,6 +212,14 @@
   // about how to configure your color scheme for semantic highlighting.
   "semantic_highlighting": false,
 
+  // Determines ranges which initially should be folded when a document is opened,
+  // provided that the language server has support for this.
+  "initially_folded": [
+    // "comment",
+    // "imports",
+    // "region",
+  ],
+
   // --- Debugging ----------------------------------------------------------------------
 
   // Show verbose debug messages in the sublime console.

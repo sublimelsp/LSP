@@ -168,23 +168,24 @@ class ProcessTransport(Transport[T]):
 
     def _end(self, exception: Optional[Exception]) -> None:
         exit_code = 0
-        if not exception and self._process:
-            try:
-                # Allow the process to stop itself.
-                exit_code = self._process.wait(1)
-            except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
-                pass
-        if self._process is not None and self._process.poll() is None:
-            try:
-                # The process didn't stop itself. Terminate!
-                self._process.kill()
-                # still wait for the process to die, or zombie processes might be the result
-                # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
-                self._process.wait()
-            except (AttributeError, ProcessLookupError):
-                pass
-            except Exception as ex:
-                exception = ex  # TODO: Old captured exception is overwritten
+        if self._process:
+            if not exception:
+                try:
+                    # Allow the process to stop itself.
+                    exit_code = self._process.wait(1)
+                except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
+                    pass
+            if self._process.poll() is None:
+                try:
+                    # The process didn't stop itself. Terminate!
+                    self._process.kill()
+                    # still wait for the process to die, or zombie processes might be the result
+                    # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
+                    self._process.wait()
+                except (AttributeError, ProcessLookupError):
+                    pass
+                except Exception as ex:
+                    exception = ex  # TODO: Old captured exception is overwritten
 
         def invoke() -> None:
             callback_object = self._callback_object()

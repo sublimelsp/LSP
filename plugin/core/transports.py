@@ -96,7 +96,8 @@ class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: Optional[subprocess.Popen], socket: Optional[socket.socket],
                  reader: IO[bytes], writer: IO[bytes], stderr: Optional[IO[bytes]],
-                 processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]) -> None:
+                 processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]
+                 ) -> None:
         self._closed = False
         self._process = process
         self._stderr = stderr
@@ -278,10 +279,10 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     if not reader or not writer:
         raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
     return ProcessTransport(
-        config.name, process, sock, reader, writer,
+        config.name, process, sock, reader, writer,  # type: ignore
         None if process is None else process.stderr,
         json_rpc_processor, callback_object
-    )  # type: ignore
+    )
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

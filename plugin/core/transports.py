@@ -95,8 +95,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: Optional[subprocess.Popen], socket: Optional[socket.socket],
-                 reader: IO[bytes], writer: IO[bytes], stderr: Optional[IO[bytes]], processor: AbstractProcessor[T],
-                 callback_object: TransportCallbacks[T]) -> None:
+                 reader: IO[bytes], writer: IO[bytes], stderr: Optional[IO[bytes]],
+                 processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
         self._stderr = stderr

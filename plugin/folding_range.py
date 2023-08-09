@@ -42,14 +42,15 @@ def sorted_folding_ranges(folding_ranges: List[FoldingRange]) -> List[FoldingRan
 class LspFoldCommand(LspTextCommand):
     """A command to fold at the current caret position or at a given point.
 
-    Command arguments:
+    Optional command arguments:
 
-    - `manual`: Should be `true` when invoked from the command palette or via key binding, and `false` for menu items.
-    - `hidden`: Can be used for a hidden menu item with the purpose to run a request and store the response.
-    - `strict`: Allows to configure the folding behavior; `true` means to fold only when the caret is contained within
-                the folded region (like ST built-in `fold` command), and `false` will fold a region even if the caret is
-                anywhere else on the starting line.
-    - `point`:  Can be used instead of the caret position, measured as character offset in the document.
+    - `prefetch`:   Should usually be `false`, except for the built-in menu items under the "Edit" main menu, which
+                    pre-run a request and cache the response to dynamically show or hide the item.
+    - `hidden`:     Can be used for a hidden menu item with the purpose to run a request and store the response.
+    - `strict`:     Allows to configure the folding behavior; `true` means to fold only when the caret is contained
+                    within the folded region (like ST built-in `fold` command), and `false` will fold a region even if
+                    the caret is anywhere else on the starting line.
+    - `point`:      Can be used instead of the caret position, measured as character offset in the document.
     """
 
     capability = 'foldingRangeProvider'
@@ -59,13 +60,13 @@ class LspFoldCommand(LspTextCommand):
 
     def is_visible(
         self,
-        manual: bool = True,
+        prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> bool:
-        if manual:
+        if not prefetch:
             return True
         # There should be a single empty selection in the view, otherwise this functionality would be misleading
         selection = self.view.sel()
@@ -95,13 +96,13 @@ class LspFoldCommand(LspTextCommand):
 
     def description(
         self,
-        manual: bool = True,
+        prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> str:
-        if manual:
+        if not prefetch:
             return "LSP: Fold"
         # Implementation detail of Sublime Text: TextCommand.description is called *before* TextCommand.is_visible
         self.folding_region = None
@@ -134,13 +135,16 @@ class LspFoldCommand(LspTextCommand):
     def run(
         self,
         edit: sublime.Edit,
-        manual: bool = True,
+        prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> None:
-        if manual:
+        if prefetch:
+            if self.folding_region is not None:
+                self.view.fold(self.folding_region)
+        else:
             if point is not None:
                 pt = point
             else:
@@ -156,8 +160,6 @@ class LspFoldCommand(LspTextCommand):
                     Request.foldingRange(params, self.view),
                     partial(self._handle_response_manual_async, pt, strict)
                 )
-        elif self.folding_region is not None:
-            self.view.fold(self.folding_region)
 
     def _handle_response_manual_async(self, point: int, strict: bool, response: Optional[List[FoldingRange]]) -> None:
         if not response:

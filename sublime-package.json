@@ -737,7 +737,7 @@
                       "region"
                     ],
                     "markdownEnumDescriptions": [
-                      "Block comments",
+                      "Comment blocks",
                       "Imports or includes",
                       "Regions (e.g. `#region`)"
                     ]

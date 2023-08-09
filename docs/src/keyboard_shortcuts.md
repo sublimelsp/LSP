@@ -10,7 +10,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Auto Complete | <kbd>ctrl</kbd> <kbd>space</kbd> (also on macOS) | `auto_complete`
 | Expand Selection | unbound | `lsp_expand_selection`
 | Find References | <kbd>shift</kbd> <kbd>f12</kbd> | `lsp_symbol_references` (supports optional args: `{"include_declaration": true/false}`)
-| Fold | unbound | `lsp_fold` (supports optional args: `{"strict": true/false}`)
+| Fold | unbound | `lsp_fold` (supports optional args: `{"strict": true/false}` - to configure whether to fold only when the caret is contained within the folded region (`true`), or even when it is anywhere on the starting line (`false`))
 | Fold All | unbound | `lsp_fold_all` (supports optional args: `{"kind": "comment" | "imports" | "region"}`)
 | Follow Link | unbound | `lsp_open_link`
 | Format File | unbound | `lsp_format_document`

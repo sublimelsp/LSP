@@ -6,8 +6,12 @@
         "id": "fold",
         "children": [
           {
+            "id": "lsp",
+            "caption": "-"
+          },
+          {
             "command": "lsp_fold",
-            "args": {"manual": false}
+            "args": {"prefetch": true}
           }
         ]
       },
@@ -17,7 +21,7 @@
       },
       {
         "command": "lsp_fold",
-        "args": {"manual": false, "hidden": true}
+        "args": {"prefetch": true, "hidden": true}
       },
       {
         "command": "lsp_source_action",

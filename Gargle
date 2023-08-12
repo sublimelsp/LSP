@@ -1,0 +1,275 @@
+<pre id="line1"><span></span><span class="error" title="Start tag seen without seeing a doctype first. Expected “<!DOCTYPE html>”.">&lt;<span class="start-tag">pre</span> <span class="attribute-name">id</span>="<a class="attribute-value">line1</a>"&gt;</span><span></span><span>&lt;<span class="start-tag">span</span>&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">error</a>" <span class="attribute-name">title</span>="<a class="attribute-value">Start tag seen without seeing a doctype first. Expected “&lt;!DOCTYPE html&gt;”.</a>"&gt;</span><span><span class="entity"><span>&amp;</span>lt;</span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">start-tag</a>"&gt;</span><span>pre</span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span> </span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-name</a>"&gt;</span><span>translate</span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>="</span><span>&lt;<span class="start-tag">a</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-value</a>"&gt;</span><span>no</span><span>&lt;/<span class="end-tag">a</span>&gt;</span><span>" </span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-name</a>"&gt;</span><span>dir</span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>="</span><span>&lt;<span class="start-tag">a</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-value</a>"&gt;</span><span>ltr</span><span>&lt;/<span class="end-tag">a</span>&gt;</span><span>" </span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-name</a>"&gt;</span><span>is-upgraded</span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>="</span><span>&lt;<span class="start-tag">a</span> <span class="attribute-name">class</span>="<a class="attribute-value">attribute-value</a>"&gt;</span><span></span><span>&lt;/<span class="end-tag">a</span>&gt;</span><span>"<span class="entity"><span>&amp;</span>gt;</span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span></span><span>&lt;<span class="start-tag">span</span>&gt;</span><span> Certificate  ::=  SEQUENCE  {
+<span id="line2"></span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">id</span>="<a class="attribute-value">line2</a>"&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>     tbsCertificate       TBSCertificate,
+<span id="line3"></span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">id</span>="<a class="attribute-value">line3</a>"&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>     signatureAlgorithm   AlgorithmIdentifier,
+<span id="line4"></span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">id</span>="<a class="attribute-value">line4</a>"&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span>     signature            BIT STRING  }
+<span id="line5"></span></span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">id</span>="<a class="attribute-value">line5</a>"&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span> </span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span></span><span>&lt;<span class="start-tag">span</span>&gt;</span><span><span class="entity"><span>&amp;</span>lt;</span>/</span><span>&lt;<span class="start-tag">span</span> <span class="attribute-name">class</span>="<a class="attribute-value">end-tag</a>"&gt;</span><span>pre</span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span><span class="entity"><span>&amp;</span>gt;</span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span></span><span>&lt;<span class="start-tag">span</span>&gt;</span><span></span><span>&lt;/<span class="end-tag">span</span>&gt;</span><span></span><span>&lt;/<span class="end-tag">pre</span>&gt;</span><span></span></pre>
+<pre id="line1"><span></span><span class="error" title="Start tag seen without seeing a doctype first. Expected “<!DOCTYPE html>”.">&lt;<span class="start-tag">pre</span> <span class="attribute-name">translate</span>="<a class="attribute-value">no</a>" <span class="attribute-name">dir</span>="<a class="attribute-value">ltr</a>" <span class="attribute-name">is-upgraded</span>="<a class="attribute-value"></a>"&gt;</span><span> Certificate  ::=  SEQUENCE  {
+<span id="line2"></span>     tbsCertificate       TBSCertificate,
+<span id="line3"></span>     signatureAlgorithm   AlgorithmIdentifier,
+<span id="line4"></span>     signature            BIT STRING  }
+<span id="line5"></span> </span><span>&lt;/<span class="end-tag">pre</span>&gt;</span><span></span></pre>
+Live Share
+v1.0.5877
+Microsoft
+microsoft.com
+13,461,678
+(146)
+Real-time collaborative development from the comfort of your favorite tools.
+
+    Disable
+
+Uninstall
+
+This extension is enabled globally.
+Settings (39)
+ID	Description	Default
+liveshare.anonymousGuestApproval	%extension.liveshare.anonymousGuestApproval.title%	prompt
+liveshare.launcherClient	%extension.liveshare.launcherClient.title%	web
+liveshare.diagnosticLoggingLevel	%extension.liveshare.diagnosticLoggingLevel.title%	Warning
+liveshare.diagnosticLogging	%extension.liveshare.diagnosticLogging.title%	false
+liveshare.diagnosticMode	%extension.liveshare.diagnosticMode.title%	false
+liveshare.connectionMode	%extension.liveshare.connectionMode.title%	auto
+liveshare.nameTagVisibility	%extension.liveshare.nameTagVisibility.title%	Activity
+liveshare.guestApprovalRequired	%extension.liveshare.guestApprovalRequired.title%	false
+liveshare.shareExternalFiles	%extension.liveshare.shareExternalFiles.title%	true
+liveshare.joinDebugSessionOption	%extension.liveshare.joinDebugSessionOption.title%	Automatic
+liveshare.showInStatusBar	%extension.liveshare.showInStatusBar.title%	always
+liveshare.sharedTerminalWidth	%extension.liveshare.sharedTerminalWidth.title%	120
+liveshare.sharedTerminalHeight	%extension.liveshare.sharedTerminalHeight.title%	50
+liveshare.featureSet	
+
+%extension.liveshare.features.markdownDescription%
+	stable
+liveshare.keepAliveInterval	%extension.liveshare.keepAliveInterval.title%	20
+liveshare.allowGuestTaskControl	%extension.liveshare.allowGuestTaskControl.title%	false
+liveshare.allowGuestDebugControl	%extension.liveshare.allowGuestDebugControl.title%	false
+liveshare.languages.allowGuestCommandControl	%extension.liveshare.allowGuestCommandControl.title%	false
+liveshare.notebooks.allowGuestExecuteCells	%extension.liveshare.allowGuestExecuteCells.title%	false
+liveshare.focusBehavior	%extension.liveshare.focusBehavior.title%	accept
+liveshare.alwaysFollowHost	%extension.liveshare.alwaysFollowHost.title%	false
+liveshare.showReadOnlyUsersInEditor	%extension.liveshare.showReadOnlyUsersInEditor.title%	whileFollowing
+liveshare.increasedGuestLimit	%extension.liveshare.increasedGuestLimit.title%	true
+liveshare.autoShareTerminals	%extension.liveshare.autoShareTerminals.title%	true
+liveshare.codeLens	%extension.liveshare.codeLens.title%	true
+liveshare.showVerboseNotifications	%extension.liveshare.showVerboseNotifications.title%	true
+liveshare.populateGitCoAuthors	%extension.liveshare.populateGitCoAuthors.title%	always
+liveshare.autoShareServers	%extension.liveshare.autoShareServers.title%	true
+liveshare.openSharedServers	%extension.liveshare.openSharedServers.title%	true
+liveshare.publishWorkspaceInfo	%extension.liveshare.publishWorkspaceInfo.description%	false
+liveshare.comments	%extension.liveshare.comments.description%	true
+liveshare.accessibility.accessibilityFeaturesEnabled	%extension.liveshare.accessibility.accessibilityFeaturesEnabled.description%	auto
+liveshare.accessibility.outputDevice	%extension.liveshare.accessibility.outputDevice.description%	Default
+liveshare.accessibility.voiceVolume	%extension.liveshare.accessibility.voiceVolume.description%	100
+liveshare.accessibility.soundVolume	%extension.liveshare.accessibility.soundVolume.description%	100
+liveshare.accessibility.speechRate	%extension.liveshare.accessibility.speechRate.description%	2
+liveshare.accessibility.voice	%extension.liveshare.accessibility.voice.description%	en-US-Jenny
+liveshare.accessibility.voiceEnabled	%extension.liveshare.accessibility.voiceEnabled.description%	true
+liveshare.accessibility.soundsEnabled	%extension.liveshare.accessibility.soundsEnabled.description%	true
+Commands (99)
+ID	Title	Keyboard Shortcuts	Menu Contexts
+liveshare.signin	%extension.liveshare.signIn.title%		commandPalettecommandPalettecommandPalette
+liveshare.signin.token	Sign In With User Code		commandPalettecommandPalettecommandPalettecommandPalette
+liveshare.signout	%extension.liveshare.signOut.title%		commandPalette
+liveshare.copyToken	Copy Cascade Token		view/titlecommandPalette
+liveshare.start	%extension.liveshare.start.title%		commandPalette
+liveshare.startFromFileTreeExplorer	%extension.liveshare.start.title%		view/titlecommandPalette
+liveshare.joinFromActivityBar	%extension.liveshare.join.title%		view/titlestatusBar/remoteIndicatorcommandPalette
+liveshare.startFromActivityBar	%extension.liveshare.start.title%		view/titlestatusBar/remoteIndicatorcommandPalette
+liveshare.startFromWelcomeContent	%extension.liveshare.start.title%		commandPalette
+liveshare.startFromWelcomePage	%extension.liveshare.start.title%		commandPalette
+liveshare.end	%extension.liveshare.end.title%		commandPalette
+liveshare.endFromFileTreeExplorer	%extension.liveshare.end.title%		view/titlecommandPalette
+liveshare.endFromActivityBar	%extension.liveshare.end.title%		view/titlecommandPalette
+liveshare.join	%extension.liveshare.join.title%	
+Ctrl+Alt+J
+	commandPalette
+liveshare.joinFromWelcomeContent	%extension.liveshare.join.title%		commandPalette
+liveshare.leave	%extension.liveshare.leave.title%		statusBar/remoteIndicatorcommandPalette
+liveshare.leaveFromFileTreeExplorer	%extension.liveshare.leave.title%		view/titlecommandPalette
+liveshare.leaveFromActivityBar	%extension.liveshare.leave.title%		view/titlecommandPalette
+liveshare.collaboration.link.copy	%extension.liveshare.copyLink.title%		commandPalette
+liveshare.collaboration.link.copyFromFileTreeExplorer	%extension.liveshare.copyLink.title%		view/titlecommandPalette
+liveshare.collaboration.link.copyFromActivityBar	%extension.liveshare.copyLink.title%		view/titlecommandPalette
+liveshare.debug	%extension.liveshare.joinDebug.title%		commandPalette
+liveshare.listServers	%extension.liveshare.showSharedServers.title%		commandPalette
+liveshare.shareServer	%extension.liveshare.shareServer.title%		commandPalette
+liveshare.fileTreeExplorer.shareServer	%extension.liveshare.shareServer.title%		view/item/contextview/item/contextcommandPalette
+liveshare.activityBar.shareServer	%extension.liveshare.shareServer.title%		view/item/contextview/item/contextcommandPalette
+liveshare.fileTreeExplorer.openServerInBrowser	%extension.liveshare.openServerInBrowser.title%		view/item/contextview/item/contextcommandPalette
+liveshare.activityBar.openServerInBrowser	%extension.liveshare.openServerInBrowser.title%		view/item/contextview/item/contextcommandPalette
+liveshare.unshareServer	%extension.liveshare.unshareServer.title%		commandPalette
+liveshare.fileTreeExplorer.unshareServer	%extension.liveshare.unshareServer.title%		view/item/contextview/item/contextcommandPalettecommandPalette
+liveshare.activityBar.unshareServer	%extension.liveshare.unshareServer.title%		view/item/contextview/item/contextcommandPalettecommandPalette
+liveshare.fileTreeExplorer.copyServerURL	%extension.liveshare.copyServerURL.title%		view/item/contextview/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.activityBar.copyServerURL	%extension.liveshare.copyServerURL.title%		view/item/contextview/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.focusParticipants	%extension.liveshare.focusParticipants.title%		editor/titlestatusBar/remoteIndicatorcommandPalette
+liveshare.focusParticipantsFromFileTreeExplorer	%extension.liveshare.focusParticipants.title%		view/titlecommandPalette
+liveshare.focusParticipantsFromActivityBar	%extension.liveshare.focusParticipants.title%		view/titlecommandPalette
+liveshare.listParticipants	%extension.liveshare.listParticipants.title%		commandPalette
+liveshare.follow	%extension.liveshare.followParticipant.title%	
+Ctrl+Alt+F
+	editor/titlestatusBar/remoteIndicatorcommandPalette
+liveshare.followToTheSide	%extension.liveshare.followParticipantToSide.title%	
+Ctrl+Alt+/
+	commandPalette
+liveshare.followToTheSideFromActivityBar	%extension.liveshare.followToSide.title%		view/item/contextcommandPalette
+liveshare.followToTheSideFromTreeExplorer	%extension.liveshare.followToSide.title%		view/item/contextcommandPalette
+liveshare.followFromFileTreeExplorer	%extension.liveshare.followParticipant.title%		view/item/contextcommandPalette
+liveshare.followFromActivityBar	%extension.liveshare.followParticipant.title%		view/item/contextcommandPalette
+liveshare.unfollow	%extension.liveshare.unfollowParticipant.title%	
+Ctrl+Alt+F
+	editor/titlecommandPalette
+liveshare.unfollowFromFileTreeExplorer	%extension.liveshare.unfollowParticipant.title%		view/item/contextcommandPalette
+liveshare.unfollowFromActivityBar	%extension.liveshare.unfollowParticipant.title%		view/item/contextcommandPalette
+liveshare.focusParticipantFromActivityBar	%extension.liveshare.focusParticipant.title%		view/item/contextcommandPalette
+liveshare.focusParticipantFromFileTreeExplorer	%extension.liveshare.focusParticipant.title%		view/item/contextcommandPalette
+liveshare.removeParticipant	%extension.liveshare.removeParticipant.title%		commandPalette
+liveshare.removeParticipantFromFileTreeExplorer	%extension.liveshare.removeParticipant.title%		view/item/contextcommandPalette
+liveshare.removeParticipantFromActivityBar	%extension.liveshare.removeParticipant.title%		view/item/contextcommandPalette
+liveshare.blockParticipant	%extension.liveshare.blockParticipant.title%		commandPalette
+liveshare.blockParticipantFromFileTreeExplorer	%extension.liveshare.blockParticipant.title%		view/item/contextcommandPalette
+liveshare.blockParticipantFromActivityBar	%extension.liveshare.blockParticipant.title%		view/item/contextcommandPalette
+liveshare.fileTreeExplorer.removeTerminal	%extension.liveshare.removeTerminal.title%		view/item/contextview/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.activityBar.removeTerminal	%extension.liveshare.removeTerminal.title%		view/item/contextview/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.exportLogs	%extension.liveshare.exportLogs.title%		commandPalette
+liveshare.getCoeditingInformation	%extension.liveshare.getCoeditingInformation.title%		commandPalette
+liveshare.shareTerminal	%extension.liveshare.shareTerminal.title%		commandPalette
+liveshare.fileTreeExplorer.shareTerminal	%extension.liveshare.shareTerminal.title%		view/item/contextview/item/contextcommandPalette
+liveshare.activityBar.shareTerminal	%extension.liveshare.shareTerminal.title%		view/item/contextview/item/contextcommandPalette
+liveshare.listTerminals	%extension.liveshare.showSharedTerminals.title%		commandPalette
+liveshare.help	%extension.liveshare.help.title%		commandPalette
+liveshare.fileTreeExplorer.openTerminal	%extension.liveshare.focusTerminal.title%		view/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.activityBar.openTerminal	%extension.liveshare.focusTerminal.title%		view/item/contextview/item/contextview/item/contextcommandPalette
+liveshare.fileTreeExplorer.makeTerminalReadWrite	%extension.liveshare.makeReadWrite.title%		view/item/contextcommandPalette
+liveshare.activityBar.makeTerminalReadWrite	%extension.liveshare.makeReadWrite.title%		view/item/contextcommandPalette
+liveshare.fileTreeExplorer.makeTerminalReadOnly	%extension.liveshare.makeReadOnly.title%		view/item/contextcommandPalette
+liveshare.activityBar.makeTerminalReadOnly	%extension.liveshare.makeReadOnly.title%		view/item/contextcommandPalette
+liveshare.startReadOnly	%extension.liveshare.startReadOnlySession.title%		commandPalette
+liveshare.startReadOnlyFromFileTreeExplorer	%extension.liveshare.startReadOnlySession.title%		commandPalette
+liveshare.startReadOnlyFromActivityBar	%extension.liveshare.startReadOnlySession.title%		commandPalette
+liveshare.startReadOnlyFromWelcomeContent	%extension.liveshare.startReadOnlySession.title%		commandPalette
+liveshare.signInAndReload	%extension.liveshare.signIn.title%		commandPalette
+liveshare.openSessionChat	%extension.liveshare.chatOpenSession.title%		statusBar/remoteIndicatorcommandPalette
+liveshare.openActivityLog	%extension.liveshare.openActivityLog.title%		commandPalette
+liveshare.scc.openChange	%extension.liveshare.openChanges.title%		editor/titlescm/resourceState/contextcommandPalette
+liveshare.scc.openFile	%extension.liveshare.openFile.title%		editor/titlescm/resourceState/contextscm/resourceState/contextcommandPalette
+liveshare.scc.openFile2	%extension.liveshare.openFile.title%		commandPalette
+liveshare.scc.clean	%extension.liveshare.discardChanges.title%		scm/resourceState/contextscm/resourceState/contextcommandPalette
+liveshare.scc.cleanAll	%extension.liveshare.discardAllChanges.title%		scm/resourceGroup/contextscm/resourceGroup/contextcommandPalette
+liveshare.scc.revertChange	%extension.liveshare.revertChange.title%		scm/change/titlecommandPalette
+liveshare.activityBar.user.elevate	%extension.liveshare.makeReadWrite.title%		view/item/contextview/item/contextcommandPalette
+liveshare.activityBar.user.decrease	%extension.liveshare.makeReadOnly.title%		view/item/contextview/item/contextcommandPalette
+liveshare.fileTreeExplorer.user.elevate	%extension.liveshare.makeReadWrite.title%		view/item/contextview/item/contextcommandPalette
+liveshare.fileTreeExplorer.user.decrease	%extension.liveshare.makeReadOnly.title%		view/item/contextview/item/contextcommandPalette
+liveshare.comments.createThread	%extension.liveshare.comments.createThread.title%		comments/commentThread/contextcommandPalette
+liveshare.comments.reply	%extension.liveshare.comments.reply.title%		comments/commentThread/contextcommandPalette
+liveshare.comments.editComment	%extension.liveshare.comments.editComment.title%		comments/comment/titlecommandPalette
+liveshare.comments.deleteComment	%extension.liveshare.comments.deleteComment.title%		comments/comment/titlecommandPalette
+liveshare.comments.deleteThread	%extension.liveshare.comments.deleteThread.title%		comments/commentThread/titlecommandPalette
+liveshare.comments.saveComment	%extension.liveshare.comments.saveComment.title%		comments/comment/contextcommandPalette
+liveshare.comments.cancelEditComment	%extension.liveshare.comments.cancelEditComment.title%		comments/comment/contextcommandPalette
+liveshare.openInVSCode	Open in VS Code		statusBar/remoteIndicatormenuBar/homecommandPalette
+liveshare.openInVS	Open in Visual Studio		statusBar/remoteIndicatormenuBar/homecommandPalette
+liveshare.accessibility.setOutputDevice	Accessibility: Set Output Device		commandPalette
+liveshare.accessibility.toggleVoiceEnabled	Accessibility: Toggle Voice Enabled		commandPalette
+liveshare.accessibility.toggleSoundsEnabled	Accessibility: Toggle Sounds Enabled		commandPalette
+liveshare.accessibility.announceCoeditorLocation	Accessibility: Announce Co-editor Location		commandPalette
+Debuggers (2)
+Name	Type
+Visual Studio Live Share Participant Debugging	vslsJoin
+Visual Studio Live Share Debugging	vslsShare
+View Containers (1)
+ID	Title	Where
+liveshare	%extension.liveshare.liveShare.title%	activitybar
+Views (4)
+ID	Name	Where
+liveshare.session	%extension.liveshare.sessionDetails.title%	liveshare
+liveshare.help	%extension.liveshare.help.title%	liveshare
+liveshare.devtools	Dev Tools	liveshare
+liveshare.session.explorer	%extension.liveshare.liveShare.title%	explorer
+Activation Events (3)
+
+    onFileSystemAccess:vsls
+    onFileSystem:vsls
+    onUri// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('GET /orgs/{org}/actions/cache/usage', {
+  org: 'ORG',
+  headers: {
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+})
+// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('GET /orgs/{org}/actions/cache/usage-by-repository', {
+  org: 'ORG',
+  headers: {
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('GET /repos/{owner}/{repo}/actions/caches', {
+  owner: 'OWNER',
+  repo: 'REPO',
+  headers: {
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+})
+// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('GET /repos/{owner}/{repo}/actions/caches', {
+  owner: 'OWNER',
+  repo: 'REPO',
+  headers: {
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+})
+// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}', {
+  owner: 'OWNER',
+  repo: 'REPO',
+  cache_id: 'CACHE_ID',
+  headers: {
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+})
+      "integrity": "sha512-/fvYntiO1GeICvqbQ3doGDIP97vWmvFt83GKguJ6prmQM2iXZfFcq6YE8KteFyRtX2/h5Hf91BYvPodJKFYv5Q=="
+    },
+    "node_modules/@types/node": {
+      "version": "20.4.10",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.4.10.tgz",
+      "integrity": "sha512-vwzFiiy8Rn6E0MtA13/Cxxgpan/N6UeNYR9oUu6kuJWxu6zCk98trcDp8CBhbtaeuq9SykCmXkFr2lWLoPcvLg=="
+    },
+    "node_modules/@xmldom/xmldom": {
+      "version": "0.8.10",
+@@ -1328,9 +1328,9 @@
+      "integrity": "sha512-/fvYntiO1GeICvqbQ3doGDIP97vWmvFt83GKguJ6prmQM2iXZfFcq6YE8KteFyRtX2/h5Hf91BYvPodJKFYv5Q=="
+    },
+    "@types/node": {
+      "version": "20.4.10",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.4.10.tgz",
+      "integrity": "sha512-vwzFiiy8Rn6E0MtA13/Cxxgpan/N6UeNYR9oUu6kuJWxu6zCk98trcDp8CBhbtaeuq9SykCmXkFr2lWLoPcvLg=="
+    },
+    "@xmldom/xmldom": {
+      "version": "0.8.10",

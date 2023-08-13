@@ -123,13 +123,13 @@ class LspFoldCommand(LspTextCommand):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
                 # self.is_visible and self.run
                 self.folding_region = region
-                return {
-                    FoldingRangeKind.Comment: "LSP: Fold this comment",
-                    FoldingRangeKind.Imports: "LSP: Fold imports",
-                    FoldingRangeKind.Region: "LSP: Fold this region",
-                    'array': "LSP: Fold this array",  # used by LSP-json
-                    'object': "LSP: Fold this object",  # used by LSP-json
-                }.get(folding_range.get('kind', ''), "LSP: Fold")
+                kind = folding_range.get('kind')
+                if kind == FoldingRangeKind.Imports:
+                    return "LSP: Fold Imports"
+                elif kind:
+                    return "LSP: Fold this {}".format(kind.title())  # pyright: ignore  # FoldingRangeKind -> StrEnum
+                else:
+                    return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
 
     def run(

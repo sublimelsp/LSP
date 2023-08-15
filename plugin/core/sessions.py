@@ -37,6 +37,7 @@ from .protocol import ErrorCodes
 from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
+from .protocol import FoldingRangeKind
 from .protocol import GeneralClientCapabilities
 from .protocol import InitializeError
 from .protocol import InitializeParams
@@ -399,6 +400,16 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "selectionRange": {
             "dynamicRegistration": True
+        },
+        "foldingRange": {
+            "dynamicRegistration": True,
+            "foldingRangeKind": {
+                "valueSet": [
+                    FoldingRangeKind.Comment,
+                    FoldingRangeKind.Imports,
+                    FoldingRangeKind.Region
+                ]
+            }
         },
         "codeLens": {
             "dynamicRegistration": True

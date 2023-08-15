@@ -10,6 +10,8 @@ from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import DocumentHighlightParams
 from .core.protocol import DocumentUri
+from .core.protocol import FoldingRange
+from .core.protocol import FoldingRangeParams
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
@@ -41,9 +43,11 @@ from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
+from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -329,6 +333,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._registered and is_regular_view(self.view):
             self._register_async()
             return
+        initially_folded_kinds = userprefs().initially_folded
+        if initially_folded_kinds:
+            session = self.session_async('foldingRangeProvider')
+            if session:
+                params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+                session.send_request_async(
+                    Request.foldingRange(params, self.view),
+                    partial(self._on_initial_folding_ranges, initially_folded_kinds))
         self.on_activated_async()
 
     def on_activated_async(self) -> None:
@@ -772,6 +784,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
+
+    # --- textDocument/foldingRange ------------------------------------------------------------------------------------
+
+    def _on_initial_folding_ranges(self, kinds: List[str], response: Optional[List[FoldingRange]]) -> None:
+        if not response:
+            return
+        regions = [
+            range_to_region(folding_range_to_range(folding_range), self.view)
+            for kind in kinds
+            for folding_range in response if kind == folding_range.get('kind')
+        ]
+        self.view.fold(regions)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

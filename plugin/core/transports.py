@@ -96,14 +96,13 @@ class ProcessTransport(Transport[T]):
 
     def __init__(self, name: str, process: Optional[subprocess.Popen], socket: Optional[socket.socket],
                  reader: IO[bytes], writer: IO[bytes], stderr: Optional[IO[bytes]],
-                 processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]
-                 ) -> None:
+                 processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
-        self._stderr = stderr
         self._socket = socket
         self._reader = reader
         self._writer = writer
+        self._stderr = stderr
         self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
@@ -111,8 +110,7 @@ class ProcessTransport(Transport[T]):
         self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
         self._reader_thread.start()
         self._writer_thread.start()
-
-        if stderr is not None:
+        if stderr:
             self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
             self._stderr_thread.start()
 
@@ -138,7 +136,7 @@ class ProcessTransport(Transport[T]):
         self.close()
         self._join_thread(self._writer_thread)
         self._join_thread(self._reader_thread)
-        if self._stderr_thread is not None:
+        if self._stderr_thread:
             self._join_thread(self._stderr_thread)
 
     def _read_loop(self) -> None:
@@ -257,17 +255,12 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
         process, sock, reader, writer = _await_tcp_connection(
-            config.name,
-            config.tcp_port,
-            config.listener_socket,
-            start_subprocess
-        )
+            config.name, config.tcp_port, config.listener_socket, start_subprocess)
     else:
         if config.command:
             process = start_subprocess()
         elif not config.tcp_port:
             raise RuntimeError("Failed to provide command or tcp_port, at least one of them has to be configured")
-
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:
@@ -279,11 +272,9 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
             writer = process.stdin  # type: ignore
     if not reader or not writer:
         raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
+    stderr = process.stderr if process else None
     return ProcessTransport(
-        config.name, process, sock, reader, writer,  # type: ignore
-        None if process is None else process.stderr,
-        json_rpc_processor, callback_object
-    )
+        config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

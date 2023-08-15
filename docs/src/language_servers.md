@@ -188,6 +188,8 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
     }
     ```
 
+If you encounter high cpu load or any other issues you can try omitting the [command] line, and ensure the godot editor is running while you work in sublime.
+
 ## GraphQL
 
 Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/LSP-graphql).

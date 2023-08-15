@@ -127,7 +127,7 @@ class LspFoldCommand(LspTextCommand):
                 if kind == FoldingRangeKind.Imports:
                     return "LSP: Fold Imports"
                 elif kind:
-                    return "LSP: Fold this {}".format(kind.title())  # pyright: ignore  # FoldingRangeKind -> StrEnum
+                    return "LSP: Fold this {}".format(kind.title())
                 else:
                     return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False

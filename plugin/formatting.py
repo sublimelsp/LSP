@@ -12,6 +12,7 @@ from .core.views import first_selection_region
 from .core.views import has_single_nonempty_selection
 from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
+from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
 import sublime
@@ -115,16 +116,27 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     capability = 'documentRangeFormattingProvider'
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        if super().is_enabled(event, point):
-            return has_single_nonempty_selection(self.view)
+        if not super().is_enabled(event, point):
+            return False
+        if has_single_nonempty_selection(self.view):
+            return True
+        if self.view.has_non_empty_selection_region() and \
+                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
+            return True
         return False
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        session = self.best_session(self.capability)
-        selection = first_selection_region(self.view)
-        if session and selection is not None:
-            req = text_document_range_formatting(self.view, selection)
-            session.send_request(req, lambda response: apply_text_edits_to_view(response, self.view))
+        if has_single_nonempty_selection(self.view):
+            session = self.best_session(self.capability)
+            selection = first_selection_region(self.view)
+            if session and selection is not None:
+                req = text_document_range_formatting(self.view, selection)
+                session.send_request(req, lambda response: apply_text_edits_to_view(response, self.view))
+        elif self.view.has_non_empty_selection_region():
+            session = self.best_session('documentRangeFormattingProvider.rangesSupport')
+            if session:
+                req = text_document_ranges_formatting(self.view)
+                session.send_request(req, lambda response: apply_text_edits_to_view(response, self.view))
 
 
 class LspFormatCommand(LspTextCommand):
@@ -139,11 +151,20 @@ class LspFormatCommand(LspTextCommand):
         return self.is_enabled(event, point)
 
     def description(self, **kwargs) -> str:
-        return "Format Selection" if self._range_formatting_available() else "Format File"
+        if self._range_formatting_available():
+            if has_single_nonempty_selection(self.view):
+                return "Format Selection"
+            return "Format Selections"
+        return "Format File"
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         command = 'lsp_format_document_range' if self._range_formatting_available() else 'lsp_format_document'
         self.view.run_command(command)
 
     def _range_formatting_available(self) -> bool:
-        return has_single_nonempty_selection(self.view) and bool(self.best_session('documentRangeFormattingProvider'))
+        if has_single_nonempty_selection(self.view) and bool(self.best_session('documentRangeFormattingProvider')):
+            return True
+        if self.view.has_non_empty_selection_region() and \
+                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
+            return True
+        return False

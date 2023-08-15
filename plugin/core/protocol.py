@@ -118,7 +118,7 @@ class LSPErrorCodes(IntEnum):
     the cancel. """
 
 
-class FoldingRangeKind(Enum):
+class FoldingRangeKind(StrEnum):
     """ A set of predefined range kinds. """
     Comment = 'comment'
     """ Folding range for a comment """
@@ -2612,8 +2612,7 @@ CodeLens = TypedDict('CodeLens', {
     # The command this code lens represents.
     'command': NotRequired['Command'],
     # A data entry field that is preserved on a code lens item between
-    # a {@link CodeLensRequest} and a [CodeLensResolveRequest]
-    # (#CodeLensResolveRequest)
+    # a {@link CodeLensRequest} and a {@link CodeLensResolveRequest}
     'data': NotRequired['LSPAny'],
 })
 """ A code lens represents a {@link Command command} that should be shown along with
@@ -3088,14 +3087,14 @@ character `a` is 0, the character offset of `𐐀` is 1 and the character
 offset of b is 3 since `𐐀` is represented using two code units in UTF-16.
 Since 3.17 clients and servers can agree on a different string encoding
 representation (e.g. UTF-8). The client announces it's supported encoding
-via the client capability [`general.positionEncodings`](#clientCapabilities).
+via the client capability [`general.positionEncodings`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#clientCapabilities).
 The value is an array of position encodings the client supports, with
 decreasing preference (e.g. the encoding at index `0` is the most preferred
 one). To stay backwards compatible the only mandatory encoding is UTF-16
 represented via the string `utf-16`. The server can pick one of the
 encodings offered by the client and signals that encoding back to the
 client via the initialize result's property
-[`capabilities.positionEncoding`](#serverCapabilities). If the string value
+[`capabilities.positionEncoding`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#serverCapabilities). If the string value
 `utf-16` is missing from the client's capability `general.positionEncodings`
 servers can safely assume that the client supports UTF-16. If the server
 omits the position encoding in its initialize result the encoding defaults
@@ -5937,7 +5936,7 @@ __TextDocumentFilter_Type_1 = TypedDict('__TextDocumentFilter_Type_1', {
     'language': str,
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': NotRequired[str],
 })
 
@@ -5947,7 +5946,7 @@ __TextDocumentFilter_Type_2 = TypedDict('__TextDocumentFilter_Type_2', {
     'language': NotRequired[str],
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': str,
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': NotRequired[str],
 })
 
@@ -5957,7 +5956,7 @@ __TextDocumentFilter_Type_3 = TypedDict('__TextDocumentFilter_Type_3', {
     'language': NotRequired[str],
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': str,
 })
 

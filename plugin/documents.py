@@ -512,7 +512,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
 
-    def _format_on_paste(self):
+    def _format_on_paste(self) -> None:
         self.purge_changes_async()
         clipboard_text = sublime.get_clipboard()
         sel = self.view.sel()

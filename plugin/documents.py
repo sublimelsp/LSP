@@ -520,7 +520,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             look_text = clipboard_text
             if len(split_clipboard_text) == number_of_cursors:
                 look_text = split_clipboard_text[index]
-            found_region = self.view.find(look_text, region.end(), sublime.REVERSE)
+            found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
             if found_region:
                 sel.add(found_region)
         self.view.run_command('lsp_format_document_range')

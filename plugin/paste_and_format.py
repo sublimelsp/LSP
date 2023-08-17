@@ -5,7 +5,7 @@ import sublime
 
 
 class LspPasteAndFormatCommand(LspTextCommand):
-    capability='documentRangeFormattingProvider'
+    capability = 'documentRangeFormattingProvider'
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         clipboard_text = sublime.get_clipboard()
@@ -15,7 +15,7 @@ class LspPasteAndFormatCommand(LspTextCommand):
         sel = self.view.sel()
         number_of_cursors = len(sel)
         split_clipboard_text = clipboard_text.split('\n')
-        for index, region  in enumerate(sel):
+        for index, region in enumerate(sel):
             insert_text = clipboard_text
             # mimic copy/paste behavior of ST when there are multiple cursors
             if len(split_clipboard_text) == number_of_cursors:

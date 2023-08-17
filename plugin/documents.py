@@ -482,10 +482,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
-        if command_name == 'paste' and userprefs().format_on_paste:
-            session = self.session_async("documentRangeFormattingProvider")
-            if session:
-                return ("lsp_paste_and_format", {})
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -495,6 +491,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+        if command_name == 'paste' and userprefs().format_on_paste:
+            # if we don't delay execution self.format_on_paste,
+            # on_text_changed_async will not pick up the change
+            # thus a call to self.purge_changes_async will not see new text changes.
+            sublime.set_timeout_async(self._format_on_paste, 1)
         if command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
@@ -510,6 +511,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout_async(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
+
+    def _format_on_paste(self):
+        self.purge_changes_async()
+        clipboard_text = sublime.get_clipboard()
+        sel = self.view.sel()
+        number_of_cursors = len(sel)
+        split_clipboard_text = clipboard_text.split('\n')
+        for index, region in enumerate(sel):
+            look_text = clipboard_text
+            if len(split_clipboard_text) == number_of_cursors:
+                look_text = split_clipboard_text[index]
+            found_region = self.view.find(look_text, region.end(), sublime.REVERSE)
+            if found_region:
+                sel.add(found_region)
+        self.view.run_command('lsp_format_document_range')
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 

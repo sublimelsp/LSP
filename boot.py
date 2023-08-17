@@ -82,7 +82,6 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from .plugin.paste_and_format import LspPasteAndFormatCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:

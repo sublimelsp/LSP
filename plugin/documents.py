@@ -516,7 +516,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sel = self.view.sel()
         number_of_cursors = len(sel)
         split_clipboard_text = clipboard_text.split('\n')
+        restore_regions = []
+        # add regions to selection, in order for lsp_format_document_range to format those regions
         for index, region in enumerate(sel):
+            restore_regions.append(region)
             look_text = clipboard_text
             if len(split_clipboard_text) == number_of_cursors:
                 look_text = split_clipboard_text[index]
@@ -524,6 +527,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if found_region:
                 sel.add(found_region)
         self.view.run_command('lsp_format_document_range')
+        # restore selection how it was
+        sel.clear()
+        sel.add_all(iter(restore_regions))
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 

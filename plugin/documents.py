@@ -482,6 +482,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
+        if command_name == 'paste' and userprefs().format_on_paste:
+            session = self.session_async("semanticTokensProvider")
+            if session:
+                return ("lsp_paste_and_format", {})
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:

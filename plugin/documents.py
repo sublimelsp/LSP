@@ -492,9 +492,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name == 'paste' and userprefs().format_on_paste:
-            # if we don't delay execution self.format_on_paste,
-            # on_text_changed_async will not pick up the change
-            # thus a call to self.purge_changes_async will not see new text changes.
+            # ensure on_text_changed_async is triggered before self.purge_changes_async()
             sublime.set_timeout_async(self._format_on_paste, 1)
         if command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))

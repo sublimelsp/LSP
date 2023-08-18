@@ -795,7 +795,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for kind in kinds
             for folding_range in response if kind == folding_range.get('kind')
         ]
-        self.view.fold(regions)
+        if regions:
+            self.view.fold(regions)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

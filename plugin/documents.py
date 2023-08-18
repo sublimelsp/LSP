@@ -514,14 +514,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.purge_changes_async()
         clipboard_text = sublime.get_clipboard()
         sel = self.view.sel()
-        number_of_cursors = len(sel)
         split_clipboard_text = clipboard_text.split('\n')
+        multi_cursor_paste = len(split_clipboard_text) == len(sel) > 1
         restore_regions = []
         # add regions to selection, in order for lsp_format_document_range to format those regions
         for index, region in enumerate(sel):
             restore_regions.append(region)
             look_text = clipboard_text
-            if len(split_clipboard_text) == number_of_cursors:
+            if multi_cursor_paste:
                 look_text = split_clipboard_text[index]
             found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
             if found_region:

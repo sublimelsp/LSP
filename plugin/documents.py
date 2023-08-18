@@ -494,7 +494,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if command_name == 'paste' and userprefs().format_on_paste:
             # ensure on_text_changed_async is triggered before self.purge_changes_async()
             sublime.set_timeout_async(self._format_on_paste, 1)
-        if command_name in ("next_field", "prev_field") and args is None:
+        elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return

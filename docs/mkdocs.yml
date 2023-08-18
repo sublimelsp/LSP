@@ -25,6 +25,9 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - js/redirect.js
+
 markdown_extensions:
   # tabs for ST4 and ST3 content
   - pymdownx.tabbed

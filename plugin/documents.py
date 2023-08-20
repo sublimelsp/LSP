@@ -158,6 +158,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
+        self.paste_was_run = False
         self._setup()
 
     def __del__(self) -> None:
@@ -492,8 +493,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name == 'paste' and userprefs().format_on_paste:
-            # ensure on_text_changed_async is triggered before self.purge_changes_async()
-            sublime.set_timeout_async(self._format_on_paste, 1)
+            self.paste_was_run = True
         elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
@@ -509,27 +509,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout_async(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
-
-    def _format_on_paste(self) -> None:
-        self.purge_changes_async()
-        clipboard_text = sublime.get_clipboard()
-        sel = self.view.sel()
-        split_clipboard_text = clipboard_text.split('\n')
-        multi_cursor_paste = len(split_clipboard_text) == len(sel) > 1
-        restore_regions = []
-        # add regions to selection, in order for lsp_format_document_range to format those regions
-        for index, region in enumerate(sel):
-            restore_regions.append(region)
-            look_text = clipboard_text
-            if multi_cursor_paste:
-                look_text = split_clipboard_text[index]
-            found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
-            if found_region:
-                sel.add(found_region)
-        self.view.run_command('lsp_format_document_range')
-        # restore selection how it was
-        sel.clear()
-        sel.add_all(iter(restore_regions))
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
@@ -918,6 +897,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
+        if self.paste_was_run:
+            self.paste_was_run = False
+            sublime.set_timeout_async(self._format_on_paste, 1)
 
     def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:
         """
@@ -940,6 +922,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 changed_first_region = current_first_region
         self._stored_selection = selection
         return changed_first_region, True
+
+    def _format_on_paste(self) -> None:
+        self.purge_changes_async()
+        clipboard_text = sublime.get_clipboard()
+        sel = self.view.sel()
+        split_clipboard_text = clipboard_text.split('\n')
+        multi_cursor_paste = len(split_clipboard_text) == len(sel) > 1
+        restore_regions = []
+        # add regions to selection, in order for lsp_format_document_range to format those regions
+        for index, region in enumerate(sel):
+            restore_regions.append(region)
+            look_text = clipboard_text
+            if multi_cursor_paste:
+                look_text = split_clipboard_text[index]
+            found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
+            if found_region:
+                sel.add(found_region)
+        self.view.run_command('lsp_format_document_range')
+        # restore selection how it was
+        sel.clear()
+        sel.add_all(iter(restore_regions))
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

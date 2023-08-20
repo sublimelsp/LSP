@@ -899,7 +899,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.do_signature_help_async(manual=False)
         if self.paste_was_run:
             self.paste_was_run = False
-            sublime.set_timeout_async(self._format_on_paste, 1)
+            self._format_on_paste()
 
     def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:
         """

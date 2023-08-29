@@ -466,7 +466,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_hover(self, point: int, hover_zone: int) -> None:
         if self.view.is_popup_visible():
             return
-        if hover_zone == sublime.HOVER_TEXT:
+        if hover_zone == sublime.HOVER_TEXT and self._manager and self._manager.hover_enabled:
             self.view.run_command("lsp_hover", {"point": point})
         elif hover_zone == sublime.HOVER_GUTTER:
             # Lightbulb must be visible and at the same line

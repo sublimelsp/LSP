@@ -1,6 +1,8 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .core.constants import HOVER_HIGHLIGHT_KEY
+from .core.constants import HOVER_PROVIDER_COUNT_KEY
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
@@ -17,6 +19,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
+from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
@@ -34,10 +37,10 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .session_view import HOVER_HIGHLIGHT_KEY
 from functools import partial
 import html
 import sublime
+import sublime_plugin
 
 
 SUBLIME_WORD_MASK = 515
@@ -366,3 +369,30 @@ class LspHoverCommand(LspTextCommand):
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
+
+
+class LspToggleHoverPopupsCommand(sublime_plugin.TextCommand):
+
+    def is_enabled(self) -> bool:
+        return self._has_hover_provider()
+
+    def is_checked(self) -> bool:
+        return self._is_hover_enabled()
+
+    def run(self, edit: sublime.Edit) -> None:
+        window_manager = windows.lookup(self.view.window())
+        if window_manager:
+            window_manager.hover_enabled = not window_manager.hover_enabled
+            for session in window_manager.get_sessions():
+                for session_view in session.session_views_async():
+                    if window_manager.hover_enabled:
+                        session_view.view.settings().set('show_definitions', False)
+                    else:
+                        session_view.reset_show_definitions()
+
+    def _has_hover_provider(self) -> bool:
+        return cast(int, self.view.settings().get(HOVER_PROVIDER_COUNT_KEY, 0)) > 0
+
+    def _is_hover_enabled(self) -> bool:
+        window_manager = windows.lookup(self.view.window())
+        return window_manager.hover_enabled if window_manager else False

@@ -82,6 +82,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
         self.total_error_count = 0
         self.total_warning_count = 0
+        self.hover_enabled = True
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         self.panel_manager.ensure_log_panel()
         self._config_manager.add_change_listener(self)

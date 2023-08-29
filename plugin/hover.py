@@ -377,7 +377,8 @@ class LspToggleHoverPopupsCommand(sublime_plugin.TextCommand):
         return self._has_hover_provider()
 
     def is_checked(self) -> bool:
-        return self._is_hover_enabled()
+        window_manager = windows.lookup(self.view.window())
+        return window_manager.hover_enabled if window_manager else False
 
     def run(self, edit: sublime.Edit) -> None:
         window_manager = windows.lookup(self.view.window())
@@ -392,7 +393,3 @@ class LspToggleHoverPopupsCommand(sublime_plugin.TextCommand):
 
     def _has_hover_provider(self) -> bool:
         return cast(int, self.view.settings().get(HOVER_PROVIDER_COUNT_KEY, 0)) > 0
-
-    def _is_hover_enabled(self) -> bool:
-        window_manager = windows.lookup(self.view.window())
-        return window_manager.hover_enabled if window_manager else False

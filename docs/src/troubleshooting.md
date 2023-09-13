@@ -1,12 +1,9 @@
 ## Self-help instructions
 
-To get more visibility into the inner-workings of the LSP client and the server and be able to diagnose problems, open `Preferences: LSP Settings` from the Command Palette and set the following options:
+To see the LSP server and client communication, run `LSP: Toggle Log Panel` from the Command Palette. Logs are useful to diagnose problems.
 
-| Option                  | Description                                                          |
-| ----------------------- | -------------------------------------------------------------------- |
-| `log_debug: true`       | Show verbose debug messages in the Sublime Text console.             |
-
-Once enabled (no restart necessary), the communication log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart Sublime Text and reproduce the issue again, so that the logs are clean.
+!!! note
+    It might be a good idea to restart Sublime Text and reproduce the issue again so that the logs are clean.
 
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 

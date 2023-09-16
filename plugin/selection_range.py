@@ -17,15 +17,15 @@ class LspExpandSelectionCommand(LspTextCommand):
         self._regions = []  # type: List[sublime.Region]
         self._change_count = 0
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = True) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
         return fallback or super().is_enabled(event, point)
 
-    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = True) -> bool:
+    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, fallback)
         return True
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, fallback: bool = True) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None, fallback: bool = False) -> None:
         position = get_position(self.view, event)
         if position is None:
             return

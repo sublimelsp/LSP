@@ -52,6 +52,8 @@ from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PreviousResultId
+from .protocol import ProgressParams
+from .protocol import ProgressToken
 from .protocol import PublishDiagnosticsParams
 from .protocol import RegistrationParams
 from .protocol import Range
@@ -67,6 +69,10 @@ from .protocol import TextDocumentSyncKind
 from .protocol import TokenFormat
 from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
+from .protocol import WorkDoneProgressBegin
+from .protocol import WorkDoneProgressCreateParams
+from .protocol import WorkDoneProgressEnd
+from .protocol import WorkDoneProgressReport
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceDiagnosticParams
 from .protocol import WorkspaceDiagnosticReport
@@ -1233,7 +1239,7 @@ class Session(TransportCallbacks):
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
-        self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
+        self._progress = {}  # type: Dict[ProgressToken, Optional[WindowProgressReporter]]
         self._watcher_impl = get_file_watcher_implementation()
         self._static_file_watchers = []  # type: List[FileWatcher]
         self._dynamic_file_watchers = {}  # type: Dict[str, List[FileWatcher]]
@@ -2012,7 +2018,7 @@ class Session(TransportCallbacks):
             # TODO: ST API does not allow us to say "do not focus this new view"
             self.open_uri_async(uri, params.get("selection")).then(success)
 
-    def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
+    def m_window_workDoneProgress_create(self, params: WorkDoneProgressCreateParams, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
         self._progress[params['token']] = None
         self.send_response(Response(request_id, None))
@@ -2026,7 +2032,7 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
-    def _create_window_progress_reporter(self, token: str, value: Dict[str, Any]) -> None:
+    def _create_window_progress_reporter(self, token: ProgressToken, value: WorkDoneProgressBegin) -> None:
         self._progress[token] = WindowProgressReporter(
             window=self.window,
             key="lspprogress{}{}".format(self.config.name, token),
@@ -2034,60 +2040,65 @@ class Session(TransportCallbacks):
             message=value.get("message")
         )
 
-    def m___progress(self, params: Any) -> None:
+    def m___progress(self, params: ProgressParams) -> None:
         """handles the $/progress notification"""
         token = params['token']
         value = params['value']
         # Partial Result Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#partialResults
-        if token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
+        if isinstance(token, str) and token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
-                self._on_workspace_diagnostics_async(value, reset_pending_response=False)
+                self._on_workspace_diagnostics_async(
+                    cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress
-        kind = value['kind']
-        if token not in self._progress:
-            # If the token is not in the _progress map then that could mean two things:
-            #
-            # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
-            #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it succeeds,
-            #    we can delegate to the appropriate session view instances.
-            #
-            # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
-            #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
-            #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
-            try:
-                request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
-                request = self._response_handlers[request_id][0]
-                self._invoke_views(request, "on_request_progress", request_id, params)
-                return
-            except (IndexError, ValueError, KeyError):
-                # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
-                # dealing with possibility (2).
-                if kind == 'begin':
-                    # We are dealing with possibility (2), so create the progress reporter now.
-                    self._create_window_progress_reporter(token, value)
+        if isinstance(value, dict) and 'kind' in value:
+            kind = value['kind']
+            if token not in self._progress:
+                # If the token is not in the _progress map then that could mean two things:
+                #
+                # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
+                #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it
+                #    succeeds, we can delegate to the appropriate session view instances.
+                #
+                # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
+                #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
+                #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
+                try:
+                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])  # type: ignore
+                    request = self._response_handlers[request_id][0]
+                    self._invoke_views(request, "on_request_progress", request_id, params)
                     return
-                pass
-            debug('unknown $/progress token: {}'.format(token))
-            return
-        if kind == 'begin':
-            self._create_window_progress_reporter(token, value)
-        elif kind == 'report':
-            progress = self._progress[token]
-            assert isinstance(progress, WindowProgressReporter)
-            progress(value.get("message"), value.get("percentage"))
-        elif kind == 'end':
-            progress = self._progress.pop(token)
-            assert isinstance(progress, WindowProgressReporter)
-            title = progress.title
-            progress = None
-            message = value.get('message')
-            if message:
-                self.window.status_message(title + ': ' + message)
+                except (TypeError, IndexError, ValueError, KeyError):
+                    # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
+                    # dealing with possibility (2).
+                    if kind == 'begin':
+                        # We are dealing with possibility (2), so create the progress reporter now.
+                        value = cast(WorkDoneProgressBegin, value)
+                        self._create_window_progress_reporter(token, value)
+                        return
+                debug('unknown $/progress token: {}'.format(token))
+                return
+            if kind == 'begin':
+                value = cast(WorkDoneProgressBegin, value)
+                self._create_window_progress_reporter(token, value)
+            elif kind == 'report':
+                value = cast(WorkDoneProgressReport, value)
+                progress = self._progress[token]
+                assert isinstance(progress, WindowProgressReporter)
+                progress(value.get("message"), value.get("percentage"))
+            elif kind == 'end':
+                value = cast(WorkDoneProgressEnd, value)
+                progress = self._progress.pop(token)
+                assert isinstance(progress, WindowProgressReporter)
+                title = progress.title
+                progress = None
+                message = value.get('message')
+                if message:
+                    self.window.status_message(title + ': ' + message)
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 

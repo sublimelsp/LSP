@@ -128,8 +128,8 @@ class LspFormatDocumentCommand(LspTextCommand):
                 session = self.session_by_name(formatter, self.capability)
                 if session:
                     session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
-            else:
-                self.select_formatter(base_scope, session_names)
+                    return
+            self.select_formatter(base_scope, session_names)
         else:
             format_document(self).then(self.on_result)
 

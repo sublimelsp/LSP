@@ -80,6 +80,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._server_log = []  # type: List[Tuple[str, str]]
         self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
         self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
+        self.formatters = {}  # type: Dict[str, str]
+        self.formatter_updated_in_project = False
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
@@ -106,6 +108,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._config_manager.update()
 
     def on_post_save_project_async(self) -> None:
+        if self.formatter_updated_in_project:
+            self.formatter_updated_in_project = False
+            return
         self.on_load_project_async()
 
     def update_workspace_folders_async(self) -> None:

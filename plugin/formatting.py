@@ -4,6 +4,7 @@ from .core.protocol import Error
 from .core.protocol import TextDocumentSaveReason
 from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Callable, List, Optional, Iterator, Union
@@ -15,6 +16,7 @@ from .core.views import text_document_range_formatting
 from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
+from functools import partial
 import sublime
 
 
@@ -100,15 +102,69 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, select: bool = False) -> bool:
+        if select:
+            return len(list(self.sessions(self.capability))) > 1
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        format_document(self).then(self.on_result)
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None, select: bool = False) -> None:
+        session_names = [session.config.name for session in self.sessions(self.capability)]
+        base_scope = self.view.scope_name(0).split()[0]
+        if select:
+            self.select_formatter(base_scope, session_names)
+        elif len(session_names) > 1:
+            window = self.view.window()
+            if not window:
+                return
+            formatter = None
+            project_data = window.project_data()
+            if isinstance(project_data, dict):
+                formatter = project_data.get('settings', {}).get('LSP', {}).get('formatters', {}).get(base_scope)
+            else:
+                window_manager = windows.lookup(window)
+                if window_manager:
+                    formatter = window_manager.formatters.get(base_scope)
+            if formatter:
+                session = self.session_by_name(formatter, self.capability)
+                if session:
+                    session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
+            else:
+                self.select_formatter(base_scope, session_names)
+        else:
+            format_document(self).then(self.on_result)
 
     def on_result(self, result: FormatResponse) -> None:
         if result and not isinstance(result, Error):
             apply_text_edits_to_view(result, self.view)
+
+    def select_formatter(self, base_scope: str, session_names: List[str]) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        window.show_quick_panel(
+            session_names, partial(self.on_select_formatter, base_scope, session_names), placeholder="Select Formatter")
+
+    def on_select_formatter(self, base_scope: str, session_names: List[str], index: int) -> None:
+        if index > -1:
+            session_name = session_names[index]
+            window = self.view.window()
+            if window:
+                window_manager = windows.lookup(window)
+                if window_manager:
+                    project_data = window.project_data()
+                    if isinstance(project_data, dict):
+                        project_settings = project_data.setdefault('settings', dict())
+                        project_lsp_settings = project_settings.setdefault('LSP', dict())
+                        project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
+                        project_formatter_settings[base_scope] = session_name
+                        # Prevent restart of all sessions after project file save
+                        window_manager.formatter_updated_in_project = True
+                        window.set_project_data(project_data)
+                    else:  # Save temporarily for this window
+                        window_manager.formatters[base_scope] = session_name
+            session = self.session_by_name(session_name, self.capability)
+            if session:
+                session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):

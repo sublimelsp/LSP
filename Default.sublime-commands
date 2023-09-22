@@ -58,6 +58,11 @@
         "command": "lsp_format_document",
     },
     {
+        "caption": "LSP: Format File With…",
+        "command": "lsp_format_document",
+        "args": {"select": true}
+    },
+    {
         "caption": "LSP: Format Selection",
         "command": "lsp_format_document_range",
     },

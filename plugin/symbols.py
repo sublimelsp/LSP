@@ -1,14 +1,19 @@
 import weakref
-from .core.protocol import Request, DocumentSymbol, SymbolInformation, SymbolKind, SymbolTag
+from .core.protocol import DocumentSymbol
+from .core.protocol import DocumentSymbolParams
+from .core.protocol import Request
+from .core.protocol import SymbolInformation
+from .core.protocol import SymbolKind
+from .core.protocol import SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
-from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
+from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
 from .core.views import range_to_region
-from .core.views import SUBLIME_KIND_ID_COLOR_SCOPES
+# from .core.views import SUBLIME_KIND_ID_COLOR_SCOPES
 from .core.views import SublimeKind
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
-from contextlib import contextmanager
+from .goto_diagnostic import PreselectedListInputHandler
 import os
 import sublime
 import sublime_plugin
@@ -16,13 +21,38 @@ import sublime_plugin
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
+SYMBOL_KIND_NAMES = {
+    SymbolKind.File: "File",
+    SymbolKind.Module: "Module",
+    SymbolKind.Namespace: "Namespace",
+    SymbolKind.Package: "Package",
+    SymbolKind.Class: "Class",
+    SymbolKind.Method: "Method",
+    SymbolKind.Property: "Property",
+    SymbolKind.Field: "Field",
+    SymbolKind.Constructor: "Constructor",
+    SymbolKind.Enum: "Enum",
+    SymbolKind.Interface: "Interface",
+    SymbolKind.Function: "Function",
+    SymbolKind.Variable: "Variable",
+    SymbolKind.Constant: "Constant",
+    SymbolKind.String: "String",
+    SymbolKind.Number: "Number",
+    SymbolKind.Boolean: "Boolean",
+    SymbolKind.Array: "Array",
+    SymbolKind.Object: "Object",
+    SymbolKind.Key: "Key",
+    SymbolKind.Null: "Null",
+    SymbolKind.EnumMember: "Enum Member",
+    SymbolKind.Struct: "Struct",
+    SymbolKind.Event: "Event",
+    SymbolKind.Operator: "Operator",
+    SymbolKind.TypeParameter: "Type Parameter"
+}  # type: Dict[SymbolKind, str]
+
 
 def unpack_lsp_kind(kind: SymbolKind) -> SublimeKind:
     return SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
-
-
-def get_symbol_color_scope_from_lsp_kind(kind: SymbolKind) -> str:
-    return SUBLIME_KIND_ID_COLOR_SCOPES.get(unpack_lsp_kind(kind)[0], "comment")
 
 
 def symbol_information_to_quick_panel_item(
@@ -47,11 +77,37 @@ def symbol_information_to_quick_panel_item(
             kind=(st_kind, st_icon, st_display_type))
 
 
-@contextmanager
-def _additional_name(names: List[str], name: str) -> Generator[None, None, None]:
-    names.append(name)
-    yield
-    names.pop(-1)
+def symbol_to_list_input_item(
+    view: sublime.View, item: Union[DocumentSymbol, SymbolInformation], hierarchy: str = ''
+) -> sublime.ListInputItem:
+    name = item['name']
+    kind = item['kind']
+    st_kind = SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
+    details = []
+    selection_range = item.get('selectionRange')
+    if selection_range:
+        item = cast(DocumentSymbol, item)
+        detail = item.get('detail')
+        if detail:
+            details.append(detail)
+        if hierarchy:
+            details.append(hierarchy + " > " + name)
+        region = range_to_region(selection_range, view)
+    else:
+        item = cast(SymbolInformation, item)
+        container_name = item.get('containerName')
+        if container_name:
+            details.append(container_name)
+        region = range_to_region(item['location']['range'], view)
+    if SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False):
+        details.append("DEPRECATED")
+    return sublime.ListInputItem(
+        name,
+        {'kind': kind, 'region': [region.a, region.b]},
+        details=details,
+        annotation=st_kind[2],
+        kind=st_kind
+    )
 
 
 class LspSelectionClearCommand(sublime_plugin.TextCommand):
@@ -88,139 +144,153 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.old_regions = []  # type: List[sublime.Region]
-        self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region], str]]
+        self.items = []  # type: List[sublime.ListInputItem]
+        self.kind = 0
+        self.cached = False
 
-    def run(self, edit: sublime.Edit, event: Optional[Dict[str, Any]] = None) -> None:
-        self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
+    def run(
+        self,
+        edit: sublime.Edit,
+        event: Optional[Dict[str, Any]] = None,
+        kind: int = 0,
+        index: Optional[int] = None
+    ) -> None:
+        pass
+
+    def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+        if self.cached:
+            self.cached = False
+            window = self.view.window()
+            if not window:
+                return None
+            symbol_kind = cast(SymbolKind, self.kind)
+            initial_value = sublime.ListInputItem(
+                SYMBOL_KIND_NAMES.get(symbol_kind, 'All Kinds'),
+                self.kind,
+                kind=SYMBOL_KINDS.get(symbol_kind, sublime.KIND_AMBIGUOUS))
+            return DocumentSymbolsKindInputHandler(window, initial_value, self.view, self.items)
+        self.kind = args.get('kind', 0)
         session = self.best_session(self.capability)
         if session:
+            self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
+            params = {"textDocument": text_document_identifier(self.view)}  # type: DocumentSymbolParams
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
-                lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
-                lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
+                Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
+        return None
 
-    def handle_response(self, response: Union[List[DocumentSymbol], List[SymbolInformation], None]) -> None:
+    def handle_response_async(self, response: Union[List[DocumentSymbol], List[SymbolInformation], None]) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
-        window = self.view.window()
-        if window and isinstance(response, list) and len(response) > 0:
-            panel_items = self.process_symbols(response)
-            self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
-            # Find region that is either intersecting or before to the current selection end.
-            selected_index = 0
-            if self.old_regions:
-                first_selection = self.old_regions[0]
-                for i, (r, _, _) in enumerate(self.regions):
-                    if r.begin() <= first_selection.b:
-                        selected_index = i
-                    else:
-                        break
-            self.view.run_command("lsp_selection_clear")
-            window.show_quick_panel(
-                panel_items,
-                self.on_symbol_selected,
-                sublime.KEEP_OPEN_ON_FOCUS_LOST,
-                selected_index,
-                self.on_highlighted)
+        self.items.clear()
+        if response and self.view.is_valid():
+            if 'selectionRange' in response[0]:
+                items = cast(List[DocumentSymbol], response)
+                for item in items:
+                    self.items.extend(self.process_document_symbol_recursive(item))
+            else:
+                items = cast(List[SymbolInformation], response)
+                for item in items:
+                    self.items.append(symbol_to_list_input_item(self.view, item))
+            self.items.sort(key=lambda item: item.value['region'])
+            window = self.view.window()
+            if window:
+                self.cached = True
+                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': 'lsp_document_symbols'})
 
     def handle_response_error(self, error: Any) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
         print_to_status_bar(error)
 
-    def region(self, index: int) -> sublime.Region:
-        return self.regions[index][0]
-
-    def selection_region(self, index: int) -> Optional[sublime.Region]:
-        return self.regions[index][1]
-
-    def scope(self, index: int) -> str:
-        return self.regions[index][2]
-
-    def on_symbol_selected(self, index: int) -> None:
-        if index == -1:
-            if self.old_regions:
-                self.view.run_command("lsp_selection_set", {"regions": [(r.a, r.b) for r in self.old_regions]})
-                self.view.show_at_center(self.old_regions[0].begin())
-        else:
-            region = self.selection_region(index)
-            if not region:
-                self.view.erase_regions(self.REGIONS_KEY)
-                region = self.region(index)
-                self.view.run_command("lsp_selection_set", {"regions": [(region.a, region.a)]})
-            self.view.show_at_center(region.a)
-        self.old_regions.clear()
-        self.regions.clear()
-
-    def on_highlighted(self, index: int) -> None:
-        region = self.selection_region(index)
-        if region:
-            self.view.run_command("lsp_selection_set", {"regions": [region.to_tuple()]})
-        else:
-            region = self.region(index)
-            self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
-        self.view.show_at_center(region.a)
-
-    def process_symbols(
-            self,
-            items: Union[List[DocumentSymbol], List[SymbolInformation]]
-    ) -> List[sublime.QuickPanelItem]:
-        self.regions.clear()
-        panel_items = []
-        if 'selectionRange' in items[0]:
-            items = cast(List[DocumentSymbol], items)
-            panel_items = self.process_document_symbols(items)
-        else:
-            items = cast(List[SymbolInformation], items)
-            panel_items = self.process_symbol_informations(items)
-        # Sort both lists in sync according to the range's begin point.
-        sorted_results = zip(*sorted(zip(self.regions, panel_items), key=lambda item: item[0][0].begin()))
-        sorted_regions, sorted_panel_items = sorted_results
-        self.regions = list(sorted_regions)  # type: ignore
-        return list(sorted_panel_items)  # type: ignore
-
-    def process_document_symbols(self, items: List[DocumentSymbol]) -> List[sublime.QuickPanelItem]:
-        quick_panel_items = []  # type: List[sublime.QuickPanelItem]
-        names = []  # type: List[str]
-        for item in items:
-            self.process_document_symbol_recursive(quick_panel_items, item, names)
-        return quick_panel_items
-
-    def process_document_symbol_recursive(self, quick_panel_items: List[sublime.QuickPanelItem], item: DocumentSymbol,
-                                          names: List[str]) -> None:
-        lsp_kind = item["kind"]
-        self.regions.append((range_to_region(item['range'], self.view),
-                             range_to_region(item['selectionRange'], self.view),
-                             get_symbol_color_scope_from_lsp_kind(lsp_kind)))
+    def process_document_symbol_recursive(
+        self, item: DocumentSymbol, hierarchy: str = ''
+    ) -> List[sublime.ListInputItem]:
         name = item['name']
-        with _additional_name(names, name):
-            st_kind, st_icon, st_display_type = unpack_lsp_kind(lsp_kind)
-            formatted_names = " > ".join(names)
-            st_details = item.get("detail") or ""
-            if st_details:
-                st_details = "{} | {}".format(st_details, formatted_names)
-            else:
-                st_details = formatted_names
-            tags = item.get("tags") or []
-            if SymbolTag.Deprecated in tags:
-                st_display_type = "⚠ {} - Deprecated".format(st_display_type)
-            quick_panel_items.append(
-                sublime.QuickPanelItem(
-                    trigger=name,
-                    details=st_details,
-                    annotation=st_display_type,
-                    kind=(st_kind, st_icon, st_display_type)))
-            children = item.get('children') or []  # type: List[DocumentSymbol]
-            for child in children:
-                self.process_document_symbol_recursive(quick_panel_items, child, names)
+        name_hierarchy = hierarchy + " > " + name if hierarchy else name
+        items = [symbol_to_list_input_item(self.view, item, hierarchy)]
+        for child in item.get('children') or []:
+            items.extend(self.process_document_symbol_recursive(child, name_hierarchy))
+        return items
 
-    def process_symbol_informations(self, items: List[SymbolInformation]) -> List[sublime.QuickPanelItem]:
-        quick_panel_items = []  # type: List[sublime.QuickPanelItem]
-        for item in items:
-            self.regions.append((range_to_region(item['location']['range'], self.view),
-                                 None, get_symbol_color_scope_from_lsp_kind(item['kind'])))
-            quick_panel_item = symbol_information_to_quick_panel_item(item, show_file_name=False)
-            quick_panel_items.append(quick_panel_item)
-        return quick_panel_items
+
+class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
+
+    def __init__(
+        self,
+        window: sublime.Window,
+        initial_value: sublime.ListInputItem,
+        view: sublime.View,
+        items: List[sublime.ListInputItem],
+    ) -> None:
+        super().__init__(window, initial_value)
+        self.view = view
+        self.items = items
+        self.old_selection = [sublime.Region(r.a, r.b) for r in view.sel()]
+        self.last_selected = 0
+
+    def name(self) -> str:
+        return 'kind'
+
+    def placeholder(self) -> str:
+        return "Symbol Kind"
+
+    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+        items = [sublime.ListInputItem('All Kinds', 0, kind=sublime.KIND_AMBIGUOUS)]
+        items.extend([
+            sublime.ListInputItem(SYMBOL_KIND_NAMES[lsp_kind], lsp_kind, kind=st_kind)
+            for lsp_kind, st_kind in SYMBOL_KINDS.items()
+            if any(item.value['kind'] == lsp_kind for item in self.items)
+        ])
+        for index, item in enumerate(items):
+            if item.value == self.last_selected:
+                break
+        else:
+            index = 0
+        return items, index
+
+    def confirm(self, text: int) -> None:
+        self.last_selected = text
+
+    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+        kind = args.get('kind')
+        if kind is not None:
+            return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
+
+
+class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
+
+    def __init__(
+        self, view: sublime.View, kind: int, items: List[sublime.ListInputItem], old_selection: List[sublime.Region]
+    ) -> None:
+        super().__init__()
+        self.view = view
+        self.kind = kind
+        self.items = items
+        self.old_selection = old_selection
+
+    def name(self) -> str:
+        return 'index'
+
+    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+        items = [item for item in self.items if not self.kind or item.value['kind'] == self.kind]
+        selected_index = 0
+        if self.old_selection:
+            pt = self.old_selection[0].b
+            for index, item in enumerate(items):
+                if item.value['region'][0] <= pt:
+                    selected_index = index
+                else:
+                    break
+        return items, selected_index
+
+    def preview(self, text: dict) -> Union[str, sublime.Html]:
+        r = text['region']
+        self.view.run_command('lsp_selection_set', {'regions': [(r[0], r[1])]})
+        self.view.show_at_center(r[0])
+        return ""
+
+    def cancel(self) -> None:
+        if self.old_selection:
+            self.view.run_command('lsp_selection_set', {'regions': [(r.a, r.b) for r in self.old_selection]})
+            self.view.show_at_center(self.old_selection[0].begin())
 
 
 class SymbolQueryInput(sublime_plugin.TextInputHandler):

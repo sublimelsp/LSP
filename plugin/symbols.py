@@ -144,6 +144,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.items = []  # type: List[sublime.ListInputItem]
         self.kind = 0
         self.cached = False
+        self.has_matching_symbols = True
 
     def run(
         self,
@@ -153,6 +154,13 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         index: Optional[int] = None
     ) -> None:
         if index is None:
+            if not self.has_matching_symbols:
+                self.has_matching_symbols = True
+                window = self.view.window()
+                if window:
+                    kind_name = SYMBOL_KIND_NAMES.get(cast(SymbolKind, self.kind))
+                    window.status_message('No symbols of kind "{}" in this file'.format(kind_name))
+                return
             self.kind = kind
             session = self.best_session(self.capability)
             if session:
@@ -164,6 +172,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         if self.cached:
             self.cached = False
+            if self.kind and not any(item.value['kind'] == self.kind for item in self.items):
+                self.has_matching_symbols = False
+                return None
             window = self.view.window()
             if not window:
                 return None

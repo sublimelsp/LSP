@@ -99,12 +99,11 @@ def symbol_to_list_input_item(
         if container_name:
             details.append(container_name)
         region = range_to_region(item['location']['range'], view)
-    if SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False):
-        details.append("DEPRECATED")
+    deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     return sublime.ListInputItem(
         name,
-        {'kind': kind, 'region': [region.a, region.b]},
-        details=details,
+        {'kind': kind, 'region': [region.a, region.b], 'deprecated': deprecated},
+        details=" • ".join(details),
         annotation=st_kind[2],
         kind=st_kind
     )
@@ -140,7 +139,7 @@ class LspSelectionSetCommand(sublime_plugin.TextCommand):
 class LspDocumentSymbolsCommand(LspTextCommand):
 
     capability = 'documentSymbolProvider'
-    REGIONS_KEY = 'lsp_document_symbols'
+    # REGIONS_KEY = 'lsp_document_symbols'
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
@@ -155,7 +154,14 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         kind: int = 0,
         index: Optional[int] = None
     ) -> None:
-        pass
+        if index is None:
+            self.kind = kind
+            session = self.best_session(self.capability)
+            if session:
+                self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
+                params = {"textDocument": text_document_identifier(self.view)}  # type: DocumentSymbolParams
+                session.send_request(
+                    Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
 
     def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         if self.cached:
@@ -169,13 +175,6 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 self.kind,
                 kind=SYMBOL_KINDS.get(symbol_kind, sublime.KIND_AMBIGUOUS))
             return DocumentSymbolsKindInputHandler(window, initial_value, self.view, self.items)
-        self.kind = args.get('kind', 0)
-        session = self.best_session(self.capability)
-        if session:
-            self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
-            params = {"textDocument": text_document_identifier(self.view)}  # type: DocumentSymbolParams
-            session.send_request(
-                Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
         return None
 
     def handle_response_async(self, response: Union[List[DocumentSymbol], List[SymbolInformation], None]) -> None:
@@ -281,10 +280,14 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
                     break
         return items, selected_index
 
-    def preview(self, text: dict) -> Union[str, sublime.Html]:
-        r = text['region']
-        self.view.run_command('lsp_selection_set', {'regions': [(r[0], r[1])]})
-        self.view.show_at_center(r[0])
+    def preview(self, text: Any) -> Union[str, sublime.Html, None]:
+        if isinstance(text, dict):
+            r = text.get('region')
+            if r:
+                self.view.run_command('lsp_selection_set', {'regions': [(r[0], r[1])]})
+                self.view.show_at_center(r[0])
+            if text.get('deprecated'):
+                return "⚠ Deprecated"
         return ""
 
     def cancel(self) -> None:

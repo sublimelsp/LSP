@@ -171,8 +171,7 @@
       },
       {
         "caption": "LSP: Goto Symbol…",
-        "command": "show_overlay",
-        "args": {"overlay": "command_palette", "command": "lsp_document_symbols"}
+        "command": "lsp_document_symbols"
       },
       {
         "caption": "LSP: Goto Symbol In Project…",

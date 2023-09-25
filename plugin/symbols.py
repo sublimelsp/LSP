@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
 from .core.views import range_to_region
-# from .core.views import SUBLIME_KIND_ID_COLOR_SCOPES
 from .core.views import SublimeKind
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
@@ -139,7 +138,6 @@ class LspSelectionSetCommand(sublime_plugin.TextCommand):
 class LspDocumentSymbolsCommand(LspTextCommand):
 
     capability = 'documentSymbolProvider'
-    # REGIONS_KEY = 'lsp_document_symbols'
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)

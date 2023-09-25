@@ -1,3 +1,4 @@
+from .core.collections import DottedDict
 from .core.edit import parse_text_edit
 from .core.promise import Promise
 from .core.protocol import Error
@@ -109,7 +110,7 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None, select: bool = False) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
-        base_scope = self.view.scope_name(0).split()[0]
+        base_scope = self.view.syntax().scope
         if select:
             self.select_formatter(base_scope, session_names)
         elif len(session_names) > 1:
@@ -119,7 +120,7 @@ class LspFormatDocumentCommand(LspTextCommand):
             formatter = None
             project_data = window.project_data()
             if isinstance(project_data, dict):
-                formatter = project_data.get('settings', {}).get('LSP', {}).get('formatters', {}).get(base_scope)
+                formatter = DottedDict(project_data).get('settings.LSP.formatters.{}'.format(base_scope))
             else:
                 window_manager = windows.lookup(window)
                 if window_manager:
@@ -145,26 +146,26 @@ class LspFormatDocumentCommand(LspTextCommand):
             session_names, partial(self.on_select_formatter, base_scope, session_names), placeholder="Select Formatter")
 
     def on_select_formatter(self, base_scope: str, session_names: List[str], index: int) -> None:
-        if index > -1:
-            session_name = session_names[index]
-            window = self.view.window()
-            if window:
-                window_manager = windows.lookup(window)
-                if window_manager:
-                    project_data = window.project_data()
-                    if isinstance(project_data, dict):
-                        project_settings = project_data.setdefault('settings', dict())
-                        project_lsp_settings = project_settings.setdefault('LSP', dict())
-                        project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
-                        project_formatter_settings[base_scope] = session_name
-                        # Prevent restart of all sessions after project file save
-                        window_manager.formatter_updated_in_project = True
-                        window.set_project_data(project_data)
-                    else:  # Save temporarily for this window
-                        window_manager.formatters[base_scope] = session_name
-            session = self.session_by_name(session_name, self.capability)
-            if session:
-                session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
+        if index == -1:
+            return
+        session_name = session_names[index]
+        window = self.view.window()
+        if window:
+            window_manager = windows.lookup(window)
+            if window_manager:
+                project_data = window.project_data()
+                if isinstance(project_data, dict):
+                    project_settings = project_data.setdefault('settings', dict())
+                    project_lsp_settings = project_settings.setdefault('LSP', dict())
+                    project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
+                    project_formatter_settings[base_scope] = session_name
+                    window_manager.suppress_sessions_restart_on_project_update = True
+                    window.set_project_data(project_data)
+                else:  # Save temporarily for this window
+                    window_manager.formatters[base_scope] = session_name
+        session = self.session_by_name(session_name, self.capability)
+        if session:
+            session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):

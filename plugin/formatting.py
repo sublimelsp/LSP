@@ -24,8 +24,21 @@ import sublime
 FormatResponse = Union[List[TextEdit], None, Error]
 
 
-def format_document(text_command: LspTextCommand) -> Promise[FormatResponse]:
+def get_formatter(window: Optional[sublime.Window], base_scope: str) -> Optional[str]:
+    window_manager = windows.lookup(window)
+    if not window_manager:
+        return None
+    project_data = window_manager.window.project_data()
+    return DottedDict(project_data).get('settings.LSP.formatters.{}'.format(base_scope)) if \
+        isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
+
+
+def format_document(text_command: LspTextCommand, formatter: Optional[str] = None) -> Promise[FormatResponse]:
     view = text_command.view
+    if formatter:
+        session = text_command.session_by_name(formatter, LspFormatDocumentCommand.capability)
+        if session:
+            return session.send_request_task(text_document_formatting(view))
     session = text_command.best_session(LspFormatDocumentCommand.capability)
     if session:
         # Either use the documentFormattingProvider ...
@@ -87,7 +100,9 @@ class FormattingTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
-        format_document(self._task_runner).then(self._on_response)
+        base_scope = self._task_runner.view.syntax().scope
+        formatter = get_formatter(self._task_runner.view.window(), base_scope)
+        format_document(self._task_runner, formatter).then(self._on_response)
 
     def _on_response(self, response: FormatResponse) -> None:
         if response and not isinstance(response, Error) and not self._cancelled:
@@ -114,17 +129,7 @@ class LspFormatDocumentCommand(LspTextCommand):
         if select:
             self.select_formatter(base_scope, session_names)
         elif len(session_names) > 1:
-            window = self.view.window()
-            if not window:
-                return
-            formatter = None
-            project_data = window.project_data()
-            if isinstance(project_data, dict):
-                formatter = DottedDict(project_data).get('settings.LSP.formatters.{}'.format(base_scope))
-            else:
-                window_manager = windows.lookup(window)
-                if window_manager:
-                    formatter = window_manager.formatters.get(base_scope)
+            formatter = get_formatter(self.view.window(), base_scope)
             if formatter:
                 session = self.session_by_name(formatter, self.capability)
                 if session:

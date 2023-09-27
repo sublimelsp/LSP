@@ -154,20 +154,19 @@ class LspFormatDocumentCommand(LspTextCommand):
         if index == -1:
             return
         session_name = session_names[index]
-        window = self.view.window()
-        if window:
-            window_manager = windows.lookup(window)
-            if window_manager:
-                project_data = window.project_data()
-                if isinstance(project_data, dict):
-                    project_settings = project_data.setdefault('settings', dict())
-                    project_lsp_settings = project_settings.setdefault('LSP', dict())
-                    project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
-                    project_formatter_settings[base_scope] = session_name
-                    window_manager.suppress_sessions_restart_on_project_update = True
-                    window.set_project_data(project_data)
-                else:  # Save temporarily for this window
-                    window_manager.formatters[base_scope] = session_name
+        window_manager = windows.lookup(self.view.window())
+        if window_manager:
+            window = window_manager.window
+            project_data = window.project_data()
+            if isinstance(project_data, dict):
+                project_settings = project_data.setdefault('settings', dict())
+                project_lsp_settings = project_settings.setdefault('LSP', dict())
+                project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
+                project_formatter_settings[base_scope] = session_name
+                window_manager.suppress_sessions_restart_on_project_update = True
+                window.set_project_data(project_data)
+            else:  # Save temporarily for this window
+                window_manager.formatters[base_scope] = session_name
         session = self.session_by_name(session_name, self.capability)
         if session:
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result)

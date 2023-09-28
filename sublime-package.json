@@ -780,6 +780,14 @@
                 "LSP": {
                   "type": "object",
                   "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",
+                  "properties": {
+                    "formatters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    }
+                  },
                   "additionalProperties": {
                     "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
                   }

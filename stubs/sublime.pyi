@@ -1082,6 +1082,8 @@ class QuickPanelItem:
 
 
 class ListInputItem:
+    value = ...  # type: Any
+    kind = ...  # type: Tuple[int, str, str]
     def __init__(
         self,
         text: str,

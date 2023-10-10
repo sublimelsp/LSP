@@ -1082,7 +1082,10 @@ class QuickPanelItem:
 
 
 class ListInputItem:
+    text = ... # type: str
     value = ...  # type: Any
+    details = ...  # type: Union[str, List[str], Tuple[str]]
+    annotation = ...  # type: str
     kind = ...  # type: Tuple[int, str, str]
     def __init__(
         self,

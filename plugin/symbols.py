@@ -1,21 +1,26 @@
-import weakref
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Request
 from .core.protocol import SymbolInformation
 from .core.protocol import SymbolKind
 from .core.protocol import SymbolTag
+from .core.protocol import WorkspaceSymbol
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
-from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
+from .core.typing import Any, Callable, List, Optional, Tuple, Dict, TypeVar, Union, cast
 from .core.views import range_to_region
-from .core.views import SublimeKind
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 from .goto_diagnostic import PreselectedListInputHandler
+from abc import ABCMeta
+from abc import abstractmethod
+import functools
 import os
 import sublime
 import sublime_plugin
+import threading
+import weakref
 
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
@@ -48,32 +53,6 @@ SYMBOL_KIND_NAMES = {
     SymbolKind.Operator: "Operator",
     SymbolKind.TypeParameter: "Type Parameter"
 }  # type: Dict[SymbolKind, str]
-
-
-def unpack_lsp_kind(kind: SymbolKind) -> SublimeKind:
-    return SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
-
-
-def symbol_information_to_quick_panel_item(
-    item: SymbolInformation,
-    show_file_name: bool = True
-) -> sublime.QuickPanelItem:
-    st_kind, st_icon, st_display_type = unpack_lsp_kind(item['kind'])
-    tags = item.get("tags") or []
-    if SymbolTag.Deprecated in tags:
-        st_display_type = "⚠ {} - Deprecated".format(st_display_type)
-    container = item.get("containerName") or ""
-    details = []  # List[str]
-    if container:
-        details.append(container)
-    if show_file_name:
-        file_name = os.path.basename(item['location']['uri'])
-        details.append(file_name)
-    return sublime.QuickPanelItem(
-            trigger=item["name"],
-            details=details,
-            annotation=st_display_type,
-            kind=(st_kind, st_icon, st_display_type))
 
 
 def symbol_to_list_input_item(
@@ -202,7 +181,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             window = self.view.window()
             if window:
                 self.cached = True
-                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': 'lsp_document_symbols'})
+                window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
 
     def handle_response_error(self, error: Any) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
@@ -305,48 +284,226 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
             self.view.show_at_center(self.old_selection[0].begin())
 
 
-class SymbolQueryInput(sublime_plugin.TextInputHandler):
-    def want_event(self) -> bool:
-        return False
-
-    def placeholder(self) -> str:
-        return "Enter symbol name"
-
-
-class LspWorkspaceSymbolsCommand(LspTextCommand):
+class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     capability = 'workspaceSymbolProvider'
 
-    def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
-        return SymbolQueryInput()
+    def __init__(self, window: sublime.Window) -> None:
+        super().__init__(window)
+        self.items = []  # type: List[sublime.ListInputItem]
+        self.pending_request = False
 
-    def run(self, edit: sublime.Edit, symbol_query_input: str, event: Optional[Any] = None) -> None:
-        session = self.best_session(self.capability)
+    def run(
+        self,
+        symbol: Optional[Dict[str, Any]],
+        text: str = ""
+    ) -> None:
+        if not symbol:
+            return
+        session = self.session()
         if session:
-            self.weaksession = weakref.ref(session)
-            session.send_request(
-                Request.workspaceSymbol({"query": symbol_query_input}),
-                lambda r: self._handle_response(symbol_query_input, r),
-                self._handle_error)
+            session.open_location_async(symbol['location'], sublime.ENCODED_POSITION)
 
-    def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
-        if index != -1:
-            session = self.weaksession()
-            if session:
-                session.open_location_async(symbols[index]['location'], sublime.ENCODED_POSITION)
+    def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
+        # TODO maybe send an initial request with empty query string when the command is invoked?
+        if 'symbol' not in args:
+            return WorkspaceSymbolsInputHandler(self, args.get('text', ''))
+        return None
 
-    def _handle_response(self, query: str, response: Union[List[SymbolInformation], None]) -> None:
-        if response:
-            matches = response
-            window = self.view.window()
-            if window:
-                window.show_quick_panel(
-                    list(map(symbol_information_to_quick_panel_item, matches)),
-                    lambda i: self._open_file(matches, i))
+
+def symbol_to_list_input_item2(item: Union[SymbolInformation, WorkspaceSymbol]) -> sublime.ListInputItem:
+    # TODO merge this function with symbol_to_list_input_item
+    name = item['name']
+    kind = item['kind']
+    location = item['location']
+    st_kind = SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
+    details = []
+    details.append(os.path.basename(location['uri']))
+    container_name = item.get('containerName')
+    if container_name:
+        details.append(container_name)
+    deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
+    return sublime.ListInputItem(
+        name,
+        {'kind': kind, 'location': location, 'deprecated': deprecated},
+        details=" > ".join(details),
+        annotation=st_kind[2],
+        kind=st_kind
+    )
+
+
+class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+    """ A ListInputHandler which can update its items while typing in the input field.
+
+    Derive from this class and override the `get_list_items` method for the initial list items, but don't implement
+    `list_items`. Then you can call the `update` method with a list of `ListInputItem`s from within `on_modified`,
+    which will be called after changes have been made to the input (with a small delay).
+
+    To create an instance of the derived class, pass the command instance and the `text` command argument to the
+    constructor, like this:
+
+    def input(self, args):
+        return MyDynamicListInputHandler(self, args.get('text', ''))
+
+    For now, the type of the command must be a WindowCommand, but maybe it can be generalized later if needed.
+    This class will set and modify an `_items` attribute of the command, so make sure that this attribute name is not
+    used in another way in the command's class.
+    """
+
+    def __init__(self, command: sublime_plugin.WindowCommand, text: str) -> None:
+        super().__init__()
+        self.command = command
+        self.text = text
+        self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
+        self.input_view = None  # type: Optional[sublime.View]
+
+    def attach_listener(self) -> None:
+        window = sublime.active_window()
+        for buffer in sublime._buffers():  # type: ignore
+            view = buffer.primary_view()
+            # TODO what to do if there is another command palette open in the same window but in another group?
+            if view.element() == 'command_palette:input' and view.window() == window:
+                self.input_view = view
+                break
         else:
-            sublime.message_dialog("No matches found for query: '{}'".format(query))
+            raise RuntimeError('Could not find the Command Palette input field view')
+        self.listener = WorkspaceSymbolsQueryListener(self)
+        self.listener.attach(buffer)
+        # --- Hack needed because the initial_selection method is not supported on Python 3.3 API
+        selection = self.input_view.sel()
+        selection.clear()
+        selection.add(len(self.text))
+        # --- End of hack
 
-    def _handle_error(self, error: Dict[str, Any]) -> None:
-        reason = error.get("message", "none provided by server :(")
-        msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
-        sublime.error_message(msg)
+    def list_items(self) -> List[sublime.ListInputItem]:
+        if not self.text:  # Show initial items when the command was just invoked
+            return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
+        else:  # Items were updated after typing
+            return getattr(self.command, '_items', None) or [sublime.ListInputItem("No Results", "")]
+
+    def initial_text(self) -> str:
+        sublime.set_timeout(self.attach_listener)
+        return self.text
+
+    # Not supported on Python 3.3 API :-(
+    def initial_selection(self) -> List[Tuple[int, int]]:
+        pt = len(self.text)
+        return [(pt, pt)]
+
+    def validate(self, text: str) -> bool:
+        return bool(text)
+
+    def cancel(self) -> None:
+        if self.listener and self.listener.is_attached():
+            self.listener.detach()
+
+    def confirm(self, text: str) -> None:
+        if self.listener and self.listener.is_attached():
+            self.listener.detach()
+
+    def on_modified(self, text: str) -> None:
+        """ Called after changes have been made to the input, with the text of the input field passed as argument. """
+        pass
+
+    @abstractmethod
+    def get_list_items(self) -> List[sublime.ListInputItem]:
+        """ The list items which are initially shown. """
+        raise NotImplementedError()
+
+    def update(self, items: List[sublime.ListInputItem]) -> None:
+        """ Call this method to update the list items. """
+        if not self.input_view:
+            return
+        setattr(self.command, '_items', items)
+        text = self.input_view.substr(sublime.Region(0, self.input_view.size()))
+        self.command.window.run_command('chain', {
+            'commands': [
+                # TODO is there a way to run the command again without having to close the overlay first, so that the
+                # command palette won't change its width?
+                ['hide_overlay', {}],
+                [self.command.name(), {'text': text}]
+            ]
+        })
+        # self.command.window.run_command(self.command.name(), {'text': self.text})
+
+
+class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
+
+    def __init__(self, command: sublime_plugin.WindowCommand, text: str) -> None:
+        super().__init__(command, text)
+
+    def name(self) -> str:
+        return 'symbol'
+
+    def placeholder(self) -> str:
+        return "Start typing to search"
+
+    def preview(self, text: Any) -> Union[str, sublime.Html, None]:
+        if isinstance(text, dict) and text.get('deprecated'):
+            return "⚠ Deprecated"
+        return ""
+
+    def get_list_items(self) -> List[sublime.ListInputItem]:
+        return []
+
+    def on_modified(self, text: str) -> None:
+        self.command = cast(LspWindowCommand, self.command)
+        session = self.command.session()
+        if session and self.input_view:
+            change_count = self.input_view.change_count()
+            session.send_request(
+                Request.workspaceSymbol({"query": text}),
+                functools.partial(self._handle_response_async, change_count),
+                functools.partial(self._handle_response_error_async, change_count)
+            )
+
+    def _handle_response_async(self, change_count: int, response: Union[List[SymbolInformation], None]) -> None:
+        if self.input_view and self.input_view.change_count() == change_count:
+            self.update([symbol_to_list_input_item2(item) for item in response] if response else [])
+
+    def _handle_response_error_async(self, change_count: int, error: Dict[str, Any]) -> None:
+        if self.input_view and self.input_view.change_count() == change_count:
+            self.update([])
+
+
+T_Callable = TypeVar('T_Callable', bound=Callable[..., Any])
+
+
+def debounced(user_function: T_Callable) -> T_Callable:
+    """ Yet another debounce implementation :-) """
+    DEBOUNCE_TIME = 0.5  # seconds
+    @functools.wraps(user_function)
+    def wrapped_function(*args: Any, **kwargs: Any) -> None:
+        def call_function():
+            if hasattr(wrapped_function, '_timer'):
+                delattr(wrapped_function, '_timer')
+            return user_function(*args, **kwargs)
+        timer = getattr(wrapped_function, '_timer', None)
+        if timer is not None:
+            timer.cancel()
+        timer = threading.Timer(DEBOUNCE_TIME, call_function)
+        timer.start()
+        setattr(wrapped_function, '_timer', timer)
+    setattr(wrapped_function, '_timer', None)
+    return cast(T_Callable, wrapped_function)
+
+
+class WorkspaceSymbolsQueryListener(sublime_plugin.TextChangeListener):
+
+    def __init__(self, handler: DynamicListInputHandler) -> None:
+        super().__init__()
+        self.weakhandler = weakref.ref(handler)
+
+    @classmethod
+    def is_applicable(cls, buffer: sublime.Buffer) -> bool:
+        return False
+
+    @debounced
+    def on_text_changed(self, changes: List[sublime.TextChange]) -> None:
+        handler = self.weakhandler()
+        if not handler:
+            return
+        view = self.buffer.primary_view()
+        if not view:
+            return
+        handler.on_modified(view.substr(sublime.Region(0, view.size())))

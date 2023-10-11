@@ -379,7 +379,15 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
         else:  # Items were updated after typing
-            return getattr(self.command, '_items', None) or [sublime.ListInputItem("No Results", "")]
+            items = getattr(self.command, '_items', None)
+            if items:
+                # Trick to select the topmost item; also see https://github.com/sublimehq/sublime_text/issues/6162
+                sublime.set_timeout(self._select_first_item)
+                return [sublime.ListInputItem("", "")] + items
+            return [sublime.ListInputItem("No Results", "")]
+
+    def _select_first_item(self) -> None:
+        self.command.window.run_command('move', {'by': 'lines', 'forward': True})
 
     def initial_text(self) -> str:
         sublime.set_timeout(self.attach_listener)

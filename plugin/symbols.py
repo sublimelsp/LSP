@@ -1,3 +1,5 @@
+from .core.input_handlers import DynamicListInputHandler
+from .core.input_handlers import PreselectedListInputHandler
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Request
@@ -8,19 +10,14 @@ from .core.protocol import WorkspaceSymbol
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
-from .core.typing import Any, Callable, List, Optional, Tuple, Dict, TypeVar, Union, cast
+from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
 from .core.views import range_to_region
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
-from .goto_diagnostic import PreselectedListInputHandler
-from abc import ABCMeta
-from abc import abstractmethod
 import functools
 import os
 import sublime
 import sublime_plugin
-import threading
-import weakref
 
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
@@ -332,113 +329,7 @@ def symbol_to_list_input_item2(item: Union[SymbolInformation, WorkspaceSymbol]) 
     )
 
 
-class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """ A ListInputHandler which can update its items while typing in the input field.
-
-    Derive from this class and override the `get_list_items` method for the initial list items, but don't implement
-    `list_items`. Then you can call the `update` method with a list of `ListInputItem`s from within `on_modified`,
-    which will be called after changes have been made to the input (with a small delay).
-
-    To create an instance of the derived class, pass the command instance and the `text` command argument to the
-    constructor, like this:
-
-    def input(self, args):
-        return MyDynamicListInputHandler(self, args.get('text', ''))
-
-    For now, the type of the command must be a WindowCommand, but maybe it can be generalized later if needed.
-    This class will set and modify an `_items` attribute of the command, so make sure that this attribute name is not
-    used in another way in the command's class.
-    """
-
-    def __init__(self, command: sublime_plugin.WindowCommand, text: str) -> None:
-        super().__init__()
-        self.command = command
-        self.text = text
-        self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
-        self.input_view = None  # type: Optional[sublime.View]
-
-    def attach_listener(self) -> None:
-        window = sublime.active_window()
-        for buffer in sublime._buffers():  # type: ignore
-            view = buffer.primary_view()
-            # TODO what to do if there is another command palette open in the same window but in another group?
-            if view.element() == 'command_palette:input' and view.window() == window:
-                self.input_view = view
-                break
-        else:
-            raise RuntimeError('Could not find the Command Palette input field view')
-        self.listener = WorkspaceSymbolsQueryListener(self)
-        self.listener.attach(buffer)
-        # --- Hack needed because the initial_selection method is not supported on Python 3.3 API
-        selection = self.input_view.sel()
-        selection.clear()
-        selection.add(len(self.text))
-        # --- End of hack
-
-    def list_items(self) -> List[sublime.ListInputItem]:
-        if not self.text:  # Show initial items when the command was just invoked
-            return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
-        else:  # Items were updated after typing
-            items = getattr(self.command, '_items', None)
-            if items:
-                # Trick to select the topmost item; also see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_item)
-                return [sublime.ListInputItem("", "")] + items
-            return [sublime.ListInputItem("No Results", "")]
-
-    def _select_first_item(self) -> None:
-        self.command.window.run_command('move', {'by': 'lines', 'forward': True})
-
-    def initial_text(self) -> str:
-        sublime.set_timeout(self.attach_listener)
-        return self.text
-
-    # Not supported on Python 3.3 API :-(
-    def initial_selection(self) -> List[Tuple[int, int]]:
-        pt = len(self.text)
-        return [(pt, pt)]
-
-    def validate(self, text: str) -> bool:
-        return bool(text)
-
-    def cancel(self) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
-
-    def confirm(self, text: str) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
-
-    def on_modified(self, text: str) -> None:
-        """ Called after changes have been made to the input, with the text of the input field passed as argument. """
-        pass
-
-    @abstractmethod
-    def get_list_items(self) -> List[sublime.ListInputItem]:
-        """ The list items which are initially shown. """
-        raise NotImplementedError()
-
-    def update(self, items: List[sublime.ListInputItem]) -> None:
-        """ Call this method to update the list items. """
-        if not self.input_view:
-            return
-        setattr(self.command, '_items', items)
-        text = self.input_view.substr(sublime.Region(0, self.input_view.size()))
-        self.command.window.run_command('chain', {
-            'commands': [
-                # TODO is there a way to run the command again without having to close the overlay first, so that the
-                # command palette won't change its width?
-                ['hide_overlay', {}],
-                [self.command.name(), {'text': text}]
-            ]
-        })
-        # self.command.window.run_command(self.command.name(), {'text': self.text})
-
-
 class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
-
-    def __init__(self, command: sublime_plugin.WindowCommand, text: str) -> None:
-        super().__init__(command, text)
 
     def name(self) -> str:
         return 'symbol'
@@ -472,46 +363,3 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
     def _handle_response_error_async(self, change_count: int, error: Dict[str, Any]) -> None:
         if self.input_view and self.input_view.change_count() == change_count:
             self.update([])
-
-
-T_Callable = TypeVar('T_Callable', bound=Callable[..., Any])
-
-
-def debounced(user_function: T_Callable) -> T_Callable:
-    """ Yet another debounce implementation :-) """
-    DEBOUNCE_TIME = 0.5  # seconds
-    @functools.wraps(user_function)
-    def wrapped_function(*args: Any, **kwargs: Any) -> None:
-        def call_function():
-            if hasattr(wrapped_function, '_timer'):
-                delattr(wrapped_function, '_timer')
-            return user_function(*args, **kwargs)
-        timer = getattr(wrapped_function, '_timer', None)
-        if timer is not None:
-            timer.cancel()
-        timer = threading.Timer(DEBOUNCE_TIME, call_function)
-        timer.start()
-        setattr(wrapped_function, '_timer', timer)
-    setattr(wrapped_function, '_timer', None)
-    return cast(T_Callable, wrapped_function)
-
-
-class WorkspaceSymbolsQueryListener(sublime_plugin.TextChangeListener):
-
-    def __init__(self, handler: DynamicListInputHandler) -> None:
-        super().__init__()
-        self.weakhandler = weakref.ref(handler)
-
-    @classmethod
-    def is_applicable(cls, buffer: sublime.Buffer) -> bool:
-        return False
-
-    @debounced
-    def on_text_changed(self, changes: List[sublime.TextChange]) -> None:
-        handler = self.weakhandler()
-        if not handler:
-            return
-        view = self.buffer.primary_view()
-        if not view:
-            return
-        handler.on_modified(view.substr(sublime.Region(0, view.size())))

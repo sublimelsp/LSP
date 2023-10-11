@@ -1,5 +1,6 @@
 from .core.diagnostics_storage import is_severity_included
 from .core.diagnostics_storage import ParsedUri
+from .core.input_handlers import PreselectedListInputHandler
 from .core.paths import project_base_dir
 from .core.paths import project_path
 from .core.paths import simple_project_path
@@ -11,7 +12,7 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from .core.typing import Dict, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
 from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
@@ -22,8 +23,6 @@ from .core.views import get_uri_and_position_from_location
 from .core.views import MissingUriError
 from .core.views import to_encoded_filename
 from .core.views import uri_from_view
-from abc import ABCMeta
-from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
@@ -91,46 +90,6 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
 
     def input_description(self) -> str:
         return "Goto Diagnostic"
-
-
-ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
-                        List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
-
-
-class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """
-    Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
-    Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
-
-    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
-    i.e. just prepend `get_` to the regular `list_items` method.
-
-    When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
-    An optional second argument `initial_value` can be provided to preselect a value.
-    """
-
-    def __init__(
-        self, window: sublime.Window, initial_value: Optional[Union[str, sublime.ListInputItem]] = None
-    ) -> None:
-        super().__init__()
-        self._window = window
-        self._initial_value = initial_value
-
-    def list_items(self) -> ListItemsReturn:
-        if self._initial_value is not None:
-            sublime.set_timeout(self._select_and_reset)
-            return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
-        else:
-            return self.get_list_items()
-
-    def _select_and_reset(self) -> None:
-        self._initial_value = None
-        if self._window.is_valid():
-            self._window.run_command('select')
-
-    @abstractmethod
-    def get_list_items(self) -> ListItemsReturn:
-        raise NotImplementedError()
 
 
 class DiagnosticUriInputHandler(PreselectedListInputHandler):

@@ -463,6 +463,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "workspaceFolders": True,
         "symbol": {
             "dynamicRegistration": True,  # exceptional
+            "resolveSupport": {
+                "properties": ["location.range"]
+            },
             "symbolKind": {
                 "valueSet": symbol_kinds
             },

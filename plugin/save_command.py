@@ -105,7 +105,9 @@ class LspSaveCommand(LspTextCommand):
     def _on_task_completed_async(self) -> None:
         self._pending_tasks.pop(0)
         if self._pending_tasks:
-            self._run_next_task_async()
+            # Even though we are on the async thread already, we want to give ST a chance to notify us about
+            # potential document changes.
+            sublime.set_timeout_async(self._run_next_task_async)
         else:
             self._trigger_native_save()
 

@@ -171,7 +171,6 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
                 [self.command.name(), {'text': text}]
             ]
         })
-        # self.command.window.run_command(self.command.name(), {'text': self.text})
 
 
 class WorkspaceSymbolsQueryListener(sublime_plugin.TextChangeListener):

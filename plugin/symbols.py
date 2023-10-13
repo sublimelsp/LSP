@@ -1,5 +1,6 @@
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
+from .core.promise import Promise
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Location
@@ -56,7 +57,8 @@ SYMBOL_KIND_NAMES = {
 def symbol_to_list_input_item(
     item: Union[DocumentSymbol, WorkspaceSymbol, SymbolInformation],
     view: Optional[sublime.View] = None,
-    hierarchy: str = ''
+    hierarchy: str = '',
+    session_name: Optional[str] = None
 ) -> sublime.ListInputItem:
     name = item['name']
     kind = item['kind']
@@ -65,26 +67,26 @@ def symbol_to_list_input_item(
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
-    selection_range = item.get('selectionRange')
-    if selection_range:
-        item = cast(DocumentSymbol, item)
-        detail = item.get('detail')
-        if detail:
-            details.append(detail)
-        if hierarchy:
-            details.append(hierarchy + " > " + name)
-        if view:
+    if view:  # Response from textDocument/documentSymbol request
+        selection_range = item.get('selectionRange')
+        if selection_range:
+            item = cast(DocumentSymbol, item)
+            detail = item.get('detail')
+            if detail:
+                details.append(detail)
+            if hierarchy:
+                details.append(hierarchy + " > " + name)
             region = range_to_region(selection_range, view)
             value['region'] = [region.a, region.b]
-    elif view:
-        item = cast(SymbolInformation, item)
-        container_name = item.get('containerName')
-        if container_name:
-            details.append(container_name)
-        region = range_to_region(item['location']['range'], view)
-        value['region'] = [region.a, region.b]
-    else:  # Can be either WorkspaceSymbol or SymbolInformation
-        item = cast(WorkspaceSymbol, item)
+        else:
+            item = cast(SymbolInformation, item)
+            container_name = item.get('containerName')
+            if container_name:
+                details.append(container_name)
+            region = range_to_region(item['location']['range'], view)
+            value['region'] = [region.a, region.b]
+    else:  # Response from workspace/symbol request
+        item = cast(WorkspaceSymbol, item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
         details_separator = " > "
         location = item['location']
         details.append(os.path.basename(location['uri']))
@@ -95,6 +97,7 @@ def symbol_to_list_input_item(
             value['location'] = location
         else:
             value['workspaceSymbol'] = item
+        value['session'] = session_name
     return sublime.ListInputItem(
         name,
         value,
@@ -317,13 +320,15 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
     ) -> None:
         if not symbol:
             return
-        session = self.session()
+        session_name = symbol['session']
+        session = self.session_by_name(session_name)
         if session:
             if 'location' in symbol:
                 session.open_location_async(symbol['location'], sublime.ENCODED_POSITION)
             else:
                 session.send_request(
-                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']), self._on_resolved_symbol_async)
+                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),
+                    functools.partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
         # TODO maybe send an initial request with empty query string when the command is invoked?
@@ -331,9 +336,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
             return WorkspaceSymbolsInputHandler(self, args.get('text', ''))
         return None
 
-    def _on_resolved_symbol_async(self, response: WorkspaceSymbol) -> None:
+    def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:
         location = cast(Location, response['location'])
-        session = self.session()
+        session = self.session_by_name(session_name)
         if session:
             session.open_location_async(location, sublime.ENCODED_POSITION)
 
@@ -355,20 +360,25 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         return []
 
     def on_modified(self, text: str) -> None:
+        if not self.input_view:
+            return
+        change_count = self.input_view.change_count()
         self.command = cast(LspWindowCommand, self.command)
-        session = self.command.session()
-        if session and self.input_view:
-            change_count = self.input_view.change_count()
-            session.send_request(
-                Request.workspaceSymbol({"query": text}),
-                functools.partial(self._handle_response_async, change_count),
-                functools.partial(self._handle_response_error_async, change_count)
-            )
+        promises = []  # type: List[Promise[List[sublime.ListInputItem]]]
+        for session in self.command.sessions():
+            promises.append(
+                session.send_request_task(Request.workspaceSymbol({"query": text}))
+                    .then(functools.partial(self._handle_response_async, session.config.name)))
+        Promise.all(promises).then(functools.partial(self._on_all_responses, change_count))
 
-    def _handle_response_async(self, change_count: int, response: Union[List[SymbolInformation], None]) -> None:
-        if self.input_view and self.input_view.change_count() == change_count:
-            self.update([symbol_to_list_input_item(item) for item in response] if response else [])
+    def _handle_response_async(
+        self, session_name: str, response: Union[List[SymbolInformation], List[WorkspaceSymbol], None]
+    ) -> List[sublime.ListInputItem]:
+        return [symbol_to_list_input_item(item, session_name=session_name) for item in response] if response else []
 
-    def _handle_response_error_async(self, change_count: int, error: Dict[str, Any]) -> None:
+    def _on_all_responses(self, change_count: int, item_lists: List[List[sublime.ListInputItem]]) -> None:
         if self.input_view and self.input_view.change_count() == change_count:
-            self.update([])
+            items = []  # type: List[sublime.ListInputItem]
+            for item_list in item_lists:
+                items.extend(item_list)
+            self.update(items)

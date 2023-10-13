@@ -1,5 +1,6 @@
 from .typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 from .typing import cast
+from .typing import final
 from abc import ABCMeta
 from abc import abstractmethod
 import functools
@@ -54,6 +55,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
         self._window = window
         self._initial_value = initial_value
 
+    @final
     def list_items(self) -> ListItemsReturn:
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
@@ -114,6 +116,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         selection.add(len(self.text))
         # --- End of hack
 
+    @final
     def list_items(self) -> List[sublime.ListInputItem]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]

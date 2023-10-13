@@ -8,6 +8,7 @@ if sys.version_info >= (3, 11, 0):
     from typing import cast
     from typing import Deque
     from typing import Dict
+    from typing import final
     from typing import Generator
     from typing import Generic
     from typing import IO
@@ -33,6 +34,9 @@ else:
 
     def cast(typ, val):  # type: ignore
         return val
+
+    def final(func):
+        return func
 
     def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore

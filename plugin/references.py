@@ -154,12 +154,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
             pt = selection[0].b
             view_filename = self.view.file_name()
             for idx, location in enumerate(locations):
-                filename = session.config.map_server_uri_to_client_path(location['uri'])
-                if filename != view_filename:
+                if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
                     continue
-                if position_to_offset(location['range']['start'], self.view) <= pt:
-                    index = idx
-                else:
+                index = idx
+                if position_to_offset(location['range']['start'], self.view) > pt:
                     break
         LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 

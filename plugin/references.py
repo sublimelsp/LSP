@@ -155,7 +155,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             view_filename = self.view.file_name()
             for idx, location in enumerate(locations):
                 filename = session.config.map_server_uri_to_client_path(location['uri'])
-                if not filename == view_filename:
+                if filename != view_filename:
                     continue
                 if position_to_offset(location['range']['start'], self.view) <= pt:
                     index = idx

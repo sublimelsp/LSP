@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 from .css import css as lsp_css
 from .protocol import CodeAction
 from .protocol import CodeActionKind
@@ -995,6 +996,34 @@ def is_location_href(href: str) -> bool:
     Check whether this href is an encoded location.
     """
     return href.startswith("location:")
+
+
+def starts_with_custom_uri_scheme(href: str) -> bool:
+    return urlparse(href).scheme.lower() not in ("", "http", "https")
+
+
+def row_col_from_uri_fragment(href: str) -> Tuple[Optional[int], Optional[int]]:
+    fragment = urlparse(href).fragment
+    if not fragment:
+        return (None, None)
+    rowcol = fragment.split(":")
+    row = None  # type: Optional[int]
+    col = None  # type: Optional[int]
+    if len(rowcol) >= 1:
+        try:
+            row = int(rowcol[0])
+            # rowcols in URI fragments are 1-based (dubious)
+            row -= 1
+        except Exception:
+            pass
+    if len(rowcol) >= 2:
+        try:
+            col = int(rowcol[1])
+            # rowcols in URI fragments are 1-based (dubious)
+            col -= 1
+        except Exception:
+            pass
+    return (row, col)
 
 
 def _format_diagnostic_related_info(

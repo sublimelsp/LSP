@@ -308,15 +308,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     capability = 'workspaceSymbolProvider'
 
-    def __init__(self, window: sublime.Window) -> None:
-        super().__init__(window)
-        self.items = []  # type: List[sublime.ListInputItem]
-        self.pending_request = False
-
     def run(
         self,
-        symbol: Optional[Dict[str, Any]],
-        text: str = ""
+        symbol: Dict[str, Any]
     ) -> None:
         if not symbol:
             return
@@ -333,7 +327,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
     def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
         # TODO maybe send an initial request with empty query string when the command is invoked?
         if 'symbol' not in args:
-            return WorkspaceSymbolsInputHandler(self, args.get('text', ''))
+            return WorkspaceSymbolsInputHandler(self)
         return None
 
     def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:

@@ -80,21 +80,20 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
     `list_items`. Then you can call the `update` method with a list of `ListInputItem`s from within `on_modified`,
     which will be called after changes have been made to the input (with a small delay).
 
-    To create an instance of the derived class, pass the command instance and the `text` command argument to the
-    constructor, like this:
+    To create an instance of the derived class pass the command instance to the constructor, like this:
 
     def input(self, args):
-        return MyDynamicListInputHandler(self, args.get('text', ''))
+        return MyDynamicListInputHandler(self)
 
     For now, the type of the command must be a WindowCommand, but maybe it can be generalized later if needed.
-    This class will set and modify an `_items` attribute of the command, so make sure that this attribute name is not
-    used in another way in the command's class.
+    This class will set and modify `_items` and '_text' attributes of the command, so make sure that those attribute
+    names are not used in another way in the command's class.
     """
 
-    def __init__(self, command: sublime_plugin.WindowCommand, text: str) -> None:
+    def __init__(self, command: sublime_plugin.WindowCommand) -> None:
         super().__init__()
         self.command = command
-        self.text = text
+        self.text = getattr(command, '_text', '')
         self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
         self.input_view = None  # type: Optional[sublime.View]
 
@@ -124,14 +123,15 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             items = getattr(self.command, '_items', None)
             if items:
                 # Trick to select the topmost item; also see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_item)
+                sublime.set_timeout(self._select_first_row)
                 return [sublime.ListInputItem("", "")] + items
             return [sublime.ListInputItem("No Results", "")]
 
-    def _select_first_item(self) -> None:
+    def _select_first_row(self) -> None:
         self.command.window.run_command('move', {'by': 'lines', 'forward': True})
 
     def initial_text(self) -> str:
+        setattr(self.command, '_text', '')
         sublime.set_timeout(self.attach_listener)
         return self.text
 
@@ -166,12 +166,13 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             return
         setattr(self.command, '_items', items)
         text = self.input_view.substr(sublime.Region(0, self.input_view.size()))
+        setattr(self.command, '_text', text)
         self.command.window.run_command('chain', {
             'commands': [
                 # TODO is there a way to run the command again without having to close the overlay first, so that the
                 # command palette won't change its width?
                 ['hide_overlay', {}],
-                [self.command.name(), {'text': text}]
+                [self.command.name(), {}]
             ]
         })
 
@@ -192,6 +193,5 @@ class WorkspaceSymbolsQueryListener(sublime_plugin.TextChangeListener):
         if not handler:
             return
         view = self.buffer.primary_view()
-        if not view:
-            return
-        handler.on_modified(view.substr(sublime.Region(0, view.size())))
+        if view and view.id():
+            handler.on_modified(view.substr(sublime.Region(0, view.size())))

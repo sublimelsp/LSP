@@ -26,7 +26,7 @@ class MessageRequestHandler():
         self.view = view
         self.actions = params.get("actions", [])
         self.action_titles = list(action.get("title") for action in self.actions)
-        self.message = text2html(params['message'])
+        self.message = params['message']
         self.message_type = params.get('type', 4)
         self.source = source
 
@@ -34,11 +34,11 @@ class MessageRequestHandler():
         formatted = []  # type: List[str]
         formatted.append("<h2>{}</h2>".format(self.source))
         icon = ICONS.get(self.message_type, '')
-        formatted.append("<div class='message'>{} {}</div>".format(icon, self.message))
+        formatted.append("<div class='message'>{} {}</div>".format(icon, text2html(self.message)))
         if self.action_titles:
             buttons = []  # type: List[str]
             for idx, title in enumerate(self.action_titles):
-                buttons.append("<a href='{}'>{}</a>".format(idx, title))
+                buttons.append("<a href='{}'>{}</a>".format(idx, text2html(title)))
             formatted.append("<div class='actions'>" + " ".join(buttons) + "</div>")
         show_lsp_popup(
             self.view,

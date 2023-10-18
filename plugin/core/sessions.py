@@ -1341,9 +1341,6 @@ class Session(TransportCallbacks):
         """
         yield from self._session_buffers
 
-    def get_session_buffer_by_id(self, buffer_id: int) -> Optional[SessionBufferProtocol]:
-        return next(filter(lambda buffer: buffer.is_self(buffer_id), self._session_buffers), None)
-
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         scheme, path = parse_uri(uri)
         if scheme == "file":
@@ -1713,12 +1710,10 @@ class Session(TransportCallbacks):
     def _maybe_resolve_code_action(self, code_action: CodeAction, view: Optional[sublime.View]) -> Promise[Union[CodeAction, Error]]:
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
-
             if not has_capability and view:
-                session_buffer = self.get_session_buffer_by_id(view.buffer_id())
-                if session_buffer:
-                     has_capability = session_buffer.has_capability("codeActionProvider.resolveProvider")
-
+                session_view = self.session_view_for_view_async(view)
+                if session_view:
+                    has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
             if has_capability:
                 # We must first resolve the command and edit properties, because they can potentially be absent.
                 request = Request("codeAction/resolve", code_action)

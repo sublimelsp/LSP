@@ -1,6 +1,8 @@
+from urllib.parse import urlparse
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
@@ -30,7 +32,6 @@ from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
-from .core.views import row_col_from_uri_fragment
 from .core.views import show_lsp_popup
 from .core.views import starts_with_custom_uri_scheme
 from .core.views import text_document_position_params
@@ -381,13 +382,7 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def try_open_custom_uri_async(self, href: str) -> None:
-        row, col_utf16 = row_col_from_uri_fragment(href)
-        if isinstance(row, int):
-            position = {"line": row, "character": col_utf16 or 0}  # type: Position
-            r = {"start": position, "end": position}  # type: Optional[Range]
-        else:
-            r = None
+        r = lsp_range_from_uri_fragment(urlparse(href).fragment)
         for session in self.sessions():
-            promise = session.open_uri_async(href, r)
-            if not promise.resolved or isinstance(promise.value, sublime.View):
+            if session.try_open_uri_async(href, r) is not None:
                 return

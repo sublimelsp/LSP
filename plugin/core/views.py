@@ -194,27 +194,6 @@ SUBLIME_KIND_SCOPES = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }  # type: Dict[SublimeKind, str]
 
-# Recommended colors to use by themes for each symbol kind, based on the kind_container specialization class described
-# at https://www.sublimetext.com/docs/themes.html#quick-panel
-SUBLIME_KIND_ID_COLOR_SCOPES = {
-    sublime.KIND_ID_KEYWORD: "region.pinkish",
-    sublime.KIND_ID_TYPE: "region.purplish",
-    sublime.KIND_ID_FUNCTION: "region.redish",
-    sublime.KIND_ID_NAMESPACE: "region.bluish",
-    sublime.KIND_ID_NAVIGATION: "region.yellowish",
-    sublime.KIND_ID_MARKUP: "region.orangish",
-    sublime.KIND_ID_VARIABLE: "region.cyanish",
-    sublime.KIND_ID_SNIPPET: "region.greenish",
-    sublime.KIND_ID_COLOR_REDISH: "region.redish",
-    sublime.KIND_ID_COLOR_ORANGISH: "region.orangish",
-    sublime.KIND_ID_COLOR_YELLOWISH: "region.yellowish",
-    sublime.KIND_ID_COLOR_GREENISH: "region.greenish",
-    sublime.KIND_ID_COLOR_CYANISH: "region.cyanish",
-    sublime.KIND_ID_COLOR_BLUISH: "region.bluish",
-    sublime.KIND_ID_COLOR_PURPLISH: "region.purplish",
-    sublime.KIND_ID_COLOR_PINKISH: "region.pinkish"
-}  # type: Dict[int, str]
-
 DOCUMENT_HIGHLIGHT_KINDS = {
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",

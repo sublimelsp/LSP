@@ -24,7 +24,7 @@ Adjusting `PATH` can differ based on the operating system and the default shell 
 </tr>
 <tr>
     <td>macOS</td>
-    <td>Depending on your default shell, edit: <code>~/.profile</code> (bash), <code>~/.zprofile</code> (zsh) or <code>~/.config/fish/config.fish</code> (fish).</td>
+    <td>Depending on your default shell (macOS ships with zsh shell by default), edit: <code>~/.zprofile</code> (zsh), <code>~/.profile</code> (bash) or <code>~/.config/fish/config.fish</code> (fish).</td>
 </tr>
 <tr>
     <td>Linux</td>

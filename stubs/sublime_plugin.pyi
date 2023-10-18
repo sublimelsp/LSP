@@ -170,6 +170,10 @@ class CommandInputHandler:
     ...
 
 
+class BackInputHandler(CommandInputHandler):
+    ...
+
+
 class TextInputHandler(CommandInputHandler):
     ...
 

@@ -39,6 +39,7 @@ from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
 from functools import partial
 import html
+import mdpopups
 import sublime
 
 
@@ -101,6 +102,7 @@ class LspHoverCommand(LspTextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
+        self._image_resolver = None
 
     def run(
         self,
@@ -313,6 +315,13 @@ class LspHoverCommand(LspTextCommand):
                     location=point,
                     on_navigate=lambda href: self._on_navigate(href, point),
                     on_hide=lambda: self.view.erase_regions(HOVER_HIGHLIGHT_KEY))
+            self._image_resolver = mdpopups.resolve_images(
+                contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
+
+    def _on_images_resolved(self, original_contents: str, contents: str) -> None:
+        self._image_resolver = None
+        if contents != original_contents and self.view.is_popup_visible():
+            update_lsp_popup(self.view, contents)
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):

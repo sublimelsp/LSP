@@ -605,6 +605,9 @@ class SessionBufferProtocol(Protocol):
     def get_view_in_group(self, group: int) -> sublime.View:
         ...
 
+    def is_self(self, buffer_id: int) -> bool:
+        ...
+
     def register_capability_async(
         self,
         registration_id: str,
@@ -1338,7 +1341,7 @@ class Session(TransportCallbacks):
         """
         yield from self._session_buffers
 
-    def get_session_buffer_by_id(self, buffer_id: int) -> SessionBufferProtocol:
+    def get_session_buffer_by_id(self, buffer_id: int) -> Optional[SessionBufferProtocol]:
         return next(filter(lambda buffer: buffer.is_self(buffer_id), self._session_buffers), None)
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
@@ -1622,8 +1625,7 @@ class Session(TransportCallbacks):
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        session_buffer = self.get_session_buffer_by_id(view.buffer_id())
-        return self._maybe_resolve_code_action(code_action, session_buffer) \
+        return self._maybe_resolve_code_action(code_action, view) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
     def open_uri_async(
@@ -1708,12 +1710,19 @@ class Session(TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(self, code_action: CodeAction, session_buffer: SessionBufferProtocol) -> Promise[Union[CodeAction, Error]]:
-        has_capability =  self.has_capability("codeActionProvider.resolveProvider") or session_buffer.has_capability("codeActionProvider.resolveProvider")
-        if "edit" not in code_action and  has_capability:
-            # We must first resolve the command and edit properties, because they can potentially be absent.
-            request = Request("codeAction/resolve", code_action)
-            return self.send_request_task(request)
+    def _maybe_resolve_code_action(self, code_action: CodeAction, view: Optional[sublime.View]) -> Promise[Union[CodeAction, Error]]:
+        if "edit" not in code_action:
+            has_capability = self.has_capability("codeActionProvider.resolveProvider")
+
+            if not has_capability and view:
+                session_buffer = self.get_session_buffer_by_id(view.buffer_id())
+                if session_buffer:
+                     has_capability = session_buffer.has_capability("codeActionProvider.resolveProvider")
+
+            if has_capability:
+                # We must first resolve the command and edit properties, because they can potentially be absent.
+                request = Request("codeAction/resolve", code_action)
+                return self.send_request_task(request)
         return Promise.resolve(code_action)
 
     def _apply_code_action_async(

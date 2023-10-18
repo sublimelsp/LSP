@@ -313,9 +313,8 @@ class LspHoverCommand(LspTextCommand):
                     location=point,
                     on_navigate=lambda href: self._on_navigate(href, point),
                     on_hide=lambda: self.view.erase_regions(HOVER_HIGHLIGHT_KEY))
-
-        self._image_resolver = mdpopups.resolve_images(
-            contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
+            self._image_resolver = mdpopups.resolve_images(
+                contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
 
     def _on_images_resolved(self, original_contents: str, contents: str) -> None:
         self._image_resolver = None

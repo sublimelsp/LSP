@@ -611,9 +611,17 @@ def text_document_code_action_params(
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
-def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
-                   css: Optional[str] = None, wrapper_class: Optional[str] = None,
-                   on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
+def show_lsp_popup(
+    view: sublime.View,
+    contents: str,
+    location: int = -1,
+    md: bool = False,
+    flags: int = 0,
+    css: Optional[str] = None,
+    wrapper_class: Optional[str] = None,
+    on_navigate: Optional[Callable[..., None]] = None,
+    on_hide: Optional[Callable[..., None]] = None
+) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML

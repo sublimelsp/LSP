@@ -2,14 +2,15 @@
     margin: 0.5rem;
     padding: 1rem;
 }
-.notification .message {
-    margin-top: 1rem;
-    margin-bottom: 3rem;
+
+.notification h2 {
+    margin-bottom: 1rem;
 }
 
 .notification .actions a {
-    text-decoration: none;
-    padding: 0.5rem;
     border: 2px solid color(var(--foreground) alpha(0.25));
     color: var(--foreground);
+    margin-top: 3rem;
+    padding: 0.5rem;
+    text-decoration: none;
 }

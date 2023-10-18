@@ -1338,6 +1338,9 @@ class Session(TransportCallbacks):
         """
         yield from self._session_buffers
 
+    def get_session_buffer_by_id(self, buffer_id: int) -> SessionBufferProtocol:
+        return next(filter(lambda buffer: buffer.is_self(buffer_id), self._session_buffers), None)
+
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         scheme, path = parse_uri(uri)
         if scheme == "file":
@@ -1619,7 +1622,8 @@ class Session(TransportCallbacks):
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        return self._maybe_resolve_code_action(code_action) \
+        session_buffer = self.get_session_buffer_by_id(view.buffer_id())
+        return self._maybe_resolve_code_action(code_action, session_buffer) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
     def open_uri_async(
@@ -1704,9 +1708,9 @@ class Session(TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
-            # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
+    def _maybe_resolve_code_action(self, code_action: CodeAction, session_buffer: SessionBufferProtocol) -> Promise[Union[CodeAction, Error]]:
+        has_capability =  self.has_capability("codeActionProvider.resolveProvider") or session_buffer.has_capability("codeActionProvider.resolveProvider")
+        if "edit" not in code_action and  has_capability:
             # We must first resolve the command and edit properties, because they can potentially be absent.
             request = Request("codeAction/resolve", code_action)
             return self.send_request_task(request)

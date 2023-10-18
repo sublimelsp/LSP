@@ -185,6 +185,9 @@ class SessionBuffer:
                 return view
         return next(iter(self.session_views)).view
 
+    def is_self(self, id: int) -> bool:
+        return self._id == id;
+
     @property
     def language_id(self) -> str:
         """

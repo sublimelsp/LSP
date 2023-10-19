@@ -605,9 +605,6 @@ class SessionBufferProtocol(Protocol):
     def get_view_in_group(self, group: int) -> sublime.View:
         ...
 
-    def is_self(self, buffer_id: int) -> bool:
-        ...
-
     def register_capability_async(
         self,
         registration_id: str,

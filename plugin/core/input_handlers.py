@@ -10,6 +10,8 @@ import threading
 import weakref
 
 
+ST_VERSION = int(sublime.version())
+
 ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
                         List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
 
@@ -98,11 +100,10 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self.input_view = None  # type: Optional[sublime.View]
 
     def attach_listener(self) -> None:
-        window = sublime.active_window()
         for buffer in sublime._buffers():  # type: ignore
             view = buffer.primary_view()
             # TODO what to do if there is another command palette open in the same window but in another group?
-            if view.element() == 'command_palette:input' and view.window() == window:
+            if view.element() == 'command_palette:input' and view.window() == self.command.window:
                 self.input_view = view
                 break
         else:
@@ -122,9 +123,12 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         else:  # Items were updated after typing
             items = getattr(self.command, '_items', None)
             if items:
-                # Trick to select the topmost item; also see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_row)
-                return [sublime.ListInputItem("", "")] + items
+                if ST_VERSION >= 4157:
+                    return items
+                else:
+                    # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
+                    sublime.set_timeout(self._select_first_row)
+                    return [sublime.ListInputItem("", "")] + items
             return [sublime.ListInputItem('No Symbol found: "{}"'.format(self.text), "")]
 
     def _select_first_row(self) -> None:

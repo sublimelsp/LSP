@@ -1652,9 +1652,7 @@ class Session(TransportCallbacks):
         group: int = -1
     ) -> Promise[Optional[sublime.View]]:
         promise = self.try_open_uri_async(uri, r, flags, group)
-        if promise is None:
-            raise RuntimeError("unexpected URI scheme")
-        return promise
+        return Promise.resolve(None) if promise is None else promise
 
     def _open_file_uri_async(
         self,

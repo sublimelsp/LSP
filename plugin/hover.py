@@ -1,4 +1,3 @@
-from urllib.parse import urlparse
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
@@ -38,6 +37,7 @@ from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
 from functools import partial
+from urllib.parse import urlparse
 import html
 import mdpopups
 import sublime

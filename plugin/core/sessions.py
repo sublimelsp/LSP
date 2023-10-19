@@ -1704,7 +1704,9 @@ class Session(TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(self, code_action: CodeAction, view: Optional[sublime.View]) -> Promise[Union[CodeAction, Error]]:
+    def _maybe_resolve_code_action(
+        self, code_action: CodeAction, view: Optional[sublime.View]
+    ) -> Promise[Union[CodeAction, Error]]:
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:

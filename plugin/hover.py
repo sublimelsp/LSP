@@ -33,7 +33,6 @@ from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
-from .core.views import starts_with_custom_uri_scheme
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
@@ -365,7 +364,7 @@ class LspHoverCommand(LspTextCommand):
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: Range
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif starts_with_custom_uri_scheme(href):
+        elif urlparse(href).scheme.lower() not in ("", "http", "https"):
             sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
         else:
             open_in_browser(href)

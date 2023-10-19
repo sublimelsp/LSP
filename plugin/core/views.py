@@ -1,4 +1,3 @@
-from urllib.parse import urlparse
 from .css import css as lsp_css
 from .protocol import CodeAction
 from .protocol import CodeActionKind
@@ -983,10 +982,6 @@ def is_location_href(href: str) -> bool:
     Check whether this href is an encoded location.
     """
     return href.startswith("location:")
-
-
-def starts_with_custom_uri_scheme(href: str) -> bool:
-    return urlparse(href).scheme.lower() not in ("", "http", "https")
 
 
 def _format_diagnostic_related_info(

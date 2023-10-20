@@ -21,36 +21,37 @@ opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], Res
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
+def lsp_range_from_uri_fragment(fragment: str) -> Optional[Range]:
+    match = FRAGMENT_PATTERN.match(fragment)
+    if match:
+        selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: Range
+        # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
+        # numbers for the LSP Position structure.
+        start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
+        if start_line:
+            selection['start']['line'] = start_line
+            selection['end']['line'] = start_line
+        if start_column:
+            selection['start']['character'] = start_column
+            selection['end']['character'] = start_column
+        if end_line:
+            selection['end']['line'] = end_line
+            selection['end']['character'] = UINT_MAX
+        if end_column is not None:
+            selection['end']['character'] = end_column
+        return selection
+    return None
+
+
 def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
-
-    def parse_fragment(fragment: str) -> Optional[Range]:
-        match = FRAGMENT_PATTERN.match(fragment)
-        if match:
-            selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: Range
-            # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
-            # numbers for the LSP Position structure.
-            start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
-            if start_line:
-                selection['start']['line'] = start_line
-                selection['end']['line'] = start_line
-            if start_column:
-                selection['start']['character'] = start_column
-                selection['end']['character'] = start_column
-            if end_line:
-                selection['end']['line'] = end_line
-                selection['end']['character'] = UINT_MAX
-            if end_column is not None:
-                selection['end']['character'] = end_column
-            return selection
-        return None
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     parsed = urlparse(decoded_uri)
     open_promise = open_file(window, decoded_uri, flags, group)
     if parsed.fragment:
-        selection = parse_fragment(parsed.fragment)
+        selection = lsp_range_from_uri_fragment(parsed.fragment)
         if selection:
             return open_promise.then(lambda view: _select_and_center(view, cast(Range, selection)))
     return open_promise

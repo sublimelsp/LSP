@@ -1,6 +1,7 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
@@ -36,6 +37,7 @@ from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
 from functools import partial
+from urllib.parse import urlparse
 import html
 import mdpopups
 import sublime
@@ -362,6 +364,8 @@ class LspHoverCommand(LspTextCommand):
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: Range
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
+        elif urlparse(href).scheme.lower() not in ("", "http", "https"):
+            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
         else:
             open_in_browser(href)
 
@@ -375,3 +379,9 @@ class LspHoverCommand(LspTextCommand):
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
+
+    def try_open_custom_uri_async(self, href: str) -> None:
+        r = lsp_range_from_uri_fragment(urlparse(href).fragment)
+        for session in self.sessions():
+            if session.try_open_uri_async(href, r) is not None:
+                return

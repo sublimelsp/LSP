@@ -1622,13 +1622,13 @@ class Session(TransportCallbacks):
         return self._maybe_resolve_code_action(code_action, view) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
-    def open_uri_async(
+    def try_open_uri_async(
         self,
         uri: DocumentUri,
         r: Optional[Range] = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
@@ -1642,7 +1642,17 @@ class Session(TransportCallbacks):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
-        return Promise.resolve(None)
+        return None
+
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Optional[Range] = None,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[Optional[sublime.View]]:
+        promise = self.try_open_uri_async(uri, r, flags, group)
+        return Promise.resolve(None) if promise is None else promise
 
     def _open_file_uri_async(
         self,
@@ -1668,7 +1678,7 @@ class Session(TransportCallbacks):
         r: Optional[Range],
         flags: int,
         group: int,
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         # I cannot type-hint an unpacked tuple
         pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
         # It'd be nice to have automatic tuple unpacking continuations
@@ -1693,7 +1703,7 @@ class Session(TransportCallbacks):
 
             pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
             return result[0]
-        return Promise.resolve(None)
+        return None
 
     def open_location_async(self, location: Union[Location, LocationLink], flags: int = 0,
                             group: int = -1) -> Promise[Optional[sublime.View]]:

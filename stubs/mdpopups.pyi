@@ -85,3 +85,16 @@ def scope2style(
     selected: bool = False,
     explicit_background: bool = False
 ) -> str: ...
+
+
+def worker_thread_resolver(
+    url: str,
+    done: Callable[[bytes], None]
+) -> None: ...
+
+
+def resolve_images(
+    minihtml: str,
+    resolver: Callable[[str, Callable[[bytes], None]], None],
+    on_done: Callable[[str], None]
+) -> Optional[object]: ...

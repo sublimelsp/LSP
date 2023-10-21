@@ -1622,16 +1622,16 @@ class Session(TransportCallbacks):
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        return self._maybe_resolve_code_action(code_action) \
+        return self._maybe_resolve_code_action(code_action, view) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
-    def open_uri_async(
+    def try_open_uri_async(
         self,
         uri: DocumentUri,
         r: Optional[Range] = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
@@ -1645,7 +1645,17 @@ class Session(TransportCallbacks):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
-        return Promise.resolve(None)
+        return None
+
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Optional[Range] = None,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[Optional[sublime.View]]:
+        promise = self.try_open_uri_async(uri, r, flags, group)
+        return Promise.resolve(None) if promise is None else promise
 
     def _open_file_uri_async(
         self,
@@ -1671,7 +1681,7 @@ class Session(TransportCallbacks):
         r: Optional[Range],
         flags: int,
         group: int,
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         # I cannot type-hint an unpacked tuple
         pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
         # It'd be nice to have automatic tuple unpacking continuations
@@ -1696,7 +1706,7 @@ class Session(TransportCallbacks):
 
             pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
             return result[0]
-        return Promise.resolve(None)
+        return None
 
     def open_location_async(self, location: Union[Location, LocationLink], flags: int = 0,
                             group: int = -1) -> Promise[Optional[sublime.View]]:
@@ -1707,12 +1717,19 @@ class Session(TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
-            # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
-            # We must first resolve the command and edit properties, because they can potentially be absent.
-            request = Request("codeAction/resolve", code_action)
-            return self.send_request_task(request)
+    def _maybe_resolve_code_action(
+        self, code_action: CodeAction, view: Optional[sublime.View]
+    ) -> Promise[Union[CodeAction, Error]]:
+        if "edit" not in code_action:
+            has_capability = self.has_capability("codeActionProvider.resolveProvider")
+            if not has_capability and view:
+                session_view = self.session_view_for_view_async(view)
+                if session_view:
+                    has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
+            if has_capability:
+                # We must first resolve the command and edit properties, because they can potentially be absent.
+                request = Request("codeAction/resolve", code_action)
+                return self.send_request_task(request)
         return Promise.resolve(code_action)
 
     def _apply_code_action_async(

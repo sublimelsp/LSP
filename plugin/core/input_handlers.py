@@ -1,4 +1,4 @@
-from .typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from .typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 from .typing import cast
 from .typing import final
 from abc import ABCMeta
@@ -82,19 +82,21 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
     `list_items`. Then you can call the `update` method with a list of `ListInputItem`s from within `on_modified`,
     which will be called after changes have been made to the input (with a small delay).
 
-    To create an instance of the derived class pass the command instance to the constructor, like this:
+    To create an instance of the derived class pass the command instance and the command arguments to the constructor,
+    like this:
 
     def input(self, args):
-        return MyDynamicListInputHandler(self)
+        return MyDynamicListInputHandler(self, args)
 
     For now, the type of the command must be a WindowCommand, but maybe it can be generalized later if needed.
     This class will set and modify `_items` and '_text' attributes of the command, so make sure that those attribute
     names are not used in another way in the command's class.
     """
 
-    def __init__(self, command: sublime_plugin.WindowCommand) -> None:
+    def __init__(self, command: sublime_plugin.WindowCommand, args: Dict[str, Any]) -> None:
         super().__init__()
         self.command = command
+        self.args = args
         self.text = getattr(command, '_text', '')
         self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
         self.input_view = None  # type: Optional[sublime.View]
@@ -108,7 +110,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
                 break
         else:
             raise RuntimeError('Could not find the Command Palette input field view')
-        self.listener = WorkspaceSymbolsQueryListener(self)
+        self.listener = InputListener(self)
         self.listener.attach(buffer)
         # --- Hack needed because the initial_selection method is not supported on Python 3.3 API
         selection = self.input_view.sel()
@@ -176,12 +178,12 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
                 # TODO is there a way to run the command again without having to close the overlay first, so that the
                 # command palette won't change its width?
                 ['hide_overlay', {}],
-                [self.command.name(), {}]
+                [self.command.name(), self.args]
             ]
         })
 
 
-class WorkspaceSymbolsQueryListener(sublime_plugin.TextChangeListener):
+class InputListener(sublime_plugin.TextChangeListener):
 
     def __init__(self, handler: DynamicListInputHandler) -> None:
         super().__init__()

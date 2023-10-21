@@ -161,10 +161,9 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         """ Called after changes have been made to the input, with the text of the input field passed as argument. """
         pass
 
-    @abstractmethod
     def get_list_items(self) -> List[sublime.ListInputItem]:
         """ The list items which are initially shown. """
-        raise NotImplementedError()
+        return []
 
     def update(self, items: List[sublime.ListInputItem]) -> None:
         """ Call this method to update the list items. """

@@ -350,9 +350,6 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             return "⚠ Deprecated"
         return ""
 
-    def get_list_items(self) -> List[sublime.ListInputItem]:
-        return []
-
     def on_modified(self, text: str) -> None:
         if not self.input_view:
             return

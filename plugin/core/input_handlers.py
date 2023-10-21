@@ -19,7 +19,7 @@ T_Callable = TypeVar('T_Callable', bound=Callable[..., Any])
 
 
 def debounced(user_function: T_Callable) -> T_Callable:
-    """ Yet another debounce implementation :-) """
+    """ Yet another debounce implementation, to be used as a decorator for the debounced function. """
     DEBOUNCE_TIME = 0.5  # seconds
 
     @functools.wraps(user_function)
@@ -39,15 +39,16 @@ def debounced(user_function: T_Callable) -> T_Callable:
 
 
 class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """
-    Similar to ListInputHandler, but allows to preselect a value like some of the input overlays in Sublime Merge.
-    Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
+    """ A ListInputHandler which can preselect a value.
 
     Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
     i.e. just prepend `get_` to the regular `list_items` method.
 
-    When an instance of PreselectedListInputHandler is created, it must be given the window as an argument.
-    An optional second argument `initial_value` can be provided to preselect a value.
+    To create an instance of PreselectedListInputHandler pass the window to the constructor, and optionally a second
+    argument `initial_value` to preselect a value. Usually you then want to use the `next_input` method to push another
+    InputHandler onto the input stack.
+
+    Inspired by https://github.com/sublimehq/sublime_text/issues/5507.
     """
 
     def __init__(
@@ -78,9 +79,10 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
 class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
     """ A ListInputHandler which can update its items while typing in the input field.
 
-    Derive from this class and override the `get_list_items` method for the initial list items, but don't implement
-    `list_items`. Then you can call the `update` method with a list of `ListInputItem`s from within `on_modified`,
-    which will be called after changes have been made to the input (with a small delay).
+    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but can override
+    `get_list_items` for the initial list items. The `on_modified` method will be called after a small delay (debounced)
+    whenever changes were made to the input text. You can use this to call the `update` method with a list of
+    `ListInputItem`s to update the list items.
 
     To create an instance of the derived class pass the command instance and the command arguments to the constructor,
     like this:

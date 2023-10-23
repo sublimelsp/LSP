@@ -1,5 +1,6 @@
 from .typing import Enum, IntEnum, IntFlag, StrEnum
 from .typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, TypeVar, Union  # noqa: E501
+from functools import total_ordering
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -6275,6 +6276,7 @@ class Notification:
         return payload
 
 
+@total_ordering
 class Point(object):
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
@@ -6285,8 +6287,13 @@ class Point(object):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Point):
-            raise NotImplementedError()
+            return NotImplemented
         return self.row == other.row and self.col == other.col
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return NotImplemented
+        return (self.row, self.col) < (other.row, other.col)
 
     @classmethod
     def from_lsp(cls, point: 'Position') -> 'Point':

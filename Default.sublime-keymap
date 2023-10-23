@@ -211,6 +211,7 @@
     // {
     //     "keys": ["primary+shift+a"],
     //     "command": "lsp_expand_selection",
+    //     "args": {"fallback": false},
     //     "context": [{"key": "lsp.session_with_capability", "operand": "selectionRangeProvider"}]
     // },
     // Fold around caret position - an optional "strict" argument can be used to configure whether

@@ -30,7 +30,6 @@ from abc import abstractmethod
 from collections import Counter, OrderedDict
 from pathlib import Path
 import functools
-import operator
 import os
 import sublime
 import sublime_plugin

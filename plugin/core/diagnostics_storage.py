@@ -1,16 +1,24 @@
 from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
-from .typing import Callable, Iterator, List, Tuple, TypeVar
+from .typing import Callable, Iterator, List, Literal, Optional, Tuple, TypeVar
 from .url import parse_uri
 from .views import diagnostic_severity
 from collections import OrderedDict
 import functools
+import operator
+import sys
 
 ParsedUri = Tuple[str, str]
+SortOrder = Literal['asc', 'desc']
 T = TypeVar('T')
 
-
 # NOTE: OrderedDict can only be properly typed in Python >=3.8.
-class DiagnosticsStorage(OrderedDict):
+if sys.version_info >= (3, 8, 0):
+    DiagnosticsStorageItems = OrderedDict[ParsedUri, List[Diagnostic]]
+else:
+    DiagnosticsStorageItems = OrderedDict
+
+
+class DiagnosticsStorage(DiagnosticsStorageItems):
     # From the specs:
     #
     #   When a file changes it is the server’s responsibility to re-compute
@@ -36,7 +44,10 @@ class DiagnosticsStorage(OrderedDict):
         self.move_to_end(uri)  # maintain incoming order
 
     def filter_map_diagnostics_async(
-        self, pred: Callable[[Diagnostic], bool], f: Callable[[ParsedUri, Diagnostic], T]
+        self,
+        pred: Callable[[Diagnostic], bool],
+        f: Callable[[ParsedUri, Diagnostic], T],
+        sort_order: Optional[SortOrder] = None
     ) -> Iterator[Tuple[ParsedUri, List[T]]]:
         """
         Yields `(uri, results)` items with `results` being a list of `f(diagnostic)` for each
@@ -45,19 +56,25 @@ class DiagnosticsStorage(OrderedDict):
         not more than once. Items and results are ordered as they came in from the server.
         """
         for uri, diagnostics in self.items():
-            results = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))  # type: List[T]
+            if sort_order:
+                self._sort_by_location(diagnostics, sort_order)
+            results = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))
             if results:
                 yield uri, results
 
-    def filter_map_diagnostics_flat_async(self, pred: Callable[[Diagnostic], bool],
-                                          f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[Tuple[ParsedUri, T]]:
+    def filter_map_diagnostics_flat_async(
+        self,
+        pred: Callable[[Diagnostic], bool],
+        f: Callable[[ParsedUri, Diagnostic], T],
+        sort_order: Optional[SortOrder] = None
+    ) -> Iterator[Tuple[ParsedUri, T]]:
         """
         Flattened variant of `filter_map_diagnostics_async()`. Yields `(uri, result)` items for each
         of the `result`s per `uri` instead. Each `uri` can be yielded more than once. Items are
         grouped by `uri` and each `uri` group is guaranteed to appear not more than once. Items are
         ordered as they came in from the server.
         """
-        for uri, results in self.filter_map_diagnostics_async(pred, f):
+        for uri, results in self.filter_map_diagnostics_async(pred, f, sort_order):
             for result in results:
                 yield uri, result
 
@@ -70,17 +87,31 @@ class DiagnosticsStorage(OrderedDict):
             sum(map(severity_count(DiagnosticSeverity.Warning), self.values())),
         )
 
-    def diagnostics_by_document_uri(self, document_uri: DocumentUri) -> List[Diagnostic]:
+    def diagnostics_by_document_uri(
+        self,
+        document_uri: DocumentUri,
+        sort_order: Optional[SortOrder] = None
+    ) -> List[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `document_uri`.
         """
-        return self.get(parse_uri(document_uri), [])
+        diagnostics = self.get(parse_uri(document_uri), [])
+        if sort_order:
+            self._sort_by_location(diagnostics, sort_order)
+        return diagnostics
 
-    def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> List[Diagnostic]:
+    def diagnostics_by_parsed_uri(self, uri: ParsedUri, sort_order: Optional[SortOrder] = None) -> List[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `uri`.
         """
-        return self.get(uri, [])
+        diagnostics = self.get(uri, [])
+        if sort_order:
+            self._sort_by_location(diagnostics, sort_order)
+        return diagnostics
+
+    def _sort_by_location(self, diagnostics: List[Diagnostic], sort_order: SortOrder) -> None:
+        diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d['range']['start']),
+                         reverse=sort_order == 'desc')
 
 
 def severity_count(severity: int) -> Callable[[List[Diagnostic]], int]:

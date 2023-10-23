@@ -246,11 +246,9 @@ class DiagnosticInputHandler(PreselectedListInputHandler):
         max_severity = userprefs().diagnostics_panel_include_severity_level
         diagnostics = []  # type: List[Tuple[SessionIndex, Diagnostic]]
         for i, session in enumerate(self.sessions):
-            for diagnostic in filter(is_severity_included(max_severity),
-                                     session.diagnostics.diagnostics_by_parsed_uri(self.parsed_uri)):
+            for diagnostic in filter(is_severity_included(max_severity), session.diagnostics.diagnostics_by_parsed_uri(
+                    self.parsed_uri, sort_order='asc')):
                 diagnostics.append((i, diagnostic))
-        # Sort diagnostics by location.
-        diagnostics.sort(key=lambda d: operator.itemgetter('line', 'character')(d[1]['range']['start']))
         selected_index = 0
         selection_region = first_selection_region(self.view)
         selection_offset = selection_region.b if selection_region is not None else 0

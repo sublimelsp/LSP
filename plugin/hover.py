@@ -1,22 +1,20 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
 from .core.protocol import Error
-from .core.protocol import ExperimentalTextDocumentRangeParams
 from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import TextDocumentPositionParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
@@ -35,12 +33,13 @@ from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
-from .core.views import text_document_range_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .session_view import HOVER_HIGHLIGHT_KEY
 from functools import partial
+from urllib.parse import urlparse
 import html
+import mdpopups
 import sublime
 
 
@@ -103,6 +102,7 @@ class LspHoverCommand(LspTextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
+        self._image_resolver = None
 
     def run(
         self,
@@ -153,21 +153,11 @@ class LspHoverCommand(LspTextCommand):
         hover_promises = []  # type: List[Promise[ResolvedHover]]
         language_maps = []  # type: List[Optional[MarkdownLangMap]]
         for session in listener.sessions_async('hoverProvider'):
-            document_position = self._create_hover_request(session, point)
             hover_promises.append(session.send_request_task(
-                Request("textDocument/hover", document_position, self.view)
+                Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
             ))
             language_maps.append(session.markdown_language_id_to_st_syntax_map())
         Promise.all(hover_promises).then(partial(self._on_all_settled, listener, point, language_maps))
-
-    def _create_hover_request(
-        self, session: Session, point: int
-    ) -> Union[TextDocumentPositionParams, ExperimentalTextDocumentRangeParams]:
-        if session.get_capability('experimental.rangeHoverProvider'):
-            region = first_selection_region(self.view)
-            if region is not None and region.contains(point):
-                return text_document_range_params(self.view, point, region)
-        return text_document_position_params(self.view, point)
 
     def _on_all_settled(
         self,
@@ -325,6 +315,13 @@ class LspHoverCommand(LspTextCommand):
                     location=point,
                     on_navigate=lambda href: self._on_navigate(href, point),
                     on_hide=lambda: self.view.erase_regions(HOVER_HIGHLIGHT_KEY))
+            self._image_resolver = mdpopups.resolve_images(
+                contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
+
+    def _on_images_resolved(self, original_contents: str, contents: str) -> None:
+        self._image_resolver = None
+        if contents != original_contents and self.view.is_popup_visible():
+            update_lsp_popup(self.view, contents)
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):
@@ -367,6 +364,8 @@ class LspHoverCommand(LspTextCommand):
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: Range
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
+        elif urlparse(href).scheme.lower() not in ("", "http", "https"):
+            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
         else:
             open_in_browser(href)
 
@@ -377,6 +376,12 @@ class LspHoverCommand(LspTextCommand):
         def run_async() -> None:
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(actions[index], progress=True)
+                session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
+
+    def try_open_custom_uri_async(self, href: str) -> None:
+        r = lsp_range_from_uri_fragment(urlparse(href).fragment)
+        for session in self.sessions():
+            if session.try_open_uri_async(href, r) is not None:
+                return

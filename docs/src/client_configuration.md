@@ -14,7 +14,7 @@ If your language server is missing or not configured correctly, you need to add/
 
 Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```js
+```jsonc
 {
   // General settings
   "show_diagnostics_panel_on_save": 0,
@@ -65,6 +65,8 @@ The vast majority of language servers can communicate over stdio. To use stdio, 
 
 Some language servers can also act as a TCP server accepting incoming TCP connections. So: the language server subprocess is started by this package, and the subprocess will then open a TCP listener port. The editor can then connect as a client and initiate the communication. To use this mode, set `tcp_port` to a positive number designating the port to connect to on `localhost`.
 
+Optionally in this case, you can omit the `command` setting if you don't want Sublime LSP to manage the language server process and you'll take care of it yourself. 
+
 ### TCP - localhost - editor acts as a TCP server
 
 Some _LSP servers_ instead expect the _LSP client_ to act as a _TCP server_. The _LSP server_ will then connect as a _TCP client_, after which the _LSP client_ is expected to initiate the communication. To use this mode, set `tcp_port` to a negative number designating the port to bind to for accepting new TCP connections.
@@ -79,7 +81,7 @@ The port number can be inserted into the server's startup `command` in your clie
 
 Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
 
-```json
+```jsonc
 {
   "folders":
   [
@@ -97,7 +99,7 @@ Also global language server settings can be added or overridden per-project by a
 
 > **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
-```json
+```jsonc
 {
   "folders":
   [

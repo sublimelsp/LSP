@@ -1,7 +1,6 @@
 from .protocol import Diagnostic
 from .protocol import Location
 from .protocol import LocationLink
-from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .tree_view import TreeDataProvider
@@ -10,7 +9,7 @@ from .typing import Optional, Any, Generator, Iterable, List, Union
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
-from .views import point_to_offset
+from .views import position_to_offset
 from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
@@ -277,17 +276,6 @@ class LspRestartServerCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
 
-class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):
-    def run(self, config_name: Optional[str] = None) -> None:
-
-        def run_async() -> None:
-            wm = windows.lookup(self.window)
-            if wm:
-                wm.restart_sessions_async(config_name)
-
-        sublime.set_timeout_async(run_async)
-
-
 def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
     try:
         uri = uri_from_view(view)
@@ -310,11 +298,11 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     # this view after/before the cursor
     op_func = operator.gt if forward else operator.lt
     for diagnostic in diagnostics:
-        diag_pos = point_to_offset(Point.from_lsp(diagnostic['range']['start']), view)
+        diag_pos = position_to_offset(diagnostic['range']['start'], view)
         if op_func(diag_pos, point):
             break
     else:
-        diag_pos = point_to_offset(Point.from_lsp(diagnostics[0]['range']['start']), view)
+        diag_pos = position_to_offset(diagnostics[0]['range']['start'], view)
     view.run_command('lsp_selection_set', {'regions': [(diag_pos, diag_pos)]})
     view.show_at_center(diag_pos)
     # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would

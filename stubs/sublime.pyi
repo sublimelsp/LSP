@@ -919,7 +919,9 @@ class View:
     def em_width(self) -> float:
         ...
 
-    # def is_folded(self, sr) -> bool: ...
+    def is_folded(self, sr: Region) -> bool:
+        ...
+
     # def folded_regions(self): ...
     def fold(self, x: Union[Region, List[Region]]) -> bool:
         ...
@@ -1006,7 +1008,7 @@ class View:
     def transform_region_from(self, region: Region, change_id: Any) -> Region:
         ...
 
-    def style_for_scope(self, scope: str) -> Dict[str, str]:
+    def style_for_scope(self, scope: str) -> Dict[str, Any]:
         ...
 
 
@@ -1080,6 +1082,8 @@ class QuickPanelItem:
 
 
 class ListInputItem:
+    value = ...  # type: Any
+    kind = ...  # type: Tuple[int, str, str]
     def __init__(
         self,
         text: str,

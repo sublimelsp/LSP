@@ -18,7 +18,6 @@ from .protocol import DidSaveTextDocumentParams
 from .protocol import DocumentColorParams
 from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
-from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -194,27 +193,6 @@ SUBLIME_KIND_SCOPES = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }  # type: Dict[SublimeKind, str]
 
-# Recommended colors to use by themes for each symbol kind, based on the kind_container specialization class described
-# at https://www.sublimetext.com/docs/themes.html#quick-panel
-SUBLIME_KIND_ID_COLOR_SCOPES = {
-    sublime.KIND_ID_KEYWORD: "region.pinkish",
-    sublime.KIND_ID_TYPE: "region.purplish",
-    sublime.KIND_ID_FUNCTION: "region.redish",
-    sublime.KIND_ID_NAMESPACE: "region.bluish",
-    sublime.KIND_ID_NAVIGATION: "region.yellowish",
-    sublime.KIND_ID_MARKUP: "region.orangish",
-    sublime.KIND_ID_VARIABLE: "region.cyanish",
-    sublime.KIND_ID_SNIPPET: "region.greenish",
-    sublime.KIND_ID_COLOR_REDISH: "region.redish",
-    sublime.KIND_ID_COLOR_ORANGISH: "region.orangish",
-    sublime.KIND_ID_COLOR_YELLOWISH: "region.yellowish",
-    sublime.KIND_ID_COLOR_GREENISH: "region.greenish",
-    sublime.KIND_ID_COLOR_CYANISH: "region.cyanish",
-    sublime.KIND_ID_COLOR_BLUISH: "region.bluish",
-    sublime.KIND_ID_COLOR_PURPLISH: "region.purplish",
-    sublime.KIND_ID_COLOR_PINKISH: "region.pinkish"
-}  # type: Dict[int, str]
-
 DOCUMENT_HIGHLIGHT_KINDS = {
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",
@@ -280,6 +258,19 @@ SEMANTIC_TOKENS_MAP = {
 }
 
 
+class DiagnosticSeverityData:
+
+    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
+
+    def __init__(self, severity: int) -> None:
+        self.regions = []  # type: List[sublime.Region]
+        self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
+        self.annotations = []  # type: List[str]
+        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
+        if userprefs().diagnostics_gutter_marker != "sign":
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+
+
 class InvalidUriSchemeException(Exception):
     def __init__(self, uri: str) -> None:
         self.uri = uri
@@ -339,6 +330,10 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
+def position_to_offset(position: Position, view: sublime.View) -> int:
+    return point_to_offset(Point.from_lsp(position), view)
+
+
 def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     best_kind = sublime.KIND_AMBIGUOUS
     best_kind_score = 0
@@ -351,9 +346,7 @@ def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
 
 
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
-    start = Point.from_lsp(range['start'])
-    end = Point.from_lsp(range['end'])
-    return sublime.Region(point_to_offset(start, view), point_to_offset(end, view))
+    return sublime.Region(position_to_offset(range['start'], view), position_to_offset(range['end'], view))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
@@ -464,15 +457,6 @@ def versioned_text_document_identifier(view: sublime.View, version: int) -> Vers
 
 def text_document_position_params(view: sublime.View, location: int) -> TextDocumentPositionParams:
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
-
-
-def text_document_range_params(view: sublime.View, location: int,
-                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
-    return {
-        "textDocument": text_document_identifier(view),
-        "position": position(view, location),
-        "range": region_to_range(view, region)
-    }
 
 
 def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:
@@ -587,6 +571,14 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     }, view, progress=True)
 
 
+def text_document_ranges_formatting(view: sublime.View) -> Request:
+    return Request("textDocument/rangesFormatting", {
+        "textDocument": text_document_identifier(view),
+        "options": formatting_options(view.settings()),
+        "ranges": [region_to_range(view, region) for region in view.sel() if not region.empty()]
+    }, view, progress=True)
+
+
 def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),
@@ -618,9 +610,17 @@ def text_document_code_action_params(
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
-def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
-                   css: Optional[str] = None, wrapper_class: Optional[str] = None,
-                   on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
+def show_lsp_popup(
+    view: sublime.View,
+    contents: str,
+    location: int = -1,
+    md: bool = False,
+    flags: int = 0,
+    css: Optional[str] = None,
+    wrapper_class: Optional[str] = None,
+    on_navigate: Optional[Callable[..., None]] = None,
+    on_hide: Optional[Callable[..., None]] = None
+) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
@@ -869,6 +869,23 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
+def format_diagnostics_for_annotation(
+    diagnostics: List[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
+) -> Tuple[List[str], str]:
+    css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
+    scope = DIAGNOSTIC_SEVERITY[severity - 1][2]
+    color = view.style_for_scope(scope).get('foreground') or 'red'
+    annotations = []
+    for diagnostic in diagnostics:
+        message = text2html(diagnostic.get('message') or '')
+        source = diagnostic.get('source')
+        line = "[{}] {}".format(text2html(source), message) if source else message
+        content = '<body id="annotation" class="{1}"><style>{0}</style><div class="{2}">{3}</div></body>'.format(
+            lsp_css().annotations, lsp_css().annotations_classname, css_class, line)
+        annotations.append(content)
+    return (annotations, color)
+
+
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
     """
     Turn an LSP diagnostic into a string suitable for an output panel.
@@ -876,7 +893,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     :param      diagnostic:  The diagnostic
     :returns:   Tuple of (content, optional offset, optional code, optional href)
                 When the last three elements are optional, don't show an inline phantom
-                When the last three elemenst are not optional, show an inline phantom
+                When the last three elements are not optional, show an inline phantom
                 using the information given.
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)

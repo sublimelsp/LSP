@@ -1,5 +1,8 @@
 from ...third_party import WebsocketServer  # type: ignore
-from .configurations import WindowConfigManager, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA
+from .configurations import RETRY_COUNT_TIMEDELTA
+from .configurations import RETRY_MAX_COUNT
+from .configurations import WindowConfigChangeListener
+from .configurations import WindowConfigManager
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
@@ -62,7 +65,7 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
         pass
 
 
-class WindowManager(Manager):
+class WindowManager(Manager, WindowConfigChangeListener):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
@@ -77,10 +80,13 @@ class WindowManager(Manager):
         self._server_log = []  # type: List[Tuple[str, str]]
         self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
         self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
+        self.formatters = {}  # type: Dict[str, str]
+        self.suppress_sessions_restart_on_project_update = False
         self.total_error_count = 0
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         self.panel_manager.ensure_log_panel()
+        self._config_manager.add_change_listener(self)
 
     @property
     def window(self) -> sublime.Window:
@@ -102,6 +108,9 @@ class WindowManager(Manager):
         self._config_manager.update()
 
     def on_post_save_project_async(self) -> None:
+        if self.suppress_sessions_restart_on_project_update:
+            self.suppress_sessions_restart_on_project_update = False
+            return
         self.on_load_project_async()
 
     def update_workspace_folders_async(self) -> None:
@@ -481,6 +490,11 @@ class WindowManager(Manager):
             region = sublime.Region(point, point)
             phantoms.append(sublime.Phantom(region, "({})".format(make_link(href, code)), sublime.LAYOUT_INLINE))
         self._panel_code_phantoms.update(phantoms)
+
+    # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
+
+    def on_configs_changed(self, config_name: Optional[str] = None) -> None:
+        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
 
 
 class WindowRegistry:

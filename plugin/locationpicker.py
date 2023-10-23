@@ -67,7 +67,8 @@ class LocationPicker:
         force_group: bool = True,
         group: int = -1,
         placeholder: str = "",
-        kind: SublimeKind = sublime.KIND_AMBIGUOUS
+        kind: SublimeKind = sublime.KIND_AMBIGUOUS,
+        selected_index: int = -1
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -92,8 +93,9 @@ class LocationPicker:
                 for location in locations
             ],
             on_select=self._select_entry,
-            on_highlight=self._highlight_entry,
             flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+            selected_index=selected_index,
+            on_highlight=self._highlight_entry,
             placeholder=placeholder
         )
 

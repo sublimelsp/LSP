@@ -192,7 +192,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         if diagnostic is None:
             self._preview = None
             return DiagnosticInputHandler(self.window, self.view, uri)
-        return sublime_plugin.BackInputHandler()  # type: ignore
+        return sublime_plugin.BackInputHandler()
 
     def confirm(self, value: Optional[DocumentUri]) -> None:
         self.uri = value

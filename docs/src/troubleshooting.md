@@ -1,12 +1,9 @@
 ## Self-help instructions
 
-To get more visibility into the inner-workings of the LSP client and the server and be able to diagnose problems, open `Preferences: LSP Settings` from the Command Palette and set the following options:
+To see the LSP server and client communication, run `LSP: Toggle Log Panel` from the Command Palette. Logs are useful to diagnose problems.
 
-| Option                  | Description                                                          |
-| ----------------------- | -------------------------------------------------------------------- |
-| `log_debug: true`       | Show verbose debug messages in the Sublime Text console.             |
-
-Once enabled (no restart necessary), the communication log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart Sublime Text and reproduce the issue again, so that the logs are clean.
+!!! note
+    It might be a good idea to restart Sublime Text and reproduce the issue again so that the logs are clean.
 
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
@@ -27,7 +24,7 @@ Adjusting `PATH` can differ based on the operating system and the default shell 
 </tr>
 <tr>
     <td>macOS</td>
-    <td>Depending on your default shell, edit: <code>~/.profile</code> (bash), <code>~/.zprofile</code> (zsh) or <code>~/.config/fish/config.fish</code> (fish).</td>
+    <td>Depending on your default shell (macOS ships with zsh shell by default), edit: <code>~/.zprofile</code> (zsh), <code>~/.profile</code> (bash) or <code>~/.config/fish/config.fish</code> (fish).</td>
 </tr>
 <tr>
     <td>Linux</td>
@@ -51,7 +48,7 @@ Another solution could be (at least on Linux) to update the server `PATH` using 
   - `<your_language_server_name>` is the server name
   - `<added_path>` is the directory needed for the server to behave correctly
 
-```json
+```jsonc
 "<your_language_server_name>":
 {
     // ...

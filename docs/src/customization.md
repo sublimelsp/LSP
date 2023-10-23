@@ -4,7 +4,7 @@ LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` comman
 
 If you want to create a new key binding that is different from the ones that are already included, you might want to make it active only when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running. In that case, you can make use of the `lsp.session_with_capability` context. For example, the following key binding overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
 
-```js
+```jsonc
 {
     "command": "lsp_document_symbols",
     "keys": [
@@ -39,7 +39,7 @@ If you want to bind some action to a mouse, open `Preferences / Browser Packages
 
 Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
 
-```js
+```jsonc
 [
     {
         "button": "button1",
@@ -83,6 +83,9 @@ The following tables give an overview of the scope names used by LSP.
 
 ### Semantic Highlighting
 
+!!! note
+    Semantic highlighting is disabled by default. To enable it, set `"semantic_highlighting": true` in your LSP user settings.
+
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
     Language servers that support semantic highlighting are for example *clangd* and *rust-analyzer*.
 
@@ -90,7 +93,7 @@ In order to support semantic highlighting, the color scheme requires a special r
 LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
 If you use a custom color scheme, select `UI: Customize Color Scheme` from the Command Palette and add for example the following code:
 
-```json
+```jsonc
 {
     "rules": [
         {
@@ -103,7 +106,7 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 
 Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
-| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenTypes) |
+| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) |
 | ----- | ------------------ |
 | `meta.semantic-token.namespace` | namespace |
 | `meta.semantic-token.type` | type |
@@ -133,9 +136,9 @@ By default, LSP will assign scopes based on the [scope naming guideline](https:/
 Language servers can also add their custom token types, which are not defined in the protocol.
 An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
 The keys of this mapping should be the token types and values should be the corresponding scopes.
-Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
+Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
 
-```json
+```jsonc
 {
     "semantic_tokens": {
         "magicFunction": "support.function.builtin",
@@ -198,7 +201,7 @@ Those scopes can be used to, for example, gray out the text color of unused code
 
 For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
 
-```json
+```jsonc
 {
     "rules": [
         {
@@ -221,7 +224,8 @@ The color scheme rule only works if the "background" color is (marginally) diffe
 | `variable.parameter.sighelp.active.lsp` | Function argument which is currently highlighted in the signature help popup |
 
 !!! note
-    If the color scheme utilizes different (foreground) colors for the scopes of active and non-active parameters, the active parameter will not additionally be rendered with bold and underlined font style.
+    If there is no special rule for the active parameter in the color scheme, it will be rendered with bold and underlined font style.
+    But if the color scheme defines a different `"foreground"` color for the active parameter, the style follows the `"font_style"` property from the color scheme rule.
 
 ### Annotations
 

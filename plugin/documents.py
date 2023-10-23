@@ -10,6 +10,8 @@ from .core.protocol import DocumentHighlight
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import DocumentHighlightParams
 from .core.protocol import DocumentUri
+from .core.protocol import FoldingRange
+from .core.protocol import FoldingRangeParams
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.protocol import SignatureHelpContext
@@ -41,9 +43,11 @@ from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
+from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -249,7 +253,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another region
                 # which is exclusive (at region end) and we want an inclusive behavior in this case.
-                if region.contains(candidate.a) or region.contains(candidate.b):
+                if region.intersects(candidate) or region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
@@ -329,6 +333,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._registered and is_regular_view(self.view):
             self._register_async()
             return
+        initially_folded_kinds = userprefs().initially_folded
+        if initially_folded_kinds:
+            session = self.session_async('foldingRangeProvider')
+            if session:
+                params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+                session.send_request_async(
+                    Request.foldingRange(params, self.view),
+                    partial(self._on_initial_folding_ranges, initially_folded_kinds))
         self.on_activated_async()
 
     def on_activated_async(self) -> None:
@@ -354,7 +366,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
-        first_region, any_different = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         if not self._is_in_higlighted_region(first_region.b):
@@ -554,16 +566,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
-        elif self.view.match_selector(pos, "meta.function-call.arguments"):
-            # Don't force close the signature help popup while the user is typing the parameters.
-            # See also: https://github.com/sublimehq/sublime_text/issues/5518
-            pass
-        else:
-            # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
-            # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
-            # reality there is only one popup per view.
-            self.view.hide_popup()
-            self._sighelp = None
+        elif self._sighelp:
+            if self.view.match_selector(pos, "meta.function-call.arguments"):
+                # Don't force close the signature help popup while the user is typing the parameters.
+                # See also: https://github.com/sublimehq/sublime_text/issues/5518
+                pass
+            else:
+                # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
+                # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
+                # reality there is only one popup per view.
+                self.view.hide_popup()
+                self._sighelp = None
 
     def _get_signature_help_session(self) -> Optional[Session]:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
@@ -693,7 +706,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         def run_async() -> None:
             session = self.session_by_name(config_name)
             if session:
-                session.run_code_action_async(actions[index], progress=True)
+                session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
 
@@ -772,6 +785,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
+
+    # --- textDocument/foldingRange ------------------------------------------------------------------------------------
+
+    def _on_initial_folding_ranges(self, kinds: List[str], response: Optional[List[FoldingRange]]) -> None:
+        if not response:
+            return
+        regions = [
+            range_to_region(folding_range_to_range(folding_range), self.view)
+            for kind in kinds
+            for folding_range in response if kind == folding_range.get('kind')
+        ]
+        if regions:
+            self.view.fold(regions)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 
@@ -853,7 +879,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             view_id = view.id()
             if view_id == self_id:
                 continue
-            listeners = list(sublime_plugin.view_event_listeners[view_id])
+            listeners = list(sublime_plugin.view_event_listeners.get(view_id, []))
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
                     debug("also registering", listener)
@@ -862,7 +888,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
-        first_region, any_different = self._update_stored_selection_async()
+        first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
         self._clear_highlight_regions()

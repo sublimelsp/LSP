@@ -25,7 +25,6 @@ from .plugin.core.registry import LspExpandTreeItemCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
-from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
@@ -43,6 +42,8 @@ from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.execute_command import LspExecuteCommand
+from .plugin.folding_range import LspFoldAllCommand
+from .plugin.folding_range import LspFoldCommand
 from .plugin.formatting import LspFormatCommand
 from .plugin.formatting import LspFormatDocumentCommand
 from .plugin.formatting import LspFormatDocumentRangeCommand

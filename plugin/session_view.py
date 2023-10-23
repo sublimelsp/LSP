@@ -12,15 +12,26 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
+from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
 import functools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]  # type: List[int]
 HOVER_HIGHLIGHT_KEY = "lsp_hover_highlight"
+
+
+class TagData:
+    __slots__ = ('key', 'regions', 'scope')
+
+    def __init__(self, key: str, regions: List[sublime.Region] = [], scope: str = '') -> None:
+        self.key = key
+        self.regions = regions
+        self.scope = scope
 
 
 class SessionView:
@@ -41,6 +52,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
+        self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
         self._active_requests = {}  # type: Dict[int, ActiveRequest]
         self._listener = ref(listener)
@@ -86,6 +98,9 @@ class SessionView:
             self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, True)))
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
+        listener = self.listener()
+        if listener:
+            listener.on_diagnostics_updated_async(False)
 
     @property
     def session(self) -> Session:
@@ -146,6 +161,7 @@ class SessionView:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("underline", "stippled"):
             self.view.add_regions(HOVER_HIGHLIGHT_KEY, r)
+        self._diagnostic_annotations.initialize_region_keys()
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
@@ -272,31 +288,42 @@ class SessionView:
                 return 'markup.{}.lsp'.format(k.lower())
         return None
 
-    def present_diagnostics_async(self, is_view_visible: bool) -> None:
+    def present_diagnostics_async(
+        self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
+    ) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
         for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], False)
-            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], True)
+            self._draw_diagnostics(
+                data_per_severity, sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
+            self._draw_diagnostics(
+                data_per_severity, sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async(is_view_visible)
 
-    def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
+    def _draw_diagnostics(
+        self,
+        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
+        severity: int,
+        max_severity_level: int,
+        flags: int,
+        multiline: bool
+    ) -> None:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         key = self.diagnostics_key(severity, multiline)
-        key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
-        for key_tag in key_tags.values():
-            self.view.erase_regions(key_tag)
-        data = self.session_buffer.data_per_severity.get((severity, multiline))
+        tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
+        data = data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
                 tag_scope = self.diagnostics_tag_scope(tag)
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                 if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
-                    self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
+                    tags[tag].regions = regions
+                    tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
             self.view.add_regions("{}_icon".format(key), non_tag_regions, data.scope, data.icon, ICON_FLAGS)
@@ -304,6 +331,11 @@ class SessionView:
         else:
             self.view.erase_regions("{}_icon".format(key))
             self.view.erase_regions("{}_underline".format(key))
+        for data in tags.values():
+            if data.regions:
+                self.view.add_regions(data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE)
+            else:
+                self.view.erase_regions(data.key)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)

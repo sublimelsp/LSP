@@ -11,6 +11,7 @@ from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
+from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 import functools
@@ -30,7 +31,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -41,7 +43,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, side_by_side, fallback)
@@ -55,7 +58,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
-        group: int = -1
+        group: int = -1,
+        include_declaration: bool = False
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -65,7 +69,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
             params = {
                 'textDocument': position_params['textDocument'],
                 'position': position_params['position'],
-                'context': {"includeDeclaration": False},
+                'context': {
+                    "includeDeclaration": include_declaration,
+                },
             }
             request = Request("textDocument/references", params, self.view, progress=True)
             word_range = self.view.word(pos)
@@ -138,10 +144,22 @@ class LspSymbolReferencesCommand(LspTextCommand):
         group: int,
         position: int
     ) -> None:
-        self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
+        selection = self.view.sel()
+        self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in selection]})
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
-        LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind)
+        index = 0
+        locations.sort(key=lambda l: (l['uri'], Point.from_lsp(l['range']['start'])))
+        if len(selection):
+            pt = selection[0].b
+            view_filename = self.view.file_name()
+            for idx, location in enumerate(locations):
+                if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
+                    continue
+                index = idx
+                if position_to_offset(location['range']['start'], self.view) > pt:
+                    break
+        LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
         wm = windows.lookup(session.window)

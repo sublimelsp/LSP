@@ -1,5 +1,6 @@
 from .typing import Enum, IntEnum, IntFlag, StrEnum
 from .typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, NotRequired, Optional, TypedDict, TypeVar, Union  # noqa: E501
+from functools import total_ordering
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -118,7 +119,7 @@ class LSPErrorCodes(IntEnum):
     the cancel. """
 
 
-class FoldingRangeKind(Enum):
+class FoldingRangeKind(StrEnum):
     """ A set of predefined range kinds. """
     Comment = 'comment'
     """ Folding range for a comment """
@@ -401,12 +402,23 @@ class MarkupKind(Enum):
     """ Markdown is supported as a content format """
 
 
+class InlineCompletionTriggerKind(IntEnum):
+    """ Describes how an {@link InlineCompletionItemProvider inline completion provider} was triggered.
+
+    @since 3.18.0
+    @proposed """
+    Invoked = 0
+    """ Completion was triggered explicitly by a user gesture. """
+    Automatic = 1
+    """ Completion was triggered automatically while editing. """
+
+
 class PositionEncodingKind(Enum):
     """ A set of predefined position encoding kinds.
 
     @since 3.17.0 """
     UTF8 = 'utf-8'
-    """ Character offsets count UTF-8 code units. """
+    """ Character offsets count UTF-8 code units (e.g. bytes). """
     UTF16 = 'utf-16'
     """ Character offsets count UTF-16 code units.
 
@@ -415,7 +427,7 @@ class PositionEncodingKind(Enum):
     UTF32 = 'utf-32'
     """ Character offsets count UTF-32 code units.
 
-    Implementation note: these are the same as Unicode code points,
+    Implementation note: these are the same as Unicode codepoints,
     so this `PositionEncodingKind` may also be used for an
     encoding-agnostic representation of character offsets. """
 
@@ -1168,10 +1180,10 @@ SemanticTokensRangeParams = TypedDict('SemanticTokensRangeParams', {
 
 
 ShowDocumentParams = TypedDict('ShowDocumentParams', {
-    # The document uri to show.
+    # The uri to show.
     'uri': 'URI',
     # Indicates to show the resource in an external program.
-    # To show for example `https://code.visualstudio.com/`
+    # To show, for example, `https://code.visualstudio.com/`
     # in the default WEB browser set `external` to `true`.
     'external': NotRequired[bool],
     # An optional property to indicate whether the editor
@@ -1185,7 +1197,7 @@ ShowDocumentParams = TypedDict('ShowDocumentParams', {
     # file.
     'selection': NotRequired['Range'],
 })
-""" Params to show a document.
+""" Params to show a resource in the UI.
 
 @since 3.16.0 """
 
@@ -1669,6 +1681,63 @@ DidCloseNotebookDocumentParams = TypedDict('DidCloseNotebookDocumentParams', {
 """ The params sent in a close notebook document notification.
 
 @since 3.17.0 """
+
+
+InlineCompletionParams = TypedDict('InlineCompletionParams', {
+    # Additional information about the context in which inline completions were
+    # requested.
+    'context': 'InlineCompletionContext',
+    # The text document.
+    'textDocument': 'TextDocumentIdentifier',
+    # The position inside the text document.
+    'position': 'Position',
+    # An optional token that a server can use to report work done progress.
+    'workDoneToken': NotRequired['ProgressToken'],
+})
+""" A parameter literal used in inline completion requests.
+
+@since 3.18.0
+@proposed """
+
+
+InlineCompletionList = TypedDict('InlineCompletionList', {
+    # The inline completion items
+    'items': List['InlineCompletionItem'],
+})
+""" Represents a collection of {@link InlineCompletionItem inline completion items} to be presented in the editor.
+
+@since 3.18.0
+@proposed """
+
+
+InlineCompletionItem = TypedDict('InlineCompletionItem', {
+    # The text to replace the range with. Must be set.
+    'insertText': Union[str, 'StringValue'],
+    # A text that is used to decide if this inline completion should be shown. When `falsy` the {@link InlineCompletionItem.insertText} is used.
+    'filterText': NotRequired[str],
+    # The range to replace. Must begin and end on the same line.
+    'range': NotRequired['Range'],
+    # An optional {@link Command} that is executed *after* inserting this completion.
+    'command': NotRequired['Command'],
+})
+""" An inline completion item represents a text snippet that is proposed inline to complete text that is being typed.
+
+@since 3.18.0
+@proposed """
+
+
+InlineCompletionRegistrationOptions = TypedDict('InlineCompletionRegistrationOptions', {
+    # A document selector to identify the scope of the registration. If set to null
+    # the document selector provided on the client side will be used.
+    'documentSelector': Union['DocumentSelector', None],
+    # The id used to register the request. The id can be used to deregister
+    # the request again. See also Registration#id.
+    'id': NotRequired[str],
+})
+""" Inline completion options used during static or dynamic registration.
+
+@since 3.18.0
+@proposed """
 
 
 RegistrationParams = TypedDict('RegistrationParams', {
@@ -2544,8 +2613,7 @@ CodeLens = TypedDict('CodeLens', {
     # The command this code lens represents.
     'command': NotRequired['Command'],
     # A data entry field that is preserved on a code lens item between
-    # a {@link CodeLensRequest} and a [CodeLensResolveRequest]
-    # (#CodeLensResolveRequest)
+    # a {@link CodeLensRequest} and a {@link CodeLensResolveRequest}
     'data': NotRequired['LSPAny'],
 })
 """ A code lens represents a {@link Command command} that should be shown along with
@@ -2581,7 +2649,7 @@ DocumentLink = TypedDict('DocumentLink', {
     # The range this link applies to.
     'range': 'Range',
     # The uri this link points to. If missing a resolve request is sent later.
-    'target': NotRequired[str],
+    'target': NotRequired['URI'],
     # The tooltip text when you hover over this link.
     #
     # If a tooltip is provided, is will be displayed in a string that includes instructions on how to
@@ -2644,8 +2712,29 @@ DocumentRangeFormattingRegistrationOptions = TypedDict('DocumentRangeFormattingR
     # A document selector to identify the scope of the registration. If set to null
     # the document selector provided on the client side will be used.
     'documentSelector': Union['DocumentSelector', None],
+    # Whether the server supports formatting multiple ranges at once.
+    #
+    # @since 3.18.0
+    # @proposed
+    'rangesSupport': NotRequired[bool],
 })
 """ Registration options for a {@link DocumentRangeFormattingRequest}. """
+
+
+DocumentRangesFormattingParams = TypedDict('DocumentRangesFormattingParams', {
+    # The document to format.
+    'textDocument': 'TextDocumentIdentifier',
+    # The ranges to format
+    'ranges': List['Range'],
+    # The format options
+    'options': 'FormattingOptions',
+    # An optional token that a server can use to report work done progress.
+    'workDoneToken': NotRequired['ProgressToken'],
+})
+""" The parameters of a {@link DocumentRangesFormattingRequest}.
+
+@since 3.18.0
+@proposed """
 
 
 DocumentOnTypeFormattingParams = TypedDict('DocumentOnTypeFormattingParams', {
@@ -2741,7 +2830,7 @@ ApplyWorkspaceEditParams = TypedDict('ApplyWorkspaceEditParams', {
     # The edits to apply.
     'edit': 'WorkspaceEdit',
 })
-""" The parameters passed via a apply workspace edit request. """
+""" The parameters passed via an apply workspace edit request. """
 
 
 ApplyWorkspaceEditResult = TypedDict('ApplyWorkspaceEditResult', {
@@ -2999,14 +3088,14 @@ character `a` is 0, the character offset of `𐐀` is 1 and the character
 offset of b is 3 since `𐐀` is represented using two code units in UTF-16.
 Since 3.17 clients and servers can agree on a different string encoding
 representation (e.g. UTF-8). The client announces it's supported encoding
-via the client capability [`general.positionEncodings`](#clientCapabilities).
+via the client capability [`general.positionEncodings`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#clientCapabilities).
 The value is an array of position encodings the client supports, with
 decreasing preference (e.g. the encoding at index `0` is the most preferred
 one). To stay backwards compatible the only mandatory encoding is UTF-16
 represented via the string `utf-16`. The server can pick one of the
 encodings offered by the client and signals that encoding back to the
 client via the initialize result's property
-[`capabilities.positionEncoding`](#serverCapabilities). If the string value
+[`capabilities.positionEncoding`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#serverCapabilities). If the string value
 `utf-16` is missing from the client's capability `general.positionEncodings`
 servers can safely assume that the client supports UTF-16. If the server
 omits the position encoding in its initialize result the encoding defaults
@@ -3502,6 +3591,45 @@ NotebookDocumentIdentifier = TypedDict('NotebookDocumentIdentifier', {
 @since 3.17.0 """
 
 
+InlineCompletionContext = TypedDict('InlineCompletionContext', {
+    # Describes how the inline completion was triggered.
+    'triggerKind': 'InlineCompletionTriggerKind',
+    # Provides information about the currently selected item in the autocomplete widget if it is visible.
+    'selectedCompletionInfo': NotRequired['SelectedCompletionInfo'],
+})
+""" Provides information about the context in which an inline completion was requested.
+
+@since 3.18.0
+@proposed """
+
+
+StringValue = TypedDict('StringValue', {
+    # The kind of string value.
+    'kind': Literal['snippet'],
+    # The snippet string.
+    'value': str,
+})
+""" A string value used as a snippet is a template which allows to insert text
+and to control the editor cursor when insertion happens.
+
+A snippet can define tab stops and placeholders with `$1`, `$2`
+and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+the end of the snippet. Variables are defined with `$name` and
+`${name:default value}`.
+
+@since 3.18.0
+@proposed """
+
+
+InlineCompletionOptions = TypedDict('InlineCompletionOptions', {
+    'workDoneProgress': NotRequired[bool],
+})
+""" Inline completion options used during static registration.
+
+@since 3.18.0
+@proposed """
+
+
 Registration = TypedDict('Registration', {
     # The id used to register the request. The id can be used to deregister
     # the request again.
@@ -3511,7 +3639,7 @@ Registration = TypedDict('Registration', {
     # Options necessary for the registration.
     'registerOptions': NotRequired['LSPAny'],
 })
-""" General parameters to to register for an notification or to register a provider. """
+""" General parameters to register for a notification or to register a provider. """
 
 
 Unregistration = TypedDict('Unregistration', {
@@ -3635,6 +3763,11 @@ ServerCapabilities = TypedDict('ServerCapabilities', {
     #
     # @since 3.17.0
     'diagnosticProvider': NotRequired[Union['DiagnosticOptions', 'DiagnosticRegistrationOptions']],
+    # Inline completion options used during static registration.
+    #
+    # @since 3.18.0
+    # @proposed
+    'inlineCompletionProvider': NotRequired[Union[bool, 'InlineCompletionOptions']],
     # Workspace specific server capabilities.
     'workspace': NotRequired['__ServerCapabilities_workspace_Type_1'],
     # Experimental server capabilities.
@@ -3997,6 +4130,11 @@ DocumentFormattingOptions = TypedDict('DocumentFormattingOptions', {
 
 
 DocumentRangeFormattingOptions = TypedDict('DocumentRangeFormattingOptions', {
+    # Whether the server supports formatting multiple ranges at once.
+    #
+    # @since 3.18.0
+    # @proposed
+    'rangesSupport': NotRequired[bool],
     'workDoneProgress': NotRequired[bool],
 })
 """ Provider options for a {@link DocumentRangeFormattingRequest}. """
@@ -4201,6 +4339,18 @@ NotebookCellArrayChange = TypedDict('NotebookCellArrayChange', {
 array from state S to S'.
 
 @since 3.17.0 """
+
+
+SelectedCompletionInfo = TypedDict('SelectedCompletionInfo', {
+    # The range that will be replaced if this completion item is accepted.
+    'range': 'Range',
+    # The text the range will be replaced with if this completion is accepted.
+    'text': str,
+})
+""" Describes the currently selected completion item.
+
+@since 3.18.0
+@proposed """
 
 
 ClientCapabilities = TypedDict('ClientCapabilities', {
@@ -4535,6 +4685,11 @@ TextDocumentClientCapabilities = TypedDict('TextDocumentClientCapabilities', {
     #
     # @since 3.17.0
     'diagnostic': NotRequired['DiagnosticClientCapabilities'],
+    # Client capabilities specific to inline completions.
+    #
+    # @since 3.18.0
+    # @proposed
+    'inlineCompletion': NotRequired['InlineCompletionClientCapabilities'],
 })
 """ Text document specific client capabilities. """
 
@@ -5023,6 +5178,11 @@ DocumentFormattingClientCapabilities = TypedDict('DocumentFormattingClientCapabi
 DocumentRangeFormattingClientCapabilities = TypedDict('DocumentRangeFormattingClientCapabilities', {
     # Whether range formatting supports dynamic registration.
     'dynamicRegistration': NotRequired[bool],
+    # Whether the client supports formatting multiple ranges at once.
+    #
+    # @since 3.18.0
+    # @proposed
+    'rangesSupport': NotRequired[bool],
 })
 """ Client capabilities of a {@link DocumentRangeFormattingRequest}. """
 
@@ -5238,6 +5398,16 @@ DiagnosticClientCapabilities = TypedDict('DiagnosticClientCapabilities', {
 """ Client capabilities specific to diagnostic pull requests.
 
 @since 3.17.0 """
+
+
+InlineCompletionClientCapabilities = TypedDict('InlineCompletionClientCapabilities', {
+    # Whether implementation supports dynamic registration for inline completion providers.
+    'dynamicRegistration': NotRequired[bool],
+})
+""" Client capabilities specific to inline completions.
+
+@since 3.18.0
+@proposed """
 
 
 NotebookDocumentSyncClientCapabilities = TypedDict('NotebookDocumentSyncClientCapabilities', {
@@ -5767,7 +5937,7 @@ __TextDocumentFilter_Type_1 = TypedDict('__TextDocumentFilter_Type_1', {
     'language': str,
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': NotRequired[str],
 })
 
@@ -5777,7 +5947,7 @@ __TextDocumentFilter_Type_2 = TypedDict('__TextDocumentFilter_Type_2', {
     'language': NotRequired[str],
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': str,
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': NotRequired[str],
 })
 
@@ -5787,7 +5957,7 @@ __TextDocumentFilter_Type_3 = TypedDict('__TextDocumentFilter_Type_3', {
     'language': NotRequired[str],
     # A Uri {@link Uri.scheme scheme}, like `file` or `untitled`.
     'scheme': NotRequired[str],
-    # A glob pattern, like `*.{ts,js}`.
+    # A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
     'pattern': str,
 })
 
@@ -5968,6 +6138,10 @@ class Request(Generic[R]):
         return Request('textDocument/selectionRange', params)
 
     @classmethod
+    def foldingRange(cls, params: FoldingRangeParams, view: sublime.View) -> 'Request':
+        return Request('textDocument/foldingRange', params, view)
+
+    @classmethod
     def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> 'Request':
         return Request("workspace/symbol", params, None, progress=True)
 
@@ -6102,6 +6276,7 @@ class Notification:
         return payload
 
 
+@total_ordering
 class Point(object):
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
@@ -6112,8 +6287,13 @@ class Point(object):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Point):
-            raise NotImplementedError()
+            return NotImplemented
         return self.row == other.row and self.col == other.col
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return NotImplemented
+        return (self.row, self.col) < (other.row, other.col)
 
     @classmethod
     def from_lsp(cls, point: 'Position') -> 'Point':
@@ -6144,12 +6324,6 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
     'data': NotRequired['LSPAny'],
     # Custom property to bring along the name of the session
     'session_name': str
-})
-
-ExperimentalTextDocumentRangeParams = TypedDict('ExperimentalTextDocumentRangeParams', {
-    'textDocument': TextDocumentIdentifier,
-    'position': Position,
-    'range': Range,
 })
 
 CompletionItemDefaults = __CompletionList_itemDefaults_Type_1

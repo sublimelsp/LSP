@@ -37,6 +37,7 @@ from .protocol import ErrorCodes
 from .protocol import ExecuteCommandParams
 from .protocol import FailureHandlingKind
 from .protocol import FileEvent
+from .protocol import FoldingRangeKind
 from .protocol import GeneralClientCapabilities
 from .protocol import InitializeError
 from .protocol import InitializeParams
@@ -51,6 +52,8 @@ from .protocol import MarkupKind
 from .protocol import Notification
 from .protocol import PrepareSupportDefaultBehavior
 from .protocol import PreviousResultId
+from .protocol import ProgressParams
+from .protocol import ProgressToken
 from .protocol import PublishDiagnosticsParams
 from .protocol import RegistrationParams
 from .protocol import Range
@@ -66,6 +69,10 @@ from .protocol import TextDocumentSyncKind
 from .protocol import TokenFormat
 from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
+from .protocol import WorkDoneProgressBegin
+from .protocol import WorkDoneProgressCreateParams
+from .protocol import WorkDoneProgressEnd
+from .protocol import WorkDoneProgressReport
 from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceDiagnosticParams
 from .protocol import WorkspaceDiagnosticReport
@@ -91,6 +98,7 @@ from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
+from .views import DiagnosticSeverityData
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
@@ -333,7 +341,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "dynamicRegistration": True  # exceptional
         },
         "rangeFormatting": {
-            "dynamicRegistration": True
+            "dynamicRegistration": True,
+            "rangesSupport": True
         },
         "declaration": {
             "dynamicRegistration": True,
@@ -397,6 +406,16 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "selectionRange": {
             "dynamicRegistration": True
+        },
+        "foldingRange": {
+            "dynamicRegistration": True,
+            "foldingRangeKind": {
+                "valueSet": [
+                    FoldingRangeKind.Comment,
+                    FoldingRangeKind.Imports,
+                    FoldingRangeKind.Region
+                ]
+            }
         },
         "codeLens": {
             "dynamicRegistration": True
@@ -539,7 +558,9 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self, is_view_visible: bool) -> None:
+    def present_diagnostics_async(
+        self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
+    ) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -819,7 +840,7 @@ class AbstractPlugin(metaclass=ABCMeta):
     def storage_path(cls) -> str:
         """
         The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
-        You should have an additional subdirectory preferrably the same name as your plugin. For instance:
+        You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
         ```python
         from LSP.plugin import AbstractPlugin
@@ -1218,7 +1239,7 @@ class Session(TransportCallbacks):
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
-        self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
+        self._progress = {}  # type: Dict[ProgressToken, Optional[WindowProgressReporter]]
         self._watcher_impl = get_file_watcher_implementation()
         self._static_file_watchers = []  # type: List[FileWatcher]
         self._dynamic_file_watchers = {}  # type: Dict[str, List[FileWatcher]]
@@ -1545,13 +1566,34 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def execute_command(self, command: ExecuteCommandParams, progress: bool) -> Promise:
+    def execute_command(
+        self, command: ExecuteCommandParams, progress: bool, view: Optional[sublime.View] = None
+    ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
+        command_name = command['command']
+        # Handle VSCode-specific command for triggering AC/sighelp
+        if command_name == "editor.action.triggerSuggest" and view:
+            # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
+            sublime.set_timeout(lambda: view.run_command("auto_complete"))
+            return Promise.resolve(None)
+        if command_name == "editor.action.triggerParameterHints" and view:
+
+            def run_async() -> None:
+                session_view = self.session_view_for_view_async(view)
+                if not session_view:
+                    return
+                listener = session_view.listener()
+                if not listener:
+                    return
+                listener.do_signature_help_async(manual=False)
+
+            sublime.set_timeout_async(run_async)
+            return Promise.resolve(None)
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
             lambda resolve: self.send_request(
@@ -1561,7 +1603,9 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: Union[Command, CodeAction], progress: bool) -> Promise:
+    def run_code_action_async(
+        self, code_action: Union[Command, CodeAction], progress: bool, view: Optional[sublime.View] = None
+    ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast(Command, code_action)
@@ -1570,20 +1614,21 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress)
+            return self.execute_command(command_params, progress, view)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast(CodeAction, code_action)
-        return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+        return self._maybe_resolve_code_action(code_action, view) \
+            .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
-    def open_uri_async(
+    def try_open_uri_async(
         self,
         uri: DocumentUri,
         r: Optional[Range] = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
@@ -1597,7 +1642,17 @@ class Session(TransportCallbacks):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
-        return Promise.resolve(None)
+        return None
+
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Optional[Range] = None,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[Optional[sublime.View]]:
+        promise = self.try_open_uri_async(uri, r, flags, group)
+        return Promise.resolve(None) if promise is None else promise
 
     def _open_file_uri_async(
         self,
@@ -1623,7 +1678,7 @@ class Session(TransportCallbacks):
         r: Optional[Range],
         flags: int,
         group: int,
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Optional[Promise[Optional[sublime.View]]]:
         # I cannot type-hint an unpacked tuple
         pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
         # It'd be nice to have automatic tuple unpacking continuations
@@ -1648,7 +1703,7 @@ class Session(TransportCallbacks):
 
             pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
             return result[0]
-        return Promise.resolve(None)
+        return None
 
     def open_location_async(self, location: Union[Location, LocationLink], flags: int = 0,
                             group: int = -1) -> Promise[Optional[sublime.View]]:
@@ -1659,15 +1714,24 @@ class Session(TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
-            # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
-            # We must first resolve the command and edit properties, because they can potentially be absent.
-            request = Request("codeAction/resolve", code_action)
-            return self.send_request_task(request)
+    def _maybe_resolve_code_action(
+        self, code_action: CodeAction, view: Optional[sublime.View]
+    ) -> Promise[Union[CodeAction, Error]]:
+        if "edit" not in code_action:
+            has_capability = self.has_capability("codeActionProvider.resolveProvider")
+            if not has_capability and view:
+                session_view = self.session_view_for_view_async(view)
+                if session_view:
+                    has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
+            if has_capability:
+                # We must first resolve the command and edit properties, because they can potentially be absent.
+                request = Request("codeAction/resolve", code_action)
+                return self.send_request_task(request)
         return Promise.resolve(code_action)
 
-    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise[None]:
+    def _apply_code_action_async(
+        self, code_action: Union[CodeAction, Error, None], view: Optional[sublime.View]
+    ) -> Promise[None]:
         if not code_action:
             return Promise.resolve(None)
         if isinstance(code_action, Error):
@@ -1684,7 +1748,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, False))
+            return promise.then(
+                lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
@@ -1970,7 +2035,7 @@ class Session(TransportCallbacks):
             # TODO: ST API does not allow us to say "do not focus this new view"
             self.open_uri_async(uri, params.get("selection")).then(success)
 
-    def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
+    def m_window_workDoneProgress_create(self, params: WorkDoneProgressCreateParams, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
         self._progress[params['token']] = None
         self.send_response(Response(request_id, None))
@@ -1984,7 +2049,7 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
-    def _create_window_progress_reporter(self, token: str, value: Dict[str, Any]) -> None:
+    def _create_window_progress_reporter(self, token: ProgressToken, value: WorkDoneProgressBegin) -> None:
         self._progress[token] = WindowProgressReporter(
             window=self.window,
             key="lspprogress{}{}".format(self.config.name, token),
@@ -1992,60 +2057,65 @@ class Session(TransportCallbacks):
             message=value.get("message")
         )
 
-    def m___progress(self, params: Any) -> None:
+    def m___progress(self, params: ProgressParams) -> None:
         """handles the $/progress notification"""
         token = params['token']
         value = params['value']
         # Partial Result Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#partialResults
-        if token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
+        if isinstance(token, str) and token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
-                self._on_workspace_diagnostics_async(value, reset_pending_response=False)
+                self._on_workspace_diagnostics_async(
+                    cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress
-        kind = value['kind']
-        if token not in self._progress:
-            # If the token is not in the _progress map then that could mean two things:
-            #
-            # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
-            #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it succeeds,
-            #    we can delegate to the appropriate session view instances.
-            #
-            # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
-            #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
-            #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
-            try:
-                request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
-                request = self._response_handlers[request_id][0]
-                self._invoke_views(request, "on_request_progress", request_id, params)
-                return
-            except (IndexError, ValueError, KeyError):
-                # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
-                # dealing with possibility (2).
-                if kind == 'begin':
-                    # We are dealing with possibility (2), so create the progress reporter now.
-                    self._create_window_progress_reporter(token, value)
+        if isinstance(value, dict) and 'kind' in value:
+            kind = value['kind']
+            if token not in self._progress:
+                # If the token is not in the _progress map then that could mean two things:
+                #
+                # 1) The server is reporting on our client-initiated request progress. In that case, the progress token
+                #    should be of the form $_WORK_DONE_PROGRESS_PREFIX$RequestId. We try to parse it, and if it
+                #    succeeds, we can delegate to the appropriate session view instances.
+                #
+                # 2) The server is not spec-compliant and reports progress using server-initiated progress but didn't
+                #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
+                #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
+                try:
+                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])  # type: ignore
+                    request = self._response_handlers[request_id][0]
+                    self._invoke_views(request, "on_request_progress", request_id, params)
                     return
-                pass
-            debug('unknown $/progress token: {}'.format(token))
-            return
-        if kind == 'begin':
-            self._create_window_progress_reporter(token, value)
-        elif kind == 'report':
-            progress = self._progress[token]
-            assert isinstance(progress, WindowProgressReporter)
-            progress(value.get("message"), value.get("percentage"))
-        elif kind == 'end':
-            progress = self._progress.pop(token)
-            assert isinstance(progress, WindowProgressReporter)
-            title = progress.title
-            progress = None
-            message = value.get('message')
-            if message:
-                self.window.status_message(title + ': ' + message)
+                except (TypeError, IndexError, ValueError, KeyError):
+                    # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
+                    # dealing with possibility (2).
+                    if kind == 'begin':
+                        # We are dealing with possibility (2), so create the progress reporter now.
+                        value = cast(WorkDoneProgressBegin, value)
+                        self._create_window_progress_reporter(token, value)
+                        return
+                debug('unknown $/progress token: {}'.format(token))
+                return
+            if kind == 'begin':
+                value = cast(WorkDoneProgressBegin, value)
+                self._create_window_progress_reporter(token, value)
+            elif kind == 'report':
+                value = cast(WorkDoneProgressReport, value)
+                progress = self._progress[token]
+                assert isinstance(progress, WindowProgressReporter)
+                progress(value.get("message"), value.get("percentage"))
+            elif kind == 'end':
+                value = cast(WorkDoneProgressEnd, value)
+                progress = self._progress.pop(token)
+                assert isinstance(progress, WindowProgressReporter)
+                title = progress.title
+                progress = None
+                message = value.get('message')
+                if message:
+                    self.window.status_message(title + ': ' + message)
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 

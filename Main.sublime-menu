@@ -3,8 +3,25 @@
     "id": "edit",
     "children": [
       {
+        "id": "fold",
+        "children": [
+          {
+            "id": "lsp",
+            "caption": "-"
+          },
+          {
+            "command": "lsp_fold",
+            "args": {"prefetch": true}
+          }
+        ]
+      },
+      {
         "id": "lsp",
         "caption": "-"
+      },
+      {
+        "command": "lsp_fold",
+        "args": {"prefetch": true, "hidden": true}
       },
       {
         "command": "lsp_source_action",

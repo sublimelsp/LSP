@@ -63,7 +63,8 @@ class ProjectFolders(object):
         self._update_exclude_patterns(self.folders)
 
     def _update_exclude_patterns(self, folders: List[str]) -> None:
-        self._folders_exclude_patterns = []
+        # Ensure that the number of patterns matches the number of folders so that accessing by index never throws.
+        self._folders_exclude_patterns = [[]] * len(folders)
         project_data = self._window.project_data()
         if not isinstance(project_data, dict):
             return
@@ -79,7 +80,7 @@ class ProjectFolders(object):
                 else:
                     exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
                     exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
-            self._folders_exclude_patterns.append(exclude_patterns)
+            self._folders_exclude_patterns[i] = exclude_patterns
 
     def update(self) -> bool:
         new_folders = self._window.folders()

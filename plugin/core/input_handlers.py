@@ -114,11 +114,6 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             raise RuntimeError('Could not find the Command Palette input field view')
         self.listener = InputListener(self)
         self.listener.attach(buffer)
-        # --- Hack needed because the initial_selection method is not supported on Python 3.3 API
-        selection = self.input_view.sel()
-        selection.clear()
-        selection.add(len(self.text))
-        # --- End of hack
 
     @final
     def list_items(self) -> List[sublime.ListInputItem]:
@@ -143,7 +138,8 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         sublime.set_timeout(self.attach_listener)
         return self.text
 
-    # Not supported on Python 3.3 API :-(
+    # This requires a fix for https://github.com/sublimehq/sublime_text/issues/6175 - it can manually be fixed in
+    # sublime_plugin.py
     def initial_selection(self) -> List[Tuple[int, int]]:
         pt = len(self.text)
         return [(pt, pt)]

@@ -174,6 +174,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             self.cached = False
             if self.kind and not any(item.value['kind'] == self.kind for item in self.items):
                 self.has_matching_symbols = False
+                self._reset_suppress_input()
                 return None
             window = self.view.window()
             if not window:
@@ -183,11 +184,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 SYMBOL_KIND_NAMES.get(symbol_kind, 'All Kinds'),
                 self.kind,
                 kind=SYMBOL_KINDS.get(symbol_kind, sublime.KIND_AMBIGUOUS))
+            sublime.set_timeout(self._reset_suppress_input)
             return DocumentSymbolsKindInputHandler(window, initial_value, self.view, self.items)
         return None
 
     def handle_response_async(self, response: Union[List[DocumentSymbol], List[SymbolInformation], None]) -> None:
-        self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
         self.items.clear()
         if response and self.view.is_valid():
             if 'selectionRange' in response[0]:
@@ -205,8 +206,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 window.run_command('show_overlay', {'overlay': 'command_palette', 'command': 'lsp_document_symbols'})
 
     def handle_response_error(self, error: Any) -> None:
-        self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
+        self._reset_suppress_input()
         print_to_status_bar(error)
+
+    def _reset_suppress_input(self) -> None:
+        self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
 
     def process_document_symbol_recursive(
         self, item: DocumentSymbol, hierarchy: str = ''

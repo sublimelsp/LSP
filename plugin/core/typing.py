@@ -19,6 +19,7 @@ if sys.version_info >= (3, 11, 0):
     from typing import Mapping
     from typing import NotRequired
     from typing import Optional
+    from typing import ParamSpec
     from typing import Protocol
     from typing import Required
     from typing import Sequence
@@ -35,7 +36,7 @@ else:
     def cast(typ, val):  # type: ignore
         return val
 
-    def final(func):
+    def final(func):  # type: ignore
         return func
 
     def _make_type(name: str) -> '_TypeMeta':
@@ -139,3 +140,9 @@ else:
 
     def TypeVar(*args, **kwargs) -> Any:  # type: ignore
         return object
+
+    class ParamSpec(Type):  # type: ignore
+        args = ...
+        kwargs = ...
+        def __init__(*args, **kwargs) -> None:  # type: ignore
+            pass

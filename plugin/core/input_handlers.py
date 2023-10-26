@@ -1,5 +1,4 @@
-from .typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
-from .typing import cast
+from .typing import Any, Callable, Dict, List, Optional, ParamSpec, Tuple, Union
 from .typing import final
 from abc import ABCMeta
 from abc import abstractmethod
@@ -15,15 +14,19 @@ ST_VERSION = int(sublime.version())
 ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
                         List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]
 
-T_Callable = TypeVar('T_Callable', bound=Callable[..., Any])
+P = ParamSpec('P')
 
 
-def debounced(user_function: T_Callable) -> T_Callable:
-    """ Yet another debounce implementation, to be used as a decorator for the debounced function. """
+def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
+    """ A decorator which debounces the calls to a function.
+
+    Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
+    functions that return None.
+    """
     DEBOUNCE_TIME = 0.5  # seconds
 
     @functools.wraps(user_function)
-    def wrapped_function(*args: Any, **kwargs: Any) -> None:
+    def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
         def call_function():
             if hasattr(wrapped_function, '_timer'):
                 delattr(wrapped_function, '_timer')
@@ -35,7 +38,7 @@ def debounced(user_function: T_Callable) -> T_Callable:
         timer.start()
         setattr(wrapped_function, '_timer', timer)
     setattr(wrapped_function, '_timer', None)
-    return cast(T_Callable, wrapped_function)
+    return wrapped_function
 
 
 class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):

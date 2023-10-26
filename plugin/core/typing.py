@@ -144,5 +144,6 @@ else:
     class ParamSpec(Type):  # type: ignore
         args = ...
         kwargs = ...
+
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass

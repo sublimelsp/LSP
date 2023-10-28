@@ -5,6 +5,7 @@ from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Location
 from .core.protocol import Point
+from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SymbolInformation
 from .core.protocol import SymbolKind
@@ -13,7 +14,8 @@ from .core.protocol import WorkspaceSymbol
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
-from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
+from .core.typing import Any, Dict, List, NotRequired, Optional, Tuple, TypedDict, TypeGuard, Union
+from .core.typing import cast
 from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import SYMBOL_KINDS
@@ -54,6 +56,25 @@ SYMBOL_KIND_NAMES = {
     SymbolKind.Operator: "Operator",
     SymbolKind.TypeParameter: "Type Parameter"
 }  # type: Dict[SymbolKind, str]
+
+
+DocumentSymbolValue = TypedDict('DocumentSymbolValue', {
+    'deprecated': bool,
+    'kind': int,
+    'range': Range
+})
+
+WorkspaceSymbolValue = TypedDict('WorkspaceSymbolValue', {
+    'deprecated': bool,
+    'kind': int,
+    'location': NotRequired[Location],
+    'session': str,
+    'workspaceSymbol': NotRequired[WorkspaceSymbol]
+})
+
+
+def is_document_symbol_value(val: Any) -> TypeGuard[DocumentSymbolValue]:
+    return isinstance(val, dict) and all(key in val for key in ('deprecated', 'kind', 'range'))
 
 
 def symbol_to_list_input_item(
@@ -292,14 +313,12 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
                     break
         return items, selected_index
 
-    def preview(self, text: Any) -> Union[str, sublime.Html, None]:
-        if isinstance(text, dict):
-            r = text.get('range')
-            if r:
-                region = range_to_region(r, self.view)
-                self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
-                self.view.show_at_center(region.a)
-            if text.get('deprecated'):
+    def preview(self, text: Optional[DocumentSymbolValue]) -> Union[str, sublime.Html, None]:
+        if is_document_symbol_value(text):
+            region = range_to_region(text['range'], self.view)
+            self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
+            self.view.show_at_center(region.a)
+            if text['deprecated']:
                 return "⚠ Deprecated"
         return ""
 
@@ -315,18 +334,17 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     def run(
         self,
-        symbol: Dict[str, Any]
+        symbol: WorkspaceSymbolValue
     ) -> None:
-        if not symbol:
-            return
         session_name = symbol['session']
         session = self.session_by_name(session_name)
         if session:
-            if 'location' in symbol:
-                session.open_location_async(symbol['location'], sublime.ENCODED_POSITION)
+            location = symbol.get('location')
+            if location:
+                session.open_location_async(location, sublime.ENCODED_POSITION)
             else:
                 session.send_request(
-                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),
+                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
                     functools.partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
@@ -350,7 +368,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
     def placeholder(self) -> str:
         return "Start typing to search"
 
-    def preview(self, text: Any) -> Union[str, sublime.Html, None]:
+    def preview(self, text: Optional[WorkspaceSymbolValue]) -> Union[str, sublime.Html, None]:
         if isinstance(text, dict) and text.get('deprecated'):
             return "⚠ Deprecated"
         return ""

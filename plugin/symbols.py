@@ -79,7 +79,7 @@ def symbol_information_to_quick_panel_item(
 
 
 def symbol_to_list_input_item(
-    view: sublime.View, item: Union[DocumentSymbol, SymbolInformation], hierarchy: str = ''
+    item: Union[DocumentSymbol, SymbolInformation], hierarchy: str = ''
 ) -> sublime.ListInputItem:
     name = item['name']
     kind = item['kind']
@@ -199,7 +199,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             else:
                 items = cast(List[SymbolInformation], response)
                 for item in items:
-                    self.items.append(symbol_to_list_input_item(self.view, item))
+                    self.items.append(symbol_to_list_input_item(item))
             self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
             window = self.view.window()
             if window:
@@ -218,7 +218,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     ) -> List[sublime.ListInputItem]:
         name = item['name']
         name_hierarchy = hierarchy + " > " + name if hierarchy else name
-        items = [symbol_to_list_input_item(self.view, item, hierarchy)]
+        items = [symbol_to_list_input_item(item, hierarchy)]
         for child in item.get('children') or []:
             items.extend(self.process_document_symbol_recursive(child, name_hierarchy))
         return items

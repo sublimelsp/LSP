@@ -1,0 +1,28 @@
+=> 1.26.0
+
+⚠️⚠️⚠️
+To ensure that everything works properly after LSP package is updated, it's strongly recommended
+to restart Sublime Text once it finishes updating all packages.
+⚠️⚠️⚠️
+
+# New features
+
+- Add support for remote images in hover popups (#2341) (jwortmann)
+- Add kind filter for Goto Symbol command (#2330) (jwortmann)
+- Handle multiple formatters (#2328) (jwortmann)
+- Add support for folding range request (#2304) (jwortmann)
+- Add support for multi-range formatting (#2299) (jwortmann)
+
+# Improvements
+
+- Handle custom URI schemes in hover text links (#2339) (Raoul Wols)
+- Sort and select closest result for Find References in quick panel (#2337) (jwortmann)
+- Improve signature help performance (#2329) (jwortmann)
+- Align "Expand Selection" fallback behavior with "Goto Definition" and "Find References" (Janos Wortmann)
+- support client config with `tcp_port` but without `command` (#2300) (Marek Budík)
+
+# Fixes
+
+- check `codeAction/resolve` capability against session buffer (#2343) (1900 TD Lemon)
+- Minor visual tweaks to ShowMessageRequest popup (#2340) (Rafał Chłodnicki)
+- fix "formatting on save" potentially running on outdated document state (Rafal Chlodnicki)

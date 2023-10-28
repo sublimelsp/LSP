@@ -4,6 +4,7 @@ from .core.promise import Promise
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Location
+from .core.protocol import Point
 from .core.protocol import Request
 from .core.protocol import SymbolInformation
 from .core.protocol import SymbolKind
@@ -13,6 +14,7 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
+from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
@@ -56,7 +58,6 @@ SYMBOL_KIND_NAMES = {
 
 def symbol_to_list_input_item(
     item: Union[DocumentSymbol, WorkspaceSymbol, SymbolInformation],
-    view: Optional[sublime.View] = None,
     hierarchy: str = '',
     session_name: Optional[str] = None
 ) -> sublime.ListInputItem:
@@ -67,24 +68,21 @@ def symbol_to_list_input_item(
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
-    if view:  # Response from textDocument/documentSymbol request
-        selection_range = item.get('selectionRange')
-        if selection_range:
-            item = cast(DocumentSymbol, item)
-            detail = item.get('detail')
-            if detail:
-                details.append(detail)
-            if hierarchy:
-                details.append(hierarchy + " > " + name)
-            region = range_to_region(selection_range, view)
-            value['region'] = [region.a, region.b]
-        else:
-            item = cast(SymbolInformation, item)
-            container_name = item.get('containerName')
-            if container_name:
-                details.append(container_name)
-            region = range_to_region(item['location']['range'], view)
-            value['region'] = [region.a, region.b]
+    selection_range = item.get('selectionRange')
+    if selection_range:  # Response from textDocument/documentSymbol request
+        item = cast(DocumentSymbol, item)
+        detail = item.get('detail')
+        if detail:
+            details.append(detail)
+        if hierarchy:
+            details.append(hierarchy + " > " + name)
+        value['range'] = selection_range
+    elif session_name is None:  # Response from textDocument/documentSymbol request
+        item = cast(SymbolInformation, item)
+        container_name = item.get('containerName')
+        if container_name:
+            details.append(container_name)
+        value['range'] = item['location']['range']
     else:  # Response from workspace/symbol request
         item = cast(WorkspaceSymbol, item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
         details_separator = " > "
@@ -197,8 +195,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             else:
                 items = cast(List[SymbolInformation], response)
                 for item in items:
-                    self.items.append(symbol_to_list_input_item(item, self.view))
-            self.items.sort(key=lambda item: item.value['region'])
+                    self.items.append(symbol_to_list_input_item(item))
+            self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
             window = self.view.window()
             if window:
                 self.cached = True
@@ -216,7 +214,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     ) -> List[sublime.ListInputItem]:
         name = item['name']
         name_hierarchy = hierarchy + " > " + name if hierarchy else name
-        items = [symbol_to_list_input_item(item, self.view, hierarchy)]
+        items = [symbol_to_list_input_item(item, hierarchy)]
         for child in item.get('children') or []:
             items.extend(self.process_document_symbol_recursive(child, name_hierarchy))
         return items
@@ -284,9 +282,11 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
         items = [item for item in self.items if not self.kind or item.value['kind'] == self.kind]
         selected_index = 0
         if self.old_selection:
-            pt = self.old_selection[0].b
+            caret_point = offset_to_point(self.view, self.old_selection[0].b)
             for index, item in enumerate(items):
-                if item.value['region'][0] <= pt:
+                start = item.value['range']['start']
+                if start['line'] < caret_point.row or \
+                        start['line'] == caret_point.row and start['character'] <= caret_point.col:
                     selected_index = index
                 else:
                     break
@@ -294,10 +294,11 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def preview(self, text: Any) -> Union[str, sublime.Html, None]:
         if isinstance(text, dict):
-            r = text.get('region')
+            r = text.get('range')
             if r:
-                self.view.run_command('lsp_selection_set', {'regions': [(r[0], r[1])]})
-                self.view.show_at_center(r[0])
+                region = range_to_region(r, self.view)
+                self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
+                self.view.show_at_center(region.a)
             if text.get('deprecated'):
                 return "⚠ Deprecated"
         return ""

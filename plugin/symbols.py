@@ -1,6 +1,7 @@
 import weakref
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
+from .core.protocol import Point
 from .core.protocol import Request
 from .core.protocol import SymbolInformation
 from .core.protocol import SymbolKind
@@ -8,6 +9,7 @@ from .core.protocol import SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
+from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import SublimeKind
 from .core.views import SYMBOL_KINDS
@@ -91,17 +93,16 @@ def symbol_to_list_input_item(
             details.append(detail)
         if hierarchy:
             details.append(hierarchy + " > " + name)
-        region = range_to_region(selection_range, view)
     else:
         item = cast(SymbolInformation, item)
         container_name = item.get('containerName')
         if container_name:
             details.append(container_name)
-        region = range_to_region(item['location']['range'], view)
+        selection_range = item['location']['range']
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     return sublime.ListInputItem(
         name,
-        {'kind': kind, 'region': [region.a, region.b], 'deprecated': deprecated},
+        {'kind': kind, 'range': selection_range, 'deprecated': deprecated},
         details=" • ".join(details),
         annotation=st_kind[2],
         kind=st_kind
@@ -199,7 +200,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 items = cast(List[SymbolInformation], response)
                 for item in items:
                     self.items.append(symbol_to_list_input_item(self.view, item))
-            self.items.sort(key=lambda item: item.value['region'])
+            self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
             window = self.view.window()
             if window:
                 self.cached = True
@@ -285,9 +286,11 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
         items = [item for item in self.items if not self.kind or item.value['kind'] == self.kind]
         selected_index = 0
         if self.old_selection:
-            pt = self.old_selection[0].b
+            caret_point = offset_to_point(self.view, self.old_selection[0].b)
             for index, item in enumerate(items):
-                if item.value['region'][0] <= pt:
+                start = item.value['range']['start']
+                if start['line'] < caret_point.row or \
+                        start['line'] == caret_point.row and start['character'] <= caret_point.col:
                     selected_index = index
                 else:
                     break
@@ -295,10 +298,11 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def preview(self, text: Any) -> Union[str, sublime.Html, None]:
         if isinstance(text, dict):
-            r = text.get('region')
+            r = text.get('range')
             if r:
-                self.view.run_command('lsp_selection_set', {'regions': [(r[0], r[1])]})
-                self.view.show_at_center(r[0])
+                region = range_to_region(r, self.view)
+                self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
+                self.view.show_at_center(region.a)
             if text.get('deprecated'):
                 return "⚠ Deprecated"
         return ""

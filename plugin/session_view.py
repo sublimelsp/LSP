@@ -244,7 +244,7 @@ class SessionView:
                 self.reset_show_definitions()
 
     def reset_show_definitions(self) -> None:
-        self.view.settings().set(SHOW_DEFINITIONS_KEY, globalprefs().get(SHOW_DEFINITIONS_KEY))
+        self.view.settings().erase(SHOW_DEFINITIONS_KEY)
 
     def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()

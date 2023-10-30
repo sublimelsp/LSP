@@ -1,5 +1,9 @@
 from .code_lens import CodeLensView
 from .core.active_request import ActiveRequest
+from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import HOVER_HIGHLIGHT_KEY
+from .core.constants import HOVER_PROVIDER_COUNT_KEY
+from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
@@ -22,7 +26,6 @@ import functools
 import sublime
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]  # type: List[int]
-HOVER_HIGHLIGHT_KEY = "lsp_hover_highlight"
 
 
 class TagData:
@@ -39,9 +42,7 @@ class SessionView:
     Holds state per session per view.
     """
 
-    SHOW_DEFINITIONS_KEY = "show_definitions"
     HOVER_PROVIDER_KEY = "hoverProvider"
-    HOVER_PROVIDER_COUNT_KEY = "lsp_hover_provider_count"
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
@@ -224,20 +225,25 @@ class SessionView:
 
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()
-        count = settings.get(self.HOVER_PROVIDER_COUNT_KEY, 0)
+        count = settings.get(HOVER_PROVIDER_COUNT_KEY, 0)
         if isinstance(count, int):
             count += 1
-            settings.set(self.HOVER_PROVIDER_COUNT_KEY, count)
-            settings.set(self.SHOW_DEFINITIONS_KEY, False)
+            settings.set(HOVER_PROVIDER_COUNT_KEY, count)
+            window = self.view.window()
+            if window and window.settings().get(HOVER_ENABLED_KEY, True):
+                settings.set(SHOW_DEFINITIONS_KEY, False)
 
     def _decrement_hover_count(self) -> None:
         settings = self.view.settings()
-        count = settings.get(self.HOVER_PROVIDER_COUNT_KEY)
+        count = settings.get(HOVER_PROVIDER_COUNT_KEY)
         if isinstance(count, int):
             count -= 1
             if count == 0:
-                settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
-                settings.set(self.SHOW_DEFINITIONS_KEY, True)
+                settings.erase(HOVER_PROVIDER_COUNT_KEY)
+                self.reset_show_definitions()
+
+    def reset_show_definitions(self) -> None:
+        self.view.settings().erase(SHOW_DEFINITIONS_KEY)
 
     def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()

@@ -159,6 +159,11 @@
       {
         "caption": "LSP: Show Inlay Hints",
         "command": "lsp_toggle_inlay_hints"
+      },
+      {
+        "caption": "LSP: Show Hover Popups",
+        "command": "lsp_toggle_hover_popups",
+        "checkbox": true
       }
     ]
   },

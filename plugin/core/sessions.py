@@ -581,6 +581,9 @@ class SessionViewProtocol(Protocol):
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
+    def reset_show_definitions(self) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 

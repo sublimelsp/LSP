@@ -2,6 +2,7 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import QueryCompletionsTask
+from .core.constants import HOVER_ENABLED_KEY
 from .core.logging import debug
 from .core.panels import PanelName
 from .core.protocol import Diagnostic
@@ -466,7 +467,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_hover(self, point: int, hover_zone: int) -> None:
         if self.view.is_popup_visible():
             return
-        if hover_zone == sublime.HOVER_TEXT:
+        window = self.view.window()
+        if hover_zone == sublime.HOVER_TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
             self.view.run_command("lsp_hover", {"point": point})
         elif hover_zone == sublime.HOVER_GUTTER:
             # Lightbulb must be visible and at the same line

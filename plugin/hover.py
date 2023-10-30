@@ -1,8 +1,10 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
 from .core.constants import HOVER_PROVIDER_COUNT_KEY
+from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
@@ -390,25 +392,32 @@ class LspHoverCommand(LspTextCommand):
                 return
 
 
-class LspToggleHoverPopupsCommand(sublime_plugin.TextCommand):
+class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
 
     def is_enabled(self) -> bool:
-        return self._has_hover_provider()
+        view = self.window.active_view()
+        if view:
+            return self._has_hover_provider(view)
+        return False
 
     def is_checked(self) -> bool:
-        window_manager = windows.lookup(self.view.window())
-        return window_manager.hover_enabled if window_manager else False
+        return bool(self.window.settings().get(HOVER_ENABLED_KEY, True))
 
-    def run(self, edit: sublime.Edit) -> None:
-        window_manager = windows.lookup(self.view.window())
-        if window_manager:
-            window_manager.hover_enabled = not window_manager.hover_enabled
-            for session in window_manager.get_sessions():
-                for session_view in session.session_views_async():
-                    if window_manager.hover_enabled:
-                        session_view.view.settings().set('show_definitions', False)
-                    else:
-                        session_view.reset_show_definitions()
+    def run(self) -> None:
+        enable = not self.is_checked()
+        self.window.settings().set(HOVER_ENABLED_KEY, enable)
+        sublime.set_timeout_async(partial(self._update_views_async, enable))
 
-    def _has_hover_provider(self) -> bool:
-        return cast(int, self.view.settings().get(HOVER_PROVIDER_COUNT_KEY, 0)) > 0
+    def _has_hover_provider(self, view: sublime.View) -> bool:
+        return cast(int, view.settings().get(HOVER_PROVIDER_COUNT_KEY, 0)) > 0
+
+    def _update_views_async(self, enable: bool) -> None:
+        window_manager = windows.lookup(self.window)
+        if not window_manager:
+            return
+        for session in window_manager.get_sessions():
+            for session_view in session.session_views_async():
+                if enable:
+                    session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
+                else:
+                    session_view.reset_show_definitions()

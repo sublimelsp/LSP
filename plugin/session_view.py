@@ -1,7 +1,9 @@
 from .code_lens import CodeLensView
 from .core.active_request import ActiveRequest
+from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
 from .core.constants import HOVER_PROVIDER_COUNT_KEY
+from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
@@ -9,7 +11,6 @@ from .core.protocol import DiagnosticTag
 from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request
-from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import globalprefs
@@ -42,7 +43,6 @@ class SessionView:
     Holds state per session per view.
     """
 
-    SHOW_DEFINITIONS_KEY = "show_definitions"
     HOVER_PROVIDER_KEY = "hoverProvider"
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
@@ -230,9 +230,9 @@ class SessionView:
         if isinstance(count, int):
             count += 1
             settings.set(HOVER_PROVIDER_COUNT_KEY, count)
-            manager = windows.lookup(self.view.window())
-            if manager and manager.hover_enabled:
-                settings.set(self.SHOW_DEFINITIONS_KEY, False)
+            window = self.view.window()
+            if window and window.settings().get(HOVER_ENABLED_KEY, True):
+                settings.set(SHOW_DEFINITIONS_KEY, False)
 
     def _decrement_hover_count(self) -> None:
         settings = self.view.settings()
@@ -244,7 +244,7 @@ class SessionView:
                 self.reset_show_definitions()
 
     def reset_show_definitions(self) -> None:
-        self.view.settings().set(self.SHOW_DEFINITIONS_KEY, globalprefs().get(self.SHOW_DEFINITIONS_KEY))
+        self.view.settings().set(SHOW_DEFINITIONS_KEY, globalprefs().get(SHOW_DEFINITIONS_KEY))
 
     def get_uri(self) -> Optional[DocumentUri]:
         listener = self.listener()

@@ -484,8 +484,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             diagnostics_with_config = []  # type: List[Tuple[ClientConfig, Diagnostic]]
             max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
             for sb, diagnostics in self.diagnostics_intersecting_async(self.view.line(point))[0]:
-                diagnostics_with_config.extend((sb.session.config, diagnostic) for diagnostic in diagnostics
-                    if diagnostic_severity(diagnostic) <= max_severity_level)
+                diagnostics_with_config.extend(
+                    (sb.session.config, diagnostic) for diagnostic in diagnostics
+                    if diagnostic_severity(diagnostic) <= max_severity_level
+                )
             if diagnostics_with_config:
                 diagnostics_with_config.sort(key=lambda d: diagnostic_severity(d[1]))
                 content += '<div class="diagnostics">'

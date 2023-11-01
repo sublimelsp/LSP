@@ -169,7 +169,7 @@ class Promise(Generic[T]):
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
-                result.then(lambda value: resolve_fn(value))
+                result.then(lambda value: resolve_fn(value))  # type: ignore  # TODO fix me
             else:
                 resolve_fn(result)
 

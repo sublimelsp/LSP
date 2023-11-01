@@ -1489,7 +1489,7 @@ class Session(TransportCallbacks):
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
+            self._plugin = self._plugin_class(weakref.ref(self))  # type: ignore  # TODO fix me
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             self._plugin.on_server_response_async('initialize', Response(-1, result))

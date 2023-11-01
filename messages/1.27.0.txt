@@ -1,4 +1,4 @@
-=> 1.30.0
+=> 1.27.0
 
 ⚠️⚠️⚠️
 To ensure that everything works properly after LSP package is updated, it's strongly recommended

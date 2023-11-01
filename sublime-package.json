@@ -655,7 +655,7 @@
             },
             "show_references_in_quick_panel": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "markdownDescription": "Show symbol references in Sublime's quick panel instead of the bottom panel."
             },
             "popup_max_characters_width": {

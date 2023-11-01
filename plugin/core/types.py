@@ -264,7 +264,7 @@ class Settings:
         r("show_multiline_document_highlights", True)
         r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
-        r("show_references_in_quick_panel", False)
+        r("show_references_in_quick_panel", True)
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 

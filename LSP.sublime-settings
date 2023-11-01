@@ -160,7 +160,7 @@
   // --- Other --------------------------------------------------------------------------
 
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
-  "show_references_in_quick_panel": false,
+  "show_references_in_quick_panel": true,
 
   // Show code lens:
   // "annotation" - show an annotation on the right when code actions are available

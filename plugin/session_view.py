@@ -1,4 +1,5 @@
 from .code_lens import CodeLensView
+from .code_lens import LspToggleCodeLensCommand
 from .core.active_request import ActiveRequest
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
@@ -375,11 +376,16 @@ class SessionView:
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def start_code_lenses_async(self) -> None:
+        if not LspToggleCodeLensCommand.are_enabled(self.view.window()):
+            return
         params = {'textDocument': text_document_identifier(self.view)}
         for request_id, data in self._active_requests.items():
             if data.request.method == "codeAction/resolve":
                 self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
         self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
+
+    def clear_code_lenses_async(self) -> None:
+        self._code_lenses.clear_view()
 
     def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
         if not self._is_listener_alive() or not isinstance(response, list):
@@ -388,6 +394,8 @@ class SessionView:
         self.resolve_visible_code_lenses_async()
 
     def resolve_visible_code_lenses_async(self) -> None:
+        if not LspToggleCodeLensCommand.are_enabled(self.view.window()):
+            return
         if not self._code_lenses.is_initialized():
             self.start_code_lenses_async()
             return

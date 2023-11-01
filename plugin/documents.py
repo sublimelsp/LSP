@@ -179,6 +179,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = []
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
+        self._diagnostics_by_config = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
         self._actions_by_config = []  # type: List[CodeActionsByConfigName]
         self._registered = False
 
@@ -480,10 +481,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         content = ''
         if self._lightbulb_line == self.view.rowcol(point)[0]:
             content += code_actions_content(self._actions_by_config)
-        if userprefs().diagnostics_gutter_marker and userprefs().show_diagnostics_severity_level:
+        if userprefs().show_diagnostics_severity_level:
             diagnostics_with_config = []  # type: List[Tuple[ClientConfig, Diagnostic]]
+            diagnostics_by_session_buffer = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
             max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
-            for sb, diagnostics in self.diagnostics_intersecting_async(self.view.line(point))[0]:
+            if userprefs().diagnostics_gutter_marker:
+                diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))[0]
+            elif content:
+                diagnostics_by_session_buffer = self._diagnostics_by_config
+            if content:
+                max_severity_level = userprefs().show_diagnostics_severity_level
+            for sb, diagnostics in diagnostics_by_session_buffer:
                 diagnostics_with_config.extend(
                     (sb.session.config, diagnostic) for diagnostic in diagnostics
                     if diagnostic_severity(diagnostic) <= max_severity_level
@@ -656,9 +664,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions_async(self) -> None:
         if not self._stored_selection:
             return
-        diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
+        self._diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
         actions_manager \
-            .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
+            .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:

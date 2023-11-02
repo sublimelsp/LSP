@@ -14,8 +14,8 @@ import itertools
 import sublime
 
 
-class LspToggleCodeLensCommand(LspWindowCommand):
-    capability = 'inlayHintProvider'
+class LspToggleCodeLensesCommand(LspWindowCommand):
+    capability = 'codeLensProvider'
 
     @classmethod
     def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
@@ -24,7 +24,7 @@ class LspToggleCodeLensCommand(LspWindowCommand):
         return bool(window.settings().get(CODE_LENS_ENABLED_KEY, True))
 
     def is_checked(self) -> bool:
-        return bool(self.window.settings().get(CODE_LENS_ENABLED_KEY, True))
+        return self.are_enabled(self.window)
 
     def run(self) -> None:
         enable = not self.is_checked()

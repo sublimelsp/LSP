@@ -491,12 +491,16 @@ There are multiple options:
 
 1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
-        gem install sorbet
-        gem install sorbet-runtime
+    ```sh
+    gem install sorbet
+    gem install sorbet-runtime
+    ```
 
     If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
 
-        bundle install
+    ```sh
+    bundle install
+    ```
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"sorbet"` client configuration to the `"clients"`:
 
@@ -512,11 +516,13 @@ There are multiple options:
     }
     ```
 
-### ruby-lsp
+### Ruby LSP
 
-1. Install the ruby-lsp gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
+1. Install the Ruby LSP gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
 
-        gem install ruby-lsp
+    ```sh
+    gem install ruby-lsp
+    ```
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby-lsp"` client configuration to the `"clients"`:
 

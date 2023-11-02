@@ -164,6 +164,10 @@
         "command": "lsp_type_hierarchy"
     },
     {
+        "caption": "LSP: Toggle Code Lenses",
+        "command": "lsp_toggle_code_lenses",
+    },
+    {
         "caption": "LSP: Toggle Inlay Hints",
         "command": "lsp_toggle_inlay_hints",
     },

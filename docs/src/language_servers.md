@@ -512,6 +512,32 @@ There are multiple options:
     }
     ```
 
+### ruby-lsp
+
+1. Install the ruby-lsp gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
+
+        gem install ruby-lsp
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "ruby-lsp": {
+                "enabled": true,
+                "command": ["ruby-lsp"],
+                "selector": "source.ruby | text.html.ruby",
+                "initializationOptions": {
+                    "enabledFeatures": {
+                        "diagnostics": false
+                    },
+                    "experimentalFeaturesEnabled": true
+                }
+            }
+        }
+    }
+    ```
+
 ## Rust
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).

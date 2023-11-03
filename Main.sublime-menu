@@ -25,50 +25,50 @@
       },
       {
         "command": "lsp_source_action",
-        "args": {"id": -1}
+        "args": {"index": -1}
       },
       {
         "caption": "LSP: Source Action",
         "children": [
           {
             "command": "lsp_source_action",
-            "args": {"id": 0}
+            "args": {"index": 0}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 1}
+            "args": {"index": 1}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 2}
+            "args": {"index": 2}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 3}
+            "args": {"index": 3}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 4}
+            "args": {"index": 4}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 5}
+            "args": {"index": 5}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 6}
+            "args": {"index": 6}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 7}
+            "args": {"index": 7}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 8}
+            "args": {"index": 8}
           },
           {
             "command": "lsp_source_action",
-            "args": {"id": 9}
+            "args": {"index": 9}
           }
         ]
       },
@@ -81,43 +81,43 @@
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 0}
+            "args": {"index": 0}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 1}
+            "args": {"index": 1}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 2}
+            "args": {"index": 2}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 3}
+            "args": {"index": 3}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 4}
+            "args": {"index": 4}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 5}
+            "args": {"index": 5}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 6}
+            "args": {"index": 6}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 7}
+            "args": {"index": 7}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 8}
+            "args": {"index": 8}
           },
           {
             "command": "lsp_refactor",
-            "args": {"id": 9}
+            "args": {"index": 9}
           }
         ]
       },

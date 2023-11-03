@@ -365,17 +365,17 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
     def view(self) -> Optional[sublime.View]:
         return self.window.active_view()
 
-    def is_enabled(self, id: int, event: Optional[dict] = None) -> bool:
-        if not -1 < id < len(self.actions_cache):
+    def is_enabled(self, index: int, event: Optional[dict] = None) -> bool:
+        if not -1 < index < len(self.actions_cache):
             return False
         return self._has_session(event)
 
-    def is_visible(self, id: int, event: Optional[dict] = None) -> bool:
-        if id == -1:
+    def is_visible(self, index: int, event: Optional[dict] = None) -> bool:
+        if index == -1:
             if self._has_session(event):
                 sublime.set_timeout_async(partial(self._request_menu_actions_async, event))
             return False
-        return id < len(self.actions_cache) and self._is_cache_valid(event)
+        return index < len(self.actions_cache) and self._is_cache_valid(event)
 
     def _has_session(self, event: Optional[dict] = None) -> bool:
         view = self.view
@@ -389,19 +389,19 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
             return False
         return bool(listener.session_async(self.capability, region.b))
 
-    def description(self, id: int, event: Optional[dict] = None) -> Optional[str]:
-        if -1 < id < len(self.actions_cache):
-            return self.actions_cache[id][1]['title']
+    def description(self, index: int, event: Optional[dict] = None) -> Optional[str]:
+        if -1 < index < len(self.actions_cache):
+            return self.actions_cache[index][1]['title']
 
     def want_event(self) -> bool:
         return True
 
-    def run(self, id: int, event: Optional[dict] = None) -> None:
-        sublime.set_timeout_async(partial(self.run_async, id, event))
+    def run(self, index: int, event: Optional[dict] = None) -> None:
+        sublime.set_timeout_async(partial(self.run_async, index, event))
 
-    def run_async(self, id: int, event: Optional[dict]) -> None:
+    def run_async(self, index: int, event: Optional[dict]) -> None:
         if self._is_cache_valid(event):
-            config_name, action = self.actions_cache[id]
+            config_name, action = self.actions_cache[index]
             session = self.session_by_name(config_name)
             if session:
                 session.run_code_action_async(action, progress=True, view=self.view) \

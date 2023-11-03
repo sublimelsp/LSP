@@ -535,7 +535,7 @@ There are multiple options:
                 "selector": "source.ruby | text.html.ruby",
                 "initializationOptions": {
                     "enabledFeatures": {
-                        "diagnostics": false
+                        "diagnostics": true
                     },
                     "experimentalFeaturesEnabled": true
                 }

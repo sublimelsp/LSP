@@ -489,7 +489,7 @@ There are multiple options:
 
 ### Sorbet
 
-1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
+1. Install the `sorbet` and `sorbet-runtime` gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
     ```sh
     gem install sorbet
@@ -518,7 +518,7 @@ There are multiple options:
 
 ### Ruby LSP
 
-1. Install the Ruby LSP gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
+1. Install the `ruby-lsp` gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
 
     ```sh
     gem install ruby-lsp

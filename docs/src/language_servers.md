@@ -489,14 +489,18 @@ There are multiple options:
 
 ### Sorbet
 
-1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
+1. Install the `sorbet` and `sorbet-runtime` gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
-        gem install sorbet
-        gem install sorbet-runtime
+    ```sh
+    gem install sorbet
+    gem install sorbet-runtime
+    ```
 
     If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
 
-        bundle install
+    ```sh
+    bundle install
+    ```
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"sorbet"` client configuration to the `"clients"`:
 
@@ -507,6 +511,34 @@ There are multiple options:
                 "enabled": true,
                 "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
                 "selector": "source.ruby | text.html.ruby",
+            }
+        }
+    }
+    ```
+
+### Ruby LSP
+
+1. Install the `ruby-lsp` gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
+
+    ```sh
+    gem install ruby-lsp
+    ```
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "ruby-lsp": {
+                "enabled": true,
+                "command": ["ruby-lsp"],
+                "selector": "source.ruby | text.html.ruby",
+                "initializationOptions": {
+                    "enabledFeatures": {
+                        "diagnostics": true
+                    },
+                    "experimentalFeaturesEnabled": true
+                }
             }
         }
     }

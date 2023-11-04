@@ -179,8 +179,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = []
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
-        self._diagnostics_by_config = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
+        self._diagnostics_for_selection = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        self._code_actions_for_selection = []  # type: List[CodeActionsByConfigName]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -480,7 +480,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
         if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._actions_by_config)
+            content += code_actions_content(self._code_actions_for_selection)
         if userprefs().show_diagnostics_severity_level:
             diagnostics_with_config = []  # type: List[Tuple[ClientConfig, Diagnostic]]
             diagnostics_by_session_buffer = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
@@ -488,7 +488,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if userprefs().diagnostics_gutter_marker:
                 diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))[0]
             elif content:
-                diagnostics_by_session_buffer = self._diagnostics_by_config
+                diagnostics_by_session_buffer = self._diagnostics_for_selection
             if content:
                 max_severity_level = userprefs().show_diagnostics_severity_level
             for sb, diagnostics in diagnostics_by_session_buffer:
@@ -664,13 +664,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions_async(self) -> None:
         if not self._stored_selection:
             return
-        self._diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
+        self._diagnostics_for_selection, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
         actions_manager \
-            .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
+            .request_for_region_async(self.view, covering, self._diagnostics_for_selection, manual=False) \
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
-        self._actions_by_config = responses
+        self._code_actions_for_selection = responses
         action_count = 0
         first_action_title = ''
         for _, actions in responses:
@@ -704,8 +704,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         )
 
     def _on_code_actions_annotation_click(self, href: str) -> None:
-        if href == 'code-actions:' and self._actions_by_config:
-            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._actions_by_config})
+        if href == 'code-actions:' and self._code_actions_for_selection:
+            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._code_actions_for_selection})
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
@@ -714,7 +714,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
+            actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:

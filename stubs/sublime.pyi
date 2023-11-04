@@ -429,7 +429,7 @@ class Window:
     def active_sheet_in_group(self, group: int) -> 'Sheet':
         ...
 
-    def active_view_in_group(self, group: int) -> 'View':
+    def active_view_in_group(self, group: int) -> 'Optional[View]':
         ...
 
     def sheets_in_group(self, group: int) -> 'List[Sheet]':

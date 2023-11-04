@@ -77,7 +77,7 @@ def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> Opti
     """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
     _group = window.active_group() if group == -1 else group
     view = window.active_view_in_group(_group)
-    if fname == view.file_name():
+    if view and fname == view.file_name():
         return view
     return window.find_open_file(fname, group)
 

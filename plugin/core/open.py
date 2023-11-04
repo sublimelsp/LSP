@@ -73,6 +73,15 @@ def _return_existing_view(flags: int, existing_view_group: int, active_group: in
     return not bool(flags & sublime.FORCE_GROUP)
 
 
+def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> Optional[sublime.View]:
+    """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
+    _group = window.active_group() if group == -1 else group
+    view = window.active_view_in_group(_group)
+    if fname == view.file_name():
+        return view
+    return window.find_open_file(fname, group)
+
+
 def open_file(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
 ) -> Promise[Optional[sublime.View]]:
@@ -84,7 +93,7 @@ def open_file(
     file = parse_uri(uri)[1]
     # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
     # to open as a separate view).
-    view = window.find_open_file(file)
+    view = _find_open_file(window, file)
     if view and _return_existing_view(flags, window.get_view_index(view)[0], window.active_group(), group):
         return Promise.resolve(view)
 

@@ -381,7 +381,7 @@ class Window:
     def open_file(self, fname: str, flags: int = ..., group: int = ...) -> 'View':
         ...
 
-    def find_open_file(self, fname: str) -> 'Optional[View]':
+    def find_open_file(self, fname: str, group: int = ...) -> 'Optional[View]':
         ...
 
     def num_groups(self) -> int:

@@ -157,8 +157,14 @@
         "caption": "-"
       },
       {
+        "caption": "LSP: Show Code Lenses",
+        "command": "lsp_toggle_code_lenses",
+        "checkbox": true
+      },
+      {
         "caption": "LSP: Show Inlay Hints",
-        "command": "lsp_toggle_inlay_hints"
+        "command": "lsp_toggle_inlay_hints",
+        "checkbox": true
       },
       {
         "caption": "LSP: Show Hover Popups",

@@ -14,7 +14,7 @@ class ResolveFunc(Protocol[T_contra]):
         ...
 
 
-FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]']]
+FullfillFunc = Callable[[T], Union['Promise[TResult]', TResult]]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
 PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 
@@ -169,7 +169,7 @@ class Promise(Generic[T]):
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
-                result.then(lambda value: resolve_fn(value))  # type: ignore  # TODO fix me
+                result.then(lambda value: resolve_fn(value))
             else:
                 resolve_fn(result)
 

@@ -85,7 +85,7 @@ class SigHelp:
             self._active_parameter_underline = active_parameter_style.get('underline', False)
         formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
-        return "".join(formatted)
+        return '<body id="lsp-signature-help">{}</body>'.format(''.join(formatted))
 
     def active_signature_help(self) -> SignatureHelp:
         """
@@ -105,7 +105,7 @@ class SigHelp:
 
     def _render_intro(self) -> str:
         fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
-              "(use ↑ ↓ to navigate, press Esc to hide):</div></p>"
+              '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide):</div></p>'
         return fmt.format(
             self._active_signature_index + 1,
             len(self._signatures),

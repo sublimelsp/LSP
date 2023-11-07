@@ -606,7 +606,7 @@ def text_document_code_action_params(
     }
 
 
-# Workaround for a limited margin-collapsing capabilities of the minihtml.
+# Workaround for limited margin-collapsing capabilities of the minihtml.
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
@@ -623,7 +623,7 @@ def show_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
+    contents += LSP_POPUP_SPACER_HTML  # TODO fix this tag being appended outside of the <body> block
     mdpopups.show_popup(
         view,
         contents,

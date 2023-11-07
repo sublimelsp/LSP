@@ -615,6 +615,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             location=point,
+            body_id='lsp-signature-help',
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)
 

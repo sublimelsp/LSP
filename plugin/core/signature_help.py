@@ -85,7 +85,7 @@ class SigHelp:
             self._active_parameter_underline = active_parameter_style.get('underline', False)
         formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
-        return '<body id="lsp-signature-help">{}</body>'.format(''.join(formatted))
+        return "".join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
         """

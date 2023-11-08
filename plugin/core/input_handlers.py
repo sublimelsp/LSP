@@ -117,7 +117,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             raise RuntimeError('Could not find the Command Palette input field view')
         self.listener = InputListener(self)
         self.listener.attach(buffer)
-        if not hasattr(sublime_plugin.CommandInputHandler, 'initial_selection'):  # TODO Replace with ST_VERSION < XXXX
+        if ST_VERSION < 4161:
             # Workaround for initial_selection not working; see https://github.com/sublimehq/sublime_text/issues/6175
             selection = self.input_view.sel()
             selection.clear()

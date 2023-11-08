@@ -14,7 +14,7 @@ class ResolveFunc(Protocol[T_contra]):
         ...
 
 
-FullfillFunc = Callable[[T], Union['Promise[TResult]', TResult]]
+FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]']]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
 PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 

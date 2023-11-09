@@ -606,27 +606,30 @@ def text_document_code_action_params(
     }
 
 
-# Workaround for a limited margin-collapsing capabilities of the minihtml.
+# Workaround for limited margin-collapsing capabilities of the minihtml.
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
 def show_lsp_popup(
     view: sublime.View,
     contents: str,
+    *,
     location: int = -1,
     md: bool = False,
     flags: int = 0,
     css: Optional[str] = None,
     wrapper_class: Optional[str] = None,
+    body_id: Optional[str] = None,
     on_navigate: Optional[Callable[..., None]] = None,
     on_hide: Optional[Callable[..., None]] = None
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
+    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
-        contents,
+        body_wrapper.format(contents),
         css=css,
         md=md,
         flags=flags,
@@ -638,12 +641,20 @@ def show_lsp_popup(
         on_hide=on_hide)
 
 
-def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: Optional[str] = None,
-                     wrapper_class: Optional[str] = None) -> None:
+def update_lsp_popup(
+    view: sublime.View,
+    contents: str,
+    *,
+    md: bool = False,
+    css: Optional[str] = None,
+    wrapper_class: Optional[str] = None,
+    body_id: Optional[str] = None
+) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
-    mdpopups.update_popup(view, contents, css=css, md=md, wrapper_class=wrapper_class)
+    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
+    mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
 
 FORMAT_STRING = 0x1

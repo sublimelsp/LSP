@@ -4,6 +4,7 @@ from .code_actions import CodeActionsByConfigName
 from .completion import QueryCompletionsTask
 from .core.constants import HOVER_ENABLED_KEY
 from .core.logging import debug
+from .core.open import open_in_browser
 from .core.panels import PanelName
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
@@ -27,6 +28,7 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
+from .core.types import ClientConfig
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
@@ -40,6 +42,7 @@ from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import format_diagnostic_for_html
 from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -176,7 +179,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = []
         self._sighelp = None  # type: Optional[SigHelp]
         self._lightbulb_line = None  # type: Optional[int]
-        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
+        self._diagnostics_for_selection = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        self._code_actions_for_selection = []  # type: List[CodeActionsByConfigName]
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -471,17 +475,40 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if hover_zone == sublime.HOVER_TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
             self.view.run_command("lsp_hover", {"point": point})
         elif hover_zone == sublime.HOVER_GUTTER:
-            # Lightbulb must be visible and at the same line
-            if self._lightbulb_line != self.view.rowcol(point)[0]:
-                return
-            content = code_actions_content(self._actions_by_config)
+            sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
+
+    def _on_hover_gutter_async(self, point: int) -> None:
+        content = ''
+        if self._lightbulb_line == self.view.rowcol(point)[0]:
+            content += code_actions_content(self._code_actions_for_selection)
+        if userprefs().show_diagnostics_severity_level:
+            diagnostics_with_config = []  # type: List[Tuple[ClientConfig, Diagnostic]]
+            diagnostics_by_session_buffer = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+            max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
+            if userprefs().diagnostics_gutter_marker:
+                diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))[0]
+            elif content:
+                diagnostics_by_session_buffer = self._diagnostics_for_selection
             if content:
-                show_lsp_popup(
-                    self.view,
-                    content,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                    location=point,
-                    on_navigate=lambda href: self._on_navigate(href, point))
+                max_severity_level = userprefs().show_diagnostics_severity_level
+            for sb, diagnostics in diagnostics_by_session_buffer:
+                diagnostics_with_config.extend(
+                    (sb.session.config, diagnostic) for diagnostic in diagnostics
+                    if diagnostic_severity(diagnostic) <= max_severity_level
+                )
+            if diagnostics_with_config:
+                diagnostics_with_config.sort(key=lambda d: diagnostic_severity(d[1]))
+                content += '<div class="diagnostics">'
+                for config, diagnostic in diagnostics_with_config:
+                    content += format_diagnostic_for_html(config, diagnostic)
+                content += '</div>'
+        if content:
+            show_lsp_popup(
+                self.view,
+                content,
+                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                location=point,
+                on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
         if command_name == "auto_complete":
@@ -615,6 +642,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             location=point,
+            body_id='lsp-signature-help',
             on_hide=self._on_sighelp_hide,
             on_navigate=self._on_sighelp_navigate)
 
@@ -637,13 +665,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions_async(self) -> None:
         if not self._stored_selection:
             return
-        diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
+        self._diagnostics_for_selection, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
         actions_manager \
-            .request_for_region_async(self.view, covering, diagnostics_by_config, manual=False) \
+            .request_for_region_async(self.view, covering, self._diagnostics_for_selection, manual=False) \
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: List[CodeActionsByConfigName]) -> None:
-        self._actions_by_config = responses
+        self._code_actions_for_selection = responses
         action_count = 0
         first_action_title = ''
         for _, actions in responses:
@@ -677,8 +705,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         )
 
     def _on_code_actions_annotation_click(self, href: str) -> None:
-        if href == 'code-actions:' and self._actions_by_config:
-            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._actions_by_config})
+        if href == 'code-actions:' and self._code_actions_for_selection:
+            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._code_actions_for_selection})
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
@@ -687,7 +715,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith('code-actions:'):
             _, config_name = href.split(":")
-            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
+            actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
             if len(actions) > 1:
                 window = self.view.window()
                 if window:
@@ -700,6 +728,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                         placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, actions, 0)
+        else:
+            open_in_browser(href)
 
     def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
         if index == -1:

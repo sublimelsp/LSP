@@ -26,7 +26,7 @@ def filename_to_uri(file_name: str) -> str:
 def view_to_uri(view: sublime.View) -> str:
     file_name = view.file_name()
     if not file_name:
-        return "buffer://sublime/{}".format(view.buffer_id())
+        return "buffer://{}".format(view.buffer_id())
     return filename_to_uri(file_name)
 
 

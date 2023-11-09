@@ -105,7 +105,7 @@ class SigHelp:
 
     def _render_intro(self) -> str:
         fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
-              "(use ↑ ↓ to navigate, press Esc to hide):</div></p>"
+              '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide):</div></p>'
         return fmt.format(
             self._active_signature_index + 1,
             len(self._signatures),

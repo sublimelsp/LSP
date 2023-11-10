@@ -3,7 +3,7 @@
 // -------------------------------------
 //
 // These are the "exceptional" base scopes. If a base scope is not in this
-// map, nor the first two components or more match any of the entires then
+// map, nor the first two components or more match any of the entries here then
 // the rule is that we split the base scope on the ".", and take
 // the last element. The resulting string is assumed to be the language ID.
 //

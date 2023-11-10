@@ -581,6 +581,9 @@ class SessionViewProtocol(Protocol):
     def start_code_lenses_async(self) -> None:
         ...
 
+    def clear_code_lenses_async(self) -> None:
+        ...
+
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 

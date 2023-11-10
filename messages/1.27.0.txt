@@ -1,0 +1,14 @@
+=> 1.27.0
+
+⚠️⚠️⚠️
+To ensure that everything works properly after LSP package is updated, it's strongly recommended
+to restart Sublime Text once it finishes updating all packages.
+⚠️⚠️⚠️
+
+# Breaking changes
+
+- The default value of `show_references_in_quick_panel` has changed from `false` to `true`.
+
+# Improvements
+
+# Fixes

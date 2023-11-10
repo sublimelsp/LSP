@@ -381,7 +381,7 @@ class Window:
     def open_file(self, fname: str, flags: int = ..., group: int = ...) -> 'View':
         ...
 
-    def find_open_file(self, fname: str) -> 'Optional[View]':
+    def find_open_file(self, fname: str, group: int = ...) -> 'Optional[View]':
         ...
 
     def num_groups(self) -> int:
@@ -429,7 +429,7 @@ class Window:
     def active_sheet_in_group(self, group: int) -> 'Sheet':
         ...
 
-    def active_view_in_group(self, group: int) -> 'View':
+    def active_view_in_group(self, group: int) -> 'Optional[View]':
         ...
 
     def sheets_in_group(self, group: int) -> 'List[Sheet]':

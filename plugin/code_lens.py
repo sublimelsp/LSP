@@ -1,14 +1,46 @@
+from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
 from .core.protocol import Error
-from .core.typing import List, Tuple, Dict, Iterable, Generator, Union, cast
+from .core.typing import List, Tuple, Dict, Iterable, Optional, Generator, Union, cast
 from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.views import make_command_link
 from .core.views import range_to_region
 from html import escape as html_escape
+from functools import partial
 import itertools
 import sublime
+
+
+class LspToggleCodeLensesCommand(LspWindowCommand):
+    capability = 'codeLensProvider'
+
+    @classmethod
+    def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
+        if not window:
+            return False
+        return bool(window.settings().get(CODE_LENS_ENABLED_KEY, True))
+
+    def is_checked(self) -> bool:
+        return self.are_enabled(self.window)
+
+    def run(self) -> None:
+        enable = not self.is_checked()
+        self.window.settings().set(CODE_LENS_ENABLED_KEY, enable)
+        sublime.set_timeout_async(partial(self._update_views_async, enable))
+
+    def _update_views_async(self, enable: bool) -> None:
+        window_manager = windows.lookup(self.window)
+        if not window_manager:
+            return
+        for session in window_manager.get_sessions():
+            for session_view in session.session_views_async():
+                if enable:
+                    session_view.start_code_lenses_async()
+                else:
+                    session_view.clear_code_lenses_async()
 
 
 class CodeLensData:

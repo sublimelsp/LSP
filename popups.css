@@ -18,6 +18,13 @@
 .lsp_popup h6 {
     font-size: 1rem;
 }
+.lsp_popup kbd {
+    font-size: 0.8rem;
+    line-height: 0.8rem;
+    color: var(--mdpopups-fg);
+    background-color: color(var(--mdpopups-bg) lightness(+ 5%));
+    border-color: color(var(--mdpopups-fg) alpha(0.25));
+}
 .highlight {
     border-width: 0;
     border-radius: 0;

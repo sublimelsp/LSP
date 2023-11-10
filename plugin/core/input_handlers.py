@@ -1,3 +1,4 @@
+from .constants import ST_VERSION
 from .typing import Any, Callable, Dict, List, Optional, ParamSpec, Tuple, Union
 from .typing import final
 from abc import ABCMeta
@@ -8,8 +9,6 @@ import sublime_plugin
 import threading
 import weakref
 
-
-ST_VERSION = int(sublime.version())
 
 ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
                         List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]

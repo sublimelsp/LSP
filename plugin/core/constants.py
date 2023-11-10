@@ -1,5 +1,7 @@
-# TODO: Move all constants which are shared by multiple modules into this file, so that they can be imported without
-# causing import loops
+import sublime
+
+
+ST_VERSION = int(sublime.version())
 
 # Keys for View.add_regions
 HOVER_HIGHLIGHT_KEY = 'lsp_hover_highlight'

@@ -60,6 +60,9 @@ def parse_uri(uri: str) -> Tuple[str, str]:
             else:
                 return parsed.scheme, path
         return parsed.scheme, path
+    elif parsed.scheme == '' and ':' in parsed.path:
+        # workaround for bug in urllib.parse.urlparse
+        return parsed.path.split(':')[0], uri
     return parsed.scheme, uri
 
 

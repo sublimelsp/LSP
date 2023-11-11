@@ -48,6 +48,7 @@
     "text.advanced_csv": "csv", // https://github.com/SublimeText/AFileIcon
     "text.django": "html", // https://github.com/willstott101/django-sublime-syntax
     "text.html": "html",
+    "text.html.handlebars": "handlebars",
     "text.html.markdown": "markdown",
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
     "text.html.vue": "vue",
@@ -55,4 +56,5 @@
     "text.plain": "plaintext",
     "text.plist": "xml", // https://bitbucket.org/fschwehn/sublime_plist
     "text.xml": "xml",
+    "text.xml.xsl": "xsl",
 }

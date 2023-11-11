@@ -70,4 +70,4 @@ class MultiplatformTests(unittest.TestCase):
         view.file_name = unittest.mock.MagicMock(return_value=None)
         view.buffer_id = unittest.mock.MagicMock(return_value=42)
         uri = view_to_uri(view)
-        self.assertEqual(uri, "buffer://42")
+        self.assertEqual(uri, "buffer:42")

@@ -37,6 +37,7 @@
     "source.modern-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.objc": "objective-c",
     "source.objc++": "objective-cpp",
+    "source.ruby": "ruby",
     "source.shader": "shaderlab", // https://github.com/waqiju/unity_shader_st3
     "source.shell": "shellscript",
     "source.ts": "typescript",

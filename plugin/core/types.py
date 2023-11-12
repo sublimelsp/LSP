@@ -16,7 +16,6 @@ import posixpath
 import socket
 import sublime
 import time
-import urllib.parse
 
 
 TCP_CONNECT_TIMEOUT = 5  # seconds

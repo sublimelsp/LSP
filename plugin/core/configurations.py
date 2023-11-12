@@ -11,7 +11,6 @@ from collections import deque
 from datetime import datetime, timedelta
 from weakref import WeakSet
 import sublime
-import urllib.parse
 
 
 RETRY_MAX_COUNT = 5

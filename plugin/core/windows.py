@@ -44,7 +44,6 @@ import functools
 import json
 import sublime
 import threading
-import urllib.parse
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"

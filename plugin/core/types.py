@@ -45,8 +45,9 @@ def basescope2languageid(base_scope: str) -> str:
             break
         scope_parts.pop()
     if not result:
-        # If no match use last component of the scope as the language ID.
-        result = base_scope.split(".")[-1]
+        # If no match, use the second component of the scope as the language ID.
+        scope_parts = base_scope.split('.')
+        result = scope_parts[1] if len(scope_parts) > 1 else scope_parts[0]
     return result if isinstance(result, str) else ""
 
 

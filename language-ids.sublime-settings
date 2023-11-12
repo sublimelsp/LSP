@@ -28,6 +28,7 @@
     "source.fixedform-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.groovy": "groovy",
     "source.js": "javascript",
+    "source.js.react": "javascriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc", // https://github.com/SublimeText/PackageDev
     "source.json": "json",
     "source.json.sublime": "jsonc", // https://github.com/SublimeText/PackageDev

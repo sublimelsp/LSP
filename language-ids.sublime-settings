@@ -7,9 +7,9 @@
 // the rule is that we split the base scope on the ".", and take
 // the second component. The resulting string is assumed to be the language ID.
 //
-// Examples of this rule:
+// Examples:
 //
-//    source.julia -> julia
+//    source.c++ -> cpp
 //    source.rust -> rust
 //    text.tex.latex -> latex
 //

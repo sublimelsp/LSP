@@ -480,7 +480,7 @@ There are multiple options:
                 "command": ["solargraph", "stdio"],
                 "selector": "source.ruby | text.html.ruby",
                 "initializationOptions": {
-                    "diagnostics": false
+                    "diagnostics": true
                 }
             }
         }

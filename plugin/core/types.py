@@ -16,7 +16,6 @@ import posixpath
 import socket
 import sublime
 import time
-import urllib.parse
 
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
@@ -394,7 +393,7 @@ class DocumentFilter:
                 return False
         if self.scheme:
             uri = view.settings().get("lsp_uri")
-            if isinstance(uri, str) and urllib.parse.urlparse(uri).scheme != self.scheme:
+            if isinstance(uri, str) and parse_uri(uri)[0] != self.scheme:
                 return False
         if self.pattern:
             if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):

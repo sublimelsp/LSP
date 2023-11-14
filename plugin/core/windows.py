@@ -44,7 +44,6 @@ import functools
 import json
 import sublime
 import threading
-import urllib.parse
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -184,7 +183,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
-        scheme = urllib.parse.urlparse(listener.get_uri()).scheme
+        scheme = parse_uri(listener.get_uri())[0]
         for session in self._sessions:
             if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
                 # debug("registering session", session.config.name, "to listener", listener)
@@ -200,7 +199,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         uri = view.settings().get("lsp_uri")
         if not isinstance(uri, str):
             return
-        scheme = urllib.parse.urlparse(uri).scheme
+        scheme = parse_uri(uri)[0]
         for session in sessions:
             if session.can_handle(view, scheme, capability, inside_workspace):
                 yield session

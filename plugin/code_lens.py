@@ -94,7 +94,7 @@ class CodeLensData:
     def resolve(self, view: sublime.View, code_lens_or_error: Union[CodeLens, Error]) -> None:
         if isinstance(code_lens_or_error, Error):
             self.is_resolve_error = True
-            self.annotation = html_escape(str(code_lens_or_error))
+            self.annotation = '<span style="color: color(var(--redish)">error</span>'
             return
         self.data = code_lens_or_error
         self.region = range_to_region(code_lens_or_error['range'], view)

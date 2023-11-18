@@ -1,3 +1,4 @@
+from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.protocol import DocumentUri
 from .core.protocol import Location
@@ -7,7 +8,6 @@ from .core.sessions import Session
 from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
-from .core.views import SublimeKind
 from .core.views import to_encoded_filename
 from urllib.request import url2pathname
 import functools

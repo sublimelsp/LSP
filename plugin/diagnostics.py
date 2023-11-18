@@ -1,8 +1,8 @@
+from .core.constants import DIAGNOSTIC_KINDS
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.settings import userprefs
 from .core.typing import List, Tuple
-from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
 import sublime

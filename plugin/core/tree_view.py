@@ -1,9 +1,9 @@
+from .constants import SublimeKind
 from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
 from .typing import Dict, IntEnum, List, Optional, TypeVar
-from .views import SublimeKind
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial

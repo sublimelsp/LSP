@@ -1,3 +1,4 @@
+from .core.constants import COMPLETION_KINDS
 from .core.edit import parse_text_edit
 from .core.logging import debug
 from .core.promise import Promise
@@ -19,7 +20,6 @@ from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast, Any, TypeGuard
-from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import MarkdownLangMap
 from .core.views import minihtml

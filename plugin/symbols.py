@@ -1,4 +1,6 @@
 import weakref
+from .core.constants import SublimeKind
+from .core.constants import SYMBOL_KINDS
 from .core.protocol import DocumentSymbol
 from .core.protocol import DocumentSymbolParams
 from .core.protocol import Point
@@ -11,8 +13,6 @@ from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Union, cast
 from .core.views import offset_to_point
 from .core.views import range_to_region
-from .core.views import SublimeKind
-from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 from .goto_diagnostic import PreselectedListInputHandler
 import os

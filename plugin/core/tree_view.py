@@ -1,5 +1,7 @@
 from .css import css
 from .promise import Promise
+from .registry import LspWindowCommand
+from .registry import windows
 from .typing import Dict, IntEnum, List, Optional, TypeVar
 from .views import SublimeKind
 from abc import ABCMeta
@@ -7,6 +9,7 @@ from abc import abstractmethod
 from functools import partial
 import html
 import sublime
+import sublime_api  # pyright: ignore[reportMissingImports]
 import uuid
 
 # pyright: reportInvalidTypeVarUse=false
@@ -270,3 +273,71 @@ class TreeViewSheet(sublime.HtmlSheet):
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
         return html
+
+
+def new_tree_view_sheet(
+    window: sublime.Window,
+    name: str,
+    data_provider: TreeDataProvider,
+    header: str = "",
+    flags: int = 0,
+    group: int = -1
+) -> Optional[TreeViewSheet]:
+    """
+    Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one TreeViewSheet
+    with the given name is allowed per window. If there already exists a TreeViewSheet with the same name, its content
+    will be replaced with the new data. The header argument is allowed to contain minihtml markup.
+    """
+    wm = windows.lookup(window)
+    if not wm:
+        return None
+    if name in wm.tree_view_sheets:
+        tree_view_sheet = wm.tree_view_sheets[name]
+        sheet_id = tree_view_sheet.id()
+        if tree_view_sheet.window():
+            tree_view_sheet.set_provider(data_provider, header)
+            if flags & sublime.ADD_TO_SELECTION:
+                # add to selected sheets if not already selected
+                selected_sheets = window.selected_sheets()
+                for sheet in window.sheets():
+                    if isinstance(sheet, sublime.HtmlSheet) and sheet.id() == sheet_id:
+                        if sheet not in selected_sheets:
+                            selected_sheets.append(sheet)
+                            window.select_sheets(selected_sheets)
+                        break
+            else:
+                window.focus_sheet(tree_view_sheet)
+            return tree_view_sheet
+    tree_view_sheet = TreeViewSheet(
+        sublime_api.window_new_html_sheet(window.window_id, name, "", flags, group),
+        name,
+        data_provider,
+        header
+    )
+    wm.tree_view_sheets[name] = tree_view_sheet
+    return tree_view_sheet
+
+
+def toggle_tree_item(window: sublime.Window, name: str, id: str, expand: bool) -> None:
+    wm = windows.lookup(window)
+    if not wm:
+        return
+    sheet = wm.tree_view_sheets.get(name)
+    if not sheet:
+        return
+    if expand:
+        sheet.expand_item(id)
+    else:
+        sheet.collapse_item(id)
+
+
+class LspExpandTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        toggle_tree_item(self.window, name, id, True)
+
+
+class LspCollapseTreeItemCommand(LspWindowCommand):
+
+    def run(self, name: str, id: str) -> None:
+        toggle_tree_item(self.window, name, id, False)

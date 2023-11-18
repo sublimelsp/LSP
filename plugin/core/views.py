@@ -1,4 +1,5 @@
 from .constants import CODE_ACTION_KINDS
+from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
 from .protocol import CodeAction
@@ -17,7 +18,6 @@ from .protocol import DidCloseTextDocumentParams
 from .protocol import DidOpenTextDocumentParams
 from .protocol import DidSaveTextDocumentParams
 from .protocol import DocumentColorParams
-from .protocol import DocumentHighlightKind
 from .protocol import DocumentUri
 from .protocol import Location
 from .protocol import LocationLink
@@ -64,75 +64,6 @@ DIAGNOSTIC_SEVERITY = [
     ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
     ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
 ]  # type: List[Tuple[str, str, str, str, int, int]]
-
-# Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
-SUBLIME_KIND_SCOPES = {
-    sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
-    sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
-    sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501
-    sublime.KIND_NAMESPACE: "entity.name.module | entity.name.namespace | support.module | support.namespace",
-    sublime.KIND_NAVIGATION: "entity.name.definition | entity.name.label | entity.name.section",
-    sublime.KIND_MARKUP: "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html",
-    sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
-}  # type: Dict[SublimeKind, str]
-
-DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
-    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
-    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
-    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
-}  # type: Dict[DocumentHighlightKind, str]
-
-SEMANTIC_TOKENS_MAP = {
-    "namespace": "variable.other.namespace.lsp",
-    "namespace.declaration": "entity.name.namespace.lsp",
-    "namespace.definition": "entity.name.namespace.lsp",
-    "type": "storage.type.lsp",
-    "type.declaration": "entity.name.type.lsp",
-    "type.defaultLibrary": "support.type.lsp",
-    "type.definition": "entity.name.type.lsp",
-    "class": "storage.type.class.lsp",
-    "class.declaration": "entity.name.class.lsp",
-    "class.defaultLibrary": "support.class.lsp",
-    "class.definition": "entity.name.class.lsp",
-    "enum": "variable.other.enum.lsp",
-    "enum.declaration": "entity.name.enum.lsp",
-    "enum.definition": "entity.name.enum.lsp",
-    "interface": "entity.other.inherited-class.lsp",
-    "interface.declaration": "entity.name.interface.lsp",
-    "interface.definition": "entity.name.interface.lsp",
-    "struct": "storage.type.struct.lsp",
-    "struct.declaration": "entity.name.struct.lsp",
-    "struct.defaultLibrary": "support.struct.lsp",
-    "struct.definition": "entity.name.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
-    "parameter": "variable.parameter.lsp",
-    "variable": "variable.other.lsp",
-    "variable.readonly": "variable.other.constant.lsp",
-    "property": "variable.other.property.lsp",
-    "enumMember": "constant.other.enum.lsp",
-    "event": "entity.name.function.lsp",
-    "function": "variable.function.lsp",
-    "function.declaration": "entity.name.function.lsp",
-    "function.defaultLibrary": "support.function.builtin.lsp",
-    "function.definition": "entity.name.function.lsp",
-    "method": "variable.function.lsp",
-    "method.declaration": "entity.name.function.lsp",
-    "method.defaultLibrary": "support.function.builtin.lsp",
-    "method.definition": "entity.name.function.lsp",
-    "macro": "variable.macro.lsp",
-    "macro.declaration": "entity.name.macro.lsp",
-    "macro.defaultLibrary": "support.macro.lsp",
-    "macro.definition": "entity.name.macro.lsp",
-    "keyword": "keyword.lsp",
-    "modifier": "storage.modifier.lsp",
-    "comment": "comment.lsp",
-    "comment.documentation": "comment.block.documentation.lsp",
-    "string": "string.lsp",
-    "number": "constant.numeric.lsp",
-    "regexp": "string.regexp.lsp",
-    "operator": "keyword.operator.lsp",
-    "decorator": "variable.annotation.lsp",
-}
 
 
 class DiagnosticSeverityData:

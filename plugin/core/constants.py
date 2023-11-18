@@ -1,6 +1,7 @@
 from .protocol import CodeActionKind
 from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentHighlightKind
 from .protocol import SymbolKind
 from .typing import Dict, Tuple
 import sublime
@@ -133,3 +134,10 @@ CODE_ACTION_KINDS = {
     CodeActionKind.Refactor: KIND_REFACTOR,
     CodeActionKind.Source: KIND_SOURCE
 }  # type: Dict[CodeActionKind, SublimeKind]
+
+
+DOCUMENT_HIGHLIGHT_KIND_NAMES = {
+    DocumentHighlightKind.Text: "text",
+    DocumentHighlightKind.Read: "read",
+    DocumentHighlightKind.Write: "write"
+}  # type: Dict[DocumentHighlightKind, str]

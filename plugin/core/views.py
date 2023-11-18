@@ -76,12 +76,6 @@ SUBLIME_KIND_SCOPES = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }  # type: Dict[SublimeKind, str]
 
-DOCUMENT_HIGHLIGHT_KINDS = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}  # type: Dict[DocumentHighlightKind, str]
-
 DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",

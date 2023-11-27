@@ -13,6 +13,7 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
 from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from .core.typing import cast
 from .core.url import parse_uri, unparse_uri
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
@@ -193,8 +194,10 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         return self._project_path(parse_uri(value))
 
     def cancel(self) -> None:
-        if self._preview is not None and self._preview.sheet().is_transient():
-            self._preview.close()
+        if self._preview is not None:
+            sheet = self._preview.sheet()
+            if sheet and sheet.is_transient():
+                self._preview.close()
         self.window.focus_view(self.view)
 
     def preview(self, value: Optional[DocumentUri]) -> str:
@@ -246,7 +249,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
                 text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
                 annotation = format_diagnostic_source_and_code(diagnostic)
                 kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
-                list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
+                list_items.append(sublime.ListInputItem(text, [i, diagnostic], annotation=annotation, kind=kind))
         return list_items
 
     def placeholder(self) -> str:
@@ -255,10 +258,11 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
         return None if args.get("diagnostic") else sublime_plugin.BackInputHandler()  # type: ignore
 
-    def confirm(self, value: Optional[Tuple[int, Diagnostic]]) -> None:
+    def confirm(self, value: Optional[list]) -> None:
         if not value:
             return
-        i, diagnostic = value
+        i = cast(int, value[0])
+        diagnostic = cast(Diagnostic, value[1])
         session = self.sessions[i]
         location = self._get_location(diagnostic)
         scheme, _ = self.parsed_uri
@@ -268,14 +272,17 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             sublime.set_timeout_async(functools.partial(session.open_location_async, location))
 
     def cancel(self) -> None:
-        if self._preview is not None and self._preview.sheet().is_transient():
-            self._preview.close()
+        if self._preview is not None:
+            sheet = self._preview.sheet()
+            if sheet and sheet.is_transient():
+                self._preview.close()
         self.window.focus_view(self.view)
 
-    def preview(self, value: Optional[Tuple[int, Diagnostic]]) -> Union[str, sublime.Html]:
+    def preview(self, value: Optional[list]) -> Union[str, sublime.Html]:
         if not value:
             return ""
-        i, diagnostic = value
+        i = cast(int, value[0])
+        diagnostic = cast(Diagnostic, value[1])
         session = self.sessions[i]
         base_dir = None
         scheme, path = self.parsed_uri

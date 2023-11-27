@@ -62,7 +62,8 @@ class WindowConfigManager(object):
         self._reload_configs(updated_config_name, notify_listeners=True)
 
     def _reload_configs(self, updated_config_name: Optional[str] = None, notify_listeners: bool = False) -> None:
-        project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
+        project_data = self._window.project_data()
+        project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
         if updated_config_name is None:
             self.all.clear()
         for name, config in self._global_configs.items():

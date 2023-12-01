@@ -193,8 +193,10 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         return self._project_path(parse_uri(value))
 
     def cancel(self) -> None:
-        if self._preview is not None and self._preview.sheet().is_transient():
-            self._preview.close()
+        if self._preview is not None:
+            sheet = self._preview.sheet()
+            if sheet and sheet.is_transient():
+                self._preview.close()
         self.window.focus_view(self.view)
 
     def preview(self, value: Optional[DocumentUri]) -> str:
@@ -246,7 +248,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
                 text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
                 annotation = format_diagnostic_source_and_code(diagnostic)
                 kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
-                list_items.append(sublime.ListInputItem(text, (i, diagnostic), annotation=annotation, kind=kind))
+                list_items.append(sublime.ListInputItem(text, [i, diagnostic], annotation=annotation, kind=kind))
         return list_items
 
     def placeholder(self) -> str:
@@ -268,8 +270,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             sublime.set_timeout_async(functools.partial(session.open_location_async, location))
 
     def cancel(self) -> None:
-        if self._preview is not None and self._preview.sheet().is_transient():
-            self._preview.close()
+        if self._preview is not None:
+            sheet = self._preview.sheet()
+            if sheet and sheet.is_transient():
+                self._preview.close()
         self.window.focus_view(self.view)
 
     def preview(self, value: Optional[Tuple[int, Diagnostic]]) -> Union[str, sublime.Html]:

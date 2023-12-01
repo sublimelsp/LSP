@@ -255,7 +255,8 @@ class SessionView:
         return listener.get_language_id() if listener else None
 
     def get_view_for_group(self, group: int) -> Optional[sublime.View]:
-        return self.view if self.view.sheet().group() == group else None
+        sheet = self.view.sheet()
+        return self.view if sheet and sheet.group() == group else None
 
     def get_capability_async(self, capability_path: str) -> Optional[Any]:
         return self.session_buffer.get_capability(capability_path)

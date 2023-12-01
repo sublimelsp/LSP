@@ -22,11 +22,10 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import userprefs
 from .transports import create_transport
-from .tree_view import TreeViewSheet
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, TYPE_CHECKING
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -44,6 +43,10 @@ import functools
 import json
 import sublime
 import threading
+
+
+if TYPE_CHECKING:
+    from tree_view import TreeViewSheet
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"

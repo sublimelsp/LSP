@@ -1,3 +1,4 @@
+from .core.constants import DIAGNOSTIC_KINDS
 from .core.diagnostics_storage import is_severity_included
 from .core.diagnostics_storage import ParsedUri
 from .core.paths import project_base_dir
@@ -13,7 +14,6 @@ from .core.settings import userprefs
 from .core.types import ClientConfig
 from .core.typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from .core.url import parse_uri, unparse_uri
-from .core.views import DIAGNOSTIC_KINDS
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
 from .core.views import format_diagnostic_source_and_code

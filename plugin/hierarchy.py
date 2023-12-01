@@ -1,3 +1,4 @@
+from .core.constants import SYMBOL_KINDS
 from .core.paths import simple_path
 from .core.promise import Promise
 from .core.protocol import CallHierarchyIncomingCall
@@ -13,14 +14,13 @@ from .core.protocol import TypeHierarchyPrepareParams
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.registry import new_tree_view_sheet
 from .core.sessions import Session
+from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.typing import Callable, List, Optional, TypedDict, Union
 from .core.typing import cast
 from .core.views import make_command_link
-from .core.views import SYMBOL_KINDS
 from .core.views import text_document_position_params
 from abc import ABCMeta
 from abc import abstractmethod

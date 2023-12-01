@@ -21,8 +21,6 @@ from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.protocol import Error
-from .plugin.core.registry import LspCollapseTreeItemCommand
-from .plugin.core.registry import LspExpandTreeItemCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
@@ -36,6 +34,8 @@ from .plugin.core.settings import unload_settings
 from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
 from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
+from .plugin.core.tree_view import LspCollapseTreeItemCommand
+from .plugin.core.tree_view import LspExpandTreeItemCommand
 from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand

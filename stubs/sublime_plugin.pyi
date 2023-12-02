@@ -3,7 +3,7 @@ from sublime import Buffer, CompletionItem, CompletionList, Edit, Html, ListInpu
 from typing import Any, Dict, List, Tuple
 
 
-view_event_listeners: Dict[int, List[ViewEventListener]]
+view_event_listeners: Dict[int, List[ViewEventListener]]  # undocumented
 
 
 class CommandInputHandler:

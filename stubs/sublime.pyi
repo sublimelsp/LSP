@@ -1749,13 +1749,13 @@ class View:
         """
         ...
 
-    # def begin_edit(self, edit_token: int, cmd: str, args: Dict[str, Any] | None = ...) -> Edit:
+    # def begin_edit(self, edit_token: int, cmd: str, args: Dict[str, Any] | None = ...) -> Edit:  # undocumented
     #     ...
 
-    # def end_edit(self, edit: Edit) -> None:
+    # def end_edit(self, edit: Edit) -> None:  # undocumented
     #     ...
 
-    # def is_in_edit(self) -> bool:
+    # def is_in_edit(self) -> bool:  # undocumented
     #     ...
 
     def insert(self, edit: Edit, pt: int, text: str) -> None:
@@ -1957,13 +1957,13 @@ class View:
         """
         ...
 
-    # def indented_region(self, pt: int) -> Region:
+    # def indented_region(self, pt: int) -> Region:  # undocumented
     #     ...
 
-    # def indentation_level(self, pt: int) -> int:
+    # def indentation_level(self, pt: int) -> int:  # undocumented
     #     ...
 
-    def has_non_empty_selection_region(self) -> bool:
+    def has_non_empty_selection_region(self) -> bool:  # undocumented
         ...
 
     def lines(self, r: Region) -> List[Region]:
@@ -2282,19 +2282,19 @@ class View:
 
     # def add_phantom(
     #     self, key: str, region: Region, content: str, layout: int, on_navigate: Callable[[str], None] | None = ...
-    # ) -> int:
+    # ) -> int:  # undocumented
     #     ...
 
-    # def erase_phantoms(self, key: str) -> None:
+    # def erase_phantoms(self, key: str) -> None:  # undocumented
     #     ...
 
-    # def erase_phantom_by_id(self, pid: int) -> None:
+    # def erase_phantom_by_id(self, pid: int) -> None:  # undocumented
     #     ...
 
-    # def query_phantom(self, pid: int) -> List[Region]:
+    # def query_phantom(self, pid: int) -> List[Region]:  # undocumented
     #     ...
 
-    # def query_phantoms(self, pids: List[int]) -> List[Region]:
+    # def query_phantoms(self, pids: List[int]) -> List[Region]:  # undocumented
     #     ...
 
     def assign_syntax(self, syntax: str | Syntax) -> None:
@@ -2372,10 +2372,10 @@ class View:
         """
         ...
 
-    # def find_all_results(self) -> List[Tuple[str, int, int]]:
+    # def find_all_results(self) -> List[Tuple[str, int, int]]:  # undocumented
     #     ...
 
-    # def find_all_results_with_text(self) -> List[Tuple[str, int, int]]:
+    # def find_all_results_with_text(self) -> List[Tuple[str, int, int]]:  # undocumented
     #     ...
 
     def command_history(self, delta: int, modifying_only: bool = ...) -> Tuple[Optional[str], Optional[dict], int]:

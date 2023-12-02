@@ -679,9 +679,9 @@ def folder_history() -> List[str]:
 
 
 class Window:
-    window_id: int = ...
-    settings_object: Settings = ...
-    template_settings_object = ...
+    window_id: int
+    settings_object: Settings
+    template_settings_object: Settings
 
     def __init__(self, id: int) -> None:
         ...
@@ -1238,7 +1238,7 @@ class Edit:
     `Edit` objects are passed to `TextCommand`s, and can not be created by the user. Using an invalid `Edit` object, or
     an `Edit` object from a different `View`, will cause the functions that require them to fail.
     """
-    edit_token: int = ...
+    edit_token: int
 
     def __init__(self, token: int) -> None:
         ...
@@ -1250,11 +1250,11 @@ class Region:
 
     Also commonly used to represent an area of the text buffer, where ordering and `xpos` are generally ignored.
     """
-    a: int = ...
+    a: int
     """The first end of the region."""
-    b: int = ...
+    b: int
     """The second end of the region. In a selection this is the location of the caret. May be less than `a`."""
-    xpos: float = ...
+    xpos: float
     """
     In a selection this is the target horizontal position of the region. This affects behavior when pressing the up or
     down keys. Use `-1` if undefined.
@@ -1321,15 +1321,15 @@ class HistoricPosition:
     Provides a snapshot of the row and column info for a `Point`, before changes were made to a `View`. This is
     primarily useful for replaying changes to a document.
     """
-    pt: int = ...
+    pt: int
     """The offset from the beginning of the `View`."""
-    row: int = ...
+    row: int
     """The row the `pt` was in when the `HistoricPosition` was recorded."""
-    col: int = ...
+    col: int
     """The column the `py` was in when the `HistoricPosition` was recorded, in Unicode characters."""
-    col_utf16: int = ...
+    col_utf16: int
     """The value of `col`, but in UTF-16 code units."""
-    col_utf8: int = ...
+    col_utf8: int
     """The value of `col`, but in UTF-8 code units."""
 
 
@@ -1338,15 +1338,15 @@ class TextChange:
     Represents a change that occurred to the text of a `View`. This is primarily useful for replaying changes to a
     document.
     """
-    a: HistoricPosition = ...
+    a: HistoricPosition
     """The beginning `HistoricPosition` of the region that was modified."""
-    b: HistoricPosition = ...
+    b: HistoricPosition
     """The ending `HistoricPosition` of the region that was modified."""
-    len_utf16: int = ...
+    len_utf16: int
     """The length of the old contents, in UTF-16 code units."""
-    len_utf8: int = ...
+    len_utf8: int
     """The length of the old contents, in UTF-8 code units."""
-    str: str = ...
+    str: str
     """A string of the new contents of the region specified by `a` and `b`."""
 
     def __init__(self, pa: HistoricPosition, pb: HistoricPosition, len_utf16: int, len_utf8: int, s: str) -> None:
@@ -1359,7 +1359,7 @@ class Selection(Reversible):
 
     This is primarily used to represent the textual selection.
     """
-    view_id: int = ...
+    view_id: int
 
     def __init__(self, id: int) -> None:
         ...
@@ -1444,7 +1444,7 @@ class Sheet:
     """
     Represents a content container, i.e. a tab, within a window. Sheets may contain a `View`, or an image preview.
     """
-    sheet_id: int = ...
+    sheet_id: int
 
     def __init__(self, id: int) -> None:
         ...
@@ -1527,11 +1527,11 @@ class ContextStackFrame:
     """
     Represents a single stack frame in the syntax highlighting.
     """
-    context_name: str = ...
+    context_name: str
     """The name of the context."""
-    source_file: str = ...
+    source_file: str
     """The name of the file the context is defined in."""
-    source_location: Tuple[int, int] = ...
+    source_location: Tuple[int, int]
     """
     The location of the context inside the source file as a pair of row and column. Maybe be `(-1, -1)` if the location
     is unclear, like in tmLanguage based syntaxes.
@@ -1545,9 +1545,9 @@ class View:
     Note that multiple views may refer to the same `Buffer`, but they have their own unique selection and geometry. A
     list of these may be gotten using `View.clones()` or `Buffer.views()`.
     """
-    view_id: int = ...
-    selection: Selection = ...
-    settings_object: Settings | None = ...
+    view_id: int
+    selection: Selection
+    settings_object: Settings | None
 
     def __init__(self, id: int) -> None:
         ...
@@ -2502,7 +2502,7 @@ class Buffer:
     """
     Represents a text buffer. Multiple `View` objects may share the same buffer.
     """
-    buffer_id: int = ...
+    buffer_id: int
 
     def __init__(self, id: int) -> None:
         ...
@@ -2540,7 +2540,7 @@ class Settings:
     """
     A `dict` like object that a settings hierarchy.
     """
-    settings_id: int = ...
+    settings_id: int
 
     def __init__(self, id: int) -> None:
         ...
@@ -2596,13 +2596,13 @@ class Phantom:
     `PhantomSet` to actually add the phantoms to the `View`. Once a `Phantom` has been constructed and added to the
     `View`, changes to the attributes will have no effect.
     """
-    region: Region = ...
+    region: Region
     """The `Region` associated with the phantom. The phantom is displayed at the start of the `Region`."""
-    content: str = ...
+    content: str
     """The HTML content of the phantom."""
-    layout: int = ...
+    layout: int
     """How the phantom should be placed relative to the `region`."""
-    on_navigate: Callable[[str], None] | None = ...
+    on_navigate: Callable[[str], None] | None
     """Called when a link in the HTML is clicked. The value of the `href` attribute is passed."""
 
     def __init__(
@@ -2633,11 +2633,11 @@ class PhantomSet:
     A collection that manages `Phantom` objects and the process of adding them, updating them and removing them from a
     `View`.
     """
-    view: View = ...
+    view: View
     """The `View` the phantom set is attached to."""
-    key: str = ...
+    key: str
     """A string used to group the phantoms together."""
-    phantoms: List[Phantom] = ...
+    phantoms: List[Phantom]
 
     def __init__(self, view: View, key: str = ...) -> None:
         ...
@@ -2657,7 +2657,7 @@ class Html:
     """
     Used to indicate that a string is formatted as HTML.
     """
-    data: str = ...
+    data: str
 
     def __init__(
         self,
@@ -2670,9 +2670,9 @@ class CompletionList:
     """
     Represents a list of completions, some of which may be in the process of being asynchronously fetched.
     """
-    target = ...
-    completions: List[str] | List[Tuple[str, str]] | List[CompletionItem] | None = ...
-    flags: int = ...
+    target: Any
+    completions: List[str] | List[Tuple[str, str]] | List[CompletionItem] | None
+    flags: int
 
     def __init__(
         self,
@@ -2697,22 +2697,22 @@ class CompletionItem:
     """
     Represents an available auto-completion item.
     """
-    trigger: str = ...
+    trigger: str
     """Text to match against the user's input."""
-    annotation: str = ...
+    annotation: str
     """A hint to draw to the right-hand side of the trigger."""
-    completion: str = ...
+    completion: str
     """Text to insert if the completion is specified. If empty the `trigger` will be inserted instead."""
-    completion_format: int = ...
+    completion_format: int
     """The format of the completion."""
-    kind: Tuple[int, str, str] = ...
+    kind: Tuple[int, str, str]
     """The kind of the completion."""
-    details: str = ...
+    details: str
     """
     An optional minihtml description of the completion, shown in the detail pane at the bottom of the auto complete
     window.
     """
-    flags: int = ...
+    flags: int
 
     def __init__(
             self,
@@ -2806,13 +2806,13 @@ class Syntax:
     """
     Contains information about a syntax.
     """
-    path: str = ...
+    path: str
     """The packages path to the syntax file."""
-    name: str = ...
+    name: str
     """The name of the syntax."""
-    hidden: bool = ...
+    hidden: bool
     """If the syntax is hidden from the user."""
-    scope: str = ...
+    scope: str
     """The base scope name of the syntax."""
 
     def __init__(self, path: str, name: str, hidden: bool, scope: str) -> None:
@@ -2826,13 +2826,13 @@ class QuickPanelItem:
     """
     Represents a row in the quick panel, shown via `Window.show_quick_panel()`.
     """
-    trigger: str = ...
+    trigger: str
     """Text to match against user's input."""
-    details: str | List[str] | Tuple[str] = ...
+    details: str | List[str] | Tuple[str]
     """A minihtml string or list of strings displayed below the trigger."""
-    annotation: str = ...
+    annotation: str
     """Hint to draw to the right-hand side of the row."""
-    kind: Tuple[int, str, str] = ...
+    kind: Tuple[int, str, str]
     """The kind of the item."""
 
     def __init__(
@@ -2849,15 +2849,15 @@ class ListInputItem:
     """
     Represents a row shown via `ListInputHandler`.
     """
-    text: str = ...
+    text: str
     """Text to match against the user's input."""
-    value: Any = ...
+    value: Any
     """A `Value` passed to the command if the row is selected."""
-    details: str | List[str] | Tuple[str] = ...
+    details: str | List[str] | Tuple[str]
     """A minihtml string or list of strings displayed below the trigger."""
-    annotation: str = ...
+    annotation: str
     """Hint to draw to the right-hand side of the row."""
-    kind: Tuple[int, str, str] = ...
+    kind: Tuple[int, str, str]
     """The kind of the item."""
 
     def __init__(
@@ -2875,15 +2875,15 @@ class SymbolRegion:
     """
     Contains information about a `Region` of a `View` that contains a symbol.
     """
-    name: str = ...
+    name: str
     """The name of the symbol."""
-    region: Region = ...
+    region: Region
     """The location of the symbol within the `View`."""
-    syntax: str = ...
+    syntax: str
     """The name of the syntax for the symbol."""
-    type: int = ...
+    type: int
     """The type of the symbol"""
-    kind: Tuple[int, str, str] = ...
+    kind: Tuple[int, str, str]
     """The kind of the symbol."""
 
     def __init__(self, name: str, region: Region, syntax: str, type: int, kind: Tuple[int, str, str]) -> None:
@@ -2894,19 +2894,19 @@ class SymbolLocation:
     """
     Contains information about a file that contains a symbol.
     """
-    path: str = ...
+    path: str
     """The filesystem path to the file containing the symbol."""
-    display_name: str = ...
+    display_name: str
     """The project-relative path to the file containing the symbol."""
-    row: int = ...
+    row: int
     """The row of the file the symbol is contained on."""
-    col: int = ...
+    col: int
     """The column of the row that the symbol is contained on."""
-    syntax: str = ...
+    syntax: str
     """The name of the syntax for the symbol."""
-    type: int = ...
+    type: int
     """The type of the symbol."""
-    kind: Tuple[int, str, str] = ...
+    kind: Tuple[int, str, str]
     """The kind of the symbol."""
 
     def __init__(

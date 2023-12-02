@@ -3,7 +3,7 @@ from sublime import Buffer, CompletionItem, CompletionList, Edit, Html, ListInpu
 from typing import Any, Dict, List, Tuple
 
 
-view_event_listeners: Dict[int, List[ViewEventListener]] = ...
+view_event_listeners: Dict[int, List[ViewEventListener]]
 
 
 class CommandInputHandler:
@@ -203,7 +203,7 @@ class WindowCommand(Command):
     """
     A `Command` instantiated once per window. The `Window` object may be retrieved via `self.window`.
     """
-    window: Window = ...
+    window: Window
     """The `Window` this command is attached to."""
 
     def __init__(self, window: Window) -> None:
@@ -215,7 +215,7 @@ class TextCommand(Command):
     A `Command` instantiated once per `View`. The `View` object may be retrieved
     via `self.view <view>`.
     """
-    view: View = ...
+    view: View
     """The `View` this command is attached to."""
 
     def __init__(self, view: View) -> None:
@@ -570,7 +570,7 @@ class ViewEventListener:
     A class that provides similar event handling to `EventListener`, but bound to a specific view. Provides class
     method-based filtering to control what views objects are created for.
     """
-    view: View = ...
+    view: View
 
     @classmethod
     def is_applicable(cls, settings: Settings) -> bool:
@@ -788,7 +788,7 @@ class TextChangeListener:
     A class that provides event handling about text changes made to a specific `Buffer`. Is separate from
     `ViewEventListener` since multiple views can share a single buffer.
     """
-    buffer: Buffer = ...
+    buffer: Buffer
 
     @classmethod
     def is_applicable(cls, buffer: Buffer) -> bool:

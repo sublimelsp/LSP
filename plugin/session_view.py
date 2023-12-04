@@ -300,7 +300,7 @@ class SessionView:
         self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE  # noqa: E501
+        multiline_flags = sublime.NO_UNDO if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
         for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self._draw_diagnostics(
@@ -320,7 +320,7 @@ class SessionView:
         flags: int,
         multiline: bool
     ) -> None:
-        ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
         data = data_per_severity.get((severity, multiline))
@@ -341,7 +341,8 @@ class SessionView:
             self.view.erase_regions("{}_underline".format(key))
         for data in tags.values():
             if data.regions:
-                self.view.add_regions(data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE)
+                self.view.add_regions(
+                    data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO)
             else:
                 self.view.erase_regions(data.key)
 

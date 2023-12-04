@@ -23,7 +23,7 @@ class DiagnosticsAnnotationsView():
         return 'lsp_da-{}-{}'.format(severity, self._config_name)
 
     def draw(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.

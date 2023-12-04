@@ -695,7 +695,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         regions = [sublime.Region(region.b, region.a)]
         scope = ""
         icon = ""
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         annotations = []
         annotation_color = ""
         if userprefs().show_code_actions == 'bulb':

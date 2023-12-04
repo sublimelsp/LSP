@@ -40,6 +40,7 @@ from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
+from .core.views import SEMANTIC_TOKEN_FLAGS
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
@@ -668,7 +669,7 @@ class SessionBuffer:
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:

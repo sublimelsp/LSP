@@ -53,9 +53,6 @@ import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
-DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE | sublime.NO_UNDO  # noqa: E501
-SEMANTIC_TOKEN_FLAGS = sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
-
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
 
 DIAGNOSTIC_SEVERITY = [

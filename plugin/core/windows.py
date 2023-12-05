@@ -22,11 +22,10 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import userprefs
 from .transports import create_transport
-from .tree_view import TreeViewSheet
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, TYPE_CHECKING
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -44,7 +43,10 @@ import functools
 import json
 import sublime
 import threading
-import urllib.parse
+
+
+if TYPE_CHECKING:
+    from tree_view import TreeViewSheet
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -184,7 +186,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
-        scheme = urllib.parse.urlparse(listener.get_uri()).scheme
+        scheme = parse_uri(listener.get_uri())[0]
         for session in self._sessions:
             if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
                 # debug("registering session", session.config.name, "to listener", listener)
@@ -200,7 +202,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         uri = view.settings().get("lsp_uri")
         if not isinstance(uri, str):
             return
-        scheme = urllib.parse.urlparse(uri).scheme
+        scheme = parse_uri(uri)[0]
         for session in sessions:
             if session.can_handle(view, scheme, capability, inside_workspace):
                 yield session

@@ -1,3 +1,5 @@
+from .core.constants import SublimeKind
+from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
@@ -18,7 +20,6 @@ from .core.typing import Any, Dict, List, NotRequired, Optional, Tuple, TypedDic
 from .core.typing import cast
 from .core.views import offset_to_point
 from .core.views import range_to_region
-from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
 import functools
 import os

@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .constants import SEMANTIC_TOKENS_MAP
 from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_edits
 from .edit import parse_workspace_edit
@@ -103,7 +104,6 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
-from .views import SEMANTIC_TOKENS_MAP
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta

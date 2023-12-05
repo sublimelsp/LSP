@@ -16,7 +16,6 @@ import posixpath
 import socket
 import sublime
 import time
-import urllib.parse
 
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
@@ -36,7 +35,18 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
-    result = base_scope_map.get(base_scope, base_scope.split(".")[-1])
+    result = ""
+    # Try to find exact match or less specific match consisting of at least 2 components.
+    scope_parts = base_scope.split('.')
+    while len(scope_parts) >= 2:
+        result = base_scope_map.get('.'.join(scope_parts))
+        if result:
+            break
+        scope_parts.pop()
+    if not result:
+        # If no match, use the second component of the scope as the language ID.
+        scope_parts = base_scope.split('.')
+        result = scope_parts[1] if len(scope_parts) > 1 else scope_parts[0]
     return result if isinstance(result, str) else ""
 
 
@@ -394,7 +404,7 @@ class DocumentFilter:
                 return False
         if self.scheme:
             uri = view.settings().get("lsp_uri")
-            if isinstance(uri, str) and urllib.parse.urlparse(uri).scheme != self.scheme:
+            if isinstance(uri, str) and parse_uri(uri)[0] != self.scheme:
                 return False
         if self.pattern:
             if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):

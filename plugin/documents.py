@@ -2,6 +2,8 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .completion import QueryCompletionsTask
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.logging import debug
 from .core.open import open_in_browser
@@ -38,8 +40,6 @@ from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
-from .core.views import DOCUMENT_HIGHLIGHT_KIND_SCOPES
-from .core.views import DOCUMENT_HIGHLIGHT_KINDS
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
@@ -70,8 +70,16 @@ SUBLIME_WORD_MASK = 515
 
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), and not a special view like a console, output panel or find-in-files panels.
-    is_widget = v.settings().get('is_widget')
-    return not v.sheet().is_transient() and v.element() is None and not is_widget
+    if v.element() is not None:
+        return False
+    if v.settings().get('is_widget'):
+        return False
+    sheet = v.sheet()
+    if not sheet:
+        return False
+    if sheet.is_transient():
+        return False
+    return True
 
 
 def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
@@ -764,7 +772,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
     def _highlights_key(self, kind: DocumentHighlightKind, multiline: bool) -> str:
-        return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KINDS[kind], "m" if multiline else "s")
+        return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KIND_NAMES[kind], "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
         for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:

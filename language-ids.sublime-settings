@@ -3,15 +3,15 @@
 // -------------------------------------
 //
 // These are the "exceptional" base scopes. If a base scope is not in this
-// map, then the rule is that we split the base scopes on the ".", and take
-// the last element. The resuling string is assumed to be the language ID.
+// map, nor the first two components or more match any of the entries here, then
+// the rule is that we split the base scope on the ".", and take
+// the second component. The resulting string is assumed to be the language ID.
 //
-// Examples of this rule:
+// Examples:
 //
-//    source.julia -> julia
+//    source.c++ -> cpp
 //    source.rust -> rust
 //    text.tex.latex -> latex
-//    text.html.vue -> vue
 //
 // The official list is maintained at
 // https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
@@ -21,103 +21,35 @@
 // request at github.com/sublimelsp/LSP if you believe an entry is missing.
 {
     "source.c++": "cpp",
-    "source.coffee.gulpfile": "coffeescript", // https://github.com/SublimeText/AFileIcon
+    "source.coffee": "coffeescript",
     "source.cs": "csharp",
-    "source.css.tailwind": "css", // https://github.com/SublimeText/TailwindCSS
     "source.dosbatch": "bat",
     "source.fixedform-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
-    "source.groovy.gradle": "groovy", // https://github.com/SublimeText/AFileIcon
-    "source.groovy.jenkins": "groovy", // https://github.com/SublimeText/AFileIcon
     "source.js": "javascript",
-    "source.js.eslint": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.gruntfile": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.gulpfile": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.postcss": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.puglint": "javascript", // https://github.com/SublimeText/AFileIcon
     "source.js.react": "javascriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
-    "source.js.stylelint": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.unittest": "javascript", // https://github.com/SublimeText/AFileIcon
-    "source.js.webpack": "javascript", // https://github.com/SublimeText/AFileIcon
     "source.json-tmlanguage": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.babel": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.bower": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.composer": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.eslint": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.npm": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.postcss": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.puglint": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.settings": "json", // https://github.com/SublimeText/AFileIcon
-    "source.json.stylelint": "json", // https://github.com/SublimeText/AFileIcon
     "source.json.sublime": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.build": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.color-scheme": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.commands": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.completions": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.keymap": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.macro": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.menu": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.mousemap": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.project": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.settings": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.sublime.theme": "jsonc", // https://github.com/SublimeText/PackageDev
-    "source.json.tern": "json", // https://github.com/SublimeText/AFileIcon
     "source.jsx": "javascriptreact",
-    "source.jsx.unittest": "javascriptreact", // https://github.com/SublimeText/AFileIcon
     "source.Kotlin": "kotlin", // https://github.com/vkostyukov/kotlin-sublime-package
     "source.modern-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.objc": "objective-c",
     "source.objc++": "objective-cpp",
     "source.shader": "shaderlab", // https://github.com/waqiju/unity_shader_st3
-    "source.shell.bash": "shellscript",
-    "source.shell.docker": "shellscript", // https://github.com/SublimeText/AFileIcon
-    "source.shell.eslint": "shellscript", // https://github.com/SublimeText/AFileIcon
-    "source.shell.npm": "shellscript", // https://github.com/SublimeText/AFileIcon
-    "source.shell.ruby": "shellscript", // https://github.com/SublimeText/AFileIcon
-    "source.shell.stylelint": "shellscript", // https://github.com/SublimeText/AFileIcon
+    "source.shell": "shellscript",
     "source.ts": "typescript",
     "source.ts.react": "typescriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
-    "source.ts.unittest": "typescript", // https://github.com/SublimeText/AFileIcon
     "source.tsx": "typescriptreact",
-    "source.tsx.unittest": "typescriptreact", // https://github.com/SublimeText/AFileIcon
     "source.unity.unity_shader": "shaderlab", // https://github.com/petereichinger/Unity3D-Shader
-    "source.viml.vimrc": "viml", // https://github.com/SublimeText/AFileIcon
     "source.yaml-tmlanguage": "yaml", // https://github.com/SublimeText/PackageDev
-    "source.yaml.circleci": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.docker": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.eslint": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.lock": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.procfile": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.stylelint": "yaml", // https://github.com/SublimeText/AFileIcon
-    "source.yaml.sublime.syntax": "yaml", // https://github.com/SublimeText/PackageDev
-    "source.yaml.yarn": "yaml", // https://github.com/SublimeText/AFileIcon
     "text.advanced_csv": "csv", // https://github.com/SublimeText/AFileIcon
     "text.django": "html", // https://github.com/willstott101/django-sublime-syntax
-    "text.html.basic": "html",
-    "text.html.elixir": "html",  // https://github.com/elixir-editors/elixir-tmbundle
-    "text.html.markdown.academicmarkdown": "markdown", // https://github.com/mangecoeur/AcademicMarkdown
-    "text.html.markdown.license": "markdown", // https://github.com/SublimeText/AFileIcon
+    "text.html.handlebars": "handlebars",
+    "text.html.markdown": "markdown",
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
-    "text.html.ngx": "html", // https://github.com/princemaple/ngx-html-syntax
+    "text.html.vue": "vue",
     "text.jinja": "html", // https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "plaintext",
-    "text.plain.buildpacks": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.eslint": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.fastq": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.license": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.lnk": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.log": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.nodejs": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.pcb": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.ps": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.python": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.readme": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.ruby": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.sketch": "plaintext", // https://github.com/SublimeText/AFileIcon
-    "text.plain.visualstudio": "plaintext", // https://github.com/SublimeText/AFileIcon
     "text.plist": "xml", // https://bitbucket.org/fschwehn/sublime_plist
-    "text.xml.plist": "xml", // https://github.com/SublimeText/PackageDev
-    "text.xml.plist.textmate.preferences": "xml", // https://github.com/SublimeText/PackageDev
-    "text.xml.sublime.snippet": "xml", // https://github.com/SublimeText/PackageDev
-    "text.xml.svg": "xml", // https://github.com/SublimeText/AFileIcon
-    "text.xml.visualstudio": "xml", // https://github.com/SublimeText/AFileIcon
+    "text.tex.latex": "latex",
+    "text.xml.xsl": "xsl",
 }

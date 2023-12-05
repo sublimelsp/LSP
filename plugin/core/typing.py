@@ -26,12 +26,15 @@ if sys.version_info >= (3, 11, 0):
     from typing import Set
     from typing import Tuple
     from typing import Type
+    from typing import TYPE_CHECKING
     from typing import TypedDict
     from typing import TypeGuard
     from typing import TypeVar
     from typing import Union
 
 else:
+
+    TYPE_CHECKING = False
 
     def cast(typ, val):  # type: ignore
         return val

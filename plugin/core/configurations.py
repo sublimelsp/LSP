@@ -3,6 +3,7 @@ from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
 from .typing import Generator, List, Optional, Set, Dict, Deque
+from .url import parse_uri
 from .workspace import enable_in_project, disable_in_project
 from abc import ABCMeta
 from abc import abstractmethod
@@ -10,7 +11,6 @@ from collections import deque
 from datetime import datetime, timedelta
 from weakref import WeakSet
 import sublime
-import urllib.parse
 
 
 RETRY_MAX_COUNT = 5
@@ -51,7 +51,7 @@ class WindowConfigManager(object):
             uri = view.settings().get("lsp_uri")
             if not isinstance(uri, str):
                 return
-            scheme = urllib.parse.urlparse(uri).scheme
+            scheme = parse_uri(uri)[0]
             for config in self.all.values():
                 if config.match_view(view, scheme) and (config.enabled or include_disabled):
                     yield config
@@ -62,7 +62,8 @@ class WindowConfigManager(object):
         self._reload_configs(updated_config_name, notify_listeners=True)
 
     def _reload_configs(self, updated_config_name: Optional[str] = None, notify_listeners: bool = False) -> None:
-        project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
+        project_data = self._window.project_data()
+        project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
         if updated_config_name is None:
             self.all.clear()
         for name, config in self._global_configs.items():

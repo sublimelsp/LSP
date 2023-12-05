@@ -1,6 +1,7 @@
 from .code_lens import CodeLensView
 from .code_lens import LspToggleCodeLensesCommand
 from .core.active_request import ActiveRequest
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
 from .core.constants import HOVER_PROVIDER_COUNT_KEY
@@ -135,13 +136,12 @@ class SessionView:
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
-        document_highlight_kinds = ["text", "read", "write"]
         line_modes = ["m", "s"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
         for key in range(1, 100):
             self.view.add_regions("lsp_semantic_{}".format(key), r)
         if document_highlight_style in ("background", "fill"):
-            for kind in document_highlight_kinds:
+            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("background", "fill"):
@@ -158,7 +158,7 @@ class SessionView:
             for mode in line_modes:
                 self.view.add_regions("lsp{}d{}{}_underline".format(self.session.config.name, mode, severity), r)
         if document_highlight_style in ("underline", "stippled"):
-            for kind in document_highlight_kinds:
+            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
                     self.view.add_regions("lsp_highlight_{}{}".format(kind, mode), r)
         if hover_highlight_style in ("underline", "stippled"):
@@ -255,7 +255,8 @@ class SessionView:
         return listener.get_language_id() if listener else None
 
     def get_view_for_group(self, group: int) -> Optional[sublime.View]:
-        return self.view if self.view.sheet().group() == group else None
+        sheet = self.view.sheet()
+        return self.view if sheet and sheet.group() == group else None
 
     def get_capability_async(self, capability_path: str) -> Optional[Any]:
         return self.session_buffer.get_capability(capability_path)

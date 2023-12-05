@@ -369,10 +369,10 @@ class LspHoverCommand(LspTextCommand):
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: Range
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif urlparse(href).scheme.lower() not in ("", "http", "https"):
-            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
-        else:
+        elif parse_uri(href)[0].lower() in ("", "http", "https"):
             open_in_browser(href)
+        else:
+            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
 
     def handle_code_action_select(self, config_name: str, actions: List[CodeActionOrCommand], index: int) -> None:
         if index == -1:

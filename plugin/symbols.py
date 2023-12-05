@@ -1,4 +1,3 @@
-from .core.constants import SublimeKind
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler

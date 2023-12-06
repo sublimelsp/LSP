@@ -300,7 +300,7 @@ class SessionView:
         self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = sublime.NO_UNDO if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
         for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             self._draw_diagnostics(

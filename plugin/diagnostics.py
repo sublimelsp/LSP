@@ -1,4 +1,5 @@
 from .core.constants import DIAGNOSTIC_KINDS
+from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.settings import userprefs
@@ -17,7 +18,7 @@ class DiagnosticsAnnotationsView():
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
         for severity in DIAGNOSTIC_KINDS.keys():
-            self._view.add_regions(self._annotation_region_key(severity), r)
+            self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
         return 'lsp_da-{}-{}'.format(severity, self._config_name)

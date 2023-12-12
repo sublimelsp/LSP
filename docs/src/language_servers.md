@@ -225,6 +225,10 @@ See also [Vue](#vue).
 
 There are multiple options:
 
+### Biome
+
+Follow installation instructions on [LSP-biome](https://github.com/sublimelsp/LSP-biome).
+
 ### Deno
 
 Follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
@@ -253,12 +257,6 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
         }
     }
     ```
-
-### Rome
-
-> Rome unifies your development stack by combining the functionality of separate tools. Supports linting and formatting.
-
-Follow installation instructions on [LSP-rome](https://github.com/sublimelsp/LSP-rome).
 
 ### TypeScript Language Server
 

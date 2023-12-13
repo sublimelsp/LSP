@@ -120,6 +120,7 @@ class SessionBuffer:
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
         self._document_diagnostic_pending_response = None  # type: Optional[int]
+        self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -156,6 +157,7 @@ class SessionBuffer:
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
             version = view.change_count()
+            self._last_synced_version = version
             self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
@@ -277,6 +279,8 @@ class SessionBuffer:
 
     def on_text_changed_async(self, view: sublime.View, change_count: int,
                               changes: Iterable[sublime.TextChange]) -> None:
+        if change_count <= self._last_synced_version:
+            return
         self._last_text_change_time = time.time()
         last_change = list(changes)[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
@@ -319,6 +323,7 @@ class SessionBuffer:
         try:
             notification = did_change(view, version, changes)
             self.session.send_notification(notification)
+            self._last_synced_version = version
         except MissingUriError:
             return  # we're closing
         finally:

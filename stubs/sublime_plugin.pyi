@@ -58,7 +58,7 @@ class CommandInputHandler:
         """
         ...
 
-    def next_input(self, args) -> CommandInputHandler | None:
+    def next_input(self, args: Any) -> CommandInputHandler | None:
         """
         Return the next input after the user has completed this one. May return
         :py:`None` to indicate no more input is required, or
@@ -119,7 +119,7 @@ class ListInputHandler(CommandInputHandler):
         """
         ...
 
-    def description(self, value, text: str) -> str:
+    def description(self, value: Any, text: str) -> str:
         """
         The text to show in the Command Palette when this input handler is not at the top of the input handler stack.
         Defaults to the text of the list item the user selected.
@@ -221,7 +221,7 @@ class TextCommand(Command):
     def __init__(self, view: View) -> None:
         ...
 
-    def run(self, edit: Edit, **kwargs: Dict[str, Any]) -> None:
+    def run(self, edit: Edit, **kwargs: Dict[str, Any]) -> None:  # type: ignore[override]
         """
         Called when the command is run. Command arguments are passed as keyword arguments.
         """

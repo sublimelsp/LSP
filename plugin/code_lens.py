@@ -196,10 +196,11 @@ class CodeLensView:
             self._phantom.update(phantoms)
         else:  # 'annotation'
             self._clear_annotations()
+            flags = sublime.NO_UNDO
             accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
             for index, lens in enumerate(self._flat_iteration()):
                 self.view.add_regions(
-                    self._region_key(lens.session_name, index), [lens.region], "", "", 0, [lens.small_html], accent)
+                    self._region_key(lens.session_name, index), [lens.region], "", "", flags, [lens.small_html], accent)
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         region = self.view.line(region)

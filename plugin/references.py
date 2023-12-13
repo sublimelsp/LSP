@@ -190,7 +190,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         })
         # highlight all word occurrences
         regions = panel.find_all(r"\b{}\b".format(word))
-        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_NO_FILL)
+        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_NO_FILL | sublime.NO_UNDO)
 
 
 def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:

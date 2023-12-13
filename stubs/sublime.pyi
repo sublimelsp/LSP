@@ -704,7 +704,7 @@ class Window:
         """
         ...
 
-    def hwnd(self):
+    def hwnd(self) -> int:
         """
         A platform specific window handle. Windows only.
         """
@@ -944,14 +944,14 @@ class Window:
         """
         ...
 
-    def layout(self):
+    def layout(self) -> Dict[str, Any]:
         """
         Get the group layout of the window.
         """
         ...
 
     @deprecated("Use layout() instead")
-    def get_layout(self):
+    def get_layout(self) -> Dict[str, Any]:
         ...
 
     def set_layout(self, layout: Dict[str, Any]) -> None:
@@ -1145,7 +1145,7 @@ class Window:
         """
         ...
 
-    def template_settings(self):
+    def template_settings(self) -> Settings:
         """
         Per-window settings that are persisted in the session, and duplicated into new windows.
         """
@@ -1349,7 +1349,7 @@ class TextChange:
     str: str
     """A string of the new contents of the region specified by `a` and `b`."""
 
-    def __init__(self, pa: HistoricPosition, pb: HistoricPosition, len_utf16: int, len_utf8: int, s: str) -> None:
+    def __init__(self, pa: HistoricPosition, pb: HistoricPosition, len_utf16: int, len_utf8: int, s: str) -> None:  # type: ignore[valid-type] # noqa
         ...
 
 
@@ -1388,7 +1388,7 @@ class Selection(Reversible):
         """
         ...
 
-    def __eq__(self, rhs: Selection | None) -> bool:
+    def __eq__(self, rhs: Selection | None) -> bool:  # type: ignore[override]
         """
         Whether the selections are identical.
         """
@@ -1929,7 +1929,7 @@ class View:
         """
         ...
 
-    def style(self):
+    def style(self) -> Dict[str, str]:
         """
         The global style settings for the view. All colors are normalized to the six character hex form with a leading
         hash, e.g. `#ff0000`.
@@ -2462,7 +2462,7 @@ class View:
         """
         ...
 
-    def preserve_auto_complete_on_focus_lost(self):
+    def preserve_auto_complete_on_focus_lost(self) -> None:
         """
         Sets the auto complete popup state to be preserved the next time the `View` loses focus. When the `View` regains
         focus, the auto complete window will be re-shown, with the previously selected entry pre-selected.
@@ -2471,7 +2471,7 @@ class View:
 
     def export_to_html(
         self,
-        regions=None,
+        regions: Region | List[Region] | None = ...,
         minihtml: bool = ...,
         enclosing_tags: bool = ...,
         font_size: bool = ...,
@@ -2614,7 +2614,7 @@ class Phantom:
     ) -> None:
         ...
 
-    def __eq__(self, rhs: 'Phantom') -> bool:
+    def __eq__(self, rhs: Phantom) -> bool:  # type: ignore[override]
         ...
 
     def to_tuple(self) -> Tuple[Tuple[int, int], str, int, Optional[Callable[[str], None]]]:
@@ -2726,7 +2726,7 @@ class CompletionItem:
         ) -> None:
         ...
 
-    def __eq__(self, rhs: 'CompletionItem') -> bool:
+    def __eq__(self, rhs: CompletionItem) -> bool:  # type: ignore[override]
         ...
 
     @classmethod

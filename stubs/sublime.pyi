@@ -2726,7 +2726,7 @@ class CompletionItem:
         ) -> None:
         ...
 
-    def __eq__(self, rhs: 'CompletionItem') -> bool:  # type: ignore[override]
+    def __eq__(self, rhs: CompletionItem) -> bool:  # type: ignore[override]
         ...
 
     @classmethod

@@ -1,3 +1,5 @@
+from .core.constants import DOCUMENT_LINK_FLAGS
+from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentDiagnosticParams
@@ -34,7 +36,6 @@ from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
-from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
@@ -668,7 +669,7 @@ class SessionBuffer:
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:

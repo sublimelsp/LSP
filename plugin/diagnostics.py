@@ -1,4 +1,5 @@
 from .core.constants import DIAGNOSTIC_KINDS
+from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.settings import userprefs
@@ -17,13 +18,13 @@ class DiagnosticsAnnotationsView():
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
         for severity in DIAGNOSTIC_KINDS.keys():
-            self._view.add_regions(self._annotation_region_key(severity), r)
+            self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
         return 'lsp_da-{}-{}'.format(severity, self._config_name)
 
     def draw(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.

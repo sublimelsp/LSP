@@ -1388,7 +1388,7 @@ class Selection(Reversible):
         """
         ...
 
-    def __eq__(self, rhs: object) -> bool:
+    def __eq__(self, rhs: Selection | None) -> bool:  # type: ignore[override]
         """
         Whether the selections are identical.
         """
@@ -2614,7 +2614,7 @@ class Phantom:
     ) -> None:
         ...
 
-    def __eq__(self, rhs: object) -> bool:
+    def __eq__(self, rhs: 'Phantom') -> bool:  # type: ignore[override]
         ...
 
     def to_tuple(self) -> Tuple[Tuple[int, int], str, int, Optional[Callable[[str], None]]]:
@@ -2726,7 +2726,7 @@ class CompletionItem:
         ) -> None:
         ...
 
-    def __eq__(self, rhs: object) -> bool:
+    def __eq__(self, rhs: 'CompletionItem') -> bool:  # type: ignore[override]
         ...
 
     @classmethod

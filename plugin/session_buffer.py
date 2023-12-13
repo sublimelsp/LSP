@@ -278,7 +278,7 @@ class SessionBuffer:
 
     def on_text_changed_async(self, view: sublime.View, change_count: int,
                               changes: Iterable[sublime.TextChange]) -> None:
-        if self._last_synced_version >= change_count:
+        if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
         last_change = list(changes)[-1]

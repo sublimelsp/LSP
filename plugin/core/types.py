@@ -320,31 +320,33 @@ class Settings:
         set_debug_logging(self.log_debug)
 
     def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
+        default = sublime.NO_UNDO
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
-            return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
-        elif style_str == "outline":
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL
-        elif style_str == "stippled":
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        else:
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+            style = default | sublime.DRAW_NO_OUTLINE
+            return style, style
+        if style_str == "outline":
+            style = default | sublime.DRAW_NO_FILL
+            return style, style
+        if style_str == "stippled":
+            return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+        return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> Optional[int]:
+        default = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.NO_UNDO
         # This method could be a dict or lru_cache
         if style_str == "":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        elif style_str == "box":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL
-        elif style_str == "underline":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
-        elif style_str == "stippled":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        elif style_str == "squiggly":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
-        else:
-            # default style
-            return None
+            return default | sublime.DRAW_NO_OUTLINE
+        if style_str == "box":
+            return default
+        if style_str == "underline":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+        if style_str == "stippled":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE
+        if style_str == "squiggly":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE
+        # default style (includes NO_UNDO)
+        return None
 
     def diagnostics_highlight_style_flags(self) -> List[Optional[int]]:
         """Returns flags for highlighting diagnostics on single lines per severity"""

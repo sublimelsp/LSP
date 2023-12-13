@@ -21,6 +21,11 @@ HOVER_ENABLED_KEY = 'lsp_show_hover_popups'
 HOVER_PROVIDER_COUNT_KEY = 'lsp_hover_provider_count'
 SHOW_DEFINITIONS_KEY = 'show_definitions'
 
+# Region flags
+DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE | sublime.NO_UNDO  # noqa: E501
+REGIONS_INITIALIZE_FLAGS = sublime.HIDDEN | sublime.NO_UNDO
+SEMANTIC_TOKEN_FLAGS = sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
+
 # sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem
 # https://www.sublimetext.com/docs/api_reference.html#sublime.Kind
 KIND_ARRAY = (sublime.KIND_ID_TYPE, "a", "Array")

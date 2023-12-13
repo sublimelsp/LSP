@@ -1,3 +1,5 @@
+from .core.constants import DOCUMENT_LINK_FLAGS
+from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentDiagnosticParams
@@ -34,7 +36,6 @@ from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
-from .core.views import DOCUMENT_LINK_FLAGS
 from .core.views import entire_content_range
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
@@ -119,6 +120,7 @@ class SessionBuffer:
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
         self._document_diagnostic_pending_response = None  # type: Optional[int]
+        self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -155,6 +157,7 @@ class SessionBuffer:
             self.session.send_notification(did_open(view, language_id))
             self.opened = True
             version = view.change_count()
+            self._last_synced_version = version
             self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
@@ -276,6 +279,8 @@ class SessionBuffer:
 
     def on_text_changed_async(self, view: sublime.View, change_count: int,
                               changes: Iterable[sublime.TextChange]) -> None:
+        if change_count <= self._last_synced_version:
+            return
         self._last_text_change_time = time.time()
         last_change = list(changes)[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
@@ -318,6 +323,7 @@ class SessionBuffer:
         try:
             notification = did_change(view, version, changes)
             self.session.send_notification(notification)
+            self._last_synced_version = version
         except MissingUriError:
             return  # we're closing
         finally:
@@ -668,7 +674,7 @@ class SessionBuffer:
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=sublime.DRAW_NO_OUTLINE)
+                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:

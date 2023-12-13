@@ -348,7 +348,6 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
                     functools.partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
-        # TODO maybe send an initial request with empty query string when the command is invoked?
         if 'symbol' not in args:
             return WorkspaceSymbolsInputHandler(self, args)
         return None

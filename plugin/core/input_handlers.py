@@ -108,7 +108,8 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
     def attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore
             view = buffer.primary_view()
-            # TODO what to do if there is another command palette open in the same window but in another group?
+            # This condition to find the input field view might not be sufficient if there is another command palette
+            # open in another group in the same window
             if view.element() == 'command_palette:input' and view.window() == self.command.window:
                 self.input_view = view
                 break
@@ -177,8 +178,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         setattr(self.command, '_text', text)
         self.command.window.run_command('chain', {
             'commands': [
-                # TODO is there a way to run the command again without having to close the overlay first, so that the
-                # command palette won't change its width?
+                # Note that the command palette changes its width after the update, due to the hide_overlay command
                 ['hide_overlay', {}],
                 [self.command.name(), self.args]
             ]

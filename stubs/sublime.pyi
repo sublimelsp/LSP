@@ -2471,7 +2471,7 @@ class View:
 
     def export_to_html(
         self,
-        regions: Optional[Region | List[Region]] = None,
+        regions: Region | List[Region] | None = ...,
         minihtml: bool = ...,
         enclosing_tags: bool = ...,
         font_size: bool = ...,

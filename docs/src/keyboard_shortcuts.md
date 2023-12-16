@@ -33,6 +33,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Run Code Lens | unbound | `lsp_code_lens`
 | Run Refactor Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["refactor"]}`)
 | Run Source Action | unbound | `lsp_code_actions` (with args: `{"only_kinds": ["source"]}`)
+| Save All | unbound | `lsp_save_all` (supports optional args `{"only_files": true}` - to ignore buffers which have no associated file on disk)
 | Show Call Hierarchy | unbound | `lsp_call_hierarchy`
 | Show Type Hierarchy | unbound | `lsp_type_hierarchy`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`

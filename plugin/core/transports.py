@@ -245,11 +245,11 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
-    startupinfo = _fixup_startup_args(config.command)
     sock = None  # type: Optional[socket.socket]
     process = None  # type: Optional[subprocess.Popen]
 
     def start_subprocess() -> subprocess.Popen:
+        startupinfo = _fixup_startup_args(config.command)
         return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
 
     if config.listener_socket:

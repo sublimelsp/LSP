@@ -569,8 +569,6 @@ There are multiple options:
     }
     ```
 
-4. Activate server for the currect project - open Command Palette `LSP: Enable Language Server in Project > steep`
-
 ## Rust
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).

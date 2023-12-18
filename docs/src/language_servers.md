@@ -542,6 +542,35 @@ There are multiple options:
     }
     ```
 
+### Steep
+
+1. Add the steep gem into your Gemfile and install it
+
+    ```bash
+    bundle install
+    ```
+
+2. Binstub steep executable
+
+    ```bash
+    steep binstub
+    ```
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "steep": {
+                "command": ["bin/steep", "langserver"],
+                "selector": "source.ruby | text.html.ruby",
+            }
+        }
+    }
+    ```
+
+4. Activate server for the currect project - open Command Palette `LSP: Enable Language Server in Project > steep`
+
 ## Rust
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
@@ -604,35 +633,6 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
         }
     }
     ```
-
-## Steep
-
-1. Add the steep gem into your Gemfile and install it
-
-    ```bash
-    bundle install
-    ```
-
-2. Binstub steep executable
-
-    ```bash
-    steep binstub
-    ```
-
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
-
-    ```jsonc
-    {
-        "clients": {
-            "steep": {
-                "command": ["bin/steep", "langserver"],
-                "selector": "source.ruby | text.html.ruby",
-            }
-        }
-    }
-    ```
-
-4. Activate server for the currect project - open Command Palette `LSP: Enable Language Server in Project > steep`
 
 ## Stylelint
 

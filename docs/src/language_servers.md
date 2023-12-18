@@ -544,15 +544,15 @@ There are multiple options:
 
 ### Steep
 
-1. Add the steep gem into your Gemfile and install it
+1. Add the `steep` gem (see [github:soutaro/steep](https://github.com/soutaro/steep)) into your Gemfile and install it
 
-    ```bash
+    ```sh
     bundle install
     ```
 
 2. Binstub steep executable
 
-    ```bash
+    ```sh
     steep binstub
     ```
 

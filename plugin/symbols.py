@@ -332,10 +332,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     capability = 'workspaceSymbolProvider'
 
-    def run(
-        self,
-        symbol: WorkspaceSymbolValue
-    ) -> None:
+    def run(self, symbol: WorkspaceSymbolValue) -> None:
         session_name = symbol['session']
         session = self.session_by_name(session_name)
         if session:

@@ -26,10 +26,10 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
-        def call_function():
+        def call_function() -> None:
             if hasattr(wrapped_function, '_timer'):
                 delattr(wrapped_function, '_timer')
-            return user_function(*args, **kwargs)
+            sublime.set_timeout(lambda: user_function(*args, **kwargs))
         timer = getattr(wrapped_function, '_timer', None)
         if timer is not None:
             timer.cancel()

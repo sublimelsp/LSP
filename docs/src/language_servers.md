@@ -562,6 +562,7 @@ There are multiple options:
     {
         "clients": {
             "steep": {
+                "enabled": true,
                 "command": ["bin/steep", "langserver"],
                 "selector": "source.ruby | text.html.ruby",
             }

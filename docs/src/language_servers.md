@@ -544,26 +544,20 @@ There are multiple options:
 
 ### Steep
 
-1. Add the `steep` gem (see [github:soutaro/steep](https://github.com/soutaro/steep)) into your Gemfile and install it
+1. Install the `steep` gem (see [github:soutaro/steep](https://github.com/soutaro/steep)):
 
     ```sh
-    bundle install
+    gem install steep
     ```
 
-2. Binstub steep executable
-
-    ```sh
-    steep binstub
-    ```
-
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
 
     ```jsonc
     {
         "clients": {
             "steep": {
                 "enabled": true,
-                "command": ["bin/steep", "langserver"],
+                "command": ["steep", "langserver"],
                 "selector": "source.ruby | text.html.ruby",
             }
         }

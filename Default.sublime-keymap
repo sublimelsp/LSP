@@ -17,10 +17,11 @@
             {"key": "auto_complete_visible"}
         ]
     },
-    // Save all open files with lsp_save
+    // Save all open files that have a language server attached with lsp_save
     // {
     //     "keys": ["UNBOUND"],
-    //     "command": "lsp_save_all"
+    //     "command": "lsp_save_all",
+    //     "args": {"only_files": false}
     // },
     // Run Code Action
     // {

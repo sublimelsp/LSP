@@ -117,13 +117,15 @@ class LspSaveCommand(LspTextCommand):
 
 
 class LspSaveAllCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
+    def run(self, only_files: bool = False) -> None:
         done = set()
         for view in self.window.views():
             buffer_id = view.buffer_id()
             if buffer_id in done:
                 continue
             if not view.is_dirty():
+                continue
+            if only_files and view.file_name() is None:
                 continue
             done.add(buffer_id)
             view.run_command("lsp_save", None)

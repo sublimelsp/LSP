@@ -627,6 +627,23 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+### Solidity
+
+1. Install [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) (follow instructions in the repo):
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"solidity"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "solidity": {
+                "command": ["/PATH/TO/node", "PATH/TO/nomicfoundation-solidity-language-server", "--stdio"],
+                "selector": "source.solidity"
+            }
+        }
+    }
+    ```
+
 ## Stylelint
 
 Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).

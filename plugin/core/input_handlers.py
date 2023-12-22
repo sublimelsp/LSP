@@ -6,7 +6,7 @@ from abc import abstractmethod
 import functools
 import sublime
 import sublime_plugin
-import threading
+import time
 import weakref
 
 
@@ -20,23 +20,27 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     """ A decorator which debounces the calls to a function.
 
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
-    functions that return None.
+    functions that return None. The function will run on Sublime's main thread.
     """
     DEBOUNCE_TIME = 0.5  # seconds
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
-        def call_function() -> None:
-            if hasattr(wrapped_function, '_timer'):
-                delattr(wrapped_function, '_timer')
-            sublime.set_timeout(lambda: user_function(*args, **kwargs))
-        timer = getattr(wrapped_function, '_timer', None)
-        if timer is not None:
-            timer.cancel()
-        timer = threading.Timer(DEBOUNCE_TIME, call_function)
-        timer.start()
-        setattr(wrapped_function, '_timer', timer)
-    setattr(wrapped_function, '_timer', None)
+        def check_call_function() -> None:
+            target_time = getattr(wrapped_function, '_target_time', None)
+            if isinstance(target_time, float):
+                additional_delay = target_time - time.monotonic()
+                if additional_delay > 0:
+                    setattr(wrapped_function, '_target_time', None)
+                    sublime.set_timeout(check_call_function, int(additional_delay * 1000))
+                    return
+            delattr(wrapped_function, '_target_time')
+            user_function(*args, **kwargs)
+        if hasattr(wrapped_function, '_target_time'):
+            setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)
+            return
+        setattr(wrapped_function, '_target_time', None)
+        sublime.set_timeout(check_call_function, int(DEBOUNCE_TIME * 1000))
     return wrapped_function
 
 

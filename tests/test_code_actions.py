@@ -118,7 +118,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         yield from self.await_message('textDocument/codeAction')
         yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
@@ -134,7 +134,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         code_action_request = yield from self.await_message('textDocument/codeAction')
         self.assertEquals(len(code_action_request['context']['diagnostics']), 1)
         self.assertEquals(code_action_request['context']['diagnostics'][0]['message'], 'Missing semicolon')
@@ -176,7 +176,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
                 ]
             ),
         ])
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         # Wait for the view to be saved
         yield lambda: not self.view.is_dirty()
         self.assertEquals(entire_content(self.view), 'const x = 1;')
@@ -191,7 +191,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         yield from self.await_message('textDocument/codeAction')
         yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
@@ -200,7 +200,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
     def test_no_fix_on_non_matching_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
         initial_content = 'const x = 1'
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), initial_content)
         self.assertEquals(self.view.is_dirty(), False)
@@ -215,7 +215,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('lsp_save')
+        self.view.run_command('lsp_save', {'async': True})
         yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1')
 

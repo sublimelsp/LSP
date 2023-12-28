@@ -106,7 +106,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         assert self.view
         self.view.settings().set("lsp_format_on_save", False)
         self.insert_characters("A")
-        self.view.run_command("lsp_save")
+        self.view.run_command("lsp_save", {'async': True})
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
@@ -123,7 +123,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'end': {'line': 0, 'character': 1}
             }
         }])
-        self.view.run_command("lsp_save")
+        self.view.run_command("lsp_save", {'async': True})
         yield from self.await_message("textDocument/formatting")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
@@ -384,7 +384,7 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
             }
         }])
         self.view.settings().set("lsp_format_on_save", False)
-        self.view.run_command("lsp_save")
+        self.view.run_command("lsp_save", {'async': True})
         yield from self.await_message("textDocument/willSaveWaitUntil")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")

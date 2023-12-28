@@ -1,6 +1,6 @@
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Callable, List, Type
+from .core.typing import Any, Callable, Dict, List, Type
 from abc import ABCMeta, abstractmethod
 import sublime
 import sublime_plugin
@@ -75,12 +75,14 @@ class LspSaveCommand(LspTextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._pending_tasks = []  # type: List[SaveTask]
+        self._kwargs = {}  # type: Dict[str, Any]
 
-    def run(self, edit: sublime.Edit) -> None:
+    def run(self, edit: sublime.Edit, **kwargs: Dict[str, Any]) -> None:
         if self._pending_tasks:
             for task in self._pending_tasks:
                 task.cancel()
             self._pending_tasks = []
+        self._kwargs = kwargs
         sublime.set_timeout_async(self._trigger_on_pre_save_async)
         for Task in self._tasks:
             if Task.is_applicable(self.view):
@@ -113,7 +115,7 @@ class LspSaveCommand(LspTextCommand):
 
     def _trigger_native_save(self) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
-        sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
+        sublime.set_timeout(lambda: self.view.run_command('save', self._kwargs))
 
 
 class LspSaveAllCommand(sublime_plugin.WindowCommand):
@@ -128,4 +130,4 @@ class LspSaveAllCommand(sublime_plugin.WindowCommand):
             if only_files and view.file_name() is None:
                 continue
             done.add(buffer_id)
-            view.run_command("lsp_save", None)
+            view.run_command("lsp_save", {'async': True})

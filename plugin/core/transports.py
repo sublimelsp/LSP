@@ -255,9 +255,8 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
         if config.command:
-            process, sock, reader, writer = _start_client_process_and_await_connection(
-                config.listener_socket,
-                start_subprocess
+            process, sock, reader, writer = _start_subprocess_and_await_connection(
+                config.listener_socket, start_subprocess
             )
         else:
             sock, reader, writer = _await_client_connection(config.listener_socket)
@@ -346,34 +345,28 @@ def _await_client_connection(listener_socket: socket.socket) -> Tuple[socket.soc
     with closing(listener_socket):
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
-
         reader = sock.makefile('rwb')  # type: ignore
         writer = reader
         return sock, reader, writer  # type: ignore
 
 
-def _start_client_process_and_await_connection(
-        listener_socket: socket.socket,
-        subprocess_starter: Callable[[], subprocess.Popen]
+def _start_subprocess_and_await_connection(
+    listener_socket: socket.socket, subprocess_starter: Callable[[], subprocess.Popen]
 ) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
     process = None
 
     # We need to be able to start the process while also awaiting a client connection.
     def start_in_background() -> None:
+        nonlocal process
         # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
         # subprocess. This is hacky, and will get better when we can use asyncio.
         time.sleep(1)
-
-        nonlocal process
         process = subprocess_starter()
 
     thread = threading.Thread(target=start_in_background)
     thread.start()
-
     sock, reader, writer = _await_client_connection(listener_socket)
-
     thread.join()
-
     assert process is not None
     return process, sock, reader, writer  # type: ignore
 

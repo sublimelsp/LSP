@@ -10,6 +10,8 @@ import sublime
 SublimeKind = Tuple[int, str, str]
 
 
+ST_VERSION = int(sublime.version())
+
 # Keys for View.add_regions
 HOVER_HIGHLIGHT_KEY = 'lsp_hover_highlight'
 

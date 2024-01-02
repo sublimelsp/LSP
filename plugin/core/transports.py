@@ -245,17 +245,21 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
-    startupinfo = _fixup_startup_args(config.command)
     sock = None  # type: Optional[socket.socket]
     process = None  # type: Optional[subprocess.Popen]
 
     def start_subprocess() -> subprocess.Popen:
+        startupinfo = _fixup_startup_args(config.command)
         return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
 
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
-        process, sock, reader, writer = _await_tcp_connection(
-            config.name, config.tcp_port, config.listener_socket, start_subprocess)
+        if config.command:
+            process, sock, reader, writer = _start_subprocess_and_await_connection(
+                config.listener_socket, start_subprocess
+            )
+        else:
+            sock, reader, writer = _await_client_connection(config.listener_socket)
     else:
         if config.command:
             process = start_subprocess()
@@ -337,39 +341,34 @@ def _start_subprocess(
     return process
 
 
-class _SubprocessData:
-    def __init__(self) -> None:
-        self.process = None  # type: Optional[subprocess.Popen]
-
-
-def _await_tcp_connection(
-    name: str,
-    tcp_port: int,
-    listener_socket: socket.socket,
-    subprocess_starter: Callable[[], subprocess.Popen]
-) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
-
-    # After we have accepted one client connection, we can close the listener socket.
+def _await_client_connection(listener_socket: socket.socket) -> Tuple[socket.socket, IO[bytes], IO[bytes]]:
     with closing(listener_socket):
-
-        # We need to be able to start the process while also awaiting a client connection.
-        def start_in_background(d: _SubprocessData) -> None:
-            # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
-            # subprocess. This is hacky, and will get better when we can use asyncio.
-            time.sleep(1)
-            process = subprocess_starter()
-            d.process = process
-
-        data = _SubprocessData()
-        thread = threading.Thread(target=lambda: start_in_background(data))
-        thread.start()
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
-        thread.join()
         reader = sock.makefile('rwb')  # type: ignore
         writer = reader
-        assert data.process
-        return data.process, sock, reader, writer  # type: ignore
+        return sock, reader, writer  # type: ignore
+
+
+def _start_subprocess_and_await_connection(
+    listener_socket: socket.socket, subprocess_starter: Callable[[], subprocess.Popen]
+) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
+    process = None
+
+    # We need to be able to start the process while also awaiting a client connection.
+    def start_in_background() -> None:
+        nonlocal process
+        # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
+        # subprocess. This is hacky, and will get better when we can use asyncio.
+        time.sleep(1)
+        process = subprocess_starter()
+
+    thread = threading.Thread(target=start_in_background)
+    thread.start()
+    sock, reader, writer = _await_client_connection(listener_socket)
+    thread.join()
+    assert process is not None
+    return process, sock, reader, writer  # type: ignore
 
 
 def _connect_tcp(port: int) -> Optional[socket.socket]:

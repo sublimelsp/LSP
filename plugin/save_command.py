@@ -72,9 +72,9 @@ class SaveTasksRunner:
         self._canceled = False
 
     def run(self) -> None:
-        for Task in self._tasks:
-            if Task.is_applicable(self._text_command.view):
-                self._pending_tasks.append(Task(self._text_command, self._on_task_completed_async))
+        for task in self._tasks:
+            if task.is_applicable(self._text_command.view):
+                self._pending_tasks.append(task(self._text_command, self._on_task_completed_async))
         self._process_next_task()
 
     def cancel(self) -> None:

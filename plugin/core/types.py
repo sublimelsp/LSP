@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .constants import SUBLIME_SETTINGS_FILENAME
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKind
@@ -827,7 +828,7 @@ class ClientConfig:
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
-        if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
+        if sublime.load_settings(SUBLIME_SETTINGS_FILENAME).get("show_view_status"):
             status = "{} ({})".format(self.name, message) if message else self.name
             view.set_status(self.status_key, status)
 

@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .constants import SUBLIME_SETTINGS_FILENAME
 from .logging import debug
 from .types import ClientConfig, debounced
 from .types import read_dict_setting
@@ -89,13 +90,13 @@ class ClientConfigs:
             plugin_settings.set("enabled", is_enabled)
             sublime.save_settings(settings_basename)
             return
-        settings = sublime.load_settings("LSP.sublime-settings")
+        settings = sublime.load_settings(SUBLIME_SETTINGS_FILENAME)
         clients = settings.get("clients")
         if isinstance(clients, dict):
             config = clients.setdefault(config_name, {})
             config["enabled"] = is_enabled
             settings.set("clients", clients)
-            sublime.save_settings("LSP.sublime-settings")
+            sublime.save_settings(SUBLIME_SETTINGS_FILENAME)
 
     def enable(self, config_name: str) -> None:
         self._set_enabled(config_name, True)
@@ -129,7 +130,7 @@ def load_settings() -> None:
     if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
     if _settings_obj is None:
-        _settings_obj = sublime.load_settings("LSP.sublime-settings")
+        _settings_obj = sublime.load_settings(SUBLIME_SETTINGS_FILENAME)
         _settings = Settings(_settings_obj)
         _settings_registration = SettingsRegistration(_settings_obj, _on_sublime_settings_changed)
 

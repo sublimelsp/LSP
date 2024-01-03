@@ -4,6 +4,7 @@
             "bracex",
             "mdpopups",
             "pathlib",
+            "sublime_lib",
             "wcmatch"
         ]
     }

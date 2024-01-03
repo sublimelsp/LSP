@@ -15,6 +15,8 @@ ST_VERSION = int(sublime.version())
 # Keys for View.add_regions
 HOVER_HIGHLIGHT_KEY = 'lsp_hover_highlight'
 
+# Settings
+SUBLIME_SETTINGS_FILENAME = 'LSP.sublime-settings'
 # Setting keys
 CODE_LENS_ENABLED_KEY = 'lsp_show_code_lens'
 HOVER_ENABLED_KEY = 'lsp_show_hover_popups'

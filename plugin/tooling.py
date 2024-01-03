@@ -1,3 +1,4 @@
+from .core.constants import SUBLIME_SETTINGS_FILENAME
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -394,7 +395,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
             line(' - project data:\n{}'.format(self.json_dump(window.project_data())))
 
         line('\n## LSP configuration\n')
-        lsp_settings_contents = self.read_resource('Packages/User/LSP.sublime-settings')
+        lsp_settings_contents = self.read_resource('Packages/User/{}'.format(SUBLIME_SETTINGS_FILENAME))
         if lsp_settings_contents is not None:
             line(self.json_dump(sublime.decode_value(lsp_settings_contents)))
         else:

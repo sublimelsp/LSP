@@ -1758,7 +1758,7 @@ class View:
     # def is_in_edit(self) -> bool:  # undocumented
     #     ...
 
-    def insert(self, edit: Edit, pt: int, text: str) -> None:
+    def insert(self, edit: Edit, pt: int, text: str) -> int:
         """
         Insert the given string into the buffer.
 

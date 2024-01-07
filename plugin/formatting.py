@@ -51,10 +51,10 @@ def format_document(text_command: LspTextCommand, formatter: Optional[str] = Non
 
 
 def apply_text_edits_to_view(
-    response: Optional[List[TextEdit]], view: sublime.View, *, process_snippets: bool = False
+    response: Optional[List[TextEdit]], view: sublime.View, *, process_placeholders: bool = False
 ) -> None:
     edits = list(parse_text_edit(change) for change in response) if response else []
-    view.run_command('lsp_apply_document_edit', {'changes': edits, 'process_snippets': process_snippets})
+    view.run_command('lsp_apply_document_edit', {'changes': edits, 'process_placeholders': process_placeholders})
 
 
 class WillSaveWaitTask(SaveTask):

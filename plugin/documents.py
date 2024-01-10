@@ -820,6 +820,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if not regions:
                     continue
                 kind, multiline = tup
+                if multiline and not userprefs().show_multiline_document_highlights:
+                    continue
                 key = self._highlights_key(kind, multiline)
                 flags = flags_multi if multiline else flags_single
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)

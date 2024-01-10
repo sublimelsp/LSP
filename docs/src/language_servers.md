@@ -514,6 +514,28 @@ There are multiple options:
     }
     ```
 
+### Stimulus LSP
+
+1. Install the `stimulus-language-server` package (see [github:marcoroth/stimulus-lsp](https://github.com/marcoroth/stimulus-lsp)):
+
+    ```sh
+    npm install -g stimulus-language-server
+    ```
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"stimulus"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "stimulus": {
+                "enabled": true,
+                "command": ["stimulus-language-server", "--stdio"],
+                "selector": "text.html.rails"
+            }
+        }
+    }
+    ```
+
 ### Ruby LSP
 
 1. Install the `ruby-lsp` gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):

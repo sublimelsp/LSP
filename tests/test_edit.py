@@ -1,7 +1,9 @@
 from LSP.plugin.core.edit import parse_workspace_edit, parse_text_edit
 from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.views import entire_content
 from LSP.plugin.edit import temporary_setting
+from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
 import sublime
 import unittest
@@ -231,6 +233,69 @@ class SortByApplicationOrderTests(unittest.TestCase):
         self.assertEqual(sorted_edits[0][1], (39, 30))
         self.assertEqual(sorted_edits[1][0], (27, 28))
         self.assertEqual(sorted_edits[1][1], (27, 32))
+
+
+class ApplyDocumentEditTestCase(TextDocumentTestCase):
+
+    def test_applies_text_edit(self) -> None:
+        self.insert_characters('abc')
+        edit = parse_text_edit({
+            'newText': 'x$0y',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 2,
+                }
+            }
+        })
+        self.view.run_command("lsp_apply_document_edit", {"changes": [edit]})
+        self.assertEquals(entire_content(self.view), 'ax$0yc')
+
+    def test_applies_text_edit_with_placeholder(self) -> None:
+        self.insert_characters('abc')
+        edit = parse_text_edit({
+            'newText': 'x$0y',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 2,
+                }
+            }
+        })
+        self.view.run_command('lsp_apply_document_edit', {'changes': [edit], 'process_placeholders': True})
+        self.assertEquals(entire_content(self.view), 'axyc')
+        self.assertEqual(len(self.view.sel()), 1)
+        self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
+
+    def test_applies_multiple_text_edits_with_placeholders(self) -> None:
+        self.insert_characters('ab')
+        newline_edit = parse_text_edit({
+            'newText': '\n$0',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 1,
+                }
+            }
+        })
+        edits = [newline_edit, newline_edit]
+        self.view.run_command('lsp_apply_document_edit', {'changes': edits, 'process_placeholders': True})
+        self.assertEquals(entire_content(self.view), 'a\n\nb')
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
+        self.assertEqual(self.view.sel()[1], sublime.Region(3, 3))
 
 
 class TemporarySetting(unittest.TestCase):

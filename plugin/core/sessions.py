@@ -1,9 +1,9 @@
 from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
 from .diagnostics_storage import DiagnosticsStorage
-from .edit import apply_edits
+from .edit import apply_text_edits
 from .edit import parse_workspace_edit
-from .edit import TextEditTuple
+from .edit import WorkspaceChanges
 from .file_watcher import DEFAULT_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -67,6 +67,7 @@ from .protocol import SymbolKind
 from .protocol import SymbolTag
 from .protocol import TextDocumentClientCapabilities
 from .protocol import TextDocumentSyncKind
+from .protocol import TextEdit
 from .protocol import TokenFormat
 from .protocol import UnregistrationParams
 from .protocol import WindowClientCapabilities
@@ -1768,11 +1769,21 @@ class Session(TransportCallbacks):
         """
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
 
-    def apply_parsed_workspace_edits(self, changes: Dict[str, List[TextEditTuple]]) -> Promise[None]:
+    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
         promises = []  # type: List[Promise[None]]
-        for uri, edits in changes.items():
-            promises.append(self.open_uri_async(uri).then(functools.partial(apply_edits, edits)))
+        for uri, (edits, view_version) in changes.items():
+            promises.append(
+                self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
+            )
         return Promise.all(promises).then(lambda _: None)
+
+    def _apply_text_edits(
+        self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
+    ) -> None:
+        if view is None or not view.is_valid():
+            print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
+            return
+        apply_text_edits(view, edits, required_view_version=view_version)
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:

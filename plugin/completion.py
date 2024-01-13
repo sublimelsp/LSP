@@ -1,5 +1,5 @@
 from .core.constants import COMPLETION_KINDS
-from .core.edit import parse_text_edit
+from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import CompletionEditRange
@@ -371,8 +371,7 @@ class LspSelectCompletionCommand(LspTextCommand):
     def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
-            edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+            apply_text_edits(self.view, additional_edits)
         command = item.get("command")
         if command:
             debug('Running server command "{}" for view {}'.format(command, self.view.id()))

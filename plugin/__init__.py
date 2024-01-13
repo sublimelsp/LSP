@@ -1,5 +1,6 @@
 from .core.collections import DottedDict
 from .core.css import css
+from .core.edit import apply_text_edits
 from .core.file_watcher import FileWatcher
 from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherEventType
@@ -28,6 +29,7 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'apply_text_edits',
     'ClientConfig',
     'css',
     'DottedDict',

@@ -9,7 +9,6 @@ from setup import TIMEOUT_TIME
 from setup import YieldPromise
 import os
 import sublime
-import sys
 
 
 try:

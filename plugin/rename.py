@@ -11,7 +11,7 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
-from .core.typing import Any, Optional, Dict, List, TypeGuard
+from .core.typing import Any, Optional, List, TypeGuard
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region

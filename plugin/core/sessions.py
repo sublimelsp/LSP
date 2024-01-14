@@ -977,7 +977,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return configuration
 
-    def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
+    def on_pre_server_command(self, command: ExecuteCommandParams, done_callback: Callable[[], None]) -> bool:
         """
         Intercept a command that is about to be sent to the language server.
 

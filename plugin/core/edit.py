@@ -43,6 +43,8 @@ def apply_text_edits(
     process_placeholders: Optional[bool] = False,
     required_view_version: Optional[int] = None
 ) -> None:
+    if not edits:
+        return
     view.run_command(
         'lsp_apply_document_edit',
         {

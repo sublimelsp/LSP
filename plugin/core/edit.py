@@ -48,7 +48,7 @@ def apply_text_edits(
     view.run_command(
         'lsp_apply_document_edit',
         {
-            'changes': edits or [],
+            'changes': edits,
             'process_placeholders': process_placeholders,
             'required_view_version': required_view_version,
         }

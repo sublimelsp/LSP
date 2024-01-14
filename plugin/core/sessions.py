@@ -95,7 +95,7 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Mapping, Set, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri

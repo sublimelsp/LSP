@@ -26,6 +26,14 @@
         }
     },
     {
+        "caption": "Preferences: LSP Utils Settings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/lsp_utils.sublime-settings",
+            "default": "// Settings in here override those in \"LSP/lsp_utils.sublime-settings\"\n{\n\t$0\n}\n"
+        }
+    },
+    {
         "caption": "LSP Development: Parse VSCode Package JSON From Clipboard",
         "command": "lsp_parse_vscode_package_json"
     },

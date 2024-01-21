@@ -1,4 +1,5 @@
 from .core.css import css
+from .core.edit import apply_text_edits
 from .core.protocol import InlayHint
 from .core.protocol import InlayHintLabelPart
 from .core.protocol import MarkupContent
@@ -9,7 +10,6 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import cast, Optional, Union
 from .core.views import position_to_offset
-from .formatting import apply_text_edits_to_view
 import html
 import sublime
 import uuid
@@ -69,7 +69,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             return
         for sb in session.session_buffers_async():
             sb.remove_inlay_hint_phantom(phantom_uuid)
-        apply_text_edits_to_view(text_edits, self.view)
+        apply_text_edits(self.view, text_edits)
 
     def handle_label_part_command(self, session_name: str, label_part: Optional[InlayHintLabelPart] = None) -> None:
         if not label_part:

@@ -1,11 +1,14 @@
-from .core.edit import TextEditTuple
-from .core.logging import debug
+from .core.edit import parse_range
+from .core.protocol import TextEdit
 from .core.typing import List, Optional, Any, Generator, Iterable, Tuple
 from contextlib import contextmanager
 import operator
 import re
 import sublime
 import sublime_plugin
+
+
+TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
 
 
 @contextmanager
@@ -25,20 +28,25 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     re_placeholder = re.compile(r'\$(0|\{0:([^}]*)\})')
 
     def run(
-        self, edit: sublime.Edit, changes: Optional[List[TextEditTuple]] = None, process_placeholders: bool = False
+        self,
+        edit: sublime.Edit,
+        changes: List[TextEdit],
+        required_view_version: Optional[int] = None,
+        process_placeholders: bool = False,
     ) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         if not changes:
             return
+        view_version = self.view.change_count()
+        if required_view_version is not None and required_view_version != view_version:
+            print('LSP: ignoring edit due to non-matching document version')
+            return
+        edits = [_parse_text_edit(change) for change in changes or []]
         with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
-            view_version = self.view.change_count()
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
-            for start, end, replacement, version in reversed(_sort_by_application_order(changes)):
-                if version is not None and version != view_version:
-                    debug('ignoring edit due to non-matching document version')
-                    continue
+            for start, end, replacement in reversed(_sort_by_application_order(edits)):
                 placeholder_region = None  # type: Optional[Tuple[Tuple[int, int], Tuple[int, int]]]
                 if process_placeholders and replacement:
                     parsed = self.parse_snippet(replacement)
@@ -94,6 +102,15 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         new_replacement = replacement.replace(match.group(0), placeholder)
         placeholder_start_and_length = (match.start(0), len(placeholder))
         return (new_replacement, placeholder_start_and_length)
+
+
+def _parse_text_edit(text_edit: TextEdit) -> TextEditTuple:
+    return (
+        parse_range(text_edit['range']['start']),
+        parse_range(text_edit['range']['end']),
+        # Strip away carriage returns -- SublimeText takes care of that.
+        text_edit.get('newText', '').replace("\r", "")
+    )
 
 
 def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> List[TextEditTuple]:

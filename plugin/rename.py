@@ -1,5 +1,6 @@
+from .core.edit import parse_range
 from .core.edit import parse_workspace_edit
-from .core.edit import TextEditTuple
+from .core.edit import WorkspaceChanges
 from .core.protocol import PrepareRenameParams
 from .core.protocol import PrepareRenameResult
 from .core.protocol import Range
@@ -10,7 +11,7 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
-from .core.typing import Any, Optional, Dict, List, TypeGuard
+from .core.typing import Any, Optional, List, TypeGuard
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region
@@ -173,12 +174,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         base_dir = wm.get_project_path(file_path)
         return os.path.relpath(file_path, base_dir) if base_dir else file_path
 
-    def _render_rename_panel(
-        self,
-        changes_per_uri: Dict[str, List[TextEditTuple]],
-        total_changes: int,
-        file_count: int
-    ) -> None:
+    def _render_rename_panel(self, changes_per_uri: WorkspaceChanges, total_changes: int, file_count: int) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
@@ -186,14 +182,14 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not panel:
             return
         to_render = []  # type: List[str]
-        for uri, changes in changes_per_uri.items():
+        for uri, (changes, _) in changes_per_uri.items():
             scheme, file = parse_uri(uri)
             if scheme == "file":
                 to_render.append('{}:'.format(self._get_relative_path(file)))
             else:
                 to_render.append('{}:'.format(uri))
             for edit in changes:
-                start = edit[0]
+                start = parse_range(edit['range']['start'])
                 if scheme == "file":
                     line_content = get_line(wm.window, file, start[0])
                 else:

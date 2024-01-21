@@ -1,4 +1,4 @@
-from .core.edit import parse_text_edit
+from .core.edit import apply_text_edits
 from .core.protocol import ColorInformation
 from .core.protocol import ColorPresentation
 from .core.protocol import ColorPresentationParams
@@ -58,4 +58,4 @@ class LspColorPresentationCommand(LspTextCommand):
         if index > -1:
             color_pres = self._filtered_response[index]
             text_edit = color_pres.get('textEdit') or {'range': self._range, 'newText': color_pres['label']}
-            self.view.run_command('lsp_apply_document_edit', {'changes': [parse_text_edit(text_edit, self._version)]})
+            apply_text_edits(self.view, [text_edit], required_view_version=self._version)

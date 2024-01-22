@@ -170,6 +170,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
+        self._did_paste = False
         self._setup()
 
     def __del__(self) -> None:
@@ -528,7 +529,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name in ("next_field", "prev_field") and args is None:
+        if command_name == 'paste' and userprefs().format_on_paste:
+            self._did_paste = True
+        elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
@@ -936,6 +939,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
+        if self._did_paste:
+            self._did_paste = False
+            self._format_on_paste_async()
 
     def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:
         """
@@ -958,6 +964,27 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 changed_first_region = current_first_region
         self._stored_selection = selection
         return changed_first_region, True
+
+    def _format_on_paste_async(self) -> None:
+        self.purge_changes_async()
+        clipboard_text = sublime.get_clipboard()
+        sel = self.view.sel()
+        split_clipboard_text = clipboard_text.split('\n')
+        multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1
+        original_selection = list(sel)
+        regions_to_format = []  # type: List[sublime.Region]
+        # add regions to selection, in order for lsp_format_document_range to format those regions
+        for index, region in enumerate(sel):
+            look_text = clipboard_text
+            if multi_cursor_paste:
+                look_text = split_clipboard_text[index]
+            found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
+            if found_region:
+                regions_to_format.append(found_region)
+        sel.add_all(regions_to_format)
+        self.view.run_command('lsp_format_document_range')
+        sel.clear()
+        sel.add_all(original_selection)
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

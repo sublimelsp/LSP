@@ -973,14 +973,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1
         original_selection = list(sel)
         regions_to_format = []  # type: List[sublime.Region]
+        pasted_text = clipboard_text
         # add regions to selection, in order for lsp_format_document_range to format those regions
         for index, region in enumerate(sel):
-            look_text = clipboard_text
             if multi_cursor_paste:
-                look_text = split_clipboard_text[index]
-            found_region = self.view.find(look_text, region.end(), sublime.REVERSE | sublime.LITERAL)
-            if found_region:
-                regions_to_format.append(found_region)
+                pasted_text = split_clipboard_text[index]
+            pasted_region = self.view.find(pasted_text, region.end(), sublime.REVERSE | sublime.LITERAL)
+            if pasted_region:
+                # Expand to preceding whitespace on the same line
+                # More info at https://github.com/sublimelsp/LSP/pull/2311#issuecomment-1688593038
+                a = self.view.find_by_class(pasted_region.a, False,
+                        sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
+                formatting_region = sublime.Region(a, pasted_region.b)
+                regions_to_format.append(formatting_region)
         sel.add_all(regions_to_format)
         self.view.run_command('lsp_format_document_range')
         sel.clear()

@@ -983,7 +983,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 # Including whitespace may help servers format a range better
                 # More info at https://github.com/sublimelsp/LSP/pull/2311#issuecomment-1688593038
                 a = self.view.find_by_class(pasted_region.a, False,
-                        sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
+                                            sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
         sel.add_all(regions_to_format)

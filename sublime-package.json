@@ -6,6 +6,11 @@
           "$id": "sublime://settings/LSP",
           "definitions": {
             // User preferences that are shared with "Preferences.sublime-settings"
+            "lsp_format_on_paste": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Run the server's documentRangeFormattingProvider (if supported) on the pasted text."
+            },
             "lsp_format_on_save": {
               "type": "boolean",
               "default": false,
@@ -444,7 +449,7 @@
               "default": false,
               "markdownDescription": "Show errors and warnings count in the status bar."
             },
-            "format_on_paste": {
+            "lsp_format_on_paste": {
               "type": "boolean",
               "default": false,
               "markdownDescription": "Run the server's documentRangeFormattingProvider (if supported) on the pasted text."
@@ -801,6 +806,9 @@
         ],
         "schema": {
           "properties": {
+            "lsp_format_on_paste": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste",
+            },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
             },

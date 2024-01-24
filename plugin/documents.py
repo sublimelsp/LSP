@@ -529,7 +529,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name == 'paste' and userprefs().format_on_paste:
+        lsp_format_on_paste = self.view.settings().get('lsp_format_on_paste', None)
+        lsp_format_on_paste_enabled = lsp_format_on_paste if isinstance(lsp_format_on_paste, bool) else userprefs().lsp_format_on_paste
+        if command_name == 'paste' and lsp_format_on_paste_enabled:
             self._did_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))

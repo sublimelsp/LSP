@@ -8,7 +8,7 @@
   // --- Document Formatting ------------------------------------------------------------
 
   // Run the server's documentRangeFormattingProvider (if supported) on the pasted text.
-  "format_on_paste": false,
+  "lsp_format_on_paste": false,
 
   // Run the server's formatProvider (if supported) on a file before saving.
   // This option is also supported in syntax-specific settings and/or in the

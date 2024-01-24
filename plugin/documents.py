@@ -966,7 +966,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return changed_first_region, True
 
     def _format_on_paste_async(self) -> None:
-        self.purge_changes_async()
         clipboard_text = sublime.get_clipboard()
         sel = self.view.sel()
         split_clipboard_text = clipboard_text.split('\n')
@@ -987,6 +986,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
         sel.add_all(regions_to_format)
+        self.purge_changes_async()
         self.view.run_command('lsp_format_document_range')
         sel.clear()
         sel.add_all(original_selection)

@@ -929,6 +929,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     listener.on_load_async()
 
     def _on_view_updated_async(self) -> None:
+        if self._did_paste:
+            self._did_paste = False
+            self._format_on_paste_async()
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
@@ -939,9 +942,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
         self.do_signature_help_async(manual=False)
-        if self._did_paste:
-            self._did_paste = False
-            self._format_on_paste_async()
 
     def _update_stored_selection_async(self) -> Tuple[Optional[sublime.Region], bool]:
         """

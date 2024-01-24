@@ -531,7 +531,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         format_on_paste = self.view.settings().get('lsp_format_on_paste', None)
         format_on_paste_enabled = format_on_paste if isinstance(format_on_paste, bool) \
-                                                  else userprefs().lsp_format_on_paste
+            else userprefs().lsp_format_on_paste
         if command_name == 'paste' and format_on_paste_enabled:
             self._did_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:

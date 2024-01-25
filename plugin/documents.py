@@ -170,7 +170,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
-        self._did_paste = False
+        self._should_format_on_paste = False
         self._setup()
 
     def __del__(self) -> None:
@@ -531,13 +531,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # if `lsp_format_on_paste` is enabled and paste_and_indent is run,
             # it is easier to find the region to format when `paste` is invoked,
             # so we intercept the `paste_and_indent` and replace it with the `paste` command.
-            return ('paste', {})
+            if self.session_async("documentRangeFormattingProvider"):
+                return ('paste', {})
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
         if command_name == 'paste' and format_on_paste:
-            self._did_paste = True
+            if self.session_async("documentRangeFormattingProvider"):
+                self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
@@ -936,8 +938,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     listener.on_load_async()
 
     def _on_view_updated_async(self) -> None:
-        if self._did_paste:
-            self._did_paste = False
+        if self._should_format_on_paste:
+            self._should_format_on_paste = False
             self._format_on_paste_async()
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)

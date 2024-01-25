@@ -520,12 +520,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
+        format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
             session = self.session_async("semanticTokensProvider")
             if session:
                 return ("lsp_show_scope_name", {})
+        elif command_name == 'paste_and_indent' and format_on_paste:
+            # if `lsp_format_on_paste` is enabled and paste_and_indent is run,
+            # it is easier to find the region to format when `paste` is invoked,
+            # so we intercept the `paste_and_indent` and replace it with the `paste` command.
+            return ('paste', {})
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:

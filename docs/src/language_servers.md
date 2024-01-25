@@ -16,6 +16,30 @@ If there are no setup steps for a language server on this page, but a [language 
 
 Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).
 
+## Assembly
+
+1. Install `asm-lsp` via Cargo (see [github:bergercookie/asm-lsp](https://github.com/bergercookie/asm-lsp)):
+
+    ```sh
+    cargo install asm-lsp
+    ```
+
+2. Install the [x86 and x86_64 Assembly](https://packagecontrol.io/packages/x86%20and%20x86_64%20Assembly) package from Package Control.
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"asm-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "asm-lsp": {
+                "enabled": true,
+                "command": ["asm-lsp"],
+                "selector": "source.asm | source.assembly"
+            }
+        }
+    }
+    ```
+
 ## Bash
 
 Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP-bash).

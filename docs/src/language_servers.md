@@ -16,7 +16,7 @@ If there are no setup steps for a language server on this page, but a [language 
 
 Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).
 
-## ASM LSP
+## Assembly
 
 1. Install `asm-lsp` via Cargo (see [github:bergercookie/asm-lsp](https://github.com/bergercookie/asm-lsp)):
 
@@ -32,7 +32,7 @@ Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/
             "asm-lsp": {
                 "enabled": true,
                 "command": ["asm-lsp"],
-                "selector": "text.plain | source.disasm"
+                "selector": "source.asm | source.assembly"
             }
         }
     }

@@ -24,7 +24,9 @@ Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/
     cargo install asm-lsp
     ```
 
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"asm-lsp"` client configuration to the `"clients"`:
+2. Install the [x86 and x86_64 Assembly](https://packagecontrol.io/packages/x86%20and%20x86_64%20Assembly) package from Package Control.
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"asm-lsp"` client configuration to the `"clients"`:
 
     ```jsonc
     {

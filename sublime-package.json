@@ -450,9 +450,7 @@
               "markdownDescription": "Show errors and warnings count in the status bar."
             },
             "lsp_format_on_paste": {
-              "type": "boolean",
-              "default": false,
-              "markdownDescription": "Run the server's documentRangeFormattingProvider (if supported) on the pasted text."
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"

@@ -1,5 +1,6 @@
 # Features
 
+Booo
 This package enhances existing concepts from Sublime Text and introduces new concepts not native to Sublime Text. This page provides an overview of the most important capabilities. The capabilities/concepts are accessible in different ways. Some are accessible via the Context Menu by right-clicking with your mouse, or via the top Menu Bar. Others are part of an existing workflow. Almost all capabilities can also be bound to a key with a key binding.
 
 ## Auto Complete

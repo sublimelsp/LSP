@@ -545,7 +545,7 @@ class WindowRegistry:
     def discard(self, window: sublime.Window) -> None:
         wm = self._windows.pop(window.id(), None)
         if wm:
-            wm.destroy()
+            sublime.set_timeout_async(wm.destroy)
 
 
 class RequestTimeTracker:

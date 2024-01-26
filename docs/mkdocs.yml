@@ -17,9 +17,12 @@ theme:
     scheme: slate
     accent: orange
     primary: orange
-
-  icon:
-    logo: fontawesome/solid/book-open
+  logo: images/logo.svg
+  favicon: images/favicon.svg
+  features:
+    - content.code.copy
+    - content.tooltips
+    - navigation.top
 
 # override css
 extra_css:
@@ -38,6 +41,8 @@ markdown_extensions:
         - name: jsonc
           lang: json
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
 
   # add tip, warning info boxes
   - admonition
@@ -49,14 +54,14 @@ markdown_extensions:
       permalink: '#'
 
 nav:
-    - Getting Started: index.md
-    - Language Servers: language_servers.md
-    - Features: features.md
-    - Commands: commands.md
-    - Keyboard Shortcuts: keyboard_shortcuts.md
-    - Customization: customization.md
-    - Client Configuration: client_configuration.md
-    - Troubleshooting: troubleshooting.md
+  - Getting Started: index.md
+  - Language Servers: language_servers.md
+  - Features: features.md
+  - Commands: commands.md
+  - Keyboard Shortcuts: keyboard_shortcuts.md
+  - Customization: customization.md
+  - Client Configuration: client_configuration.md
+  - Troubleshooting: troubleshooting.md
 
 extra:
   social:

@@ -1,13 +1,13 @@
 ## Self-help instructions
 
-To see the LSP server and client communication, run `LSP: Toggle Log Panel` from the Command Palette. Logs are useful to diagnose problems.
+Following are the primary places to look at when diagnosing issues:
+
+1. Run `LSP: Toggle Log Panel` from the *Command Palette* to see communication logs between the server and the client. It allows to see what the server is doing exactly.
+2. Open the *Sublime Text* console by going to `View` -> `Show Console` from the main menu. It provides information about installed packages, potential LSP crashes and additional LSP debugging logs when `log_debug` is enabled in `Preferences: LSP Settings`.
+3. Focus the relevant file, then run `LSP: Troubleshoot server` from the *Command Palette* and select a server to see troubleshooting information. It can be a very efficient way to diagnose problems quickly when shared.
 
 !!! note
-    It might be a good idea to restart Sublime Text and reproduce the issue again so that the logs are clean.
-
-If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
-
-If the server is crashing on startup, try running `LSP: Troubleshoot server` from the Command Palette and check the "Server output" for potential errors. Consider sharing the output of this command in the report.
+    In case of reporting an issue, consider providing all before-mentioned logs. If you can reproduce the issue, then restarting Sublime Text before capturing the logs can help improve clarity of the logs.
 
 ## Updating the PATH used by LSP servers
 

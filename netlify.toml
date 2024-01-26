@@ -1,0 +1,6 @@
+# https://docs.netlify.com/configure-builds/file-based-configuration
+
+[build]
+  base    = "docs/"
+  publish = "site/"
+  command = "make install && make build"

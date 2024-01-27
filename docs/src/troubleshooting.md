@@ -64,7 +64,7 @@ Another solution could be (at least on Linux) to update the server `PATH` using 
 
 ### Error dialog saying `Failed to start...`
 
-If you are getting an error that the server binary can't be found (`No such file or directory...`) but it does start when running it from the terminal, then the issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell. See ["Updating the PATH used by LSP servers"](troubleshooting.md#updating-the-path-used-by-lsp-servers) on how to make Sublime Text aware of the location of your language server.
+If you are getting an error that the server binary can't be found (`No such file or directory...`) but it does start when Sublime Text is started from the terminal, then the issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell. See ["Updating the PATH used by LSP servers"](troubleshooting.md#updating-the-path-used-by-lsp-servers) on how to fix that.
 
 Otherwise refer to the ["Self-help instructions"](troubleshooting.md#self-help-instructions) section to try to understand the issue better.
 

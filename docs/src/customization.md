@@ -4,7 +4,7 @@ LSP's key bindings can be edited from the `Preferences: LSP Key Bindings` comman
 
 If you want to create a new key binding that is different from the ones that are already included, you might want to make it active only when there is a language server with a specific [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize) (refer to the `ServerCapabilities` structure in that link) running. In that case, you can make use of the `lsp.session_with_capability` context. For example, the following key binding overrides `ctrl+r` to use LSP's symbol provider but only when the current view has a language server with the `documentSymbolProvider` capability and we're in a javascript or a typescript file:
 
-```jsonc
+```jsonc title="Packages/User/Default.sublime-keymap"
 {
     "command": "lsp_document_symbols",
     "keys": [
@@ -29,17 +29,11 @@ Generally, you should not need to restrict your key bindings to specific scopes 
 
 ## Mouse map configuration
 
-If you want to bind some action to a mouse, open `Preferences / Browse Packages` from the main menu and create a sublime-mousemap file in the following location within the Packages folder:
-
-| Platform | Path |
-| -------- | ---- |
-| Windows  | `/User/Default (Windows).sublime-mousemap` |
-| Linux    | `/User/Default (Linux).sublime-mousemap` |
-| Mac      | `/User/Default (OSX).sublime-mousemap` |
+If you want to bind some action to a mouse, select `Preferences / Mouse Bindings` from the main menu and edit the file on the righthand side.
 
 Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:
 
-```jsonc
+```jsonc title="Packages/User/Default.sublime-mousemap"
 [
     {
         "button": "button1",
@@ -57,13 +51,12 @@ LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to 
 You can override its style by creating a `Packages/User/mdpopups.css` file.
 In particular, to get the same font in the popup as your `"font_face"` setting in `Packages/User/Preferences.sublime-settings`, add
 
-```css
+```css title="Packages/User/mdpopups.css"
 html {
     --mdpopups-font-mono: "your desired font face";
 }
 ```
 
-to `Packages/User/mdpopups.css`.
 See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-popups/) for more details.
 
 ## Inlay Hints

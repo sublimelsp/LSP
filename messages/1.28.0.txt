@@ -1,0 +1,16 @@
+=> 1.28.0
+
+⚠️⚠️⚠️
+To ensure that everything works properly after LSP package is updated,
+it's strongly recommended to restart Sublime Text once it finishes updating all packages.
+⚠️⚠️⚠️
+
+# New features
+
+- Support setting cursor position in text edits (https://github.com/sublimelsp/LSP/pull/2389) (Rafał Chłodnicki)
+
+# Fixes and Improvements
+
+- Include lsp_utils settings in LSP (https://github.com/sublimelsp/LSP/pull/2395) (Rafał Chłodnicki)
+- Add `stimulus-lsp` to docs (https://github.com/sublimelsp/LSP/pull/2391) (Óscar Carretero)
+- Add `asm-lsp` to docs (https://github.com/sublimelsp/LSP/pull/2400) (Will Lillis)

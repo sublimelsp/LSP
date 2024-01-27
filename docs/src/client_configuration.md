@@ -14,7 +14,7 @@ If your language server is missing or not configured correctly, you need to add/
 
 Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```jsonc
+```jsonc title="Packages/User/LSP.sublime-settings"
 {
   // General settings
   "show_diagnostics_panel_on_save": 0,

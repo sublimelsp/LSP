@@ -8,6 +8,20 @@
                 "caption": "Find References"
             },
             {
+                "command": "lsp_symbol_references",
+                "caption": "Find References (in bottom panel)",
+                "args": {
+                    "show_in": "bottom_panel"
+                },
+            },
+            {
+                "command": "lsp_symbol_references",
+                "caption": "Find References (in quick panel)",
+                "args": {
+                    "show_in": "quick_panel"
+                },
+            },
+            {
                 "command": "lsp_symbol_definition",
                 "caption": "Goto Definition…"
             },

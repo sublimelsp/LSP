@@ -55,7 +55,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # but we only show the one that is not the same as the default one (per `show_references_in_quick_panel`
         # setting).
         if show_in == 'bottom_panel' and not userprefs().show_references_in_quick_panel or \
-            show_in == 'quick_panel' and userprefs().show_references_in_quick_panel:
+                show_in == 'quick_panel' and userprefs().show_references_in_quick_panel:
             return False
         if self.applies_to_context_menu(event):
             return self.is_enabled(

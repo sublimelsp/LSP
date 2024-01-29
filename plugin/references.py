@@ -140,6 +140,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
             return
         modifier_keys = (event or {}).get('modifier_keys', {})
         show_in_quick_panel = show_in == 'quick_panel' or show_in is None and userprefs().show_references_in_quick_panel
+        if modifier_keys.get('shift'):
+            show_in_quick_panel = not show_in_quick_panel
         if show_in_quick_panel:
             if modifier_keys.get('primary') and side_by_side is False:
                 side_by_side = True

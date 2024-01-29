@@ -520,7 +520,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: Optional[dict]) -> Optional[Tuple[str, dict]]:
-        format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -536,9 +535,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
-        if command_name == 'paste' and format_on_paste:
-            if self.session_async("documentRangeFormattingProvider"):
+        if command_name == 'paste':
+            format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
+            if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))

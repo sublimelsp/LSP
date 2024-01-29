@@ -99,6 +99,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     fallback,
                     group,
                     show_in,
+                    event,
                     word_range.begin()
                 )
             )
@@ -114,11 +115,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool,
         group: int,
         show_in: Optional[ShowInArgument],
+        event: Optional[dict],
         position: int,
         response: Optional[List[Location]]
     ) -> None:
         sublime.set_timeout(lambda: self._handle_response(
-            word, session, side_by_side, force_group, fallback, group, show_in, position, response))
+            word, session, side_by_side, force_group, fallback, group, show_in, event, position, response))
 
     def _handle_response(
         self,
@@ -129,17 +131,21 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool,
         group: int,
         show_in: Optional[ShowInArgument],
+        event: Optional[dict],
         position: int,
         response: Optional[List[Location]]
     ) -> None:
-        if response:
-            if show_in == 'quick_panel' or (show_in is None and userprefs().show_references_in_quick_panel):
-                self._show_references_in_quick_panel(
-                    word, session, response, side_by_side, force_group, group, position)
-            else:
-                self._show_references_in_output_panel(word, session, response)
-        else:
+        if not response:
             self._handle_no_results(fallback, side_by_side)
+            return
+        modifier_keys = (event or {}).get('modifier_keys', {})
+        show_in_quick_panel = show_in == 'quick_panel' or show_in is None and userprefs().show_references_in_quick_panel
+        if modifier_keys.get('primary') and show_in_quick_panel and side_by_side is False:
+            side_by_side = True
+        if show_in_quick_panel:
+            self._show_references_in_quick_panel(word, session, response, side_by_side, force_group, group, position)
+        else:
+            self._show_references_in_output_panel(word, session, response)
 
     def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
         window = self.view.window()

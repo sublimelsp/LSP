@@ -528,7 +528,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if session:
                 return ("lsp_show_scope_name", {})
         elif command_name == 'paste_and_indent':
-            # if `lsp_format_on_paste` is enabled and paste_and_indent is run,
             # it is easier to find the region to format when `paste` is invoked,
             # so we intercept the `paste_and_indent` and replace it with the `paste` command.
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)

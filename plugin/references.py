@@ -139,11 +139,14 @@ class LspSymbolReferencesCommand(LspTextCommand):
             self._handle_no_results(fallback, side_by_side)
             return
         modifier_keys = (event or {}).get('modifier_keys', {})
-        show_in_quick_panel = show_in == 'quick_panel' or show_in is None and userprefs().show_references_in_quick_panel
-        if modifier_keys.get('shift'):
-            show_in_quick_panel = not show_in_quick_panel
+        if show_in is None:
+            show_in_quick_panel = userprefs().show_references_in_quick_panel
+            if modifier_keys.get('shift'):
+                show_in_quick_panel = not show_in_quick_panel
+        else:
+            show_in_quick_panel = show_in == 'quick_panel'
         if show_in_quick_panel:
-            if modifier_keys.get('primary') and side_by_side is False:
+            if modifier_keys.get('primary'):
                 side_by_side = True
             self._show_references_in_quick_panel(word, session, response, side_by_side, force_group, group, position)
         else:

@@ -122,14 +122,14 @@
         "command": "lsp_symbol_references"
     },
     {
-        "caption": "LSP: Find References (in bottom panel)",
+        "caption": "LSP: Find References (Bottom Panel)",
         "command": "lsp_symbol_references",
         "args": {
-            "show_in": "bottom_panel"
+            "show_in": "output_panel"
         },
     },
     {
-        "caption": "LSP: Find References (in quick panel)",
+        "caption": "LSP: Find References (Quick Panel)",
         "command": "lsp_symbol_references",
         "args": {
             "show_in": "quick_panel"

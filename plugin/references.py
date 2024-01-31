@@ -20,7 +20,7 @@ import os
 import sublime
 
 
-ShowInArgument = Literal['bottom_panel', 'quick_panel']
+ShowInArgument = Literal['output_panel', 'quick_panel']
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -51,10 +51,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         include_declaration: bool = False,
         show_in: Optional[ShowInArgument] = None,
     ) -> bool:
-        # We include "in bottom panel" and "in quick panel" variants of `LSP: Find References` in the Command Palette
-        # but we only show the one that is not the same as the default one (per `show_references_in_quick_panel`
+        # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
+        # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
         # setting).
-        if show_in == 'bottom_panel' and not userprefs().show_references_in_quick_panel or \
+        if show_in == 'output_panel' and not userprefs().show_references_in_quick_panel or \
                 show_in == 'quick_panel' and userprefs().show_references_in_quick_panel:
             return False
         if self.applies_to_context_menu(event):

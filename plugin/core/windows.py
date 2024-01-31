@@ -128,6 +128,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._config_manager.disable_config(config_name)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
+        config = self._needed_config(listener.view)
+        if config:
+            plugin = get_plugin(config.name)
+            if plugin and plugin.should_ignore(listener.view):
+                debug(listener.view, "ignored by plugin", plugin.__name__)
+                return
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.

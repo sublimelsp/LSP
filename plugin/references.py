@@ -20,7 +20,7 @@ import os
 import sublime
 
 
-ShowInArgument = Literal['output_panel', 'quick_panel']
+OutputMode = Literal['output_panel', 'quick_panel']
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -36,7 +36,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        show_in: Optional[ShowInArgument] = None,
+        output_mode: Optional[OutputMode] = None,
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
@@ -49,17 +49,17 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        show_in: Optional[ShowInArgument] = None,
+        output_mode: Optional[OutputMode] = None,
     ) -> bool:
         # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
         # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
         # setting).
-        if show_in == 'output_panel' and not userprefs().show_references_in_quick_panel or \
-                show_in == 'quick_panel' and userprefs().show_references_in_quick_panel:
+        if output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel or \
+                output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel:
             return False
         if self.applies_to_context_menu(event):
             return self.is_enabled(
-                event, point, side_by_side, force_group, fallback, group, include_declaration, show_in)
+                event, point, side_by_side, force_group, fallback, group, include_declaration, output_mode)
         return True
 
     def run(
@@ -72,7 +72,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        show_in: Optional[ShowInArgument] = None,
+        output_mode: Optional[OutputMode] = None,
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -98,7 +98,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     force_group,
                     fallback,
                     group,
-                    show_in,
+                    output_mode,
                     event,
                     word_range.begin()
                 )
@@ -114,13 +114,13 @@ class LspSymbolReferencesCommand(LspTextCommand):
         force_group: bool,
         fallback: bool,
         group: int,
-        show_in: Optional[ShowInArgument],
+        output_mode: Optional[OutputMode],
         event: Optional[dict],
         position: int,
         response: Optional[List[Location]]
     ) -> None:
         sublime.set_timeout(lambda: self._handle_response(
-            word, session, side_by_side, force_group, fallback, group, show_in, event, position, response))
+            word, session, side_by_side, force_group, fallback, group, output_mode, event, position, response))
 
     def _handle_response(
         self,
@@ -130,7 +130,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         force_group: bool,
         fallback: bool,
         group: int,
-        show_in: Optional[ShowInArgument],
+        output_mode: Optional[OutputMode],
         event: Optional[dict],
         position: int,
         response: Optional[List[Location]]
@@ -139,12 +139,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
             self._handle_no_results(fallback, side_by_side)
             return
         modifier_keys = (event or {}).get('modifier_keys', {})
-        if show_in is None:
+        if output_mode is None:
             show_in_quick_panel = userprefs().show_references_in_quick_panel
             if modifier_keys.get('shift'):
                 show_in_quick_panel = not show_in_quick_panel
         else:
-            show_in_quick_panel = show_in == 'quick_panel'
+            show_in_quick_panel = output_mode == 'quick_panel'
         if show_in_quick_panel:
             if modifier_keys.get('primary'):
                 side_by_side = True

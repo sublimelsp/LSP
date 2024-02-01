@@ -993,11 +993,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                             sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
-        sel.add_all(regions_to_format)
         self.purge_changes_async()
-        self.view.run_command('lsp_format_document_range')
-        sel.clear()
-        sel.add_all(original_selection)
+
+        def run_sync() -> None:
+            sel.add_all(regions_to_format)
+            self.view.run_command('lsp_format_document_range')
+            sel.clear()
+            sel.add_all(original_selection)
+
+        sublime.set_timeout(run_sync)
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

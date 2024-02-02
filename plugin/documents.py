@@ -170,6 +170,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
+        self._should_format_on_paste = False
         self._setup()
 
     def __del__(self) -> None:
@@ -525,10 +526,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session = self.session_async("semanticTokensProvider")
             if session:
                 return ("lsp_show_scope_name", {})
+        elif command_name == 'paste_and_indent':
+            # it is easier to find the region to format when `paste` is invoked,
+            # so we intercept the `paste_and_indent` and replace it with the `paste` command.
+            format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
+            if format_on_paste and self.session_async("documentRangeFormattingProvider"):
+                return ('paste', {})
         return None
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
-        if command_name in ("next_field", "prev_field") and args is None:
+        if command_name == 'paste':
+            format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
+            if format_on_paste and self.session_async("documentRangeFormattingProvider"):
+                self._should_format_on_paste = True
+        elif command_name in ("next_field", "prev_field") and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
@@ -926,6 +937,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     listener.on_load_async()
 
     def _on_view_updated_async(self) -> None:
+        if self._should_format_on_paste:
+            self._should_format_on_paste = False
+            self._format_on_paste_async()
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
@@ -958,6 +972,36 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 changed_first_region = current_first_region
         self._stored_selection = selection
         return changed_first_region, True
+
+    def _format_on_paste_async(self) -> None:
+        clipboard_text = sublime.get_clipboard()
+        sel = self.view.sel()
+        split_clipboard_text = clipboard_text.split('\n')
+        multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1
+        original_selection = list(sel)
+        regions_to_format = []  # type: List[sublime.Region]
+        pasted_text = clipboard_text
+        # add regions to selection, in order for lsp_format_document_range to format those regions
+        for index, region in enumerate(sel):
+            if multi_cursor_paste:
+                pasted_text = split_clipboard_text[index]
+            pasted_region = self.view.find(pasted_text, region.end(), sublime.REVERSE | sublime.LITERAL)
+            if pasted_region:
+                # Including whitespace may help servers format a range better
+                # More info at https://github.com/sublimelsp/LSP/pull/2311#issuecomment-1688593038
+                a = self.view.find_by_class(pasted_region.a, False,
+                                            sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
+                formatting_region = sublime.Region(a, pasted_region.b)
+                regions_to_format.append(formatting_region)
+        self.purge_changes_async()
+
+        def run_sync() -> None:
+            sel.add_all(regions_to_format)
+            self.view.run_command('lsp_format_document_range')
+            sel.clear()
+            sel.add_all(original_selection)
+
+        sublime.set_timeout(run_sync)
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

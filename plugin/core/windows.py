@@ -128,12 +128,6 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._config_manager.disable_config(config_name)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
-        config = self._needed_config(listener.view)
-        if config:
-            plugin = get_plugin(config.name)
-            if plugin and plugin.should_ignore(listener.view):
-                debug(listener.view, "ignored by plugin", plugin.__name__)
-                return
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
@@ -183,12 +177,16 @@ class WindowManager(Manager, WindowConfigChangeListener):
         config = self._needed_config(listener.view)
         if config:
             # debug("found new config for listener", listener)
-            self._new_listener = listener
-            self.start_async(config, listener.view)
-        else:
-            # debug("no new config found for listener", listener)
-            self._new_listener = None
-            self._dequeue_listener_async()
+            plugin = get_plugin(config.name)
+            if plugin and plugin.should_ignore(listener.view):
+                debug(listener.view, "ignored by plugin", plugin.__name__)
+            else:
+                self._new_listener = listener
+                self.start_async(config, listener.view)
+                return
+        # debug("no new config found for listener", listener)
+        self._new_listener = None
+        self._dequeue_listener_async()
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)

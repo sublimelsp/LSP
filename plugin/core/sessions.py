@@ -939,9 +939,9 @@ class AbstractPlugin(metaclass=ABCMeta):
     @classmethod
     def should_ignore(cls, view: sublime.View) -> bool:
         """
-        Allows to exclude a view from being handled by the language server, even if it matches the URI scheme(s) and
-        selector from the configuration. This can be used to, for example, ignore certain file patterns which are listed
-        in a configuration file (e.g. .gitignore).
+        Exclude a view from being handled by the language server, even if it matches the URI scheme(s) and selector from
+        the configuration. This can be used to, for example, ignore certain file patterns which are listed in a
+        configuration file (e.g. .gitignore).
         """
         return False
 

@@ -1,3 +1,4 @@
+from .constants import ST_VERSION
 from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
@@ -79,7 +80,7 @@ def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> Opti
     view = window.active_view_in_group(_group)
     if view and fname == view.file_name():
         return view
-    return window.find_open_file(fname, group)
+    return window.find_open_file(fname, group) if ST_VERSION >= 4136 else window.find_open_file(fname)
 
 
 def open_file(

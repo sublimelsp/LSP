@@ -12,7 +12,6 @@ from .core.protocol import Response
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import AbstractPlugin
-from .core.sessions import AbstractPluginV2
 from .core.sessions import register_plugin
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
@@ -31,7 +30,6 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
-    'AbstractPluginV2',
     'apply_text_edits',
     'ClientConfig',
     'css',

@@ -7,7 +7,10 @@
 
   // --- Document Formatting ------------------------------------------------------------
 
-  // Run the server's formatProvider (if supported) on a file before saving.
+  // If supported, format the pasted text.
+  "lsp_format_on_paste": false,
+
+  // If supported, format a file before saving.
   // This option is also supported in syntax-specific settings and/or in the
   // "settings" section of project files.
   "lsp_format_on_save": false,

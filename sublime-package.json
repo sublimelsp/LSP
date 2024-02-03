@@ -6,10 +6,15 @@
           "$id": "sublime://settings/LSP",
           "definitions": {
             // User preferences that are shared with "Preferences.sublime-settings"
+            "lsp_format_on_paste": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "If supported, format the pasted text."
+            },
             "lsp_format_on_save": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "Run the server's formatProvider (if supported) on a document before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
+              "markdownDescription": "If supported, format a file before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
             },
             "lsp_code_actions_on_save": {
               "type": "object",
@@ -444,6 +449,9 @@
               "default": false,
               "markdownDescription": "Show errors and warnings count in the status bar."
             },
+            "lsp_format_on_paste": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
+            },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
             },
@@ -796,6 +804,9 @@
         ],
         "schema": {
           "properties": {
+            "lsp_format_on_paste": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste",
+            },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
             },

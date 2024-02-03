@@ -255,20 +255,20 @@
             "caption": "-"
           },
           {
-              "caption": "Enable Language Server Globally…",
-              "command": "lsp_enable_language_server_globally",
+            "caption": "Enable Language Server Globally…",
+            "command": "lsp_enable_language_server_globally",
           },
           {
-              "caption": "Disable Language Server Globally…",
-              "command": "lsp_disable_language_server_globally",
+            "caption": "Disable Language Server Globally…",
+            "command": "lsp_disable_language_server_globally",
           },
           {
-              "caption": "Enable Language Server in Project…",
-              "command": "lsp_enable_language_server_in_project",
+            "caption": "Enable Language Server in Project…",
+            "command": "lsp_enable_language_server_in_project",
           },
           {
-              "caption": "Disable Language Server in Project…",
-              "command": "lsp_disable_language_server_in_project",
+            "caption": "Disable Language Server in Project…",
+            "command": "lsp_disable_language_server_in_project",
           },
           {
             "caption": "Troubleshoot Server Configuration…",

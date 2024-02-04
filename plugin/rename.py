@@ -64,7 +64,6 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         new_name: str = "",
         placeholder: str = "",
-        position: Optional[int] = None,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> bool:
@@ -97,14 +96,13 @@ class LspSymbolRenameCommand(LspTextCommand):
         edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
-        position: Optional[int] = None,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> None:
         listener = self.get_listener()
         if listener:
             listener.purge_changes_async()
-        location = position if position is not None else get_position(self.view, event, point)
+        location = get_position(self.view, event, point)
         prepare_provider_session = self.best_session("renameProvider.prepareProvider")
         if new_name or placeholder or not prepare_provider_session:
             if location is not None and new_name:
@@ -161,7 +159,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             pos = range_to_region(response["range"], self.view).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
-        args = {"placeholder": placeholder, "position": pos}
+        args = {"placeholder": placeholder, "point": pos}
         self.view.run_command("lsp_symbol_rename", args)
 
     def _on_prepare_error(self, error: Any) -> None:

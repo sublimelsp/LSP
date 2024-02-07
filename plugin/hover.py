@@ -3,7 +3,6 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
-from .core.constants import HOVER_PROVIDER_COUNT_KEY
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
@@ -22,7 +21,6 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
-from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
@@ -409,7 +407,8 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
         sublime.set_timeout_async(partial(self._update_views_async, enable))
 
     def _has_hover_provider(self, view: sublime.View) -> bool:
-        return cast(int, view.settings().get(HOVER_PROVIDER_COUNT_KEY, 0)) > 0
+        listener = windows.listener_for_view(view)
+        return listener.hover_provider_count > 0 if listener else False
 
     def _update_views_async(self, enable: bool) -> None:
         window_manager = windows.lookup(self.window)

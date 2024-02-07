@@ -679,6 +679,7 @@ class AbstractViewListener(metaclass=ABCMeta):
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
     view = cast(sublime.View, None)
+    hover_provider_count = 0
 
     @abstractmethod
     def session_async(self, capability: str, point: Optional[int] = None) -> Optional['Session']:

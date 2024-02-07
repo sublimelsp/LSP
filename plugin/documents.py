@@ -171,6 +171,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._completions_task = None  # type: Optional[QueryCompletionsTask]
         self._stored_selection = []  # type: List[sublime.Region]
         self._should_format_on_paste = False
+        self.hover_provider_count = 0
         self._setup()
 
     def __del__(self) -> None:

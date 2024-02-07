@@ -4,7 +4,6 @@ from .core.active_request import ActiveRequest
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import HOVER_HIGHLIGHT_KEY
-from .core.constants import HOVER_PROVIDER_COUNT_KEY
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.promise import Promise
@@ -229,23 +228,21 @@ class SessionView:
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
     def _increment_hover_count(self) -> None:
-        settings = self.view.settings()
-        count = settings.get(HOVER_PROVIDER_COUNT_KEY, 0)
-        if isinstance(count, int):
-            count += 1
-            settings.set(HOVER_PROVIDER_COUNT_KEY, count)
-            window = self.view.window()
-            if window and window.settings().get(HOVER_ENABLED_KEY, True):
-                settings.set(SHOW_DEFINITIONS_KEY, False)
+        listener = self.listener()
+        if not listener:
+            return
+        listener.hover_provider_count += 1
+        window = self.view.window()
+        if window and window.settings().get(HOVER_ENABLED_KEY, True):
+            self.view.settings().set(SHOW_DEFINITIONS_KEY, False)
 
     def _decrement_hover_count(self) -> None:
-        settings = self.view.settings()
-        count = settings.get(HOVER_PROVIDER_COUNT_KEY)
-        if isinstance(count, int):
-            count -= 1
-            if count == 0:
-                settings.erase(HOVER_PROVIDER_COUNT_KEY)
-                self.reset_show_definitions()
+        listener = self.listener()
+        if not listener:
+            return
+        listener.hover_provider_count -= 1
+        if listener.hover_provider_count == 0:
+            self.reset_show_definitions()
 
     def reset_show_definitions(self) -> None:
         self.view.settings().erase(SHOW_DEFINITIONS_KEY)

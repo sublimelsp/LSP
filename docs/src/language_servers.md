@@ -685,6 +685,26 @@ Follow installation instructions on [LSP-svelte](https://github.com/sublimelsp/L
 
 Follow installation instructions on [LSP-SourceKit](https://github.com/sublimelsp/LSP-SourceKit).
 
+## SystemVerilog
+
+1. Install the [SystemVerilog](https://packagecontrol.io/packages/SystemVerilog) package from Package Control for syntax highlighting.
+2. Make sure you install the latest version of [Verible](https://github.com/chipsalliance/verible).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"verible"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "verible": {
+                "enabled": true,
+                "command": [
+                    "/PATH/TO/verible-verilog-ls"
+                ],
+                "selector": "source.systemverilog"
+            }
+        }
+    }
+    ```
+
 ## TAGML
 
 Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LSP-tagml).

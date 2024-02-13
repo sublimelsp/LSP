@@ -6,9 +6,7 @@ from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Un
 from .typing import cast
 from .url import filename_to_uri
 from .url import parse_uri
-from wcmatch.glob import BRACE
-from wcmatch.glob import globmatch
-from wcmatch.glob import GLOBSTAR
+from wcmatch import glob
 import contextlib
 import fnmatch
 import os
@@ -411,7 +409,7 @@ class DocumentFilter:
             if isinstance(uri, str) and parse_uri(uri)[0] != self.scheme:
                 return False
         if self.pattern:
-            if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):
+            if not glob.globmatch(view.file_name() or "", self.pattern, flags=glob.GLOBSTAR | glob.BRACE):
                 return False
         return True
 

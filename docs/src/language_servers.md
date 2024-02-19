@@ -738,6 +738,7 @@ See [Javascript/TypeScript](#javascripttypescript).
         }
     }
     ```
+
 4. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
 
     ```jsonc
@@ -749,6 +750,33 @@ See [Javascript/TypeScript](#javascripttypescript).
             {"selector": "text.typst", "characters": "#", "rhs_empty": true},
         ],
     }
+    ```
+
+5. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
+
+    <!-- how to call: see https://github.com/nvarner/typst-lsp/blob/master/editors/vscode/src/extension.ts -->
+    ```jsonc title="Packages/User/Default.sublime-commands"
+    [
+        // ...
+        {
+            "caption": "typst-lsp - Pin the main file to the currently opened document",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "typst-lsp",
+                "command_name": "typst-lsp.doPinMain",
+                "command_args": ["${file_uri}"]
+            }
+        },
+        {
+            "caption": "typst-lsp - Unpin the main file",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "typst-lsp",
+                "command_name": "typst-lsp.doPinMain",
+                "command_args": ["detached"]
+            }
+        },
+    ]
     ```
 
 ## Vue

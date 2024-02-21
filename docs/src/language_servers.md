@@ -719,8 +719,21 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
 
 ## Toit
 
-Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
-Follow installation instructions on [LSP-toit](https://github.com/toitlang/toit/tree/master/tools/lsp/server).
+1. Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
+2. Install the [Jaguar](https://github.com/toitlang/jaguar)
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"jag"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "jag": {
+                "enabled": true,
+                "command": ["jag" "lsp"],
+                "selector": "source.toit"
+            }
+        }
+    }
+    ```
 
 ## TypeScript
 

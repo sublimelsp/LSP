@@ -717,6 +717,11 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 
 Follow installation instructions on [LSP-terraform](https://github.com/sublimelsp/LSP-terraform).
 
+## Toit
+
+Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
+Follow installation instructions on [LSP-toit](https://github.com/toitlang/toit/tree/master/tools/lsp/server).
+
 ## TypeScript
 
 See [Javascript/TypeScript](#javascripttypescript).

@@ -2,6 +2,7 @@ from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
 from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
+from .edit import is_snippet_text_edit
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
 from .file_watcher import DEFAULT_KIND
@@ -18,6 +19,7 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
+from .protocol import ApplyWorkspaceEditParams
 from .protocol import ClientCapabilities
 from .protocol import CodeAction, CodeActionKind
 from .protocol import CodeLensExtended
@@ -63,6 +65,7 @@ from .protocol import Response
 from .protocol import ResponseError
 from .protocol import SemanticTokenModifiers
 from .protocol import SemanticTokenTypes
+from .protocol import SnippetTextEdit
 from .protocol import SymbolKind
 from .protocol import SymbolTag
 from .protocol import TextDocumentClientCapabilities
@@ -460,6 +463,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "workspaceEdit": {
             "documentChanges": True,
             "failureHandling": FailureHandlingKind.Abort,
+            "snippetEditSupport": True
         },
         "workspaceFolders": True,
         "symbol": {
@@ -1773,6 +1777,24 @@ class Session(TransportCallbacks):
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
         promises = []  # type: List[Promise[None]]
         for uri, (edits, view_version) in changes.items():
+            if any(is_snippet_text_edit(edit) for edit in edits):
+                # SnippetTextEdits must only be applied to the active view
+                window = sublime.active_window()
+                if window.is_valid():
+                    view = window.active_view()
+                    if view and view.settings().get('lsp_uri') == uri:
+                        promises.append(self._apply_text_edits_with_snippet(edits, view_version, view))
+                        continue
+                # > In case the snippet text edit corresponds to a file that is not currently open in the active editor,
+                # > the client should downgrade the snippet to a non-interactive normal text edit and apply it to the
+                # > file.
+                for edit in edits:
+                    if is_snippet_text_edit(edit):
+                        new_text = sublime.expand_variables(edit['snippet']['value'], {})
+                        del edit['snippet']  # type: ignore
+                        edit = cast(TextEdit, edit)
+                        edit['newText'] = new_text
+            edits = cast(List[TextEdit], edits)
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
             )
@@ -1785,6 +1807,22 @@ class Session(TransportCallbacks):
             print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
             return
         apply_text_edits(view, edits, required_view_version=view_version)
+
+    def _apply_text_edits_with_snippet(
+        self,
+        edits: List[Union[TextEdit, SnippetTextEdit]],
+        view_version: Optional[int],
+        view: sublime.View
+    ) -> Promise[None]:
+        view.run_command(
+            'lsp_apply_document_edit',
+            {
+                'changes': edits,
+                'process_placeholders': False,
+                'required_view_version': view_version,
+            }
+        )
+        return Promise.resolve(None)
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
@@ -1912,7 +1950,7 @@ class Session(TransportCallbacks):
                 items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
-    def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
+    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
         self.apply_workspace_edit_async(params.get('edit', {})).then(
             lambda _: self.send_response(Response(request_id, {"applied": True})))

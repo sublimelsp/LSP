@@ -1,6 +1,9 @@
+from .core.edit import is_snippet_text_edit
 from .core.edit import parse_range
+from .core.protocol import SnippetTextEdit
 from .core.protocol import TextEdit
-from .core.typing import List, Optional, Any, Generator, Iterable, Tuple
+from .core.typing import List, Optional, Any, Generator, Iterable, Tuple, Union
+from .core.typing import cast
 from contextlib import contextmanager
 import operator
 import re
@@ -8,7 +11,7 @@ import sublime
 import sublime_plugin
 
 
-TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
+TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str, bool]
 
 
 @contextmanager
@@ -30,7 +33,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(
         self,
         edit: sublime.Edit,
-        changes: List[TextEdit],
+        changes: List[Union[TextEdit, SnippetTextEdit]],
         required_view_version: Optional[int] = None,
         process_placeholders: bool = False,
     ) -> None:
@@ -42,11 +45,18 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         if required_view_version is not None and required_view_version != view_version:
             print('LSP: ignoring edit due to non-matching document version')
             return
-        edits = [_parse_text_edit(change) for change in changes or []]
+        edits = []  # type: List[TextEditTuple]
+        for change in changes:
+            if is_snippet_text_edit(change):
+                edits.append(_parse_snippet_text_edit(change))
+            else:
+                change = cast(TextEdit, change)
+                edits.append(_parse_text_edit(change))
         with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
-            for start, end, replacement in reversed(_sort_by_application_order(edits)):
+            snippet_already_applied = False
+            for start, end, replacement, is_snippet in reversed(_sort_by_application_order(edits)):
                 placeholder_region = None  # type: Optional[Tuple[Tuple[int, int], Tuple[int, int]]]
                 if process_placeholders and replacement:
                     parsed = self.parse_snippet(replacement)
@@ -63,6 +73,15 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                             start_column = len(prefix) - last_newline_start - 1
                         end_column = start_column + placeholder_length
                         placeholder_region = ((start_line, start_column), (start_line, end_column))
+                if is_snippet:
+                    if snippet_already_applied:
+                        # Downgrade to regular TextEdit
+                        # > For the active file, only one snippet can specify a cursor position. In case there are
+                        # > multiple snippets defining a cursor position for a given URI, it is up to the client to
+                        # > decide the end position of the cursor.
+                        is_snippet = False
+                        replacement = sublime.expand_variables(replacement, {})
+                    snippet_already_applied = True
                 region = sublime.Region(
                     self.view.text_point_utf16(*start, clamp_column=True),
                     self.view.text_point_utf16(*end, clamp_column=True)
@@ -70,10 +89,10 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 if start[0] > last_row and replacement[0] != '\n':
                     # Handle when a language server (eg gopls) inserts at a row beyond the document
                     # some editors create the line automatically, sublime needs to have the newline prepended.
-                    self.apply_change(region, '\n' + replacement, edit)
+                    self.apply_change(edit, region, '\n' + replacement, is_snippet)
                     last_row, _ = self.view.rowcol(self.view.size())
                 else:
-                    self.apply_change(region, replacement, edit)
+                    self.apply_change(edit, region, replacement, is_snippet)
                 if placeholder_region is not None:
                     if placeholder_region_count == 0:
                         self.view.sel().clear()
@@ -85,7 +104,13 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             if placeholder_region_count == 1:
                 self.view.show(self.view.sel())
 
-    def apply_change(self, region: sublime.Region, replacement: str, edit: sublime.Edit) -> None:
+    def apply_change(self, edit: sublime.Edit, region: sublime.Region, replacement: str, is_snippet: bool) -> None:
+        if is_snippet:
+            selection = self.view.sel()
+            selection.clear()
+            selection.add(region)
+            self.view.run_command('insert_snippet', {'contents': replacement})
+            return
         if region.empty():
             self.view.insert(edit, region.a, replacement)
         else:
@@ -109,7 +134,18 @@ def _parse_text_edit(text_edit: TextEdit) -> TextEditTuple:
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),
         # Strip away carriage returns -- SublimeText takes care of that.
-        text_edit.get('newText', '').replace("\r", "")
+        text_edit.get('newText', '').replace("\r", ""),
+        False
+    )
+
+
+def _parse_snippet_text_edit(text_edit: SnippetTextEdit) -> TextEditTuple:
+    return (
+        parse_range(text_edit['range']['start']),
+        parse_range(text_edit['range']['end']),
+        # Strip away carriage returns -- SublimeText takes care of that.
+        text_edit['snippet']['value'].replace("\r", ""),
+        True
     )
 
 

@@ -41,6 +41,7 @@
     background-color: color(var(--redish) alpha(0.25));
     color: var(--foreground);
     padding: 0.5rem;
+    white-space: pre-wrap;
 }
 .warnings {
     border-width: 0;

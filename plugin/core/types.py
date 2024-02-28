@@ -840,10 +840,10 @@ class ClientConfig:
         syntax = view.syntax()
         if not syntax:
             return False
-        # We don't want to match on empty selectors.
-        if len(self.selector.strip()) == 0:
+        selector = self.selector.strip()
+        if not selector:
             return False
-        return scheme in self.schemes and sublime.score_selector(syntax.scope, self.selector)
+        return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
 
     def map_client_path_to_server_uri(self, path: str) -> str:
         if self.path_maps:

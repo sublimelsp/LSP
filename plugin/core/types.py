@@ -840,11 +840,10 @@ class ClientConfig:
         syntax = view.syntax()
         if not syntax:
             return False
-        # Every part of a x.y.z scope seems to contribute 8.
-        # An empty selector result in a score of 1.
-        # A non-matching non-empty selector results in a score of 0.
-        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
-        return scheme in self.schemes and sublime.score_selector(syntax.scope, self.selector) >= 8
+        # We don't want to match on empty selectors.
+        if len(self.selector.strip()) == 0:
+            return False
+        return scheme in self.schemes and sublime.score_selector(syntax.scope, self.selector)
 
     def map_client_path_to_server_uri(self, path: str) -> str:
         if self.path_maps:

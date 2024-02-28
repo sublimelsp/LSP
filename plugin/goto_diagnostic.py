@@ -35,7 +35,7 @@ import sublime_plugin
 PREVIEW_PANE_CSS = """
     .diagnostics {padding: 0.5em}
     .diagnostics a {color: var(--bluish)}
-    .diagnostics.error {background-color: color(var(--redish) alpha(0.25))}
+    .diagnostics.error {background-color: color(var(--redish) alpha(0.25)); white-space: pre-wrap}
     .diagnostics.warning {background-color: color(var(--yellowish) alpha(0.25))}
     .diagnostics.info {background-color: color(var(--bluish) alpha(0.25))}
     .diagnostics.hint {background-color: color(var(--bluish) alpha(0.25))}

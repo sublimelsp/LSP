@@ -1,0 +1,30 @@
+=> 1.29.0
+
+⚠️⚠️⚠️
+To ensure that everything works properly after LSP package is updated,
+it's strongly recommended to restart Sublime Text once it finishes updating all packages.
+⚠️⚠️⚠️
+
+# New features
+
+- add commands for opening "find references" in bottom or quick panel (#2409) (Rafał Chłodnicki)
+- Add format on paste (#2397) (Предраг Николић)
+
+# Fixes and Improvements
+
+- Fix usage of sublime.score_selector (#2427) (Benjamin Schaaf)
+- Fix find_open_file incompatibility with older ST versions (Janos Wortmann)
+
+# Refactoring
+
+- Remove hover provider count view setting (Janos Wortmann)
+- Remove unnecessary argument from lsp_symbol_rename command (Janos Wortmann)
+
+# Documentation
+
+- docs: add info about typst-lsp commands (#2424) (Ilia)
+- docs: add systemverilog/verible language server setup guide (#2416) (Johnny Martínez)
+- docs: rewrite self-help instructions (#2405) (Rafał Chłodnicki)
+- docs: rewritten "common problems" section (#2406) (Rafał Chłodnicki)
+- A few enhancements for the docs website (#2402) (jwortmann)
+- chore: deploy docs preview on docs changes (#2403) (Rafał Chłodnicki)

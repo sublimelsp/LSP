@@ -42,6 +42,7 @@ from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
+from .plugin.edit import LspApplyWorkspaceChangesCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.folding_range import LspFoldAllCommand
 from .plugin.folding_range import LspFoldCommand

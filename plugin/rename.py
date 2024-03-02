@@ -24,6 +24,43 @@ import sublime
 import sublime_plugin
 
 
+BUTTON_HTML = """
+<style>
+    html {{
+        padding: 0.2rem;
+        background-color: transparent;
+    }}
+    a {{
+        display: inline;
+        line-height: 1.5rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #fff4;
+        border-radius: 4px;
+        color: #cccccc;
+        background-color: color({color} min-contrast(white 6.0));
+        text-decoration: none;
+    }}
+    html.light a {{
+        border-color: #000a;
+        color: white;
+        background-color: color({color_light} min-contrast(white 6.0));
+    }}
+</style>
+<body id='lsp-button'>
+    <a href='{command}'>{label}</a>
+</body>"""
+
+DISCARD_BUTTON_HTML = BUTTON_HTML.format(
+    label="Discard",
+    command=sublime.command_url('hide_panel'),
+    color="#3f3f3f",
+    color_light="#636363"
+)
+
+
 def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
     return 'start' in result
 
@@ -134,17 +171,17 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not response:
             return session.window.status_message('Nothing to rename')
         changes = parse_workspace_edit(response)
-        count = len(changes.keys())
-        if count == 1:
+        file_count = len(changes.keys())
+        if file_count == 1:
             session.apply_parsed_workspace_edits(changes)
             return
         total_changes = sum(map(len, changes.values()))
-        message = "Replace {} occurrences across {} files?".format(total_changes, count)
-        choice = sublime.yes_no_cancel_dialog(message, "Replace", "Dry Run")
+        message = "Replace {} occurrences across {} files?".format(total_changes, file_count)
+        choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
         if choice == sublime.DIALOG_YES:
             session.apply_parsed_workspace_edits(changes)
         elif choice == sublime.DIALOG_NO:
-            self._render_rename_panel(changes, total_changes, count)
+            self._render_rename_panel(changes, total_changes, file_count, session.config.name)
 
     def _on_prepare_result(self, pos: int, response: Optional[PrepareRenameResult]) -> None:
         if response is None:
@@ -172,14 +209,24 @@ class LspSymbolRenameCommand(LspTextCommand):
         base_dir = wm.get_project_path(file_path)
         return os.path.relpath(file_path, base_dir) if base_dir else file_path
 
-    def _render_rename_panel(self, changes_per_uri: WorkspaceChanges, total_changes: int, file_count: int) -> None:
+    def _render_rename_panel(
+        self,
+        changes_per_uri: WorkspaceChanges,
+        total_changes: int,
+        file_count: int,
+        session_name: str
+    ) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        panel = wm.panel_manager and wm.panel_manager.ensure_rename_panel()
+        pm = wm.panel_manager
+        if not pm:
+            return
+        panel = pm.ensure_rename_panel()
         if not panel:
             return
         to_render = []  # type: List[str]
+        to_render.append("{} changes across {} files.\n\n \n".format(total_changes, file_count))
         for uri, (changes, _) in changes_per_uri.items():
             scheme, file = parse_uri(uri)
             if scheme == "file":
@@ -199,12 +246,35 @@ class LspSymbolRenameCommand(LspTextCommand):
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
         wm.window.run_command("show_panel", {"panel": "output.rename"})
-        fmt = "{} changes across {} files.\n\n{}"
         panel.run_command('append', {
-            'characters': fmt.format(total_changes, file_count, characters),
+            'characters': characters,
             'force': True,
             'scroll_to_end': False
         })
+        buttons = pm.rename_panel_buttons
+        if buttons:
+            buttons_position = len(to_render[0]) - 2
+            APPLY_BUTTON_HTML = BUTTON_HTML.format(
+                label="Apply",
+                command=sublime.command_url('chain', {
+                    'commands': [
+                        [
+                            'lsp_apply_workspace_changes',
+                            {'session_name': session_name, 'workspace_changes': changes_per_uri}
+                        ],
+                        [
+                            'hide_panel',
+                            {}
+                        ]
+                    ]
+                }),
+                color="var(--accent)",
+                color_light="var(--accent)"
+            )
+            buttons.update([
+                sublime.Phantom(sublime.Region(buttons_position), APPLY_BUTTON_HTML, sublime.LAYOUT_INLINE),
+                sublime.Phantom(sublime.Region(buttons_position + 1), DISCARD_BUTTON_HTML, sublime.LAYOUT_INLINE)
+            ])
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):

@@ -1,5 +1,8 @@
 from .core.edit import parse_range
+from .core.edit import WorkspaceChanges
+from .core.logging import debug
 from .core.protocol import TextEdit
+from .core.registry import LspWindowCommand
 from .core.typing import List, Optional, Any, Generator, Iterable, Tuple
 from contextlib import contextmanager
 import operator
@@ -22,6 +25,16 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
     settings.erase(key)
     if has_prev_val and settings.get(key) != prev_val:
         settings.set(key, prev_val)
+
+
+class LspApplyWorkspaceChangesCommand(LspWindowCommand):
+
+    def run(self, session_name: str, workspace_changes: WorkspaceChanges) -> None:
+        session = self.session_by_name(session_name)
+        if not session:
+            debug('Could not find session', session_name)
+            return
+        session.apply_parsed_workspace_edits(workspace_changes)
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):

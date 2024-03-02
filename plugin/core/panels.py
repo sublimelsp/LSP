@@ -38,6 +38,7 @@ class PanelName:
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
+        self.rename_panel_buttons = None  # type: Optional[sublime.PhantomSet]
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
@@ -91,6 +92,8 @@ class PanelManager:
         panel = self.create_output_panel(name)
         if not panel:
             return None
+        if name == PanelName.Rename:
+            self.rename_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
         settings = panel.settings()
         if result_file_regex:
             settings.set("result_file_regex", result_file_regex)

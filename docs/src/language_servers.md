@@ -720,7 +720,7 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
 ## Toit
 
 1. Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
-2. Install the [Jaguar](https://github.com/toitlang/jaguar)
+2. Install the [Jaguar Language Server](https://github.com/toitlang/jaguar).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"jag"` client configuration to the `"clients"`:
 
     ```jsonc

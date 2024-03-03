@@ -102,6 +102,18 @@ def get_line(window: sublime.Window, file_name: str, row: int) -> str:
         return linecache.getline(file_name, row + 1).strip()
 
 
+def get_line2(window: sublime.Window, file_name: str, row: int) -> str:
+    '''
+    Same as get_line, but don't strip away leading and trailing whitespace.
+    '''
+    view = window.find_open_file(file_name)
+    if view:
+        point = view.text_point(row, 0)
+        return view.substr(view.line(point))
+    else:
+        return linecache.getline(file_name, row + 1)
+
+
 def get_storage_path() -> str:
     """
     The "Package Storage" is a way to store server data without influencing the behavior of Sublime Text's "catalog".

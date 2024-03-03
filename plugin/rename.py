@@ -15,7 +15,7 @@ from .core.typing import Any, Optional, List, TypeGuard
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region
-from .core.views import get_line
+from .core.views import get_line2
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from functools import partial
@@ -243,8 +243,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             reference_document.append(filename_line)
             for edit in changes:
                 start_row, start_col_utf16 = parse_range(edit['range']['start'])
-                line_content = get_line(wm.window, file, start_row) if scheme == 'file' else '<no preview available>'
-                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, line_content + "\n")
+                line_content = get_line2(wm.window, file, start_row) if scheme == 'file' else '<no preview available>'
+                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, line_content.strip() + "\n")
                 reference_document.append(original_line)
                 if scheme == "file" and line_content:
                     end_row, end_col_utf16 = parse_range(edit['range']['end'])
@@ -253,7 +253,8 @@ class LspSymbolRenameCommand(LspTextCommand):
                     new_line_content = line_content[:start_col_utf16] + new_text_rows[0]
                     if start_row == end_row and len(new_text_rows) == 1 and end_col_utf16 < len(line_content):
                         new_line_content += line_content[end_col_utf16:]
-                    to_render.append(ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, new_line_content + "\n"))
+                    to_render.append(
+                        ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, new_line_content.strip() + "\n"))
                 else:
                     to_render.append(original_line)
         characters = "\n".join(to_render)

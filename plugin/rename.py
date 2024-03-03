@@ -55,7 +55,12 @@ BUTTON_HTML = """
 
 DISCARD_BUTTON_HTML = BUTTON_HTML.format(
     label="Discard",
-    command=sublime.command_url('hide_panel'),
+    command=sublime.command_url('chain', {
+        'commands': [
+            ['hide_panel', {}],
+            ['lsp_hide_rename_buttons', {}]
+        ]
+    }),
     color="#3f3f3f",
     color_light="#636363"
 )
@@ -226,21 +231,31 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not panel:
             return
         to_render = []  # type: List[str]
-        to_render.append("{} changes across {} files.\n\n \n".format(total_changes, file_count))
+        reference_document = []  # type: List[str]
+        header_lines = "{} changes across {} files.\n\n \n".format(total_changes, file_count)
+        to_render.append(header_lines)
+        reference_document.append(header_lines)
+        ROWCOL_PREFIX = " {:>4}:{:<4} {}"
         for uri, (changes, _) in changes_per_uri.items():
             scheme, file = parse_uri(uri)
-            if scheme == "file":
-                to_render.append('{}:'.format(self._get_relative_path(file)))
-            else:
-                to_render.append('{}:'.format(uri))
+            filename_line = '{}:'.format(self._get_relative_path(file) if scheme == 'file' else uri)
+            to_render.append(filename_line)
+            reference_document.append(filename_line)
             for edit in changes:
-                start = parse_range(edit['range']['start'])
-                if scheme == "file":
-                    line_content = get_line(wm.window, file, start[0])
+                start_row, start_col_utf16 = parse_range(edit['range']['start'])
+                line_content = get_line(wm.window, file, start_row) if scheme == 'file' else '<no preview available>'
+                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, line_content + "\n")
+                reference_document.append(original_line)
+                if scheme == "file" and line_content:
+                    end_row, end_col_utf16 = parse_range(edit['range']['end'])
+                    new_text_rows = edit['newText'].split('\n')
+                    # TODO: string slicing is not compatible with UTF-16 column numbers
+                    new_line_content = line_content[:start_col_utf16] + new_text_rows[0]
+                    if start_row == end_row and len(new_text_rows) == 1 and end_col_utf16 < len(line_content):
+                        new_line_content += line_content[end_col_utf16:]
+                    to_render.append(ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, new_line_content + "\n"))
                 else:
-                    line_content = '<no preview available>'
-                to_render.append(" {:>4}:{:<4} {}".format(start[0] + 1, start[1] + 1, line_content))
-            to_render.append("")  # this adds a spacing between filenames
+                    to_render.append(original_line)
         characters = "\n".join(to_render)
         base_dir = wm.get_project_path(self.view.file_name() or "")
         panel.settings().set("result_base_dir", base_dir)
@@ -251,30 +266,40 @@ class LspSymbolRenameCommand(LspTextCommand):
             'force': True,
             'scroll_to_end': False
         })
+        panel.set_reference_document("\n".join(reference_document))
+        selection = panel.sel()
+        selection.add(sublime.Region(0, panel.size()))
+        panel.run_command('toggle_inline_diff')
+        selection.clear()
         buttons = pm.rename_panel_buttons
-        if buttons:
-            buttons_position = len(to_render[0]) - 2
-            APPLY_BUTTON_HTML = BUTTON_HTML.format(
-                label="Apply",
-                command=sublime.command_url('chain', {
-                    'commands': [
-                        [
-                            'lsp_apply_workspace_changes',
-                            {'session_name': session_name, 'workspace_changes': changes_per_uri}
-                        ],
-                        [
-                            'hide_panel',
-                            {}
-                        ]
+        if not buttons:
+            return
+        buttons_position = len(to_render[0]) - 2
+        APPLY_BUTTON_HTML = BUTTON_HTML.format(
+            label="Apply",
+            command=sublime.command_url('chain', {
+                'commands': [
+                    [
+                        'lsp_apply_workspace_changes',
+                        {'session_name': session_name, 'workspace_changes': changes_per_uri}
+                    ],
+                    [
+                        'hide_panel',
+                        {}
+                    ],
+                    [
+                        'lsp_hide_rename_buttons',
+                        {}
                     ]
-                }),
-                color="var(--accent)",
-                color_light="var(--accent)"
-            )
-            buttons.update([
-                sublime.Phantom(sublime.Region(buttons_position), APPLY_BUTTON_HTML, sublime.LAYOUT_INLINE),
-                sublime.Phantom(sublime.Region(buttons_position + 1), DISCARD_BUTTON_HTML, sublime.LAYOUT_INLINE)
-            ])
+                ]
+            }),
+            color="var(--accent)",
+            color_light="var(--accent)"
+        )
+        buttons.update([
+            sublime.Phantom(sublime.Region(buttons_position), APPLY_BUTTON_HTML, sublime.LAYOUT_INLINE),
+            sublime.Phantom(sublime.Region(buttons_position + 1), DISCARD_BUTTON_HTML, sublime.LAYOUT_INLINE)
+        ])
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -296,3 +321,17 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
 
     def validate(self, name: str) -> bool:
         return len(name) > 0
+
+
+class LspHideRenameButtonsCommand(sublime_plugin.WindowCommand):
+
+    def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        pm = wm.panel_manager
+        if not pm:
+            return
+        buttons = pm.rename_panel_buttons
+        if buttons:
+            buttons.update([])

@@ -15,7 +15,7 @@ from .core.typing import Any, Optional, List, TypeGuard
 from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region
-from .core.views import get_line2
+from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from functools import partial
@@ -243,7 +243,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             reference_document.append(filename_line)
             for edit in changes:
                 start_row, start_col_utf16 = parse_range(edit['range']['start'])
-                line_content = get_line2(wm.window, file, start_row) if scheme == 'file' else '<no preview available>'
+                line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
+                    '<no preview available>'
                 original_line = ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, line_content.strip() + "\n")
                 reference_document.append(original_line)
                 if scheme == "file" and line_content:

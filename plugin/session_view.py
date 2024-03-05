@@ -1,5 +1,6 @@
 from .code_lens import CodeLensView
 from .code_lens import LspToggleCodeLensesCommand
+from .core.registry import LspWindowCommand
 from .core.active_request import ActiveRequest
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
@@ -79,6 +80,8 @@ class SessionView:
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
+        self._data_per_severity = {}
+        self._is_show_diagnostics = True
 
     def on_before_remove(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
@@ -300,6 +303,9 @@ class SessionView:
     def present_diagnostics_async(
         self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
+        self._data_per_severity = data_per_severity
+        if not self._is_show_diagnostics:
+            return
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
@@ -346,6 +352,21 @@ class SessionView:
                     data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO)
             else:
                 self.view.erase_regions(data.key)
+
+    def _hide_diagnostics(self):
+        print('_hide_diagnostics')
+        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            for multiline in (True, False):
+                key = self.diagnostics_key(severity, multiline)
+                self.view.erase_regions("{}_icon".format(key))
+                self.view.erase_regions("{}_underline".format(key))
+                tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
+                for data in tags.values():
+                    self.view.erase_regions(data.key)
+
+    def _show_diagnostics(self):
+        print('_show_diagnostics')
+        self.present_diagnostics_async(is_view_visible=True, data_per_severity=self._data_per_severity)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)
@@ -426,3 +447,28 @@ class SessionView:
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())
+
+
+class LspToggleShowDiagnosticsCommand(LspWindowCommand):
+
+    @property
+    def view(self) -> Optional[sublime.View]:
+        return self.window.active_view()
+
+    def run(self, toggle=None) -> None:
+        sublime.set_timeout_async(functools.partial(self.run_async, toggle))
+
+    def run_async(self, toggle=None) -> None:
+        session = self.session()
+        if not session:
+            return
+        sv = session.session_view_for_view_async(self.view)
+        if not sv:
+            return
+        if toggle is None:
+            toggle = not sv._is_show_diagnostics
+        sv._is_show_diagnostics = toggle
+        if toggle:
+            sv._show_diagnostics()
+        else:
+            sv._hide_diagnostics()

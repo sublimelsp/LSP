@@ -250,4 +250,10 @@
         "args": {"async": true},
         "context": [{"key": "lsp.session_with_capability", "operand": "textDocumentSync.willSave | textDocumentSync.willSaveWaitUntil | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"}]
     },
+    // Toggle showing diagnostics
+    {
+        "keys": ["alt+shift+l"],
+        "command": "lsp_toggle_show_diagnostics",
+        "args": {"toggle": null}
+    }
 ]

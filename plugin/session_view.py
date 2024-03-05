@@ -354,7 +354,6 @@ class SessionView:
                 self.view.erase_regions(data.key)
 
     def _hide_diagnostics(self):
-        print('_hide_diagnostics')
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             for multiline in (True, False):
                 key = self.diagnostics_key(severity, multiline)
@@ -365,7 +364,6 @@ class SessionView:
                     self.view.erase_regions(data.key)
 
     def _show_diagnostics(self):
-        print('_show_diagnostics')
         self.present_diagnostics_async(is_view_visible=True, data_per_severity=self._data_per_severity)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:

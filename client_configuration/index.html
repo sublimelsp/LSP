@@ -1,0 +1,818 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://sublimelsp.github.io/LSP/client_configuration/">
+      
+      
+        <link rel="prev" href="../customization/">
+      
+      
+        <link rel="next" href="../troubleshooting/">
+      
+      
+      <link rel="icon" href="../images/favicon.svg">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
+    
+    
+      
+        <title>Client Configuration - LSP for Sublime Text</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e359304.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#client-configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="LSP for Sublime Text" class="md-header__button md-logo" aria-label="LSP for Sublime Text" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LSP for Sublime Text
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Client Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="LSP for Sublime Text" class="md-nav__button md-logo" aria-label="LSP for Sublime Text" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    LSP for Sublime Text
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language_servers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Language Servers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Features
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Commands
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keyboard_shortcuts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Keyboard Shortcuts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../customization/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Customization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Client Configuration
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Client Configuration
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#custom-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom client configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#subprocesses" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subprocesses
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transports
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-inputoutput-stdio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard input/output (STDIO)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-localhost-subprocess-acts-as-a-tcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      TCP - localhost - subprocess acts as a TCP server
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-localhost-editor-acts-as-a-tcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      TCP - localhost - editor acts as a TCP server
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-project-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      Per-project overrides
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#custom-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom client configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#subprocesses" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subprocesses
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transports
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-inputoutput-stdio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard input/output (STDIO)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-localhost-subprocess-acts-as-a-tcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      TCP - localhost - subprocess acts as a TCP server
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-localhost-editor-acts-as-a-tcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      TCP - localhost - editor acts as a TCP server
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-project-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      Per-project overrides
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="client-configuration">Client Configuration<a class="headerlink" href="#client-configuration" title="Permanent link">#</a></h1>
+<h2 id="custom-client-configuration">Custom client configuration<a class="headerlink" href="#custom-client-configuration" title="Permanent link">#</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The external LSP-* helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.</p>
+</div>
+<p>After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
+LSP ships with configurations for a few language servers, but these need to be enabled before they will start.
+To globally enable a server, open the Command Palette and choose "LSP: Enable Language Server Globally".
+This will add <code>"enabled": true</code> to the corresponding language server setting under the <code>"clients"</code> key in your user-settings file for LSP.
+Your user-settings file is stored at <code>Packages/User/LSP.sublime-settings</code> and can be opened via "Preferences &gt; Package Settings &gt; LSP &gt; Settings" from the menu or with the <code>Preferences: LSP Settings</code> command from the Command Palette.
+If your language server is missing or not configured correctly, you need to add/override further settings which are explained below.</p>
+<p>Below is an example of the <code>LSP.sublime-settings</code> file with configurations for the <a href="https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server">Phpactor</a> server.</p>
+<div class="highlight"><span class="filename">Packages/User/LSP.sublime-settings</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="c1">// General settings</span>
+<span class="w">  </span><span class="nt">&quot;show_diagnostics_panel_on_save&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">// Language server configurations</span>
+<span class="w">  </span><span class="nt">&quot;clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;phpactor&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// enable this configuration</span>
+<span class="w">      </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="c1">// the startup command -- what you would type in a terminal</span>
+<span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;PATH/TO/phpactor&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;language-server&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="c1">// the selector that selects which type of buffers this language server attaches to</span>
+<span class="w">      </span><span class="nt">&quot;selector&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;source.php&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>enabled</td>
+<td>enables a language server (default is disabled)</td>
+</tr>
+<tr>
+<td>command</td>
+<td>must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured)</td>
+</tr>
+<tr>
+<td>env</td>
+<td>dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)</td>
+</tr>
+<tr>
+<td>settings</td>
+<td>per-project settings (equivalent to VS Code's Workspace Settings)</td>
+</tr>
+<tr>
+<td>initializationOptions</td>
+<td>options to send to the server at startup (rarely used)</td>
+</tr>
+<tr>
+<td>selector</td>
+<td>This is <em>the</em> connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/3/selectors.html</td>
+</tr>
+<tr>
+<td>priority_selector</td>
+<td>Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "feature_selector" to <code>text.html</code> for HTML server and <code>source.php</code> to PHP server. Note: when the "feature_selector" is missing, it will be the same as the "document_selector".</td>
+</tr>
+<tr>
+<td>diagnostics_mode</td>
+<td>Set to <code>"workspace"</code> (default is <code>"open_files"</code>) to ignore diagnostics for files that are not within the project (window) folders. If project has no folders then this option has no effect and diagnostics are shown for all files. If the server supports <em>pull diagnostics</em> (<code>diagnosticProvider</code>), this setting also controls whether diagnostics are requested only for open files (<code>"open_files"</code>), or for all files in the project folders (<code>"workspace"</code>).</td>
+</tr>
+<tr>
+<td>tcp_port</td>
+<td>see instructions below</td>
+</tr>
+<tr>
+<td>experimental_capabilities</td>
+<td>Turn on experimental capabilities of a language server. This is a dictionary and differs per language server</td>
+</tr>
+<tr>
+<td>disabled_capabilities</td>
+<td>Disables specific capabilities of a language server. This is a dictionary with key being a capability key and being <code>true</code>. Refer to the <code>ServerCapabilities</code> structure in <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP capabilities</a> to find capabilities that you might want to disable. Note that the value should be <code>true</code> rather than <code>false</code> for capabilites that you want to disable. For example: <code>"signatureHelpProvider": true</code></td>
+</tr>
+</tbody>
+</table>
+<p>You can figure out the scope of the current view with <code>Tools &gt; Developer &gt; Show Scope</code>.</p>
+<h2 id="subprocesses">Subprocesses<a class="headerlink" href="#subprocesses" title="Permanent link">#</a></h2>
+<p>A subprocess is <em>always</em> started. There is no support for connecting to a remote language server.</p>
+<h2 id="transports">Transports<a class="headerlink" href="#transports" title="Permanent link">#</a></h2>
+<p>Communication with a language server subprocess can be achieved in different ways. See the table below for what's possible.</p>
+<h3 id="standard-inputoutput-stdio">Standard input/output (STDIO)<a class="headerlink" href="#standard-inputoutput-stdio" title="Permanent link">#</a></h3>
+<p>The vast majority of language servers can communicate over stdio. To use stdio, leave out <code>tcp_port</code> and use only <code>command</code> in the client configuration.</p>
+<h3 id="tcp-localhost-subprocess-acts-as-a-tcp-server">TCP - localhost - subprocess acts as a TCP server<a class="headerlink" href="#tcp-localhost-subprocess-acts-as-a-tcp-server" title="Permanent link">#</a></h3>
+<p>Some language servers can also act as a TCP server accepting incoming TCP connections. So: the language server subprocess is started by this package, and the subprocess will then open a TCP listener port. The editor can then connect as a client and initiate the communication. To use this mode, set <code>tcp_port</code> to a positive number designating the port to connect to on <code>localhost</code>.</p>
+<p>Optionally in this case, you can omit the <code>command</code> setting if you don't want Sublime LSP to manage the language server process and you'll take care of it yourself. </p>
+<h3 id="tcp-localhost-editor-acts-as-a-tcp-server">TCP - localhost - editor acts as a TCP server<a class="headerlink" href="#tcp-localhost-editor-acts-as-a-tcp-server" title="Permanent link">#</a></h3>
+<p>Some <em>LSP servers</em> instead expect the <em>LSP client</em> to act as a <em>TCP server</em>. The <em>LSP server</em> will then connect as a <em>TCP client</em>, after which the <em>LSP client</em> is expected to initiate the communication. To use this mode, set <code>tcp_port</code> to a negative number designating the port to bind to for accepting new TCP connections.</p>
+<p>To use a fixed port number, use <code>-X</code> as the value for <code>tcp_port</code>, where <code>X</code> is the desired (positive) port number.</p>
+<p>To select a random free port, use <code>-1</code> as the value for <code>tcp_port</code>.</p>
+<p>The port number can be inserted into the server's startup <code>command</code> in your client configuration by using the <code>${port}</code> template variable. It will expand to the absolute value of the bound port.</p>
+<h2 id="per-project-overrides">Per-project overrides<a class="headerlink" href="#per-project-overrides" title="Permanent link">#</a></h2>
+<p>Global LSP settings (which currently are <code>lsp_format_on_save</code>, <code>lsp_format_on_paste</code> and <code>lsp_code_actions_on_save</code>) can be overridden per-project in <code>.sublime-project</code> file:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;folders&quot;</span><span class="p">:</span>
+<span class="w">  </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;lsp_format_on_save&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Also global language server settings can be added or overridden per-project by adding an <code>LSP</code> object within the <code>settings</code> object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the <code>clients</code> key in <code>LSP.sublime-settings</code> or those provided by external helper packages.</p>
+<blockquote>
+<p><strong>Note</strong>: The <code>settings</code> and <code>initializationOptions</code> objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;folders&quot;</span><span class="p">:</span>
+<span class="w">  </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;LSP&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;jsts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;LSP-eslint&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;eslint.autoFixOnSave&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// This property will be merged with original settings for</span>
+<span class="w">                                        </span><span class="c1">// this client (potentially overriding original value).</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discordapp.com/channels/280102180189634562/645268178397560865" target="_blank" rel="noopener" title="discordapp.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.tooltips", "navigation.top"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      
+        <script src="../js/redirect.js"></script>
+      
+    
+  </body>
+</html>

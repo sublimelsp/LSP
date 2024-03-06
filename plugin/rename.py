@@ -266,11 +266,12 @@ class LspSymbolRenameCommand(LspTextCommand):
                 if scheme == "file" and line_content:
                     end_row, end_col_utf16 = parse_range(edit['range']['end'])
                     new_text_rows = edit['newText'].split('\n')
-                    end_col = start_col if end_col_utf16 <= start_col_utf16 else \
-                        utf16_to_code_points(line_content, end_col_utf16)
                     new_line_content = line_content[:start_col] + new_text_rows[0]
-                    if start_row == end_row and len(new_text_rows) == 1 and end_col < len(line_content):
-                        new_line_content += line_content[end_col:]
+                    if start_row == end_row and len(new_text_rows) == 1:
+                        end_col = start_col if end_col_utf16 <= start_col_utf16 else \
+                            utf16_to_code_points(line_content, end_col_utf16)
+                        if end_col < len(line_content):
+                            new_line_content += line_content[end_col:]
                     to_render.append(
                         ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
                 else:

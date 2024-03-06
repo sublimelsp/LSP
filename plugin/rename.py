@@ -70,6 +70,21 @@ def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
     return 'start' in result
 
 
+def utf16_to_code_points(s: str, col: int) -> int:
+    """ Converts from UTF-16 code units to Unicode code points, usable for string slicing. """
+    utf16_len = 0
+    idx = 0
+    for idx, c in enumerate(s):
+        if utf16_len >= col:
+            if utf16_len > col:  # If col is in the middle of a character (emoji), don't advance to the next code point
+                idx -= 1
+            break
+        utf16_len += 1 if ord(c) < 65536 else 2
+    else:
+        idx += 1  # get_line function trims the trailing '\n'
+    return idx
+
+
 # The flow of this command is fairly complicated so it deserves some documentation.
 #
 # When "LSP: Rename" is triggered from the Command Palette, the flow can go one of two ways:
@@ -245,15 +260,17 @@ class LspSymbolRenameCommand(LspTextCommand):
                 start_row, start_col_utf16 = parse_range(edit['range']['start'])
                 line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
                     '<no preview available>'
-                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, line_content.strip() + "\n")
+                start_col = utf16_to_code_points(line_content, start_col_utf16)
+                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
                 reference_document.append(original_line)
                 if scheme == "file" and line_content:
                     end_row, end_col_utf16 = parse_range(edit['range']['end'])
                     new_text_rows = edit['newText'].split('\n')
-                    # TODO: string slicing is not compatible with UTF-16 column numbers
-                    new_line_content = line_content[:start_col_utf16] + new_text_rows[0]
-                    if start_row == end_row and len(new_text_rows) == 1 and end_col_utf16 < len(line_content):
-                        new_line_content += line_content[end_col_utf16:]
+                    end_col = start_col if end_col_utf16 <= start_col_utf16 else \
+                        utf16_to_code_points(line_content, end_col_utf16)
+                    new_line_content = line_content[:start_col] + new_text_rows[0]
+                    if start_row == end_row and len(new_text_rows) == 1 and end_col < len(line_content):
+                        new_line_content += line_content[end_col:]
                     to_render.append(
                         ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, new_line_content.strip() + "\n"))
                 else:

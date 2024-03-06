@@ -272,7 +272,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     if start_row == end_row and len(new_text_rows) == 1 and end_col < len(line_content):
                         new_line_content += line_content[end_col:]
                     to_render.append(
-                        ROWCOL_PREFIX.format(start_row + 1, start_col_utf16 + 1, new_line_content.strip() + "\n"))
+                        ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
                 else:
                     to_render.append(original_line)
         characters = "\n".join(to_render)

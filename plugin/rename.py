@@ -24,15 +24,16 @@ import sublime
 import sublime_plugin
 
 
-BUTTON_HTML = """
+BUTTONS_TEMPLATE = """
 <style>
     html {{
-        padding: 0.2rem;
         background-color: transparent;
+        height: 2rem;
+        padding-top: 0.3rem;
     }}
     a {{
         display: inline;
-        line-height: 1.5rem;
+        line-height: 1.6rem;
         padding-left: 0.6rem;
         padding-right: 0.6rem;
         border-width: 1px;
@@ -40,30 +41,32 @@ BUTTON_HTML = """
         border-color: #fff4;
         border-radius: 4px;
         color: #cccccc;
-        background-color: color({color} min-contrast(white 6.0));
+        background-color: #3f3f3f;
         text-decoration: none;
     }}
     html.light a {{
         border-color: #000a;
         color: white;
-        background-color: color({color_light} min-contrast(white 6.0));
+        background-color: #636363;
+    }}
+    a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
+    }}
+    html.light a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
     }}
 </style>
-<body id='lsp-button'>
-    <a href='{command}'>{label}</a>
+<body id='lsp-buttons'>
+    <a href='{apply}' class='primary'>Apply</a>
+    <a href='{discard}'>Discard</a>
 </body>"""
 
-DISCARD_BUTTON_HTML = BUTTON_HTML.format(
-    label="Discard",
-    command=sublime.command_url('chain', {
-        'commands': [
-            ['hide_panel', {}],
-            ['lsp_hide_rename_buttons', {}]
-        ]
-    }),
-    color="#3f3f3f",
-    color_light="#636363"
-)
+DISCARD_COMMAND = sublime.command_url('chain', {
+    'commands': [
+        ['hide_panel', {}],
+        ['lsp_hide_rename_buttons', {}]
+    ]
+})
 
 
 def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
@@ -247,7 +250,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             return
         to_render = []  # type: List[str]
         reference_document = []  # type: List[str]
-        header_lines = "{} changes across {} files.\n\n \n".format(total_changes, file_count)
+        header_lines = "{} changes across {} files.\n\n".format(total_changes, file_count)
         to_render.append(header_lines)
         reference_document.append(header_lines)
         ROWCOL_PREFIX = " {:>4}:{:<4} {}"
@@ -294,10 +297,9 @@ class LspSymbolRenameCommand(LspTextCommand):
         buttons = pm.rename_panel_buttons
         if not buttons:
             return
-        buttons_position = len(to_render[0]) - 2
-        APPLY_BUTTON_HTML = BUTTON_HTML.format(
-            label="Apply",
-            command=sublime.command_url('chain', {
+        buttons_position = sublime.Region(len(to_render[0]) - 1)
+        BUTTONS_HTML = BUTTONS_TEMPLATE.format(
+            apply=sublime.command_url('chain', {
                 'commands': [
                     [
                         'lsp_apply_workspace_changes',
@@ -313,12 +315,10 @@ class LspSymbolRenameCommand(LspTextCommand):
                     ]
                 ]
             }),
-            color="var(--accent)",
-            color_light="var(--accent)"
+            discard=DISCARD_COMMAND
         )
         buttons.update([
-            sublime.Phantom(sublime.Region(buttons_position), APPLY_BUTTON_HTML, sublime.LAYOUT_INLINE),
-            sublime.Phantom(sublime.Region(buttons_position + 1), DISCARD_BUTTON_HTML, sublime.LAYOUT_INLINE)
+            sublime.Phantom(buttons_position, BUTTONS_HTML, sublime.LAYOUT_BLOCK)
         ])
 
 

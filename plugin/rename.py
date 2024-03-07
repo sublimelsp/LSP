@@ -204,7 +204,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if choice == sublime.DIALOG_YES:
             session.apply_parsed_workspace_edits(changes)
         elif choice == sublime.DIALOG_NO:
-            self._render_rename_panel(changes, total_changes, file_count, session.config.name)
+            self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
     def _on_prepare_result(self, pos: int, response: Optional[PrepareRenameResult]) -> None:
         if response is None:
@@ -234,6 +234,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _render_rename_panel(
         self,
+        workspace_edit: WorkspaceEdit,
         changes_per_uri: WorkspaceChanges,
         total_changes: int,
         file_count: int,
@@ -302,8 +303,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             apply=sublime.command_url('chain', {
                 'commands': [
                     [
-                        'lsp_apply_workspace_changes',
-                        {'session_name': session_name, 'workspace_changes': changes_per_uri}
+                        'lsp_apply_workspace_edit',
+                        {'session_name': session_name, 'edit': workspace_edit}
                     ],
                     [
                         'hide_panel',

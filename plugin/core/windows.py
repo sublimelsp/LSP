@@ -177,16 +177,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
         config = self._needed_config(listener.view)
         if config:
             # debug("found new config for listener", listener)
-            plugin = get_plugin(config.name)
-            if plugin and plugin.should_ignore(listener.view):
-                debug(listener.view, "ignored by plugin", plugin.__name__)
-            else:
-                self._new_listener = listener
-                self.start_async(config, listener.view)
-                return
-        # debug("no new config found for listener", listener)
-        self._new_listener = None
-        self._dequeue_listener_async()
+            self._new_listener = listener
+            self.start_async(config, listener.view)
+        else:
+            # debug("no new config found for listener", listener)
+            self._new_listener = None
+            self._dequeue_listener_async()
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
@@ -236,7 +232,11 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     handled = True
                     break
             if not handled:
-                return config
+                plugin = get_plugin(config.name)
+                if plugin and plugin.should_ignore(view):
+                    debug(view, "ignored by plugin", plugin.__name__)
+                else:
+                    return config
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:

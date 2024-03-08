@@ -61,7 +61,7 @@ BUTTONS_TEMPLATE = """
     <a href='{discard}'>Discard</a>
 </body>"""
 
-DISCARD_COMMAND = sublime.command_url('chain', {
+DISCARD_COMMAND_URL = sublime.command_url('chain', {
     'commands': [
         ['hide_panel', {}],
         ['lsp_hide_rename_buttons', {}]
@@ -316,7 +316,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     ]
                 ]
             }),
-            discard=DISCARD_COMMAND
+            discard=DISCARD_COMMAND_URL
         )
         buttons.update([
             sublime.Phantom(buttons_position, BUTTONS_HTML, sublime.LAYOUT_BLOCK)

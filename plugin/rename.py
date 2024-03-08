@@ -74,7 +74,7 @@ def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
 
 
 def utf16_to_code_points(s: str, col: int) -> int:
-    """ Converts from UTF-16 code units to Unicode code points, usable for string slicing. """
+    """Convert a position from UTF-16 code units to Unicode code points, usable for string slicing."""
     utf16_len = 0
     idx = 0
     for idx, c in enumerate(s):

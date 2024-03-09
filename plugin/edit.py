@@ -1,5 +1,4 @@
 from .core.edit import parse_range
-from .core.edit import parse_workspace_edit
 from .core.logging import debug
 from .core.protocol import TextEdit
 from .core.protocol import WorkspaceEdit
@@ -35,7 +34,7 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
         if not session:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
             return
-        session.apply_parsed_workspace_edits(parse_workspace_edit(edit))
+        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit))
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):

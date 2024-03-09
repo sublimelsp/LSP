@@ -6335,3 +6335,10 @@ CompletionEditRange = __CompletionList_itemDefaults_editRange_Type_1
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range
+
+# Temporary for this PR as long as protocol types are not yet updated
+SnippetTextEdit = TypedDict('SnippetTextEdit', {
+    'range': Range,
+    'snippet': Dict[str, str],
+    'annotationId': NotRequired[ChangeAnnotationIdentifier]
+})

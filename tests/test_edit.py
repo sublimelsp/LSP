@@ -158,12 +158,13 @@ LSP_EDIT_DOCUMENT_CHANGES_3 = {
 class TextEditTests(unittest.TestCase):
 
     def test_parse_from_lsp(self):
-        (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
+        (start, end, newText, is_snippet) = parse_text_edit(LSP_TEXT_EDIT)
         self.assertEqual(newText, 'newText\n')  # Without the \r
         self.assertEqual(start[0], 10)
         self.assertEqual(start[1], 4)
         self.assertEqual(end[0], 11)
         self.assertEqual(end[1], 3)
+        self.assertEqual(is_snippet, False)
 
 
 class WorkspaceEditTests(unittest.TestCase):

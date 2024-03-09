@@ -1,13 +1,18 @@
 from .logging import debug
 from .protocol import Position
+from .protocol import SnippetTextEdit
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
-from .typing import List, Dict, Optional, Tuple
+from .typing import List, Dict, Optional, Tuple, TypeGuard, Union
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[TextEdit], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, SnippetTextEdit]], Optional[int]]]
+
+
+def is_snippet_text_edit(edit: Union[TextEdit, SnippetTextEdit]) -> TypeGuard[SnippetTextEdit]:
+    return 'snippet' in edit and 'newText' not in edit
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
@@ -28,7 +33,7 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
         raw_changes = workspace_edit.get('changes')
         if isinstance(raw_changes, dict):
             for uri, edits in raw_changes.items():
-                changes[uri] = (edits, None)
+                changes[uri] = (edits, None)  # type: ignore
     return changes
 
 

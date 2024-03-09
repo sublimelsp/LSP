@@ -1771,12 +1771,13 @@ class Session(TransportCallbacks):
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
+        sheet = self.window.active_sheet()
         promises = []  # type: List[Promise[None]]
         for uri, (edits, view_version) in changes.items():
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
             )
-        return Promise.all(promises).then(lambda _: None)
+        return Promise.all(promises).then(lambda _: self._check_focus_sheet(sheet))
 
     def _apply_text_edits(
         self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
@@ -1785,6 +1786,10 @@ class Session(TransportCallbacks):
             print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
             return
         apply_text_edits(view, edits, required_view_version=view_version)
+
+    def _check_focus_sheet(self, sheet: Optional[sublime.Sheet]) -> None:
+        if sheet and sheet != self.window.active_sheet():
+            self.window.focus_sheet(sheet)
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:

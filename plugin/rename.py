@@ -28,11 +28,10 @@ BUTTONS_TEMPLATE = """
 <style>
     html {{
         background-color: transparent;
-        height: 2rem;
-        padding-top: 0.3rem;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
     }}
     a {{
-        display: inline;
         line-height: 1.6rem;
         padding-left: 0.6rem;
         padding-right: 0.6rem;
@@ -57,7 +56,7 @@ BUTTONS_TEMPLATE = """
     }}
 </style>
 <body id='lsp-buttons'>
-    <a href='{apply}' class='primary'>Apply</a>
+    <a href='{apply}' class='primary'>Apply</a>&nbsp;
     <a href='{discard}'>Discard</a>
 </body>"""
 

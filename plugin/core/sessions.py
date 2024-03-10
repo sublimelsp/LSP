@@ -938,6 +938,15 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
     @classmethod
+    def should_ignore(cls, view: sublime.View) -> bool:
+        """
+        Exclude a view from being handled by the language server, even if it matches the URI scheme(s) and selector from
+        the configuration. This can be used to, for example, ignore certain file patterns which are listed in a
+        configuration file (e.g. .gitignore).
+        """
+        return False
+
+    @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
@@ -1382,6 +1391,9 @@ class Session(TransportCallbacks):
 
     def can_handle(self, view: sublime.View, scheme: str, capability: Optional[str], inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
+            return False
+        if self._plugin and self._plugin.should_ignore(view):
+            debug(view, "ignored by plugin", self._plugin.__class__.__name__)
             return False
         if scheme == "file":
             file_name = view.file_name()

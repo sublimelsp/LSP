@@ -294,10 +294,6 @@ class LspSymbolRenameCommand(LspTextCommand):
         selection.add(sublime.Region(0, panel.size()))
         panel.run_command('toggle_inline_diff')
         selection.clear()
-        buttons = pm.rename_panel_buttons
-        if not buttons:
-            return
-        buttons_position = sublime.Region(len(to_render[0]) - 1)
         BUTTONS_HTML = BUTTONS_TEMPLATE.format(
             apply=sublime.command_url('chain', {
                 'commands': [
@@ -317,8 +313,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             }),
             discard=DISCARD_COMMAND_URL
         )
-        buttons.update([
-            sublime.Phantom(buttons_position, BUTTONS_HTML, sublime.LAYOUT_BLOCK)
+        pm.update_rename_panel_buttons([
+            sublime.Phantom(sublime.Region(len(to_render[0]) - 1), BUTTONS_HTML, sublime.LAYOUT_BLOCK)
         ])
 
 
@@ -350,8 +346,5 @@ class LspHideRenameButtonsCommand(sublime_plugin.WindowCommand):
         if not wm:
             return
         pm = wm.panel_manager
-        if not pm:
-            return
-        buttons = pm.rename_panel_buttons
-        if buttons:
-            buttons.update([])
+        if pm:
+            pm.update_rename_panel_buttons([])

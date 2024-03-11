@@ -28,7 +28,7 @@ BUTTONS_TEMPLATE = """
 <style>
     html {{
         background-color: transparent;
-        margin-top: 0.5rem;
+        margin-top: 1.5rem;
         margin-bottom: 0.5rem;
     }}
     a {{
@@ -48,10 +48,7 @@ BUTTONS_TEMPLATE = """
         color: white;
         background-color: #636363;
     }}
-    a.primary {{
-        background-color: color(var(--accent) min-contrast(white 6.0));
-    }}
-    html.light a.primary {{
+    a.primary, html.light a.primary {{
         background-color: color(var(--accent) min-contrast(white 6.0));
     }}
 </style>
@@ -250,7 +247,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             return
         to_render = []  # type: List[str]
         reference_document = []  # type: List[str]
-        header_lines = "{} changes across {} files.\n\n".format(total_changes, file_count)
+        header_lines = "{} changes across {} files.\n".format(total_changes, file_count)
         to_render.append(header_lines)
         reference_document.append(header_lines)
         ROWCOL_PREFIX = " {:>4}:{:<4} {}"
@@ -345,6 +342,5 @@ class LspHideRenameButtonsCommand(sublime_plugin.WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        pm = wm.panel_manager
-        if pm:
-            pm.update_rename_panel_buttons([])
+        if wm.panel_manager:
+            wm.panel_manager.update_rename_panel_buttons([])

@@ -1791,7 +1791,7 @@ class Session(TransportCallbacks):
         apply_text_edits(view, edits, required_view_version=view_version)
 
     def _check_select_sheets(self, sheets: List[sublime.Sheet]) -> None:
-        if len(sheets) > 1 == len(self.window.selected_sheets()):
+        if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):
             self.window.select_sheets(sheets)
 
     def _check_focus_sheet(self, sheet: Optional[sublime.Sheet]) -> None:

@@ -1779,8 +1779,8 @@ class Session(TransportCallbacks):
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
             )
         return Promise.all(promises).then(
-            lambda _: self._check_select_sheets(selected_sheets)).then(
-            lambda _: self._check_focus_sheet(active_sheet))
+            lambda _: self._set_selected_sheets(selected_sheets)).then(
+            lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
         self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
@@ -1790,11 +1790,11 @@ class Session(TransportCallbacks):
             return
         apply_text_edits(view, edits, required_view_version=view_version)
 
-    def _check_select_sheets(self, sheets: List[sublime.Sheet]) -> None:
+    def _set_selected_sheets(self, sheets: List[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):
             self.window.select_sheets(sheets)
 
-    def _check_focus_sheet(self, sheet: Optional[sublime.Sheet]) -> None:
+    def _set_focused_sheet(self, sheet: Optional[sublime.Sheet]) -> None:
         if sheet and sheet != self.window.active_sheet():
             self.window.focus_sheet(sheet)
 

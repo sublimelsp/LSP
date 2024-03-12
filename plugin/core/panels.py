@@ -1,6 +1,6 @@
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
-from .typing import Optional
+from .typing import Iterable, Optional
 import sublime
 
 
@@ -38,6 +38,7 @@ class PanelName:
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
+        self._rename_panel_buttons = None  # type: Optional[sublime.PhantomSet]
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
@@ -46,6 +47,7 @@ class PanelManager:
             if panel and panel.is_valid():
                 panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
                 self._window.destroy_output_panel(panel_name)
+        self._rename_panel_buttons = None
 
     def toggle_output_panel(self, panel_type: str) -> None:
         panel_name = "output.{}".format(panel_type)
@@ -91,6 +93,8 @@ class PanelManager:
         panel = self.create_output_panel(name)
         if not panel:
             return None
+        if name == PanelName.Rename:
+            self._rename_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
         settings = panel.settings()
         if result_file_regex:
             settings.set("result_file_regex", result_file_regex)
@@ -121,3 +125,7 @@ class PanelManager:
     def hide_diagnostics_panel_async(self) -> None:
         if self.is_panel_open(PanelName.Diagnostics):
             self.toggle_output_panel(PanelName.Diagnostics)
+
+    def update_rename_panel_buttons(self, phantoms: Iterable[sublime.Phantom]) -> None:
+        if self._rename_panel_buttons:
+            self._rename_panel_buttons.update(phantoms)

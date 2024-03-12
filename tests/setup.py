@@ -210,8 +210,8 @@ class TextDocumentTestCase(DeferrableTestCase):
     def await_run_code_action(self, code_action: Dict[str, Any]) -> Generator:
         promise = YieldPromise()
         sublime.set_timeout_async(
-            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view).then(
-                promise.fulfill))
+            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view)
+            .then(promise.fulfill))
         yield from self.await_promise(promise)
 
     def set_response(self, method: str, response: Any) -> None:

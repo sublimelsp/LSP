@@ -1759,8 +1759,7 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(
-                lambda _: self.execute_command(execute_command, progress=False, view=view))
+            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
@@ -1778,9 +1777,9 @@ class Session(TransportCallbacks):
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
             )
-        return Promise.all(promises).then(
-            lambda _: self._set_selected_sheets(selected_sheets)).then(
-            lambda _: self._set_focused_sheet(active_sheet))
+        return Promise.all(promises) \
+            .then(lambda _: self._set_selected_sheets(selected_sheets)) \
+            .then(lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
         self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
@@ -1926,8 +1925,8 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {})).then(
-            lambda _: self.send_response(Response(request_id, {"applied": True})))
+        self.apply_workspace_edit_async(params.get('edit', {})) \
+            .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""

@@ -47,7 +47,7 @@ def open_basic_file(
     if uri.startswith("file:"):
         filename = session.config.map_server_uri_to_client_path(uri)
     else:
-        prefix = 'res://Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
+        prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)
         filename = sublime.packages_path() + url2pathname(uri[len(prefix):])
         # Window.open_file can only focus and scroll to a location in a resource file if it is already opened

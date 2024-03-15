@@ -62,7 +62,7 @@ class MultiplatformTests(unittest.TestCase):
 
     def test_resource_path(self):
         uri = filename_to_uri(os.path.join(sublime.installed_packages_path(), "Package Control", "dir", "file.py"))
-        self.assertEqual(uri, "res://Packages/Package%20Control/dir/file.py")
+        self.assertEqual(uri, "res:/Packages/Package%20Control/dir/file.py")
 
     def test_buffer_uri(self):
         view = sublime.active_window().active_view()

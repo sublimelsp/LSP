@@ -27,16 +27,16 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Insert/Replace Completions | <kbd>alt</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
 | Next Diagnostic | unbound | `lsp_next_diagnostic`
 | Previous Diagnostic | unbound | `lsp_prev_diagnostic`
-| Rename | unbound | `lsp_symbol_rename`
+| Rename | unbound | `lsp_symbol_rename`<br>Supports optional args `{"preserve_tabs": true | false}` - if set to `true`, the current states of the tabs in the window are preserved when applying the rename. This means that affected files are automatically saved unless they had unsaved changes beforehand, and other files in the workspace with rename modifications but not currently open in the window aren't kept open as new tabs.
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
 | Run Code Lens | unbound | `lsp_code_lens`
 | Run Refactor Action | unbound | `lsp_code_actions`<br>With args: `{"only_kinds": ["refactor"]}`.
 | Run Source Action | unbound | `lsp_code_actions`<br>With args: `{"only_kinds": ["source"]}`.
-| Save All | unbound | `lsp_save_all`<br>Supports optional args `{"only_files": true}` - to ignore buffers which have no associated file on disk.
+| Save All | unbound | `lsp_save_all`<br>Supports optional args `{"only_files": true | false}` - whether to ignore buffers which have no associated file on disk.
 | Show Call Hierarchy | unbound | `lsp_call_hierarchy`
 | Show Type Hierarchy | unbound | `lsp_type_hierarchy`
 | Signature Help | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>space</kbd> | `lsp_signature_help_show`
 | Toggle Diagnostics Panel | <kbd>ctrl</kbd> <kbd>alt</kbd> <kbd>m</kbd> | `lsp_show_diagnostics_panel`
-| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`<br>Supports optional args: `{"enable": true/false}`.
+| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`<br>Supports optional args: `{"enable": true | false}`.
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

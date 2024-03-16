@@ -105,6 +105,7 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
+from .views import UriTabState
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
@@ -1774,20 +1775,22 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
-    def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
+    def apply_workspace_edit_async(self, edit: WorkspaceEdit, preserve_tabs: bool = False) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), preserve_tabs)
 
-    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
+    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, preserve_tabs: bool) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises = []  # type: List[Promise[None]]
         for uri, (edits, view_version) in changes.items():
+            tab_state = self._get_tab_state(uri) if preserve_tabs else UriTabState.DIRTY
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
+                    .then(functools.partial(self._set_tab_state, tab_state))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
@@ -1795,11 +1798,36 @@ class Session(TransportCallbacks):
 
     def _apply_text_edits(
         self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
-    ) -> None:
+    ) -> Optional[sublime.View]:
         if view is None or not view.is_valid():
             print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
-            return
+            return None
         apply_text_edits(view, edits, required_view_version=view_version)
+        return view
+
+    def _get_tab_state(self, uri: DocumentUri) -> UriTabState:
+        scheme, filepath = parse_uri(uri)
+        if scheme == 'file':
+            view = self.window.find_open_file(filepath)
+            if view:
+                return UriTabState.DIRTY if view.is_dirty() else UriTabState.SAVED
+        else:
+            # Only file URIs can be saved (or closed) without a save dialog; "DIRTY" means that nothing needs to be done
+            return UriTabState.DIRTY
+        return UriTabState.UNOPENED
+
+    def _set_tab_state(self, tab_state: UriTabState, view: Optional[sublime.View]) -> None:
+        if not view:
+            return
+        if tab_state is UriTabState.SAVED:
+            view.run_command('save', {'async': True, 'quiet': True})
+        elif tab_state is UriTabState.UNOPENED:
+            # The save operation should be blocking, because we want to close the tab afterwards
+            view.run_command('save', {'async': False, 'quiet': True})
+            if not view.is_dirty():
+                if not view == self.window.active_view():
+                    self.window.focus_view(view)
+                self.window.run_command('close')
 
     def _set_selected_sheets(self, sheets: List[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):

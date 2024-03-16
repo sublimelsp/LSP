@@ -855,7 +855,7 @@ class ClientConfig:
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
         scheme, path = parse_uri(uri)
-        if scheme != "file":
+        if scheme not in ("file", "res"):
             raise ValueError("{}: {} URI scheme is unsupported".format(uri, scheme))
         if self.path_maps:
             for path_map in self.path_maps:

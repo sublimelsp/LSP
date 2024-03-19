@@ -232,7 +232,11 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     handled = True
                     break
             if not handled:
-                return config
+                plugin = get_plugin(config.name)
+                if plugin and plugin.should_ignore(view):
+                    debug(view, "ignored by plugin", plugin.__name__)
+                else:
+                    return config
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:

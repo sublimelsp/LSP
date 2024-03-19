@@ -938,6 +938,15 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
     @classmethod
+    def should_ignore(cls, view: sublime.View) -> bool:
+        """
+        Exclude a view from being handled by the language server, even if it matches the URI scheme(s) and selector from
+        the configuration. This can be used to, for example, ignore certain file patterns which are listed in a
+        configuration file (e.g. .gitignore).
+        """
+        return False
+
+    @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
@@ -1383,6 +1392,9 @@ class Session(TransportCallbacks):
     def can_handle(self, view: sublime.View, scheme: str, capability: Optional[str], inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
             return False
+        if self._plugin and self._plugin.should_ignore(view):
+            debug(view, "ignored by plugin", self._plugin.__class__.__name__)
+            return False
         if scheme == "file":
             file_name = view.file_name()
             if not file_name:
@@ -1759,8 +1771,7 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(
-                lambda _: self.execute_command(execute_command, progress=False, view=view))
+            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
@@ -1771,12 +1782,16 @@ class Session(TransportCallbacks):
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
+        active_sheet = self.window.active_sheet()
+        selected_sheets = self.window.selected_sheets()
         promises = []  # type: List[Promise[None]]
         for uri, (edits, view_version) in changes.items():
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
             )
-        return Promise.all(promises).then(lambda _: None)
+        return Promise.all(promises) \
+            .then(lambda _: self._set_selected_sheets(selected_sheets)) \
+            .then(lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
         self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
@@ -1785,6 +1800,14 @@ class Session(TransportCallbacks):
             print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
             return
         apply_text_edits(view, edits, required_view_version=view_version)
+
+    def _set_selected_sheets(self, sheets: List[sublime.Sheet]) -> None:
+        if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):
+            self.window.select_sheets(sheets)
+
+    def _set_focused_sheet(self, sheet: Optional[sublime.Sheet]) -> None:
+        if sheet and sheet != self.window.active_sheet():
+            self.window.focus_sheet(sheet)
 
     def decode_semantic_token(
             self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
@@ -1914,8 +1937,8 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {})).then(
-            lambda _: self.send_response(Response(request_id, {"applied": True})))
+        self.apply_workspace_edit_async(params.get('edit', {})) \
+            .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""

@@ -38,14 +38,14 @@ class WindowConfigManagerTests(ViewTestCase):
     def test_with_single_config(self):
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
-        self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
+        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
         self.view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",
             scope="text.plain",
             hidden=False
         ))
-        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
+        self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
         self.assertEqual(list(manager.match_view(self.view)), [TEST_CONFIG])
 
     def test_applies_project_settings(self):
@@ -58,14 +58,14 @@ class WindowConfigManagerTests(ViewTestCase):
                 }
             }
         })
-        self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
+        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
         self.view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",
             scope="text.plain",
             hidden=False
         ))
-        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
+        self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
         configs = list(manager.match_view(self.view))
         self.assertEqual(len(configs), 1)
         config = configs[0]

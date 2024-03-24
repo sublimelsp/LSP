@@ -1,12 +1,10 @@
-import sublime
-
-from unittest import TestCase
-from unittest.mock import MagicMock
-from unittesting import ViewTestCase
-
 from LSP.plugin.core.configurations import WindowConfigManager
 from test_mocks import DISABLED_CONFIG
 from test_mocks import TEST_CONFIG
+from unittest import TestCase
+from unittest.mock import MagicMock
+from unittesting import ViewTestCase
+import sublime
 
 
 class GlobalConfigManagerTests(TestCase):

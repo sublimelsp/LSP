@@ -942,7 +942,10 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         Exclude a view from being handled by the language server, even if it matches the URI scheme(s) and selector from
         the configuration. This can be used to, for example, ignore certain file patterns which are listed in a
-        configuration file (e.g. .gitignore).
+        configuration file (e.g. .gitignore). Please note that this also means that no document syncronization
+        notifications (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to the server
+        for ignored views, when they are opened in the editor. Therefore this method should be used with caution for
+        language servers which index all files in the workspace.
         """
         return False
 

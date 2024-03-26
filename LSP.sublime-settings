@@ -223,6 +223,14 @@
     // "region",
   ],
 
+  // Controls if files that were part of a refactoring (e.g. rename) are saved automatically:
+  // "always" - save all affected files
+  // "preserve" - only save files that didn't have unsaved changes beforehand
+  // "preserve_opened" - only save opened files that didn't have unsaved changes beforehand
+  //                     and open other files that were affected by the refactoring
+  // "never" - never save files automatically
+  "refactoring_auto_save": "never",
+
   // --- Debugging ----------------------------------------------------------------------
 
   // Show verbose debug messages in the sublime console.

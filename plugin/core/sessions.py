@@ -83,6 +83,7 @@ from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
+from .settings import userprefs
 from .transports import Transport
 from .transports import TransportCallbacks
 from .types import Capabilities
@@ -95,7 +96,7 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Set, TypeVar, Union  # noqa: E501
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Set, TypeVar, Union, IntFlag  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
@@ -105,7 +106,6 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
-from .views import UriTabState
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
@@ -120,6 +120,11 @@ import weakref
 
 InitCallback = Callable[['Session', bool], None]
 T = TypeVar('T')
+
+
+class ViewStateActions(IntFlag):
+    Close = 2
+    Save = 1
 
 
 def is_workspace_full_document_diagnostic_report(
@@ -1763,7 +1768,8 @@ class Session(TransportCallbacks):
             self.window.status_message("Failed to apply code action: {}".format(code_action))
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
+        is_refactoring = code_action.get('kind') == CodeActionKind.Refactor
+        promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command = {
@@ -1775,22 +1781,23 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
-    def apply_workspace_edit_async(self, edit: WorkspaceEdit, preserve_tabs: bool = False) -> Promise[None]:
+    def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), preserve_tabs)
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
 
-    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, preserve_tabs: bool) -> Promise[None]:
+    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises = []  # type: List[Promise[None]]
+        auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         for uri, (edits, view_version) in changes.items():
-            tab_state = self._get_tab_state(uri) if preserve_tabs else UriTabState.DIRTY
+            view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
-                    .then(functools.partial(self._set_tab_state, tab_state))
+                    .then(functools.partial(self._set_view_state, view_state_actions))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
@@ -1805,29 +1812,52 @@ class Session(TransportCallbacks):
         apply_text_edits(view, edits, required_view_version=view_version)
         return view
 
-    def _get_tab_state(self, uri: DocumentUri) -> UriTabState:
+    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> int:
+        """
+        Determine the required actions for a view after applying a WorkspaceEdit, depending on the
+        "refactoring_auto_save" user setting. Returns a bitwise combination of ViewStateActions.Save and
+        ViewStateActions.Close, or 0 if no action is necessary.
+        """
+        if auto_save == 'never':
+            return 0  # Never save or close automatically
         scheme, filepath = parse_uri(uri)
-        if scheme == 'file':
-            view = self.window.find_open_file(filepath)
-            if view:
-                return UriTabState.DIRTY if view.is_dirty() else UriTabState.SAVED
+        if scheme != 'file':
+            return 0  # Can't save or close unsafed buffers (and other schemes) without user dialog
+        view = self.window.find_open_file(filepath)
+        if view:
+            is_opened = True
+            is_dirty = view.is_dirty()
         else:
-            # Only file URIs can be saved (or closed) without a save dialog; "DIRTY" means that nothing needs to be done
-            return UriTabState.DIRTY
-        return UriTabState.UNOPENED
+            is_opened = False
+            is_dirty = False
+        actions = 0
+        if auto_save == 'always':
+            actions |= ViewStateActions.Save  # Always save
+            if not is_opened:
+                actions |= ViewStateActions.Close  # Close if file was previously closed
+        elif auto_save == 'preserve':
+            if not is_dirty:
+                actions |= ViewStateActions.Save  # Only save if file didn't have unsaved changes
+            if not is_opened:
+                actions |= ViewStateActions.Close  # Close if file was previously closed
+        elif auto_save == 'preserve_opened':
+            if is_opened and not is_dirty:
+                # Only save if file was already open and didn't have unsaved changes, but never close
+                actions |= ViewStateActions.Save
+        return actions
 
-    def _set_tab_state(self, tab_state: UriTabState, view: Optional[sublime.View]) -> None:
+    def _set_view_state(self, actions: int, view: Optional[sublime.View]) -> None:
         if not view:
             return
-        if tab_state is UriTabState.SAVED:
-            view.run_command('save', {'async': True, 'quiet': True})
-        elif tab_state is UriTabState.UNOPENED:
-            # The save operation should be blocking, because we want to close the tab afterwards
-            view.run_command('save', {'async': False, 'quiet': True})
-            if not view.is_dirty():
-                if not view == self.window.active_view():
-                    self.window.focus_view(view)
-                self.window.run_command('close')
+        should_save = bool(actions & ViewStateActions.Save)
+        should_close = bool(actions & ViewStateActions.Close)
+        if should_save and view.is_dirty():
+            # The save operation must be blocking in case the tab should be closed afterwards
+            view.run_command('save', {'async': not should_close, 'quiet': True})
+        if should_close and not view.is_dirty():
+            if view != self.window.active_view():
+                self.window.focus_view(view)
+            self.window.run_command('close')
 
     def _set_selected_sheets(self, sheets: List[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):

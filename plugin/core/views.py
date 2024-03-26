@@ -38,7 +38,7 @@ from .protocol import VersionedTextDocumentIdentifier
 from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
-from .typing import Callable, Optional, Dict, Any, Enum, Iterable, List, Union, Tuple, cast
+from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
 import html
@@ -76,12 +76,6 @@ class DiagnosticSeverityData:
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
-
-
-class UriTabState(Enum):
-    UNOPENED = 1
-    SAVED = 2
-    DIRTY = 3
 
 
 class InvalidUriSchemeException(Exception):

@@ -27,7 +27,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Insert/Replace Completions | <kbd>alt</kbd> <kbd>enter</kbd> | `lsp_commit_completion_with_opposite_insert_mode`
 | Next Diagnostic | unbound | `lsp_next_diagnostic`
 | Previous Diagnostic | unbound | `lsp_prev_diagnostic`
-| Rename | unbound | `lsp_symbol_rename`<br>Supports optional args `{"preserve_tabs": true | false}` - if set to `true`, the current states of the tabs in the window are preserved when applying the rename. This means that affected files are automatically saved unless they had unsaved changes beforehand, and other files in the workspace with rename modifications but not currently open in the window aren't kept open as new tabs.
+| Rename | unbound | `lsp_symbol_rename`
 | Restart Server | unbound | `lsp_restart_server`
 | Run Code Action | unbound | `lsp_code_actions`
 | Run Code Lens | unbound | `lsp_code_lens`

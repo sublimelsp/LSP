@@ -120,7 +120,6 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         new_name: str = "",
         placeholder: str = "",
-        preserve_tabs: bool = False,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> bool:
@@ -153,7 +152,6 @@ class LspSymbolRenameCommand(LspTextCommand):
         edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
-        preserve_tabs: bool = False,
         event: Optional[dict] = None,
         point: Optional[int] = None
     ) -> None:
@@ -164,7 +162,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         prepare_provider_session = self.best_session("renameProvider.prepareProvider")
         if new_name or placeholder or not prepare_provider_session:
             if location is not None and new_name:
-                self._do_rename(location, new_name, preserve_tabs)
+                self._do_rename(location, new_name)
                 return
             # Trigger InputHandler manually.
             raise TypeError("required positional argument")
@@ -173,9 +171,9 @@ class LspSymbolRenameCommand(LspTextCommand):
         params = cast(PrepareRenameParams, text_document_position_params(self.view, location))
         request = Request.prepareRename(params, self.view, progress=True)
         prepare_provider_session.send_request(
-            request, partial(self._on_prepare_result, location, preserve_tabs), self._on_prepare_error)
+            request, partial(self._on_prepare_result, location), self._on_prepare_error)
 
-    def _do_rename(self, position: int, new_name: str, preserve_tabs: bool) -> None:
+    def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)
         if not session:
             return
@@ -186,25 +184,25 @@ class LspSymbolRenameCommand(LspTextCommand):
             "newName": new_name,
         }  # type: RenameParams
         request = Request.rename(params, self.view, progress=True)
-        session.send_request(request, partial(self._on_rename_result_async, session, preserve_tabs))
+        session.send_request(request, partial(self._on_rename_result_async, session))
 
-    def _on_rename_result_async(self, session: Session, preserve_tabs: bool, response: Optional[WorkspaceEdit]) -> None:
+    def _on_rename_result_async(self, session: Session, response: Optional[WorkspaceEdit]) -> None:
         if not response:
             return session.window.status_message('Nothing to rename')
         changes = parse_workspace_edit(response)
         file_count = len(changes.keys())
         if file_count == 1:
-            session.apply_parsed_workspace_edits(changes, preserve_tabs)
+            session.apply_parsed_workspace_edits(changes, True)
             return
         total_changes = sum(map(len, changes.values()))
         message = "Replace {} occurrences across {} files?".format(total_changes, file_count)
         choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
         if choice == sublime.DIALOG_YES:
-            session.apply_parsed_workspace_edits(changes, preserve_tabs)
+            session.apply_parsed_workspace_edits(changes, True)
         elif choice == sublime.DIALOG_NO:
-            self._render_rename_panel(response, changes, total_changes, file_count, session.config.name, preserve_tabs)
+            self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
-    def _on_prepare_result(self, pos: int, preserve_tabs: bool, response: Optional[PrepareRenameResult]) -> None:
+    def _on_prepare_result(self, pos: int, response: Optional[PrepareRenameResult]) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -217,7 +215,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             pos = range_to_region(response["range"], self.view).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
-        args = {"placeholder": placeholder, "point": pos, "preserve_tabs": preserve_tabs}
+        args = {"placeholder": placeholder, "point": pos}
         self.view.run_command("lsp_symbol_rename", args)
 
     def _on_prepare_error(self, error: Any) -> None:
@@ -236,8 +234,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         changes_per_uri: WorkspaceChanges,
         total_changes: int,
         file_count: int,
-        session_name: str,
-        preserve_tabs: bool
+        session_name: str
     ) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
@@ -299,7 +296,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 'commands': [
                     [
                         'lsp_apply_workspace_edit',
-                        {'session_name': session_name, 'edit': workspace_edit, 'preserve_tabs': preserve_tabs}
+                        {'session_name': session_name, 'edit': workspace_edit}
                     ],
                     [
                         'hide_panel',

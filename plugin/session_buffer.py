@@ -168,7 +168,7 @@ class SessionBuffer:
 
     def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
-            self.purge_changes_async(view)
+            self.purge_changes_async(view, suppress_requests=True)
             self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 

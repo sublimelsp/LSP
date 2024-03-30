@@ -398,3 +398,23 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
         yield from self.await_clear_view_and_save()
+
+
+class AnotherDocumentTestCase(TextDocumentTestCase):
+
+    @classmethod
+    def get_test_name(cls) -> str:
+        return "testfile2"
+
+    def test_did_change_before_did_close(self) -> 'Generator':
+        assert self.view
+        self.view.window().run_command("chain", {
+            "commands": [
+                ["insert", {"characters": "TEST"}],
+                ["save", {"async": False}],
+                ["close", {}]
+            ]
+        })
+        yield from self.await_message('textDocument/didChange')
+        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didClose')

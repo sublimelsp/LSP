@@ -402,6 +402,10 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 
 class AnotherDocumentTestCase(TextDocumentTestCase):
 
+    @classmethod
+    def get_test_name(cls) -> str:
+        return "testfile2"
+
     def test_did_change_before_did_close(self) -> 'Generator':
         assert self.view
         self.view.window().run_command("chain", {

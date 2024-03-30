@@ -109,6 +109,19 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             }
         })
 
+    def test_did_change_before_did_close(self) -> 'Generator':
+        assert self.view
+        self.view.window().run_command("chain", {
+            "commands": [
+                ["insert", {"characters": "TEST"}],
+                ["save", {"async": False}],
+                ["close", {}]
+            ]
+        })
+        yield from self.await_message('textDocument/didChange')
+        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didClose')
+
     def test_sends_save_with_purge(self) -> 'Generator':
         assert self.view
         self.view.settings().set("lsp_format_on_save", False)

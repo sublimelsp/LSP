@@ -317,7 +317,7 @@ class SessionBuffer:
             return
         if sync_kind == TextDocumentSyncKind.Full:
             changes = None
-            version = view.change_count() if view.is_valid() else self._pending_changes.version
+            version = view.change_count() or self._pending_changes.version
         else:
             changes = self._pending_changes.changes
             version = self._pending_changes.version

@@ -1,5 +1,6 @@
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.constants import ST_PLATFORM
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentDiagnosticParams
@@ -168,7 +169,8 @@ class SessionBuffer:
 
     def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
-            self.purge_changes_async(view, suppress_requests=True)
+            if ST_PLATFORM != 'linux':  # https://github.com/sublimelsp/LSP/pull/2438
+                self.purge_changes_async(view, suppress_requests=True)
             self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 

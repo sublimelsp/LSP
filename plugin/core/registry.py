@@ -40,7 +40,7 @@ def get_position(view: sublime.View, event: Optional[dict] = None, point: Option
         if x is not None and y is not None:
             return view.window_to_text((x, y))
     try:
-        return view.sel()[0].begin()
+        return view.sel()[0].b
     except IndexError:
         return None
 

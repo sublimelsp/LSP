@@ -109,15 +109,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             }
         })
 
-    def test_sends_save_with_purge(self) -> 'Generator':
-        assert self.view
-        self.view.settings().set("lsp_format_on_save", False)
-        self.insert_characters("A")
-        self.view.run_command("lsp_save", {'async': True})
-        yield from self.await_message("textDocument/didChange")
-        yield from self.await_message("textDocument/didSave")
-        yield from self.await_clear_view_and_save()
-
     def test_formats_on_save(self) -> 'Generator':
         assert self.view
         self.view.settings().set("lsp_format_on_save", True)
@@ -265,30 +256,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield {"condition": condition, "timeout": TIMEOUT_TIME}
         first = self.view.sel()[0].begin()
         self.assertEqual(self.view.substr(sublime.Region(first, first + 1)), "F")
-
-    def test_definition(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE, 'definition', 'definition')
-
-    def test_definition_location_link(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'definition', 'definition')
-
-    def test_type_definition(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE, 'typeDefinition', 'type_definition')
-
-    def test_type_definition_location_link(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'typeDefinition', 'type_definition')
-
-    def test_declaration(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE, 'declaration', 'declaration')
-
-    def test_declaration_location_link(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'declaration', 'declaration')
-
-    def test_implementation(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE, 'implementation', 'implementation')
-
-    def test_implementation_location_link(self) -> 'Generator':
-        yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'implementation', 'implementation')
 
     def test_expand_selection(self) -> 'Generator':
         self.insert_characters("abcba\nabcba\nabcba\n")

@@ -51,6 +51,32 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ
 0123456789
 '''
 
+class SingleDocumentTestCase2(TextDocumentTestCase):
+   def test_did_change(self) -> 'Generator':
+        assert self.view
+        self.maxDiff = None
+        self.insert_characters("A")
+        yield from self.await_message("textDocument/didChange")
+        # multiple changes are batched into one didChange notification
+        self.insert_characters("B\n")
+        self.insert_characters("🙂\n")
+        self.insert_characters("D")
+        promise = YieldPromise()
+        yield from self.await_message("textDocument/didChange", promise)
+        self.assertEqual(promise.result(), {
+            'contentChanges': [
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
+                # Note that this is character offset (2) is correct (UTF-16).
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
+            'textDocument': {
+                'version': self.view.change_count(),
+                'uri': filename_to_uri(TEST_FILE_PATH)
+            }
+        })
+
 
 class SingleDocumentTestCase(TextDocumentTestCase):
 
@@ -83,31 +109,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertTrue(self.view.is_valid())
         self.view.close()
         yield from self.await_message("textDocument/didClose")
-
-    def test_did_change(self) -> 'Generator':
-        assert self.view
-        self.maxDiff = None
-        self.insert_characters("A")
-        yield from self.await_message("textDocument/didChange")
-        # multiple changes are batched into one didChange notification
-        self.insert_characters("B\n")
-        self.insert_characters("🙂\n")
-        self.insert_characters("D")
-        promise = YieldPromise()
-        yield from self.await_message("textDocument/didChange", promise)
-        self.assertEqual(promise.result(), {
-            'contentChanges': [
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
-                # Note that this is character offset (2) is correct (UTF-16).
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
-            'textDocument': {
-                'version': self.view.change_count(),
-                'uri': filename_to_uri(TEST_FILE_PATH)
-            }
-        })
 
     def test_formats_on_save(self) -> 'Generator':
         assert self.view

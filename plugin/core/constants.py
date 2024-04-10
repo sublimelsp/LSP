@@ -11,7 +11,6 @@ SublimeKind = Tuple[int, str, str]
 
 
 ST_VERSION = int(sublime.version())
-ST_PLATFORM = sublime.platform()
 
 # Keys for View.add_regions
 HOVER_HIGHLIGHT_KEY = 'lsp_hover_highlight'

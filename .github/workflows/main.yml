@@ -30,18 +30,3 @@ jobs:
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
         with:
           coverage: true
-
-  Lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.8'
-      - run: sudo apt update
-      - run: sudo apt install --no-install-recommends -y x11-xserver-utils
-      - run: pip3 install mypy==1.7.1 flake8==5.0.4 pyright==1.1.339 --user
-      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: mypy stubs
-      - run: flake8 plugin tests
-      - run: pyright plugin

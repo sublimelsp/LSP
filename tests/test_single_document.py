@@ -1,14 +1,7 @@
-from copy import deepcopy
-from LSP.plugin import apply_text_edits, Request
-from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.core.views import entire_content
-from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
-from setup import TIMEOUT_TIME
 from setup import YieldPromise
 import os
-import sublime
 
 
 try:
@@ -89,4 +82,3 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'uri': filename_to_uri(TEST_FILE_PATH)
             }
         })
-

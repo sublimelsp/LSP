@@ -382,15 +382,11 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
 
     def test_did_change_before_did_close(self) -> 'Generator':
         assert self.view
-        self.view.window().run_command("chain", {
-            "commands": [
-                ["insert", {"characters": "TEST"}],
-                ["save", {"async": False}],
-                ["close", {}]
-            ]
-        })
+        self.insert_characters("TEST")
+        self.view.window().run_command("save", {'async': False})
+        self.view.window().run_command("close", {})
         yield from self.await_message('textDocument/didChange')
-        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didSave')
         yield from self.await_message('textDocument/didClose')
 
 

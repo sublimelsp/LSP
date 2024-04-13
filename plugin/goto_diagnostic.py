@@ -13,8 +13,6 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, Iterator, List, Optional, Tuple, Union
-from .core.typing import cast
 from .core.url import parse_uri, unparse_uri
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
@@ -26,6 +24,8 @@ from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from collections import Counter, OrderedDict
 from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import cast
 import functools
 import os
 import sublime

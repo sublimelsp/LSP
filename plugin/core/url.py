@@ -1,4 +1,4 @@
-from .typing import Any, Tuple
+from typing import Any, Tuple
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url

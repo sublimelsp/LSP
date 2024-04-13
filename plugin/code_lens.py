@@ -2,7 +2,6 @@ from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
 from .core.protocol import Error
-from .core.typing import List, Tuple, Dict, Iterable, Optional, Generator, Union, cast
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
@@ -10,6 +9,8 @@ from .core.views import make_command_link
 from .core.views import range_to_region
 from html import escape as html_escape
 from functools import partial
+from typing import Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import cast
 import itertools
 import sublime
 

@@ -1,10 +1,10 @@
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
-from .typing import Dict, Any, Optional, IO, Protocol, Generic, List, Callable, Tuple, TypeVar, Union
 from contextlib import closing
 from functools import partial
 from queue import Queue
+from typing import Any, Callable, Dict, Generic, IO, List, Optional, Protocol, Tuple, TypeVar, Union
 import http
 import json
 import os

@@ -95,7 +95,7 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Set, TypeVar, Union  # noqa: E501
+from .typing import TypeGuard
 from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
@@ -110,6 +110,8 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
+from typing import Any, Callable, Dict, Generator, List, Optional, Protocol, Set, Tuple, Type, TypeVar, Union
+from typing import cast
 from weakref import WeakSet
 import functools
 import mdpopups

@@ -1,7 +1,7 @@
 from LSP.plugin.core.types import diff
 from LSP.plugin.core.types import basescope2languageid
 from LSP.plugin.core.types import DocumentSelector
-from LSP.plugin.core.typing import List
+from typing import List
 from unittest.mock import MagicMock
 import sublime
 import unittest

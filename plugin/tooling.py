@@ -7,7 +7,6 @@ from .core.transports import Transport
 from .core.transports import TransportCallbacks
 from .core.types import Capabilities
 from .core.types import ClientConfig
-from .core.typing import Any, Callable, cast, Dict, List, Optional, Tuple
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
@@ -17,6 +16,8 @@ from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
+from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import cast
 import json
 import mdpopups
 import os

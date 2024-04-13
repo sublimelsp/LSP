@@ -35,8 +35,6 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
-from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
@@ -56,6 +54,8 @@ from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
+from typing import cast
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools

@@ -25,7 +25,6 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, TYPE_CHECKING
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -37,6 +36,7 @@ from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
+from typing import Any, Deque, Dict, Generator, List, Optional, Tuple, TYPE_CHECKING
 from weakref import ref
 from weakref import WeakSet
 import functools

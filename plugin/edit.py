@@ -3,8 +3,8 @@ from .core.logging import debug
 from .core.protocol import TextEdit
 from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
-from .core.typing import List, Optional, Any, Generator, Iterable, Tuple
 from contextlib import contextmanager
+from typing import Any, Generator, Iterable, List, Optional, Tuple
 import operator
 import re
 import sublime

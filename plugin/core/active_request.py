@@ -3,7 +3,7 @@ from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
 from .protocol import Request
-from .typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 from weakref import ref
 import sublime
 

@@ -3,7 +3,7 @@ from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
-from .typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import sublime
 
 

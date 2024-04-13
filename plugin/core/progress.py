@@ -1,5 +1,5 @@
+from typing import Optional, Union
 import sublime
-from .typing import Optional, Union
 
 
 class ProgressReporter:

@@ -7,8 +7,8 @@ from LSP.plugin.core.protocol import CompletionItemKind
 from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
-from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable, Optional
 from setup import TextDocumentTestCase
+from typing import Any, Callable, Dict, Generator, List, Optional
 from unittest import TestCase
 import sublime
 

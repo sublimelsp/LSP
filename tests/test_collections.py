@@ -1,6 +1,6 @@
-from unittest import TestCase
 from LSP.plugin.core.collections import DottedDict
-from LSP.plugin.core.typing import Any
+from typing import Any
+from unittest import TestCase
 
 
 class DottedDictTests(TestCase):

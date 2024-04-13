@@ -1,8 +1,8 @@
 from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
-from .typing import Callable, Iterator, List, Tuple, TypeVar
 from .url import parse_uri
 from .views import diagnostic_severity
 from collections import OrderedDict
+from typing import Callable, Iterator, List, Tuple, TypeVar
 import functools
 
 ParsedUri = Tuple[str, str]

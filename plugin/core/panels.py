@@ -1,6 +1,6 @@
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
-from .typing import Iterable, Optional
+from typing import Iterable, Optional
 import sublime
 
 

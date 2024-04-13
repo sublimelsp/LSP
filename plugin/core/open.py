@@ -5,10 +5,10 @@ from .promise import ResolveFunc
 from .protocol import DocumentUri
 from .protocol import Range
 from .protocol import UINT_MAX
-from .typing import Dict, Tuple, Optional
-from .typing import cast
 from .url import parse_uri
 from .views import range_to_region
+from typing import Dict, Optional, Tuple
+from typing import cast
 from urllib.parse import unquote, urlparse
 import os
 import re

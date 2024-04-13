@@ -1,13 +1,13 @@
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional, Any
 from .core.views import first_selection_region
 from .core.views import offset_to_point
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import uri_from_view
+from typing import Any, List, Optional
 import sublime
 
 

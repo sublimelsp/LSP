@@ -2,9 +2,9 @@ from .protocol import MessageType
 from .protocol import Response
 from .protocol import ShowMessageRequestParams
 from .sessions import Session
-from .typing import Any, Dict, List
 from .views import show_lsp_popup
 from .views import text2html
+from typing import Any, Dict, List
 import sublime
 
 

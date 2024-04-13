@@ -14,6 +14,7 @@ from .panels import PanelManager
 from .panels import PanelName
 from .protocol import DocumentUri
 from .protocol import Error
+from .protocol import LogMessageParams
 from .protocol import MessageType
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
@@ -414,7 +415,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
 
-    def handle_log_message(self, session: Session, params: Any) -> None:
+    def handle_log_message(self, session: Session, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
             return
         message_type = params['type']

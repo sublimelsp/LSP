@@ -14,6 +14,7 @@ from .panels import PanelManager
 from .panels import PanelName
 from .protocol import DocumentUri
 from .protocol import Error
+from .protocol import MessageType
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -414,7 +415,20 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.panel_manager = None
 
     def handle_log_message(self, session: Session, params: Any) -> None:
-        self.handle_server_message_async(session.config.name, extract_message(params))
+        if not userprefs().log_debug:
+            return
+        message_type = params['type']
+        level = {
+            MessageType.Error: "ERROR",
+            MessageType.Warning: "WARNING",
+            MessageType.Info: "INFO",
+            MessageType.Log: "LOG",
+            MessageType.Debug: "DEBUG"
+        }.get(message_type, "?")
+        message = params['message']
+        print("{}: {}: {}".format(session.config.name, level, message))
+        if message_type == MessageType.Error:
+            self.window.status_message("{}: {}".format(session.config.name, message))
 
     def handle_stderr_log(self, session: Session, message: str) -> None:
         self.handle_server_message_async(session.config.name, message)

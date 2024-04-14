@@ -5,6 +5,7 @@ from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
 from .typing import Any, Optional, Dict, Callable
+import json
 import os
 import sublime
 
@@ -14,11 +15,17 @@ class ClientConfigs:
     def __init__(self) -> None:
         self.all = {}  # type: Dict[str, ClientConfig]
         self.external = {}  # type: Dict[str, ClientConfig]
-        self._listener = None  # type: Optional[Callable[[Optional[str]], None]]
+        self._clients_listener = None  # type: Optional[Callable[[Optional[str]], None]]
+        self._userprefs_listener = None  # type: Optional[Callable[[], None]]
+        self._clients_hash = None  # type: Optional[int]
 
     def _notify_listener(self, config_name: Optional[str] = None) -> None:
-        if callable(self._listener):
-            self._listener(config_name)
+        if callable(self._clients_listener):
+            self._clients_listener(config_name)
+
+    def _notify_userprefs_listener(self) -> None:
+        if callable(self._userprefs_listener):
+            self._userprefs_listener()
 
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
@@ -71,8 +78,14 @@ class ClientConfigs:
         global _settings_obj
         if _settings_obj is None:
             return
+        clients_dict = read_dict_setting(_settings_obj, "clients", {})
+        _clients_hash = hash(json.dumps(clients_dict, sort_keys=True))
+        if _clients_hash == self._clients_hash:
+            self._notify_userprefs_listener()
+            return
+        self._clients_hash = _clients_hash
         clients = DottedDict(read_dict_setting(_settings_obj, "default_clients", {}))
-        clients.update(read_dict_setting(_settings_obj, "clients", {}))
+        clients.update(clients_dict)
         self.all.clear()
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)
@@ -103,8 +116,13 @@ class ClientConfigs:
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listener(self, recipient: Callable[[Optional[str]], None]) -> None:
-        self._listener = recipient
+    def set_listeners(
+        self,
+        clients_listener: Callable[[Optional[str]], None],
+        userprefs_listener: Callable[[], None]
+    ) -> None:
+        self._clients_listener = clients_listener
+        self._userprefs_listener = userprefs_listener
 
 
 _settings_obj = None  # type: Optional[sublime.Settings]

@@ -55,6 +55,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
+        self._diagnostics_data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
         self._active_requests = {}  # type: Dict[int, ActiveRequest]
@@ -300,22 +301,23 @@ class SessionView:
     def present_diagnostics_async(
         self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
-        flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
-        level = userprefs().show_diagnostics_severity_level
-        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(
-                data_per_severity, sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
-            self._draw_diagnostics(
-                data_per_severity, sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
-        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
+        self._diagnostics_data_per_severity = data_per_severity
+        self.redraw_diagnostics_async()
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async(is_view_visible)
 
+    def redraw_diagnostics_async(self) -> None:
+        flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
+        level = userprefs().show_diagnostics_severity_level
+        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
+            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
+
     def _draw_diagnostics(
         self,
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
         severity: int,
         max_severity_level: int,
         flags: int,
@@ -324,7 +326,7 @@ class SessionView:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
-        data = data_per_severity.get((severity, multiline))
+        data = self._diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():

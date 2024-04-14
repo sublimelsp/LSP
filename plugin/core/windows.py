@@ -522,11 +522,26 @@ class WindowRegistry:
     def __init__(self) -> None:
         self._enabled = False
         self._windows = {}  # type: Dict[int, WindowManager]
-        client_configs.set_listener(self._on_client_config_updated)
+        client_configs.set_listeners(self._on_client_config_updated, self._on_userprefs_updated)
 
     def _on_client_config_updated(self, config_name: Optional[str] = None) -> None:
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
+
+    def _on_userprefs_updated(self) -> None:
+        sublime.set_timeout_async(self._on_userprefs_updated_async)
+
+    def _on_userprefs_updated_async(self) -> None:
+        for wm in self._windows.values():
+            wm.on_diagnostics_updated()
+            for session in wm.get_sessions():
+                session.redraw_config_status_async()
+                for sb in session.session_buffers_async():
+                    sb.redraw_document_links_async()
+                    if not userprefs().semantic_highlighting:
+                        sb.clear_semantic_tokens_async()
+                for sv in session.session_views_async():
+                    sv.redraw_diagnostics_async()
 
     def enable(self) -> None:
         self._enabled = True

@@ -205,7 +205,7 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
             "godot-lsp": {
                 "enabled": true,
                 "command": ["/PATH/TO/godot-editor.exe"], // Update the PATH
-                "tcp_port": 6008,
+                "tcp_port": 6005,
                 "selector": "source.gdscript",
             }
         }

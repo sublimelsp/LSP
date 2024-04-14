@@ -1,7 +1,7 @@
 => 2.0.0
 
-⚠️ To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
-Sublime Text once it finishes updating all packages. ⚠️
+⚠️ Sublime Text will need to be restarted **more than once** for things to work properly. ⚠️
 
 # Breaking changes
-- We are transitioning LSP and LSP-* packages from Python 3.3 to Python 3.8.
+
+- LSP and LSP-* packages are transitioning from Python 3.3 to Python 3.8.

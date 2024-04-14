@@ -317,7 +317,7 @@ class SessionBuffer:
             return
         if sync_kind == TextDocumentSyncKind.Full:
             changes = None
-            version = view.change_count() if view.is_valid() else self._pending_changes.version
+            version = view.change_count() or self._pending_changes.version
         else:
             changes = self._pending_changes.changes
             version = self._pending_changes.version
@@ -336,19 +336,22 @@ class SessionBuffer:
         if self._is_saving:
             self._has_changed_during_save = True
             return
-        if suppress_requests or not view.is_valid():
+        if suppress_requests:
             return
-        self._do_color_boxes_async(view, version)
-        self.do_document_diagnostic_async(view, version)
-        if self.session.config.diagnostics_mode == "workspace" and \
-                not self.session.workspace_diagnostics_pending_response and \
-                self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            self._workspace_diagnostics_debouncer_async.debounce(
-                self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
-        self.do_semantic_tokens_async(view)
-        if userprefs().link_highlight_style in ("underline", "none"):
-            self._do_document_link_async(view, version)
-        self.do_inlay_hints_async(view)
+        try:
+            self._do_color_boxes_async(view, version)
+            self.do_document_diagnostic_async(view, version)
+            if self.session.config.diagnostics_mode == "workspace" and \
+                    not self.session.workspace_diagnostics_pending_response and \
+                    self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
+                self._workspace_diagnostics_debouncer_async.debounce(
+                    self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
+            self.do_semantic_tokens_async(view)
+            if userprefs().link_highlight_style in ("underline", "none"):
+                self._do_document_link_async(view, version)
+            self.do_inlay_hints_async(view)
+        except MissingUriError:
+            pass
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         self._is_saving = True

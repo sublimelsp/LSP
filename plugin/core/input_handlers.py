@@ -85,7 +85,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
 class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
     """ A ListInputHandler which can update its items while typing in the input field.
 
-    Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but can override
+    Subclasses of DynamicListInputHandler must not implement the `list_items` method, but can override
     `get_list_items` for the initial list items. The `on_modified` method will be called after a small delay (debounced)
     whenever changes were made to the input text. You can use this to call the `update` method with a list of
     `ListInputItem`s to update the list items.

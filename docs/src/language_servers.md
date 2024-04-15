@@ -627,7 +627,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
-### Solidity
+## Solidity
 
 1. Install [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) (follow instructions in the repo):
 

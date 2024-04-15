@@ -629,14 +629,15 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 
 ## Solidity
 
-1. Install [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) (follow instructions in the repo):
-
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"solidity"` client configuration to the `"clients"`:
+1. Install the [Ethereum](https://packagecontrol.io/packages/Ethereum) package from Package Control for syntax highlighting.
+2. Install [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"solidity"` client configuration to the `"clients"`:
 
     ```jsonc
     {
         "clients": {
             "solidity": {
+                "enabled": true,
                 "command": ["nomicfoundation-solidity-language-server", "--stdio"],
                 "selector": "source.solidity"
             }

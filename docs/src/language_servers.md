@@ -637,7 +637,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     {
         "clients": {
             "solidity": {
-                "command": ["/PATH/TO/node", "PATH/TO/nomicfoundation-solidity-language-server", "--stdio"],
+                "command": ["nomicfoundation-solidity-language-server", "--stdio"],
                 "selector": "source.solidity"
             }
         }

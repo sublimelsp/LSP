@@ -27,7 +27,6 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .core.typing import TypeGuard
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -48,6 +47,7 @@ from .semantic_highlighting import SemanticToken
 from functools import partial
 from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Union
 from typing import cast
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import sublime
 import time

@@ -1,9 +1,9 @@
 from .constants import ST_VERSION
-from .typing import ParamSpec
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from typing import final
+from typing_extensions import ParamSpec
 import functools
 import sublime
 import sublime_plugin

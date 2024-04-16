@@ -1,5 +1,5 @@
-from .typing import NotRequired, StrEnum
-from enum import Enum, IntEnum, IntFlag
+from .typing import NotRequired
+from .typing import Enum, IntEnum, IntFlag, StrEnum
 from functools import total_ordering
 from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, Optional, TypedDict, TypeVar, Union
 import sublime

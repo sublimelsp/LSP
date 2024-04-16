@@ -5,3 +5,30 @@
 # Breaking changes
 
 - LSP and LSP-* packages are transitioning from Python 3.3 to Python 3.8.
+
+# FAQ
+
+### What are the most significant improvements that stem from the 3.3 to 3.8 change?
+
+There are no new features.
+This is an internal LSP codebase change that affect all LSP-* pacakges.
+
+### LSP is broken after the update even if Sublime Text is restarted many times?
+
+If that is the case, check the following:
+
+- ##### Check if `"index_files"` is set to `false` in `Preferences.sublime-settings`
+
+From the command palette open `Preferences: Settings` and see if `"index_files": false` exists.
+If yes, remove that setting.
+
+- ##### Check if `"LSP"` is put in `"ignored_packages"` in `Preferences.sublime-settings`
+
+Check if `LSP` got put in the `"ignored_packages"` during the update.
+If yes, remove `LSP` from that setting.
+
+- ##### Reach for help
+
+Feel free to [open an issue](https://github.com/sublimelsp/LSP/issues/new?assignees=&labels=&projects=&template=bug_report.md&title=) or reach us on [Discord](https://discord.gg/TZ5WN8t)
+if there are problems that arise during the update.
+Be sure to provide logs from the Sublime Text console.

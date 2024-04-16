@@ -3,9 +3,9 @@ from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
-from .typing import IntEnum
 from abc import ABCMeta
 from abc import abstractmethod
+from enum import IntEnum
 from functools import partial
 from typing import Dict, List, Optional, TypeVar
 import html

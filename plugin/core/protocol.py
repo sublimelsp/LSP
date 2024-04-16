@@ -216,6 +216,8 @@ class MessageType(IntEnum):
     """ An information message. """
     Log = 4
     """ A log message. """
+    Debug = 5
+    """ A debug message. """
 
 
 class TextDocumentSyncKind(IntEnum):

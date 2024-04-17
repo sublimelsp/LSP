@@ -17,7 +17,7 @@ ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]],
 P = ParamSpec('P')
 
 
-def debounced(user_function: 'Callable[P, Any]') -> 'Callable[P, None]':
+def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     """ A decorator which debounces the calls to a function.
 
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for

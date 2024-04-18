@@ -108,7 +108,7 @@ class CodeLensView:
         self.view = view
         self._init = False
         self._phantom = sublime.PhantomSet(view, self.CODE_LENS_KEY)
-        self._code_lenses = {}  # type: Dict[Tuple[int, int], List[CodeLensData]]
+        self._code_lenses: Dict[Tuple[int, int], List[CodeLensData]] = {}
 
     def clear(self) -> None:
         self._code_lenses.clear()
@@ -134,10 +134,10 @@ class CodeLensView:
         self._init = True
         responses = [CodeLensData(data, self.view, session_name) for data in response]
         responses.sort(key=lambda c: c.region)
-        result = {
+        result: Dict[Tuple[int, int], List[CodeLensData]] = {
             region.to_tuple(): list(groups)
             for region, groups in itertools.groupby(responses, key=lambda c: c.region)
-        }  # type: Dict[Tuple[int, int], List[CodeLensData]]
+        }
 
         # Fast path: no extra work to do
         if self.is_empty():
@@ -215,7 +215,7 @@ class LspCodeLensCommand(LspTextCommand):
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
-        code_lenses = []  # type: List[CodeLensExtended]
+        code_lenses: List[CodeLensExtended] = []
         for region in self.view.sel():
             for sv in listener.session_views_async():
                 code_lenses.extend(sv.get_resolved_code_lenses_for_region(region))

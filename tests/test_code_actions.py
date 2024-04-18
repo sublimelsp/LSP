@@ -38,7 +38,7 @@ def create_code_action_edit(view: sublime.View, version: int, edits: List[Tuple[
 
 
 def create_command(command_name: str, command_args: Optional[List[Any]] = None) -> Dict[str, Any]:
-    result = {"command": command_name}  # type: Dict[str, Any]
+    result: Dict[str, Any] = {"command": command_name}
     if command_args is not None:
         result["arguments"] = command_args
     return result
@@ -233,7 +233,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
         actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
-        expected = []  # type: List[str]
+        expected: List[str] = []
         self.assertEquals(actual, expected)
 
     def test_matches_exact_action(self) -> None:
@@ -248,7 +248,7 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 
     def test_does_not_match_disabled_action(self) -> None:
         actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
-        expected = []  # type: List[str]
+        expected: List[str] = []
         self.assertEquals(actual, expected)
 
     def test_kind_matching(self) -> None:

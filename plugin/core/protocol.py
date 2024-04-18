@@ -6030,7 +6030,7 @@ class Request(Generic[R]):
         self.method = method
         self.params = params
         self.view = view
-        self.progress = progress  # type: Union[bool, str]
+        self.progress: Union[bool, str] = progress
         self.partial_results = partial_results
 
     @classmethod

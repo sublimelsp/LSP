@@ -54,9 +54,9 @@ class LspFoldCommand(LspTextCommand):
     """
 
     capability = 'foldingRangeProvider'
-    folding_ranges = []  # type: List[FoldingRange]
+    folding_ranges: List[FoldingRange] = []
     change_count = -1
-    folding_region = None  # type: Optional[sublime.Region]
+    folding_region: Optional[sublime.Region] = None
 
     def is_visible(
         self,
@@ -82,7 +82,7 @@ class LspFoldCommand(LspTextCommand):
             self.change_count = -1
             session = self.best_session(self.capability)
             if session:
-                params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+                params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
                     partial(self._handle_response_async, view_change_count)
@@ -155,7 +155,7 @@ class LspFoldCommand(LspTextCommand):
                 pt = selection[0].b
             session = self.best_session(self.capability)
             if session:
-                params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+                params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
                     partial(self._handle_response_manual_async, pt, strict)
@@ -187,7 +187,7 @@ class LspFoldAllCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, kind: Optional[str] = None, event: Optional[dict] = None) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+            params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
             session.send_request_async(
                 Request.foldingRange(params, self.view), partial(self._handle_response_async, kind))
 

@@ -37,10 +37,10 @@ class CodeActionsManager:
     """Manager for per-location caching of code action responses."""
 
     def __init__(self) -> None:
-        self._response_cache = None  # type: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]]
-        self.menu_actions_cache_key = None  # type: Optional[str]
-        self.refactor_actions_cache = []  # type: List[Tuple[str, CodeAction]]
-        self.source_actions_cache = []  # type: List[Tuple[str, CodeAction]]
+        self._response_cache: Optional[Tuple[str, Promise[List[CodeActionsByConfigName]]]] = None
+        self.menu_actions_cache_key: Optional[str] = None
+        self.refactor_actions_cache: List[Tuple[str, CodeAction]] = []
+        self.source_actions_cache: List[Tuple[str, CodeAction]] = []
 
     def request_for_region_async(
         self,
@@ -74,7 +74,7 @@ class CodeActionsManager:
             self.source_actions_cache.clear()
 
         def request_factory(sb: SessionBufferProtocol) -> Optional[Request]:
-            diagnostics = []  # type: List[Diagnostic]
+            diagnostics: List[Diagnostic] = []
             for diag_sb, diags in session_buffer_diagnostics:
                 if diag_sb == sb:
                     diagnostics = diags
@@ -122,7 +122,7 @@ class CodeActionsManager:
             matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
             if not matching_kinds:
                 return None
-            diagnostics = []  # type: List[Diagnostic]
+            diagnostics: List[Diagnostic] = []
             for diag_sb, diags in session_buffer_diagnostics:
                 if diag_sb == sb:
                     diagnostics = diags
@@ -155,13 +155,13 @@ class CodeActionsManager:
                 actions = response_filter(sb, response)
             return (sb.session.config.name, actions)
 
-        tasks = []  # type: List[Promise[CodeActionsByConfigName]]
+        tasks: List[Promise[CodeActionsByConfigName]] = []
         for sb in listener.session_buffers_async('codeActionProvider'):
             session = sb.session
             request = request_factory(sb)
             if request:
                 response_handler = partial(on_response, sb)
-                task = session.send_request_task(request)  # type: Promise[Optional[List[CodeActionOrCommand]]]
+                task: Promise[Optional[List[CodeActionOrCommand]]] = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \
@@ -172,7 +172,7 @@ actions_manager = CodeActionsManager()
 
 
 def get_session_kinds(sb: SessionBufferProtocol) -> List[CodeActionKind]:
-    session_kinds = sb.get_capability('codeActionProvider.codeActionKinds')  # type: Optional[List[CodeActionKind]]
+    session_kinds: Optional[List[CodeActionKind]] = sb.get_capability('codeActionProvider.codeActionKinds')
     return session_kinds or []
 
 
@@ -254,7 +254,7 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         view = self._task_runner.view
-        tasks = []  # type: List[Promise]
+        tasks: List[Promise] = []
         for config_name, code_actions in responses:
             session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
             if session:
@@ -308,7 +308,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _handle_code_actions(self, response: List[CodeActionsByConfigName], run_first: bool = False) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
-        actions = []  # type: List[Tuple[ConfigName, CodeActionOrCommand]]
+        actions: List[Tuple[ConfigName, CodeActionOrCommand]] = []
         for config_name, session_actions in response:
             actions.extend([(config_name, action) for action in session_actions])
         if actions:

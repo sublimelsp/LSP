@@ -106,8 +106,8 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self.command = command
         self.args = args
         self.text = getattr(command, '_text', '')
-        self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
-        self.input_view = None  # type: Optional[sublime.View]
+        self.listener: Optional[sublime_plugin.TextChangeListener] = None
+        self.input_view: Optional[sublime.View] = None
 
     def attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore

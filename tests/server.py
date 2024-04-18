@@ -145,8 +145,8 @@ class SimpleRequest(Request):
 
     def __init__(self) -> None:
         self.cv = asyncio.Condition()
-        self.result = None  # type: PayloadLike
-        self.error = None  # type: Optional[Error]
+        self.result: PayloadLike = None
+        self.error: Optional[Error] = None
 
     async def on_result(self, params: PayloadLike) -> None:
         self.result = params

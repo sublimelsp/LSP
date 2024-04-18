@@ -57,9 +57,9 @@ class ProjectFolders(object):
 
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self.folders = self._window.folders()  # type: List[str]
+        self.folders: List[str] = self._window.folders()
         # Per-folder ignore patterns. The list order matches the order of self.folders.
-        self._folders_exclude_patterns = []  # type: List[List[str]]
+        self._folders_exclude_patterns: List[List[str]] = []
         self._update_exclude_patterns(self.folders)
 
     def _update_exclude_patterns(self, folders: List[str]) -> None:
@@ -120,8 +120,8 @@ class ProjectFolders(object):
 
 
 def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
-    matching_paths = []  # type: List[str]
-    other_paths = []  # type: List[str]
+    matching_paths: List[str] = []
+    other_paths: List[str] = []
 
     for folder in folders:
         is_subpath = is_subpath_of(file_path, folder)

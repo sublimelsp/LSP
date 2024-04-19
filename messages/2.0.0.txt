@@ -11,9 +11,9 @@
 ### What are the most significant improvements that stem from the 3.3 to 3.8 change?
 
 There are no new features.
-This is an internal LSP codebase change that affect all LSP-* pacakges.
+This is an internal LSP codebase change that affects all LSP-* packages.
 
-### LSP is broken after the update even if Sublime Text is restarted many times?
+### LSP is broken after the update even if Sublime Text is restarted many times
 
 If that is the case, follow these steps:
 

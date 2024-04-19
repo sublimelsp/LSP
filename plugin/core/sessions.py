@@ -1815,8 +1815,8 @@ class Session(TransportCallbacks):
 
     def decode_semantic_token(
         self,
-        types_legend: Tuple[str],
-        modifiers_legend: Tuple[str],
+        types_legend: Tuple[str, ...],
+        modifiers_legend: Tuple[str, ...],
         token_type_encoded: int,
         token_modifiers_encoded: int
     ) -> Tuple[str, List[str], Optional[str]]:

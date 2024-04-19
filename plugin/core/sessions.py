@@ -1814,9 +1814,12 @@ class Session(TransportCallbacks):
             self.window.focus_sheet(sheet)
 
     def decode_semantic_token(
-            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
-        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        self,
+        types_legend: Tuple[List[str]],
+        modifiers_legend: Tuple[List[str]],
+        token_type_encoded: int,
+        token_modifiers_encoded: int
+    ) -> Tuple[str, List[str], Optional[str]]:
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 

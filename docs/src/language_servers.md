@@ -205,7 +205,7 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
             "godot-lsp": {
                 "enabled": true,
                 "command": ["/PATH/TO/godot-editor.exe"], // Update the PATH
-                "tcp_port": 6008,
+                "tcp_port": 6005, // Older versions of Godot(3.x) use port 6008
                 "selector": "source.gdscript",
             }
         }
@@ -668,6 +668,24 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
                         "shellscript": "shellcheck",
                     }
                 }
+            }
+        }
+    }
+    ```
+
+## Solidity
+
+1. Install the [Ethereum](https://packagecontrol.io/packages/Ethereum) package from Package Control for syntax highlighting.
+2. Install the [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) language server.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"solidity"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "solidity": {
+                "enabled": true,
+                "command": ["nomicfoundation-solidity-language-server", "--stdio"],
+                "selector": "source.solidity"
             }
         }
     }

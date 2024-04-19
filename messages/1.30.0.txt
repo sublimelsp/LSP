@@ -1,0 +1,21 @@
+=> 1.30.0
+
+# Breaking changes
+
+- [godot-editor](https://lsp.sublimetext.io/language_servers/#gdscript-godot-engine) client configuration default `tcp_port` value is now `6005` instead of `6008`. Older versions of Godot(3.x) use port `6008`. (#2447) (Предраг Николић)
+
+# Fixes and Improvements
+
+- Keep tab selection and focus when applying WorkspaceEdit (#2431) (Janos Wortmann)
+- Enhancements for the rename panel (#2428) (Janos Wortmann)
+- Fix URI format for res scheme (#2432) (Janos Wortmann)
+- If `"log_debug"` is enabled, `window/logMessage` will be printed to the Sublime Text Console instead of LSP log panel (#2444) (Janos Wortmann)
+
+# Documentation
+
+- docs: Add Toit (#2425) (Serjan Nasredin)
+- docs: Add Solidity (#2383) (Nikita Kozlov)
+
+# Plugin API changes
+
+- Allow plugins to ignore certain views (#2410) (Janos Wortmann)

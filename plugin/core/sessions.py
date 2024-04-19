@@ -46,6 +46,7 @@ from .protocol import InitializeResult
 from .protocol import InsertTextMode
 from .protocol import Location
 from .protocol import LocationLink
+from .protocol import LogMessageParams
 from .protocol import LSPAny
 from .protocol import LSPErrorCodes
 from .protocol import LSPObject
@@ -1918,7 +1919,7 @@ class Session(TransportCallbacks):
         """handles the window/showMessage notification"""
         self.call_manager('handle_show_message', self, params)
 
-    def m_window_logMessage(self, params: Any) -> None:
+    def m_window_logMessage(self, params: LogMessageParams) -> None:
         """handles the window/logMessage notification"""
         self.call_manager('handle_log_message', self, params)
 

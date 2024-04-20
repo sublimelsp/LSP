@@ -96,7 +96,6 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, TypeGuard, Protocol, Set, TypeVar, Union  # noqa: E501
 from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
@@ -111,6 +110,10 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
+from enum import IntEnum
+from typing import Any, Callable, Dict, Generator, List, Optional, Protocol, Set, Tuple, Type, TypeVar, Union
+from typing import cast
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -238,23 +241,29 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+def _enum_to_list(e: Type[IntEnum]) -> List[int]:
+    return [v.value for v in e]
+
+
 def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
     return [v for k, v in c.__dict__.items() if not k.startswith('_')]
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
                           config: ClientConfig) -> InitializeParams:
-    completion_kinds = cast(List[CompletionItemKind], _enum_like_class_to_list(CompletionItemKind))
-    symbol_kinds = cast(List[SymbolKind], _enum_like_class_to_list(SymbolKind))
-    diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_like_class_to_list(DiagnosticTag))
-    completion_tag_value_set = cast(List[CompletionItemTag], _enum_like_class_to_list(CompletionItemTag))
-    symbol_tag_value_set = cast(List[SymbolTag], _enum_like_class_to_list(SymbolTag))
+    completion_kinds = cast(List[CompletionItemKind], _enum_to_list(CompletionItemKind))
+    symbol_kinds = cast(List[SymbolKind], _enum_to_list(SymbolKind))
+    diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_to_list(DiagnosticTag))
+    completion_tag_value_set = cast(List[CompletionItemTag], _enum_to_list(CompletionItemTag))
+    symbol_tag_value_set = cast(List[SymbolTag], _enum_to_list(SymbolTag))
     semantic_token_types = cast(List[str], _enum_like_class_to_list(SemanticTokenTypes))
     if config.semantic_tokens is not None:
         for token_type in config.semantic_tokens.keys():
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
     semantic_token_modifiers = cast(List[str], _enum_like_class_to_list(SemanticTokenModifiers))
+    supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
+    folding_range_kind_value_set = cast(List[FoldingRangeKind], _enum_like_class_to_list(FoldingRangeKind))
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities: GeneralClientCapabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -280,14 +289,14 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         },
         "hover": {
             "dynamicRegistration": True,
-            "contentFormat": [MarkupKind.Markdown, MarkupKind.PlainText]
+            "contentFormat": supported_markup_kinds
         },
         "completion": {
             "dynamicRegistration": True,
             "completionItem": {
                 "snippetSupport": True,
                 "deprecatedSupport": True,
-                "documentationFormat": [MarkupKind.Markdown, MarkupKind.PlainText],
+                "documentationFormat": supported_markup_kinds,
                 "tagSupport": {
                     "valueSet": completion_tag_value_set
                 },
@@ -296,14 +305,14 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 },
                 "insertReplaceSupport": True,
                 "insertTextModeSupport": {
-                    "valueSet": [InsertTextMode.AdjustIndentation]
+                    "valueSet": cast(List[InsertTextMode], [InsertTextMode.AdjustIndentation.value])
                 },
                 "labelDetailsSupport": True,
             },
             "completionItemKind": {
                 "valueSet": completion_kinds
             },
-            "insertTextMode": InsertTextMode.AdjustIndentation,
+            "insertTextMode": cast(InsertTextMode, InsertTextMode.AdjustIndentation.value),
             "completionList": {
                 "itemDefaults": ["editRange", "insertTextFormat", "data"]
             }
@@ -313,7 +322,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "contextSupport": True,
             "signatureInformation": {
                 "activeParameterSupport": True,
-                "documentationFormat": [MarkupKind.Markdown, MarkupKind.PlainText],
+                "documentationFormat": supported_markup_kinds,
                 "parameterInformation": {
                     "labelOffsetSupport": True
                 }
@@ -388,7 +397,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rename": {
             "dynamicRegistration": True,
             "prepareSupport": True,
-            "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
+            "prepareSupportDefaultBehavior": cast(
+                PrepareSupportDefaultBehavior, PrepareSupportDefaultBehavior.Identifier.value),
         },
         "colorProvider": {
             "dynamicRegistration": True  # exceptional
@@ -412,11 +422,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {
-                "valueSet": [
-                    FoldingRangeKind.Comment,
-                    FoldingRangeKind.Imports,
-                    FoldingRangeKind.Region
-                ]
+                "valueSet": folding_range_kind_value_set
             }
         },
         "codeLens": {

@@ -15,11 +15,12 @@ from .core.protocol import WorkspaceSymbol
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
-from .core.typing import Any, Dict, List, NotRequired, Optional, Tuple, TypedDict, TypeGuard, Union
-from .core.typing import cast
 from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import text_document_identifier
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import cast
+from typing_extensions import NotRequired, TypeGuard
 import functools
 import os
 import sublime

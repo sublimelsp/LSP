@@ -1,8 +1,8 @@
 """
 Module with additional collections.
 """
-from .typing import Optional, Dict, Any, Generator
 from copy import deepcopy
+from typing import Any, Dict, Generator, Optional
 import sublime
 
 

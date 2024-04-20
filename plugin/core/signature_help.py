@@ -2,11 +2,11 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
-from .typing import Optional, List
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
+from typing import List, Optional
 import functools
 import html
 import re

@@ -19,7 +19,6 @@ from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Callable, List, Dict, Optional, Generator, Tuple, Union, cast, Any, TypeGuard
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
@@ -27,6 +26,9 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import cast
+from typing_extensions import TypeGuard
 import functools
 import html
 import sublime

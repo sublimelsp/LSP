@@ -1,8 +1,8 @@
 from .protocol import FileChangeType
 from .protocol import WatchKind
-from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
+from typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 
 DEFAULT_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 

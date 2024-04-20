@@ -18,13 +18,13 @@ from .core.sessions import Session
 from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
-from .core.typing import Callable, List, Optional, TypedDict, Union
-from .core.typing import cast
 from .core.views import make_command_link
 from .core.views import text_document_position_params
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
+from typing import Callable, List, Optional, TypedDict, Union
+from typing import cast
 import sublime
 import weakref
 

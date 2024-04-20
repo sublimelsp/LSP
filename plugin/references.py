@@ -7,13 +7,13 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, List, Literal, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
+from typing import Dict, List, Literal, Optional, Tuple
 import functools
 import linecache
 import os

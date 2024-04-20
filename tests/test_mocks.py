@@ -3,7 +3,7 @@ from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.protocol import Response
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import List, Any, Callable
+from typing import Any, Callable, List
 
 
 TEST_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None)

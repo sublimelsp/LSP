@@ -11,7 +11,6 @@ from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Callable, Optional, Tuple, TypeGuard, Union, cast
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
@@ -21,6 +20,9 @@ from .save_command import SaveTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import cast
+from typing_extensions import TypeGuard
 import sublime
 
 ConfigName = str

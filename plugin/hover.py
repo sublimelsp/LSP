@@ -20,7 +20,6 @@ from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
@@ -39,6 +38,7 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 from urllib.parse import urlparse
 import html
 import mdpopups

@@ -2,10 +2,10 @@ from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKind
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
-from .typing import cast
 from .url import filename_to_uri
 from .url import parse_uri
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple, TypedDict, TypeVar, Union
+from typing import cast
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR

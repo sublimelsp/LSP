@@ -1,9 +1,9 @@
 from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.protocol import DiagnosticTag
 from LSP.plugin.core.protocol import PublishDiagnosticsParams
-from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
+from typing import Generator
 import sublime
 
 

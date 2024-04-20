@@ -2,13 +2,13 @@ from .logging import debug
 from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
-from .typing import Generator, List, Optional, Set, Dict, Deque
 from .url import parse_uri
 from .workspace import enable_in_project, disable_in_project
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
 from datetime import datetime, timedelta
+from typing import Deque, Dict, Generator, List, Optional, Set
 from weakref import WeakSet
 import sublime
 

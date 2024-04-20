@@ -3,7 +3,7 @@ from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentHighlightKind
 from .protocol import SymbolKind
-from .typing import Dict, Tuple
+from typing import Dict, Tuple
 import sublime
 
 

@@ -1,5 +1,5 @@
+from typing import Optional
 import sublime
-from .typing import Optional
 
 
 class CSS:

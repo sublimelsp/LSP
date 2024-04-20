@@ -1,5 +1,6 @@
 from .core.registry import LspTextCommand
-from .core.typing import Any, List, Tuple, cast
+from typing import Any, List, Tuple
+from typing import cast
 import sublime
 import os
 

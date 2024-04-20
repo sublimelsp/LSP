@@ -4,12 +4,12 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.sessions import Session, method_to_capability
-from .core.typing import List, Optional, Union
 from .core.views import get_symbol_kind_from_scope
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from .locationpicker import open_location_async
 from functools import partial
+from typing import List, Optional, Union
 import sublime
 
 

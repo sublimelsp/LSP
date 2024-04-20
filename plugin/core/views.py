@@ -38,9 +38,10 @@ from .protocol import VersionedTextDocumentIdentifier
 from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
-from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import cast
 import html
 import itertools
 import linecache

@@ -5,10 +5,10 @@ from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import UINT_MAX
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional
 from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
+from typing import List, Optional
 import sublime
 
 

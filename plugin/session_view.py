@@ -16,12 +16,12 @@ from .core.protocol import Request
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
+from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 from weakref import ref
 from weakref import WeakValueDictionary
 import functools

@@ -1,7 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
 from LSP.plugin.core.protocol import Point, Range
-from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple, Optional
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
@@ -9,6 +8,7 @@ from LSP.plugin.session_view import SessionView
 from LSP.plugin.core.views import versioned_text_document_identifier
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
+from typing import Any, Dict, Generator, List, Optional, Tuple
 import unittest
 import sublime
 

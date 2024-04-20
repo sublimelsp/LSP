@@ -630,6 +630,8 @@ class SessionBuffer:
         scope_regions = dict()  # type: Dict[int, Tuple[str, List[sublime.Region]]]
         prev_line = 0
         prev_col_utf16 = 0
+        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -644,7 +646,7 @@ class SessionBuffer:
             prev_line = line
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self.session.decode_semantic_token(
-                token_type_encoded, token_modifiers_encoded)
+                types_legend, modifiers_legend, token_type_encoded, token_modifiers_encoded)
             if scope is None:
                 # We can still use the meta scope and draw highlighting regions for custom token types if there is a
                 # color scheme rule for this particular token type.

@@ -4,12 +4,12 @@ from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, ClientStates
-from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from unittesting import DeferrableTestCase
 import sublime
 

@@ -1,8 +1,8 @@
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Any, Callable, Dict, List, Optional, Type
 from abc import ABCMeta, abstractmethod
 from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Type
 import sublime
 import sublime_plugin
 
@@ -68,7 +68,7 @@ class SaveTasksRunner:
         self._text_command = text_command
         self._tasks = tasks
         self._on_tasks_completed = on_complete
-        self._pending_tasks = []  # type: List[SaveTask]
+        self._pending_tasks: List[SaveTask] = []
         self._canceled = False
 
     def run(self) -> None:
@@ -107,7 +107,7 @@ class LspSaveCommand(LspTextCommand):
     A command used as a substitute for native save command. Runs code actions and document
     formatting before triggering the native save command.
     """
-    _tasks = []  # type: List[Type[SaveTask]]
+    _tasks: List[Type[SaveTask]] = []
 
     @classmethod
     def register_task(cls, task: Type[SaveTask]) -> None:
@@ -116,7 +116,7 @@ class LspSaveCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._save_tasks_runner = None  # type: Optional[SaveTasksRunner]
+        self._save_tasks_runner: Optional[SaveTasksRunner] = None
 
     def run(self, edit: sublime.Edit, **kwargs: Dict[str, Any]) -> None:
         if self._save_tasks_runner:

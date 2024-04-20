@@ -3,7 +3,6 @@ from .protocol import Location
 from .protocol import LocationLink
 from .sessions import AbstractViewListener
 from .sessions import Session
-from .typing import Optional, Any, Generator, Iterable, List, Union
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -12,6 +11,7 @@ from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
+from typing import Any, Generator, Iterable, List, Optional, Union
 import operator
 import sublime
 import sublime_plugin
@@ -238,7 +238,7 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     wm = windows.lookup(view.window())
     if not wm:
         return
-    diagnostics = []  # type: List[Diagnostic]
+    diagnostics: List[Diagnostic] = []
     for session in wm.get_sessions():
         diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:

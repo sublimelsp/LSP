@@ -1,5 +1,5 @@
+from typing import Optional
 import sublime
-from .typing import Optional
 
 
 class CSS:
@@ -15,7 +15,7 @@ class CSS:
         self.annotations_classname = "lsp_annotation"
 
 
-_css = None  # type: Optional[CSS]
+_css: Optional[CSS] = None
 
 
 def load() -> None:

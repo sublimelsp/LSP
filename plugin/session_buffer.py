@@ -27,8 +27,6 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
-from .core.typing import Any, Callable, Iterable, Optional, List, Protocol, Set, Dict, Tuple, TypeGuard, Union
-from .core.typing import cast
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -47,6 +45,9 @@ from .inlay_hint import inlay_hint_to_phantom
 from .inlay_hint import LspToggleInlayHintsCommand
 from .semantic_highlighting import SemanticToken
 from functools import partial
+from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Union
+from typing import cast
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import sublime
 import time
@@ -85,13 +86,13 @@ class SemanticTokensData:
         'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
 
     def __init__(self) -> None:
-        self.data = []  # type: List[int]
-        self.result_id = None  # type: Optional[str]
-        self.active_region_keys = set()  # type: Set[int]
-        self.tokens = []  # type: List[SemanticToken]
+        self.data: List[int] = []
+        self.result_id: Optional[str] = None
+        self.active_region_keys: Set[int] = set()
+        self.tokens: List[SemanticToken] = []
         self.view_change_count = 0
         self.needs_refresh = False
-        self.pending_response = None  # type: Optional[int]
+        self.pending_response: Optional[int] = None
 
 
 class SessionBuffer:
@@ -109,25 +110,25 @@ class SessionBuffer:
         # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
         self.capabilities = Capabilities()
         self._session = session_view.session
-        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
+        self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
         self._session_views.add(session_view)
         self._last_known_uri = uri
         self._id = buffer_id
-        self._pending_changes = None  # type: Optional[PendingChanges]
-        self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
+        self._pending_changes: Optional[PendingChanges] = None
+        self.diagnostics: List[Tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
-        self._document_diagnostic_pending_response = None  # type: Optional[int]
+        self._document_diagnostic_pending_response: Optional[int] = None
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
-        self._document_links = []  # type: List[DocumentLink]
+        self._document_links: List[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
-        self._semantic_region_keys = {}  # type: Dict[str, int]
+        self._semantic_region_keys: Dict[str, int] = {}
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
@@ -228,7 +229,7 @@ class SessionBuffer:
         options: Dict[str, Any]
     ) -> None:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
-        view = None  # type: Optional[sublime.View]
+        view: Optional[sublime.View] = None
         for sv in self.session_views:
             sv.on_capability_added_async(registration_id, capability_path, options)
             if view is None:
@@ -461,7 +462,7 @@ class SessionBuffer:
         if self.has_capability("diagnosticProvider"):
             if self._document_diagnostic_pending_response:
                 self.session.cancel_request(self._document_diagnostic_pending_response)
-            params = {'textDocument': text_document_identifier(view)}  # type: DocumentDiagnosticParams
+            params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
             identifier = self.get_capability("diagnosticProvider.identifier")
             if identifier:
                 params['identifier'] = identifier
@@ -518,8 +519,8 @@ class SessionBuffer:
         if version != change_count:
             return
         diagnostics_version = version
-        diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
+        diagnostics: List[Tuple[Diagnostic, sublime.Region]] = []
+        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
             region = range_to_region(diagnostic["range"], view)
             severity = diagnostic_severity(diagnostic)
@@ -574,7 +575,7 @@ class SessionBuffer:
         if self.semantic_tokens.pending_response:
             self.session.cancel_request(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
-        params = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
+        params: Dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
@@ -633,9 +634,11 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions = dict()  # type: Dict[int, Tuple[str, List[sublime.Region]]]
+        scope_regions: Dict[int, Tuple[str, List[sublime.Region]]] = dict()
         prev_line = 0
         prev_col_utf16 = 0
+        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -650,7 +653,7 @@ class SessionBuffer:
             prev_line = line
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self.session.decode_semantic_token(
-                token_type_encoded, token_modifiers_encoded)
+                types_legend, modifiers_legend, token_type_encoded, token_modifiers_encoded)
             if scope is None:
                 # We can still use the meta scope and draw highlighting regions for custom token types if there is a
                 # color scheme rule for this particular token type.
@@ -706,10 +709,10 @@ class SessionBuffer:
         if not LspToggleInlayHintsCommand.are_enabled(view.window()):
             self.remove_all_inlay_hints()
             return
-        params = {
+        params: InlayHintParams = {
             "textDocument": text_document_identifier(view),
             "range": entire_content_range(view)
-        }  # type: InlayHintParams
+        }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
     def _on_inlay_hints_async(self, response: Union[List[InlayHint], None]) -> None:

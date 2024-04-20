@@ -7,10 +7,10 @@ from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.protocol import WatchKind
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import sublime_pattern_to_glob
-from LSP.plugin.core.typing import Generator, List, Optional
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
+from typing import Generator, List, Optional
 import sublime
 import unittest
 
@@ -32,7 +32,7 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers = []  # type: List[TestFileWatcher]
+    _active_watchers: List['TestFileWatcher'] = []
 
     @classmethod
     def create(

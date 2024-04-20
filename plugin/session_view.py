@@ -16,18 +16,18 @@ from .core.protocol import Request
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
+from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 from weakref import ref
 from weakref import WeakValueDictionary
 import functools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]  # type: List[int]
+DIAGNOSTIC_TAG_VALUES: List[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
 
 
 class TagData:
@@ -50,14 +50,14 @@ class SessionView:
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
     CODE_ACTIONS_KEY = "lsp_code_action"
 
-    _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
+    _session_buffers: 'WeakValueDictionary[Tuple[int, int], SessionBuffer]' = WeakValueDictionary()
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
         self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
-        self._active_requests = {}  # type: Dict[int, ActiveRequest]
+        self._active_requests: Dict[int, ActiveRequest] = {}
         self._listener = ref(listener)
         self._code_lenses = CodeLensView(self._view)
         self.code_lenses_needs_refresh = False
@@ -81,7 +81,7 @@ class SessionView:
         self._setup_auto_complete_triggers(settings)
 
     def on_before_remove(self) -> None:
-        settings = self.view.settings()  # type: sublime.Settings
+        settings: sublime.Settings = self.view.settings()
         self._clear_auto_complete_triggers(settings)
         self._code_lenses.clear_view()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
@@ -133,7 +133,7 @@ class SessionView:
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
-        keys = []  # type: List[str]
+        keys: List[str] = []
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
@@ -190,7 +190,7 @@ class SessionView:
         settings = self.view.settings()
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
-            new_triggers = []  # type: List[Dict[str, str]]
+            new_triggers: List[Dict[str, str]] = []
             name = self.session.config.name
             for trigger in triggers:
                 if not isinstance(trigger, dict):
@@ -223,7 +223,7 @@ class SessionView:
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
             trigger["registration_id"] = registration_id
-        triggers = settings.get(self.AC_TRIGGERS_KEY) or []  # type: List[Dict[str, str]]
+        triggers: List[Dict[str, str]] = settings.get(self.AC_TRIGGERS_KEY) or []
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
@@ -404,7 +404,7 @@ class SessionView:
             return
         if self._code_lenses.is_empty():
             return
-        promises = [Promise.resolve(None)]  # type: List[Promise[None]]
+        promises: List[Promise[None]] = [Promise.resolve(None)]
         if self.get_capability_async('codeLensProvider.resolveProvider'):
             for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
                 request = Request("codeLens/resolve", code_lens.data, self.view)

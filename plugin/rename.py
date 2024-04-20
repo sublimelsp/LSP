@@ -11,14 +11,15 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
-from .core.typing import Any, Optional, List, TypeGuard
-from .core.typing import cast
 from .core.url import parse_uri
 from .core.views import first_selection_region
 from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from functools import partial
+from typing import Any, List, Optional
+from typing import cast
+from typing_extensions import TypeGuard
 import os
 import sublime
 import sublime_plugin
@@ -178,11 +179,11 @@ class LspSymbolRenameCommand(LspTextCommand):
         if not session:
             return
         position_params = text_document_position_params(self.view, position)
-        params = {
+        params: RenameParams = {
             "textDocument": position_params["textDocument"],
             "position": position_params["position"],
             "newName": new_name,
-        }  # type: RenameParams
+        }
         request = Request.rename(params, self.view, progress=True)
         session.send_request(request, partial(self._on_rename_result_async, session))
 
@@ -245,8 +246,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         panel = pm.ensure_rename_panel()
         if not panel:
             return
-        to_render = []  # type: List[str]
-        reference_document = []  # type: List[str]
+        to_render: List[str] = []
+        reference_document: List[str] = []
         header_lines = "{} changes across {} files.\n".format(total_changes, file_count)
         to_render.append(header_lines)
         reference_document.append(header_lines)

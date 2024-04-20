@@ -1,6 +1,6 @@
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
-from .typing import Iterable, Optional
+from typing import Iterable, Optional
 import sublime
 
 
@@ -38,7 +38,7 @@ class PanelName:
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self._rename_panel_buttons = None  # type: Optional[sublime.PhantomSet]
+        self._rename_panel_buttons: Optional[sublime.PhantomSet] = None
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):

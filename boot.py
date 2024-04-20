@@ -36,7 +36,6 @@ from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
 from .plugin.core.tree_view import LspCollapseTreeItemCommand
 from .plugin.core.tree_view import LspExpandTreeItemCommand
-from .plugin.core.typing import Any, Optional, List, Type, Dict
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
 from .plugin.documents import DocumentSyncListener
@@ -86,6 +85,7 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
+from typing import Any, Dict, List, Optional, Type
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
@@ -98,7 +98,7 @@ def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes = []  # type: List[Type[AbstractPlugin]]
+    plugin_classes: List[Type[AbstractPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:

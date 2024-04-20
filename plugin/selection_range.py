@@ -2,9 +2,9 @@ from .core.protocol import Request
 from .core.protocol import SelectionRange
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.typing import Any, Optional, List, Tuple
 from .core.views import range_to_region
 from .core.views import selection_range_params
+from typing import Any, List, Optional, Tuple
 import sublime
 
 
@@ -14,7 +14,7 @@ class LspExpandSelectionCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._regions = []  # type: List[sublime.Region]
+        self._regions: List[sublime.Region] = []
         self._change_count = 0
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:

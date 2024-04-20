@@ -6,7 +6,7 @@ from .core.protocol import Request
 from .core.protocol import URI
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.typing import Optional
+from typing import Optional
 import sublime
 
 

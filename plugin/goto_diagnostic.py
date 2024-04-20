@@ -13,8 +13,6 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, Iterator, List, Optional, Tuple, Union
-from .core.typing import cast
 from .core.url import parse_uri, unparse_uri
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
@@ -26,6 +24,8 @@ from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from collections import Counter, OrderedDict
 from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import cast
 import functools
 import os
 import sublime
@@ -94,8 +94,8 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
 
 
 class DiagnosticUriInputHandler(PreselectedListInputHandler):
-    _preview = None  # type: Optional[sublime.View]
-    uri = None  # Optional[DocumentUri]
+    _preview: Optional[sublime.View] = None
+    uri: Optional[DocumentUri] = None
 
     def __init__(self, window: sublime.Window, view: sublime.View, initial_value: Optional[DocumentUri] = None) -> None:
         super().__init__(window, initial_value)
@@ -108,8 +108,8 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
-        severities_per_path = OrderedDict()  # type: OrderedDict[ParsedUri, List[DiagnosticSeverity]]
-        self.first_locations = dict()  # type: Dict[ParsedUri, Tuple[Session, Location]]
+        severities_per_path: OrderedDict[ParsedUri, List[DiagnosticSeverity]] = OrderedDict()
+        self.first_locations: Dict[ParsedUri, Tuple[Session, Location]] = dict()
         for session in get_sessions(self.window):
             for parsed_uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
@@ -184,7 +184,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
 
 
 class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
-    _preview = None  # type: Optional[sublime.View]
+    _preview: Optional[sublime.View] = None
 
     def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri) -> None:
         self.window = window
@@ -196,7 +196,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         return "diagnostic"
 
     def list_items(self) -> List[sublime.ListInputItem]:
-        list_items = []  # type: List[sublime.ListInputItem]
+        list_items: List[sublime.ListInputItem] = []
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),

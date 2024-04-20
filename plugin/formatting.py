@@ -8,7 +8,6 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import Callable, List, Optional, Iterator, Union
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import has_single_nonempty_selection
@@ -18,6 +17,7 @@ from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
 from functools import partial
+from typing import Callable, Iterator, List, Optional, Union
 import sublime
 
 
@@ -57,7 +57,7 @@ class WillSaveWaitTask(SaveTask):
 
     def __init__(self, task_runner: LspTextCommand, on_complete: Callable[[], None]) -> None:
         super().__init__(task_runner, on_complete)
-        self._session_iterator = None  # type: Optional[Iterator[Session]]
+        self._session_iterator: Optional[Iterator[Session]] = None
 
     def run_async(self) -> None:
         super().run_async()

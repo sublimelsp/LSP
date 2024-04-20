@@ -20,7 +20,6 @@ from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
@@ -39,6 +38,7 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 from urllib.parse import urlparse
 import html
 import mdpopups
@@ -51,7 +51,7 @@ SessionName = str
 ResolvedHover = Union[Hover, Error]
 
 
-_test_contents = []  # type: List[str]
+_test_contents: List[str] = []
 
 
 class LinkKind:
@@ -104,7 +104,7 @@ class LspHoverCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._base_dir = None   # type: Optional[str]
+        self._base_dir: Optional[str] = None
         self._image_resolver = None
 
     def run(
@@ -126,10 +126,10 @@ class LspHoverCommand(LspTextCommand):
             return
         hover_point = temp_point
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
-        self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
-        self._document_links = []  # type: List[DocumentLink]
-        self._actions_by_config = []  # type: List[CodeActionsByConfigName]
-        self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
+        self._hover_responses: List[Tuple[Hover, Optional[MarkdownLangMap]]] = []
+        self._document_links: List[DocumentLink] = []
+        self._actions_by_config: List[CodeActionsByConfigName] = []
+        self._diagnostics_by_config: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]] = []
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
 
@@ -153,8 +153,8 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
-        hover_promises = []  # type: List[Promise[ResolvedHover]]
-        language_maps = []  # type: List[Optional[MarkdownLangMap]]
+        hover_promises: List[Promise[ResolvedHover]] = []
+        language_maps: List[Optional[MarkdownLangMap]] = []
         for session in listener.sessions_async('hoverProvider'):
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
@@ -169,8 +169,8 @@ class LspHoverCommand(LspTextCommand):
         language_maps: List[Optional[MarkdownLangMap]],
         responses: List[ResolvedHover]
     ) -> None:
-        hovers = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
-        errors = []  # type: List[Error]
+        hovers: List[Tuple[Hover, Optional[MarkdownLangMap]]] = []
+        errors: List[Error] = []
         for response, language_map in zip(responses, language_maps):
             if isinstance(response, Error):
                 errors.append(response)
@@ -184,7 +184,7 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
-        link_promises = []  # type: List[Promise[DocumentLink]]
+        link_promises: List[Promise[DocumentLink]] = []
         for sv in listener.session_views_async():
             if not sv.has_capability_async("documentLinkProvider"):
                 continue
@@ -251,7 +251,7 @@ class LspHoverCommand(LspTextCommand):
     def diagnostics_content(self) -> str:
         formatted = []
         for sb, diagnostics in self._diagnostics_by_config:
-            by_severity = {}  # type: Dict[int, List[str]]
+            by_severity: Dict[int, List[str]] = {}
             formatted.append('<div class="diagnostics">')
             for diagnostic in diagnostics:
                 by_severity.setdefault(diagnostic_severity(diagnostic), []).append(
@@ -366,8 +366,8 @@ class LspHoverCommand(LspTextCommand):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
             session = self.session_by_name(session_name)
             if session:
-                position = {"line": row, "character": col_utf16}  # type: Position
-                r = {"start": position, "end": position}  # type: Range
+                position: Position = {"line": row, "character": col_utf16}
+                r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
         elif parse_uri(href)[0].lower() in ("", "http", "https"):
             open_in_browser(href)

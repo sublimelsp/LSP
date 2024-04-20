@@ -1,148 +1,47 @@
 import sys
+from enum import Enum, IntEnum, IntFlag  # noqa: F401
+from typing import (  # noqa: F401
+    IO,  # noqa: F401
+    TYPE_CHECKING,  # noqa: F401
+    Any,  # noqa: F401
+    Callable,  # noqa: F401
+    Deque,  # noqa: F401
+    Dict,  # noqa: F401
+    Generator,  # noqa: F401
+    Generic,  # noqa: F401
+    Iterable,  # noqa: F401
+    Iterator,  # noqa: F401
+    List,  # noqa: F401
+    Literal,  # noqa: F401
+    Mapping,  # noqa: F401
+    Optional,  # noqa: F401
+    Protocol,  # noqa: F401
+    Sequence,  # noqa: F401
+    Set,  # noqa: F401
+    Tuple,  # noqa: F401
+    Type,  # noqa: F401
+    TypedDict,  # noqa: F401
+    TypeVar,  # noqa: F401
+    Union,  # noqa: F401
+    cast,  # noqa: F401
+    final,  # noqa: F401
+)
 
-if sys.version_info >= (3, 11, 0):
-
-    from enum import Enum, IntEnum, IntFlag, StrEnum
-    from typing import Any
-    from typing import Callable
-    from typing import cast
-    from typing import Deque
-    from typing import Dict
-    from typing import final
-    from typing import Generator
-    from typing import Generic
-    from typing import IO
-    from typing import Iterable
-    from typing import Iterator
-    from typing import List
-    from typing import Literal
-    from typing import Mapping
-    from typing import NotRequired
-    from typing import Optional
-    from typing import ParamSpec
-    from typing import Protocol
-    from typing import Required
-    from typing import Sequence
-    from typing import Set
-    from typing import Tuple
-    from typing import Type
-    from typing import TYPE_CHECKING
-    from typing import TypedDict
-    from typing import TypeGuard
-    from typing import TypeVar
-    from typing import Union
-
+if sys.version_info >= (3, 11):
+    from enum import StrEnum  # noqa: F401
+    from typing import (
+        NotRequired,  # noqa: F401
+        ParamSpec,  # noqa: F401
+        Required,  # noqa: F401
+        TypeGuard,  # noqa: F401
+    )
 else:
-
-    TYPE_CHECKING = False
-
-    def cast(typ, val):  # type: ignore
-        return val
-
-    def final(func):  # type: ignore
-        return func
-
-    def _make_type(name: str) -> '_TypeMeta':
-        return _TypeMeta(name, (Type,), {})  # type: ignore
-
-    class _TypeMeta(type):
-        def __getitem__(self, args: 'Any') -> 'Any':
-            if not isinstance(args, tuple):
-                args = (args,)
-
-            name = '{}[{}]'.format(
-                str(self),
-                ', '.join(map(str, args))
-            )
-            return _make_type(name)
-
-        def __str__(self) -> str:
-            return self.__name__
-
-    class Type(metaclass=_TypeMeta):  # type: ignore
-        pass
-
-    class TypedDict(Type, dict):  # type: ignore
-        def __init__(*args, **kwargs) -> None:  # type: ignore
-            pass
-
-    class TypeGuard(Type):  # type: ignore
-        pass
-
-    class Enum(Type):  # type: ignore
-        pass
-
-    class IntEnum(Type):  # type: ignore
-        pass
-
-    class IntFlag(Type):  # type: ignore
-        pass
 
     class StrEnum(Type):  # type: ignore
         pass
 
-    class Any(Type):  # type: ignore
-        pass
-
-    class Callable(Type):  # type: ignore
-        pass
-
-    class Deque(Type):  # type: ignore
-        pass
-
-    class Dict(Type):  # type: ignore
-        pass
-
-    class Generic(Type):  # type: ignore
-        pass
-
-    class Generator(Type):  # type: ignore
-        pass
-
-    class IO(Type):  # type: ignore
-        pass
-
-    class Iterable(Type):  # type: ignore
-        pass
-
-    class Iterator(Type):  # type: ignore
-        pass
-
-    class List(Type):  # type: ignore
-        pass
-
-    class Literal(Type):  # type: ignore
-        pass
-
-    class Mapping(Type):  # type: ignore
-        pass
-
-    class Optional(Type):  # type: ignore
-        pass
-
-    class Set(Type):  # type: ignore
-        pass
-
-    class Tuple(Type):  # type: ignore
-        pass
-
-    class Union(Type):  # type: ignore
-        pass
-
-    class Protocol(Type):  # type: ignore
-        pass
-
-    class Sequence(Type):  # type: ignore
-        pass
-
-    class Required(Type):  # type: ignore
-        pass
-
     class NotRequired(Type):  # type: ignore
         pass
-
-    def TypeVar(*args, **kwargs) -> Any:  # type: ignore
-        return object
 
     class ParamSpec(Type):  # type: ignore
         args = ...
@@ -150,3 +49,9 @@ else:
 
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
+
+    class Required(Type):  # type: ignore
+        pass
+
+    class TypeGuard(Type):  # type: ignore
+        pass

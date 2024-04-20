@@ -32,7 +32,7 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers = []  # type: List[TestFileWatcher]
+    _active_watchers: List['TestFileWatcher'] = []
 
     @classmethod
     def create(

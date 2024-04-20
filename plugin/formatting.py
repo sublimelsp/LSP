@@ -57,7 +57,7 @@ class WillSaveWaitTask(SaveTask):
 
     def __init__(self, task_runner: LspTextCommand, on_complete: Callable[[], None]) -> None:
         super().__init__(task_runner, on_complete)
-        self._session_iterator = None  # type: Optional[Iterator[Session]]
+        self._session_iterator: Optional[Iterator[Session]] = None
 
     def run_async(self) -> None:
         super().run_async()

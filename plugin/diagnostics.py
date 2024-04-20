@@ -30,7 +30,7 @@ class DiagnosticsAnnotationsView():
         # most to the least severe.
         for severity in DIAGNOSTIC_KINDS.keys():
             if severity <= max_severity_level:
-                matching_diagnostics = ([], [])  # type: Tuple[List[Diagnostic], List[sublime.Region]]
+                matching_diagnostics: Tuple[List[Diagnostic], List[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:
                     if diagnostic_severity(diagnostic) != severity:
                         continue

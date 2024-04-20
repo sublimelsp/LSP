@@ -11,7 +11,7 @@ class ServerNotifications(TextDocumentTestCase):
 
     def test_publish_diagnostics(self) -> Generator:
         self.insert_characters("a b c\n")
-        params = {
+        params: PublishDiagnosticsParams = {
             'uri': filename_to_uri(self.view.file_name() or ''),
             'diagnostics': [
                 {
@@ -34,7 +34,7 @@ class ServerNotifications(TextDocumentTestCase):
                     'tags': [DiagnosticTag.Unnecessary]
                 }
             ]
-        }  # type: PublishDiagnosticsParams
+        }
         yield from self.await_client_notification("textDocument/publishDiagnostics", params)
         errors_icon_regions = self.view.get_regions("lspTESTds1_icon")
         errors_underline_regions = self.view.get_regions("lspTESTds1_underline")

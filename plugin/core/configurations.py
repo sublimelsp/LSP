@@ -28,10 +28,10 @@ class WindowConfigManager(object):
     def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._disabled_for_session = set()  # type: Set[str]
-        self._crashes = {}  # type: Dict[str, Deque[datetime]]
-        self.all = {}  # type: Dict[str, ClientConfig]
-        self._change_listeners = WeakSet()  # type: WeakSet[WindowConfigChangeListener]
+        self._disabled_for_session: Set[str] = set()
+        self._crashes: Dict[str, Deque[datetime]] = {}
+        self.all: Dict[str, ClientConfig] = {}
+        self._change_listeners: WeakSet[WindowConfigChangeListener] = WeakSet()
         self._reload_configs(notify_listeners=False)
 
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:

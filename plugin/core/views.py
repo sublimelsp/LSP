@@ -56,13 +56,13 @@ MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
 _multilineflags = sublime.DRAW_NO_FILL | sublime.NO_UNDO
 
-DIAGNOSTIC_SEVERITY = [
+DIAGNOSTIC_SEVERITY: List[Tuple[str, str, str, str, int, int]] = [
     # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
     ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
     ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
     ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
     ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-]  # type: List[Tuple[str, str, str, str, int, int]]
+]
 
 
 class DiagnosticSeverityData:
@@ -70,9 +70,9 @@ class DiagnosticSeverityData:
     __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
 
     def __init__(self, severity: int) -> None:
-        self.regions = []  # type: List[sublime.Region]
-        self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
-        self.annotations = []  # type: List[str]
+        self.regions: List[sublime.Region] = []
+        self.regions_with_tag: Dict[int, List[sublime.Region]] = {}
+        self.annotations: List[str] = []
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
@@ -285,11 +285,11 @@ def render_text_change(change: sublime.TextChange) -> TextDocumentContentChangeE
 def did_change_text_document_params(
     view: sublime.View, version: int, changes: Optional[Iterable[sublime.TextChange]] = None
 ) -> DidChangeTextDocumentParams:
-    content_changes = []  # type: List[TextDocumentContentChangeEvent]
-    result = {
+    content_changes: List[TextDocumentContentChangeEvent] = []
+    result: DidChangeTextDocumentParams = {
         "textDocument": versioned_text_document_identifier(view, version),
         "contentChanges": content_changes
-    }  # type: DidChangeTextDocumentParams
+    }
     if changes is None:
         # TextDocumentSyncKind.Full
         content_changes.append({"text": entire_content(view)})
@@ -309,9 +309,9 @@ def will_save_text_document_params(
 def did_save_text_document_params(
     view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
 ) -> DidSaveTextDocumentParams:
-    result = {
+    result: DidSaveTextDocumentParams = {
         "textDocument": text_document_identifier(uri if uri is not None else view)
-    }  # type: DidSaveTextDocumentParams
+    }
     if include_text:
         result["text"] = entire_content(view)
     return result
@@ -401,10 +401,10 @@ def text_document_code_action_params(
     only_kinds: Optional[List[CodeActionKind]] = None,
     manual: bool = False
 ) -> CodeActionParams:
-    context = {
+    context: CodeActionContext = {
         "diagnostics": diagnostics,
         "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
-    }  # type: CodeActionContext
+    }
     if only_kinds:
         context["only"] = only_kinds
     return {
@@ -619,7 +619,7 @@ def make_command_link(
 ) -> str:
     if view_id is not None:
         cmd = "lsp_run_text_command_helper"
-        args = {"view_id": view_id, "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
+        args: Optional[Dict[str, Any]] = {"view_id": view_id, "command": command, "args": command_args}
     else:
         cmd = command
         args = command_args
@@ -848,7 +848,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 def format_code_actions_for_quick_panel(
     session_actions: Iterable[Tuple[str, Union[CodeAction, Command]]]
 ) -> Tuple[List[sublime.QuickPanelItem], int]:
-    items = []  # type: List[sublime.QuickPanelItem]
+    items: List[sublime.QuickPanelItem] = []
     selected_index = -1
     for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")

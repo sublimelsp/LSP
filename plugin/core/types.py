@@ -356,7 +356,7 @@ class Settings:
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
         elif isinstance(self.diagnostics_highlight_style, dict):
-            flags = []  # type: List[Optional[int]]
+            flags: List[Optional[int]] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style
@@ -437,7 +437,7 @@ class DocumentSelector:
 
 # method -> (capability dotted path, optional registration dotted path)
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
-_METHOD_TO_CAPABILITY_EXCEPTIONS = {
+_METHOD_TO_CAPABILITY_EXCEPTIONS: Dict[str, Tuple[str, Optional[str]]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
@@ -449,7 +449,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS = {
     'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
     'textDocument/formatting': ('documentFormattingProvider', None),
     'textDocument/documentColor': ('colorProvider', None)
-}  # type: Dict[str, Tuple[str, Optional[str]]]
+}
 
 
 def method_to_capability(method: str) -> Tuple[str, str]:
@@ -477,9 +477,9 @@ def normalize_text_sync(textsync: Union[None, int, Dict[str, Any]]) -> Dict[str,
     """
     Brings legacy text sync capabilities to the most modern format
     """
-    result = {}  # type: Dict[str, Any]
+    result: Dict[str, Any] = {}
     if isinstance(textsync, int):
-        change = {"syncKind": textsync}  # type: Optional[Dict[str, Any]]
+        change: Optional[Dict[str, Any]] = {"syncKind": textsync}
         result["textDocumentSync"] = {"didOpen": {}, "save": {}, "didClose": {}, "change": change}
     elif isinstance(textsync, dict):
         new = {}
@@ -565,7 +565,7 @@ class Capabilities(DottedDict):
         return "textDocumentSync.didOpen" in self
 
     def text_sync_kind(self) -> TextDocumentSyncKind:
-        value = self.get("textDocumentSync.change.syncKind")  # type: TextDocumentSyncKind
+        value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKind.None_
 
     def should_notify_did_change_workspace_folders(self) -> bool:
@@ -608,7 +608,7 @@ class PathMap:
     def parse(cls, json: Any) -> "Optional[List[PathMap]]":
         if not isinstance(json, list):
             return None
-        result = []  # type: List[PathMap]
+        result: List[PathMap] = []
         for path_map in json:
             if not isinstance(path_map, dict):
                 debug('path map entry is not an object')
@@ -680,7 +680,7 @@ class ClientConfig:
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
         if isinstance(schemes, list):
-            self.schemes = schemes  # type: List[str]
+            self.schemes: List[str] = schemes
         else:
             self.schemes = ["file"]
         if isinstance(command, list):
@@ -798,8 +798,8 @@ class ClientConfig:
         )
 
     def resolve_transport_config(self, variables: Dict[str, str]) -> TransportConfig:
-        tcp_port = None  # type: Optional[int]
-        listener_socket = None  # type: Optional[socket.socket]
+        tcp_port: Optional[int] = None
+        listener_socket: Optional[socket.socket] = None
         if self.tcp_port is not None:
             # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
@@ -878,14 +878,14 @@ class ClientConfig:
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> Dict[str, Any]:
-        result = {}  # type: Dict[str, Any]
+        result: Dict[str, Any] = {}
         for k, v in options.items():
             if not self.is_disabled_capability("{}.{}".format(capability_path, k)):
                 result[k] = v
         return result
 
     def __repr__(self) -> str:
-        items = []  # type: List[str]
+        items: List[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
                 items.append("{}={}".format(k, repr(v)))

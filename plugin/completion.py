@@ -56,7 +56,7 @@ def format_completion(
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
     completion_kind = item.get('kind')
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
-    details = []  # type: List[str]
+    details: List[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
         args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
@@ -132,7 +132,7 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
     """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
     if not item_defaults:
         return item
-    default_text_edit = None  # type: Optional[Union[TextEdit, InsertReplaceEdit]]
+    default_text_edit: Optional[Union[TextEdit, InsertReplaceEdit]] = None
     edit_range = item_defaults.get('editRange')
     if edit_range:
         #  If textEditText is not provided and a list's default range is provided
@@ -182,7 +182,7 @@ class QueryCompletionsTask:
         self._triggered_manually = triggered_manually
         self._on_done_async = on_done_async
         self._resolved = False
-        self._pending_completion_requests = {}  # type: Dict[int, weakref.ref[Session]]
+        self._pending_completion_requests: Dict[int, weakref.ref[Session]] = {}
 
     def query_completions_async(self, sessions: List[Session]) -> None:
         promises = [self._create_completion_request_async(session) for session in sessions]
@@ -206,10 +206,10 @@ class QueryCompletionsTask:
         if self._resolved:
             return
         LspSelectCompletionCommand.completions = {}
-        items = []  # type: List[sublime.CompletionItem]
-        item_defaults = {}  # type: CompletionItemDefaults
-        errors = []  # type: List[Error]
-        flags = 0  # int
+        items: List[sublime.CompletionItem] = []
+        item_defaults: CompletionItemDefaults = {}
+        errors: List[Error] = []
+        flags = 0
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
@@ -225,7 +225,7 @@ class QueryCompletionsTask:
             session = weak_session()
             if not session:
                 continue
-            response_items = []  # type: List[CompletionItem]
+            response_items: List[CompletionItem] = []
             if isinstance(response, dict):
                 response_items = response["items"] or []
                 item_defaults = response.get('itemDefaults') or {}
@@ -291,7 +291,7 @@ class LspResolveDocsCommand(LspTextCommand):
             detail = self._format_documentation(item.get('detail') or "", language_map)
             documentation = self._format_documentation(item.get("documentation") or "", language_map)
         if not documentation:
-            markdown = {"kind": MarkupKind.Markdown, "value": "*No documentation available.*"}  # type: MarkupContent
+            markdown: MarkupContent = {"kind": MarkupKind.Markdown, "value": "*No documentation available.*"}
             # No need for a language map here
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
@@ -337,7 +337,7 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions = {}  # type: Dict[SessionName, CompletionsStore]
+    completions: Dict[SessionName, CompletionsStore] = {}
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]

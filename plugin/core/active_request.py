@@ -18,7 +18,7 @@ class ActiveRequest:
         self.weaksv = ref(sv)
         self.request_id = request_id
         self.request = request
-        self.progress = None  # type: Optional[ProgressReporter]
+        self.progress: Optional[ProgressReporter] = None
         # `request.progress` is either a boolean or a string. If it's a boolean, then that signals that the server does
         # not support client-initiated progress. However, for some requests we still want to notify some kind of
         # progress to the end-user. This is communicated by the boolean value being "True".

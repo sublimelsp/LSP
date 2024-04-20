@@ -36,11 +36,12 @@ if sys.version_info >= (3, 11):
         TypeGuard,  # noqa: F401
     )
 else:
+    _T = TypeVar("_T")
 
     class StrEnum(Type):  # type: ignore
         pass
 
-    class NotRequired(Type):  # type: ignore
+    class NotRequired(Type, Generic[_T]):  # type: ignore
         pass
 
     class ParamSpec(Type):  # type: ignore
@@ -50,8 +51,8 @@ else:
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
 
-    class Required(Type):  # type: ignore
+    class Required(Type, Generic[_T]):  # type: ignore
         pass
 
-    class TypeGuard(Type):  # type: ignore
+    class TypeGuard(Type, Generic[_T]):  # type: ignore
         pass

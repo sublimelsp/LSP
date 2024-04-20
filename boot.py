@@ -98,7 +98,7 @@ def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes = []  # type: List[Type[AbstractPlugin]]
+    plugin_classes: List[Type[AbstractPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:

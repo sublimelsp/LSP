@@ -81,7 +81,7 @@ class LocationPicker:
         self._force_group = force_group
         self._group = group
         self._items = locations
-        self._highlighted_view = None  # type: Optional[sublime.View]
+        self._highlighted_view: Optional[sublime.View] = None
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
         self._window.focus_group(group)

@@ -11,7 +11,7 @@ WorkspaceChanges = Dict[str, Tuple[List[TextEdit], Optional[int]]]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
-    changes = {}  # type: WorkspaceChanges
+    changes: WorkspaceChanges = {}
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
         for document_change in document_changes:

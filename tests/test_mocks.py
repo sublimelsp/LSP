@@ -43,7 +43,7 @@ basic_responses = {
 class MockSession(object):
     def __init__(self, async_response=None) -> None:
         self.responses = basic_responses
-        self._notifications = []  # type: List[Notification]
+        self._notifications: List[Notification] = []
         self._async_response_callback = async_response
 
     def send_request(self, request: Request, on_success: Callable, on_error: Callable = None) -> None:

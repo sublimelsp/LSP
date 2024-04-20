@@ -238,7 +238,7 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     wm = windows.lookup(view.window())
     if not wm:
         return
-    diagnostics = []  # type: List[Diagnostic]
+    diagnostics: List[Diagnostic] = []
     for session in wm.get_sessions():
         diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:

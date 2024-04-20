@@ -60,7 +60,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
             for start, end, replacement in reversed(_sort_by_application_order(edits)):
-                placeholder_region = None  # type: Optional[Tuple[Tuple[int, int], Tuple[int, int]]]
+                placeholder_region: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
                 if process_placeholders and replacement:
                     parsed = self.parse_snippet(replacement)
                     if parsed:

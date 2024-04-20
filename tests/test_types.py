@@ -44,7 +44,7 @@ class TestDiff(unittest.TestCase):
 class TestDocumentSelector(unittest.TestCase):
 
     def setUp(self) -> None:
-        self._opened_views = []  # type: List[sublime.View]
+        self._opened_views: List[sublime.View] = []
 
     def tearDown(self) -> None:
         for view in self._opened_views:

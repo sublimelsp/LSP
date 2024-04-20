@@ -45,7 +45,7 @@ class DiagnosticsStorage(OrderedDict):
         not more than once. Items and results are ordered as they came in from the server.
         """
         for uri, diagnostics in self.items():
-            results = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))  # type: List[T]
+            results: List[T] = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))
             if results:
                 yield uri, results
 

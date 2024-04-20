@@ -19,11 +19,11 @@ class LspColorPresentationCommand(LspTextCommand):
         if session:
             self._version = self.view.change_count()
             self._range = color_information['range']
-            params = {
+            params: ColorPresentationParams = {
                 'textDocument': text_document_identifier(self.view),
                 'color': color_information['color'],
                 'range': self._range
-            }  # type: ColorPresentationParams
+            }
             session.send_request_async(Request.colorPresentation(params, self.view), self._handle_response_async)
 
     def want_event(self) -> bool:
@@ -38,7 +38,7 @@ class LspColorPresentationCommand(LspTextCommand):
         if self._version != self.view.change_count():
             return
         old_text = self.view.substr(range_to_region(self._range, self.view))
-        self._filtered_response = []  # type: List[ColorPresentation]
+        self._filtered_response: List[ColorPresentation] = []
         for item in response:
             # Filter out items that would apply no change
             text_edit = item.get('textEdit')

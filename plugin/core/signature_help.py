@@ -70,7 +70,7 @@ class SigHelp:
             signature = self._signatures[self._active_signature_index]
         except IndexError:
             return ""
-        formatted = []  # type: List[str]
+        formatted: List[str] = []
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
         self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
@@ -112,7 +112,7 @@ class SigHelp:
         )
 
     def _render_label(self, signature: SignatureInformation) -> List[str]:
-        formatted = []  # type: List[str]
+        formatted: List[str] = []
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
         formatted.append('<div class="highlight"><pre>')
@@ -150,7 +150,7 @@ class SigHelp:
         return formatted
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> List[str]:
-        formatted = []  # type: List[str]
+        formatted: List[str] = []
         docs = self._parameter_documentation(view, signature)
         if docs:
             formatted.append(docs)

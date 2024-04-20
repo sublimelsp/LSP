@@ -87,12 +87,12 @@ class Promise(Generic[T]):
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver = None  # type: Optional[ResolveFunc[TExecutor]]
+                self.resolver: Optional[ResolveFunc[TExecutor]] = None
 
             def __call__(self, resolver: ResolveFunc[TExecutor]) -> None:
                 self.resolver = resolver
 
-        executor = Executor()  # type: Executor[S]
+        executor: Executor[S] = Executor()
         promise = Promise(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
@@ -139,7 +139,7 @@ class Promise(Generic[T]):
         """
         self.resolved = False
         self.mutex = threading.Lock()
-        self.callbacks = []  # type: List[ResolveFunc[T]]
+        self.callbacks: List[ResolveFunc[T]] = []
         executor_func(lambda resolve_value=None: self._do_resolve(resolve_value))
 
     def __repr__(self) -> str:

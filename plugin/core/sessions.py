@@ -265,7 +265,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
     folding_range_kind_value_set = cast(List[FoldingRangeKind], _enum_like_class_to_list(FoldingRangeKind))
     first_folder = workspace_folders[0] if workspace_folders else None
-    general_capabilities = {
+    general_capabilities: GeneralClientCapabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
         "regularExpressions": {
             # https://www.sublimetext.com/docs/completions.html#ver-dev
@@ -279,8 +279,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "parser": "Python-Markdown",
             "version": mdpopups.markdown.__version__  # type: ignore
         }
-    }  # type: GeneralClientCapabilities
-    text_document_capabilities = {
+    }
+    text_document_capabilities: TextDocumentClientCapabilities = {
         "synchronization": {
             "dynamicRegistration": True,  # exceptional
             "didSave": True,
@@ -457,8 +457,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "typeHierarchy": {
             "dynamicRegistration": True
         }
-    }  # type: TextDocumentClientCapabilities
-    workspace_capabilites = {
+    }
+    workspace_capabilites: WorkspaceClientCapabilities = {
         "applyEdit": True,
         "didChangeConfiguration": {
             "dynamicRegistration": True
@@ -494,8 +494,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "diagnostics": {
             "refreshSupport": True
         }
-    }  # type: WorkspaceClientCapabilities
-    window_capabilities = {
+    }
+    window_capabilities: WindowClientCapabilities = {
         "showDocument": {
             "support": True
         },
@@ -505,13 +505,13 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             }
         },
         "workDoneProgress": True
-    }  # type: WindowClientCapabilities
-    capabilities = {
+    }
+    capabilities: ClientCapabilities = {
         "general": general_capabilities,
         "textDocument": text_document_capabilities,
         "workspace": workspace_capabilites,
         "window": window_capabilities,
-    }  # type: ClientCapabilities
+    }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
     if get_file_watcher_implementation():
@@ -1073,7 +1073,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
 
-_plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
+_plugins: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]] = {}
 
 
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
@@ -1223,7 +1223,7 @@ class _RegistrationData:
             document_selector = []
         self.selector = DocumentSelector(document_selector)
         self.options = options
-        self.session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
+        self.session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
 
     def __del__(self) -> None:
         for sb in self.session_buffers:
@@ -1247,11 +1247,11 @@ class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
-        self.transport = None  # type: Optional[Transport]
-        self.working_directory = None  # type: Optional[str]
+        self.transport: Optional[Transport] = None
+        self.working_directory: Optional[str] = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
+        self._response_handlers: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]] = {}
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1259,23 +1259,23 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self.diagnostics_result_ids = {}  # type: Dict[DocumentUri, Optional[str]]
-        self.workspace_diagnostics_pending_response = None  # type: Optional[int]
+        self.diagnostics_result_ids: Dict[DocumentUri, Optional[str]] = {}
+        self.workspace_diagnostics_pending_response: Optional[int] = None
         self.exiting = False
-        self._registrations = {}  # type: Dict[str, _RegistrationData]
-        self._init_callback = None  # type: Optional[InitCallback]
-        self._initialize_error = None  # type: Optional[Tuple[int, Optional[Exception]]]
+        self._registrations: Dict[str, _RegistrationData] = {}
+        self._init_callback: Optional[InitCallback] = None
+        self._initialize_error: Optional[Tuple[int, Optional[Exception]]] = None
         self._views_opened = 0
         self._workspace_folders = workspace_folders
-        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
-        self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
-        self._progress = {}  # type: Dict[ProgressToken, Optional[WindowProgressReporter]]
+        self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
+        self._session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
+        self._progress: Dict[ProgressToken, Optional[WindowProgressReporter]] = {}
         self._watcher_impl = get_file_watcher_implementation()
-        self._static_file_watchers = []  # type: List[FileWatcher]
-        self._dynamic_file_watchers = {}  # type: Dict[str, List[FileWatcher]]
+        self._static_file_watchers: List[FileWatcher] = []
+        self._dynamic_file_watchers: Dict[str, List[FileWatcher]] = {}
         self._plugin_class = plugin_class
-        self._plugin = None  # type: Optional[AbstractPlugin]
-        self._status_messages = {}  # type: Dict[str, str]
+        self._plugin: Optional[AbstractPlugin] = None
+        self._status_messages: Dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
@@ -1453,7 +1453,7 @@ class Session(TransportCallbacks):
     # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
 
     def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
-        changes = []  # type: List[FileEvent]
+        changes: List[FileEvent] = []
         for event in events:
             event_type, filepath = event
             changes.append({
@@ -1487,12 +1487,12 @@ class Session(TransportCallbacks):
         if self.should_notify_did_change_workspace_folders():
             added, removed = diff(self._workspace_folders, folders)
             if added or removed:
-                params = {
+                params: DidChangeWorkspaceFoldersParams = {
                     "event": {
                         "added": [a.to_lsp() for a in added],
                         "removed": [r.to_lsp() for r in removed]
                     }
-                }  # type: DidChangeWorkspaceFoldersParams
+                }
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders
@@ -1604,7 +1604,7 @@ class Session(TransportCallbacks):
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task = Promise.packaged_task()  # type: PackagedTask[None]
+            task: PackagedTask[None] = Promise.packaged_task()
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
@@ -1643,7 +1643,7 @@ class Session(TransportCallbacks):
         if isinstance(command, str):
             code_action = cast(Command, code_action)
             # This is actually a command.
-            command_params = {'command': command}  # type: ExecuteCommandParams
+            command_params: ExecuteCommandParams = {'command': command}
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
@@ -1694,7 +1694,7 @@ class Session(TransportCallbacks):
         flags: int = 0,
         group: int = -1
     ) -> Promise[Optional[sublime.View]]:
-        result = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
+        result: PackagedTask[Optional[sublime.View]] = Promise.packaged_task()
 
         def handle_continuation(view: Optional[sublime.View]) -> None:
             if view and r:
@@ -1713,11 +1713,11 @@ class Session(TransportCallbacks):
         group: int,
     ) -> Optional[Promise[Optional[sublime.View]]]:
         # I cannot type-hint an unpacked tuple
-        pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
+        pair: PackagedTask[Tuple[str, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
-            result = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
+            result: PackagedTask[Optional[sublime.View]] = Promise.packaged_task()
 
             def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
                 if group > -1:
@@ -1775,9 +1775,9 @@ class Session(TransportCallbacks):
         promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
-            execute_command = {
+            execute_command: ExecuteCommandParams = {
                 "command": command["command"],
-            }  # type: ExecuteCommandParams
+            }
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
@@ -1794,7 +1794,7 @@ class Session(TransportCallbacks):
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
-        promises = []  # type: List[Promise[None]]
+        promises: List[Promise[None]] = []
         for uri, (edits, view_version) in changes.items():
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
@@ -1820,16 +1820,19 @@ class Session(TransportCallbacks):
             self.window.focus_sheet(sheet)
 
     def decode_semantic_token(
-            self, token_type_encoded: int, token_modifiers_encoded: int) -> Tuple[str, List[str], Optional[str]]:
-        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
-        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        self,
+        types_legend: Tuple[str, ...],
+        modifiers_legend: Tuple[str, ...],
+        token_type_encoded: int,
+        token_modifiers_encoded: int
+    ) -> Tuple[str, List[str], Optional[str]]:
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
     def session_views_by_visibility(self) -> Tuple[Set[SessionViewProtocol], Set[SessionViewProtocol]]:
-        visible_session_views = set()  # type: Set[SessionViewProtocol]
-        not_visible_session_views = set()  # type: Set[SessionViewProtocol]
-        selected_sheets = set()  # type: Set[sublime.Sheet]
+        visible_session_views: Set[SessionViewProtocol] = set()
+        not_visible_session_views: Set[SessionViewProtocol] = set()
+        selected_sheets: Set[sublime.Sheet] = set()
         for group in range(self.window.num_groups()):
             selected_sheets = selected_sheets.union(self.window.selected_sheets_in_group(group))
         for sheet in self.window.sheets():
@@ -1852,11 +1855,11 @@ class Session(TransportCallbacks):
             # The server is probably leaving the request open intentionally, in order to continuously stream updates via
             # $/progress notifications.
             return
-        previous_result_ids = [
+        previous_result_ids: List[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
             if result_id is not None
-        ]  # type: List[PreviousResultId]
-        params = {'previousResultIds': previous_result_ids}  # type: WorkspaceDiagnosticParams
+        ]
+        params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
             params['identifier'] = identifier
@@ -1935,7 +1938,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
         """handles the workspace/configuration request"""
-        items = []  # type: List[Any]
+        items: List[Any] = []
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
@@ -2034,7 +2037,7 @@ class Session(TransportCallbacks):
                     sublime.set_timeout_async(inform)
             if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
-                file_watchers = []  # type: List[FileWatcher]
+                file_watchers: List[FileWatcher] = []
                 for config in capability_options.get("watchers", []):
                     pattern = config.get("globPattern", '')
                     if not isinstance(pattern, str):
@@ -2251,13 +2254,13 @@ class Session(TransportCallbacks):
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
 
     def send_request_task(self, request: Request) -> Promise:
-        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
     def send_request_task_2(self, request: Request) -> Tuple[Promise, int]:
-        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)

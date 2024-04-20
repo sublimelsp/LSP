@@ -18,14 +18,14 @@ import subprocess
 import webbrowser
 
 
-opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
+opening_files: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
 def lsp_range_from_uri_fragment(fragment: str) -> Optional[Range]:
     match = FRAGMENT_PATTERN.match(fragment)
     if match:
-        selection = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}  # type: Range
+        selection: Range = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}
         # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
         # numbers for the LSP Position structure.
         start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]

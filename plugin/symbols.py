@@ -29,7 +29,7 @@ import sublime_plugin
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
-SYMBOL_KIND_NAMES = {
+SYMBOL_KIND_NAMES: Dict[SymbolKind, str] = {
     SymbolKind.File: "File",
     SymbolKind.Module: "Module",
     SymbolKind.Namespace: "Namespace",
@@ -56,7 +56,7 @@ SYMBOL_KIND_NAMES = {
     SymbolKind.Event: "Event",
     SymbolKind.Operator: "Operator",
     SymbolKind.TypeParameter: "Type Parameter"
-}  # type: Dict[SymbolKind, str]
+}
 
 
 DocumentSymbolValue = TypedDict('DocumentSymbolValue', {
@@ -86,7 +86,7 @@ def symbol_to_list_input_item(
     name = item['name']
     kind = item['kind']
     st_kind = SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
-    details = []  # type: List[str]
+    details: List[str] = []
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
@@ -160,7 +160,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.items = []  # type: List[sublime.ListInputItem]
+        self.items: List[sublime.ListInputItem] = []
         self.kind = 0
         self.cached = False
         self.has_matching_symbols = True
@@ -184,7 +184,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             session = self.best_session(self.capability)
             if session:
                 self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
-                params = {"textDocument": text_document_identifier(self.view)}  # type: DocumentSymbolParams
+                params: DocumentSymbolParams = {"textDocument": text_document_identifier(self.view)}
                 session.send_request(
                     Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
 
@@ -375,7 +375,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             return
         change_count = self.input_view.change_count()
         self.command = cast(LspWindowCommand, self.command)
-        promises = []  # type: List[Promise[List[sublime.ListInputItem]]]
+        promises: List[Promise[List[sublime.ListInputItem]]] = []
         for session in self.command.sessions():
             promises.append(
                 session.send_request_task(Request.workspaceSymbol({"query": text}))
@@ -389,7 +389,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
 
     def _on_all_responses(self, change_count: int, item_lists: List[List[sublime.ListInputItem]]) -> None:
         if self.input_view and self.input_view.change_count() == change_count:
-            items = []  # type: List[sublime.ListInputItem]
+            items: List[sublime.ListInputItem] = []
             for item_list in item_lists:
                 items.extend(item_list)
             self.update(items)

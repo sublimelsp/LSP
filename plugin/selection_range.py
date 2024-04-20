@@ -14,7 +14,7 @@ class LspExpandSelectionCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._regions = []  # type: List[sublime.Region]
+        self._regions: List[sublime.Region] = []
         self._change_count = 0
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:

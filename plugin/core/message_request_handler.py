@@ -8,12 +8,12 @@ from typing import Any, Dict, List
 import sublime
 
 
-ICONS = {
+ICONS: Dict[MessageType, str] = {
     MessageType.Error: '❗',
     MessageType.Warning: '⚠️',
     MessageType.Info: 'ℹ️',
     MessageType.Log: '📝'
-}  # type: Dict[MessageType, str]
+}
 
 
 class MessageRequestHandler():
@@ -31,12 +31,12 @@ class MessageRequestHandler():
         self.source = source
 
     def show(self) -> None:
-        formatted = []  # type: List[str]
+        formatted: List[str] = []
         formatted.append("<h2>{}</h2>".format(self.source))
         icon = ICONS.get(self.message_type, '')
         formatted.append("<div class='message'>{} {}</div>".format(icon, text2html(self.message)))
         if self.action_titles:
-            buttons = []  # type: List[str]
+            buttons: List[str] = []
             for idx, title in enumerate(self.action_titles):
                 buttons.append("<a href='{}'>{}</a>".format(idx, text2html(title)))
             formatted.append("<div class='actions'>" + " ".join(buttons) + "</div>")

@@ -12,9 +12,9 @@ import sublime
 class ClientConfigs:
 
     def __init__(self) -> None:
-        self.all = {}  # type: Dict[str, ClientConfig]
-        self.external = {}  # type: Dict[str, ClientConfig]
-        self._listener = None  # type: Optional[Callable[[Optional[str]], None]]
+        self.all: Dict[str, ClientConfig] = {}
+        self.external: Dict[str, ClientConfig] = {}
+        self._listener: Optional[Callable[[Optional[str]], None]] = None
 
     def _notify_listener(self, config_name: Optional[str] = None) -> None:
         if callable(self._listener):
@@ -107,10 +107,10 @@ class ClientConfigs:
         self._listener = recipient
 
 
-_settings_obj = None  # type: Optional[sublime.Settings]
-_settings = None  # type: Optional[Settings]
-_settings_registration = None  # type: Optional[SettingsRegistration]
-_global_settings = None  # type: Optional[sublime.Settings]
+_settings_obj: Optional[sublime.Settings] = None
+_settings: Optional[Settings] = None
+_settings_registration: Optional[SettingsRegistration] = None
+_global_settings: Optional[sublime.Settings] = None
 client_configs = ClientConfigs()
 
 

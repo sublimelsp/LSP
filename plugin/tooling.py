@@ -68,7 +68,7 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
         if not isinstance(enums, list):
             enums = v.get("markdownEnumDescriptions")
         if isinstance(enums, list):
-            new_enums = []  # type: List[str]
+            new_enums: List[str] = []
             for descr in enums:
                 descr, _ = _translate_description(translations, descr)
                 new_enums.append(descr)
@@ -109,7 +109,7 @@ class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
 class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
 
     def __init__(self) -> None:
-        self.view = None  # type: Optional[sublime.View]
+        self.view: Optional[sublime.View] = None
 
     def writeline(self, contents: str, indent: int = 0) -> None:
         if self.view is not None:
@@ -327,7 +327,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
             lambda resolved_command, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
-        self.test_runner = server  # type: Optional[ServerTestRunner]
+        self.test_runner: Optional[ServerTestRunner] = server
 
     def update_sheet(self, config: ClientConfig, active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet,
                      resolved_command: List[str], server_output: str, exit_code: int) -> None:
@@ -494,9 +494,9 @@ class ServerTestRunner(TransportCallbacks):
         on_close: Callable[[List[str], str, int], None]
     ) -> None:
         self._on_close = on_close
-        self._transport = None  # type: Optional[Transport]
-        self._resolved_command = []  # type: List[str]
-        self._stderr_lines = []  # type: List[str]
+        self._transport: Optional[Transport] = None
+        self._resolved_command: List[str] = []
+        self._stderr_lines: List[str] = []
         try:
             variables = extract_variables(window)
             plugin_class = get_plugin(config.name)
@@ -540,8 +540,8 @@ class ServerTestRunner(TransportCallbacks):
 
 class LspOnDoubleClickCommand(sublime_plugin.TextCommand):
     click_count = 0
-    prev_command = None  # type: Optional[str]
-    prev_args = None  # type: Optional[Dict[Any, Any]]
+    prev_command: Optional[str] = None
+    prev_args: Optional[Dict[Any, Any]] = None
 
     def run(self, edit: sublime.Edit, command: str, args: Dict[Any, Any]) -> None:
         if self.prev_command != command or self.prev_args != args:

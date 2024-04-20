@@ -38,8 +38,15 @@ if sys.version_info >= (3, 11):
 else:
     _T = TypeVar("_T")
 
-    class StrEnum(Type):  # type: ignore
-        pass
+    class StrEnum(str, Enum):
+        """
+        Naive polyfill for Python 3.11's StrEnum.
+
+        See https://docs.python.org/3.11/library/enum.html#enum.StrEnum
+        """
+
+        __format__ = str.__format__
+        __str__ = str.__str__
 
     class NotRequired(Type, Generic[_T]):  # type: ignore
         pass

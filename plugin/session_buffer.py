@@ -166,8 +166,9 @@ class SessionBuffer:
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
-    def _check_did_close(self) -> None:
+    def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
+            self.purge_changes_async(view, suppress_requests=True)
             self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 
@@ -202,9 +203,9 @@ class SessionBuffer:
         self._clear_semantic_token_regions(sv.view)
         self.session_views.remove(sv)
         if len(self.session_views) == 0:
-            self._on_before_destroy()
+            self._on_before_destroy(sv.view)
 
-    def _on_before_destroy(self) -> None:
+    def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
             self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
@@ -216,7 +217,7 @@ class SessionBuffer:
         # in unregistering ourselves from the session.
         if not self.session.exiting:
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            self._check_did_close()
+            self._check_did_close(view)
             self.session.unregister_session_buffer_async(self)
 
     def register_capability_async(
@@ -308,7 +309,7 @@ class SessionBuffer:
 
     on_reload_async = on_revert_async
 
-    def purge_changes_async(self, view: sublime.View) -> None:
+    def purge_changes_async(self, view: sublime.View, suppress_requests: bool = False) -> None:
         if self._pending_changes is None:
             return
         sync_kind = self.text_sync_kind()
@@ -316,7 +317,7 @@ class SessionBuffer:
             return
         if sync_kind == TextDocumentSyncKind.Full:
             changes = None
-            version = view.change_count()
+            version = view.change_count() or self._pending_changes.version
         else:
             changes = self._pending_changes.changes
             version = self._pending_changes.version
@@ -329,23 +330,28 @@ class SessionBuffer:
         finally:
             self._pending_changes = None
         self.session.notify_plugin_on_session_buffer_change(self)
-        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, suppress_requests))
 
-    def _on_after_change_async(self, view: sublime.View, version: int) -> None:
+    def _on_after_change_async(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:
         if self._is_saving:
             self._has_changed_during_save = True
             return
-        self._do_color_boxes_async(view, version)
-        self.do_document_diagnostic_async(view, version)
-        if self.session.config.diagnostics_mode == "workspace" and \
-                not self.session.workspace_diagnostics_pending_response and \
-                self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            self._workspace_diagnostics_debouncer_async.debounce(
-                self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
-        self.do_semantic_tokens_async(view)
-        if userprefs().link_highlight_style in ("underline", "none"):
-            self._do_document_link_async(view, version)
-        self.do_inlay_hints_async(view)
+        if suppress_requests:
+            return
+        try:
+            self._do_color_boxes_async(view, version)
+            self.do_document_diagnostic_async(view, version)
+            if self.session.config.diagnostics_mode == "workspace" and \
+                    not self.session.workspace_diagnostics_pending_response and \
+                    self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
+                self._workspace_diagnostics_debouncer_async.debounce(
+                    self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
+            self.do_semantic_tokens_async(view)
+            if userprefs().link_highlight_style in ("underline", "none"):
+                self._do_document_link_async(view, version)
+            self.do_inlay_hints_async(view)
+        except MissingUriError:
+            pass
 
     def on_pre_save_async(self, view: sublime.View) -> None:
         self._is_saving = True
@@ -357,7 +363,7 @@ class SessionBuffer:
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
         self._is_saving = False
         if new_uri != self._last_known_uri:
-            self._check_did_close()
+            self._check_did_close(view)
             self._last_known_uri = new_uri
             self._check_did_open(view)
         else:

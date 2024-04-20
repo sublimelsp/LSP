@@ -84,31 +84,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.close()
         yield from self.await_message("textDocument/didClose")
 
-    def test_did_change(self) -> 'Generator':
-        assert self.view
-        self.maxDiff = None
-        self.insert_characters("A")
-        yield from self.await_message("textDocument/didChange")
-        # multiple changes are batched into one didChange notification
-        self.insert_characters("B\n")
-        self.insert_characters("🙂\n")
-        self.insert_characters("D")
-        promise = YieldPromise()
-        yield from self.await_message("textDocument/didChange", promise)
-        self.assertEqual(promise.result(), {
-            'contentChanges': [
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
-                # Note that this is character offset (2) is correct (UTF-16).
-                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
-                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
-            'textDocument': {
-                'version': self.view.change_count(),
-                'uri': filename_to_uri(TEST_FILE_PATH)
-            }
-        })
-
     def test_sends_save_with_purge(self) -> 'Generator':
         assert self.view
         self.view.settings().set("lsp_format_on_save", False)
@@ -369,6 +344,54 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield lambda: "workDoneToken" in request.params
         result = yield from self.await_promise(promise)
         self.assertEqual(result, {"general": "kenobi"})
+
+
+class SingleDocumentTestCase2(TextDocumentTestCase):
+
+    def test_did_change(self) -> 'Generator':
+        assert self.view
+        self.maxDiff = None
+        self.insert_characters("A")
+        yield from self.await_message("textDocument/didChange")
+        # multiple changes are batched into one didChange notification
+        self.insert_characters("B\n")
+        self.insert_characters("🙂\n")
+        self.insert_characters("D")
+        promise = YieldPromise()
+        yield from self.await_message("textDocument/didChange", promise)
+        self.assertEqual(promise.result(), {
+            'contentChanges': [
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
+                # Note that this is character offset (2) is correct (UTF-16).
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
+            'textDocument': {
+                'version': self.view.change_count(),
+                'uri': filename_to_uri(TEST_FILE_PATH)
+            }
+        })
+
+
+class SingleDocumentTestCase3(TextDocumentTestCase):
+
+    @classmethod
+    def get_test_name(cls) -> str:
+        return "testfile2"
+
+    def test_did_change_before_did_close(self) -> 'Generator':
+        assert self.view
+        self.view.window().run_command("chain", {
+            "commands": [
+                ["insert", {"characters": "TEST"}],
+                ["save", {"async": False}],
+                ["close", {}]
+            ]
+        })
+        yield from self.await_message('textDocument/didChange')
+        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didClose')
 
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):

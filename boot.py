@@ -4,89 +4,174 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.code_actions import LspCodeActionsCommand  # noqa: F401
-from .plugin.code_actions import LspRefactorCommand  # noqa: F401
-from .plugin.code_actions import LspSourceActionCommand  # noqa: F401
-from .plugin.code_lens import LspCodeLensCommand  # noqa: F401
-from .plugin.code_lens import LspToggleCodeLensesCommand  # noqa: F401
-from .plugin.color import LspColorPresentationCommand  # noqa: F401
-from .plugin.completion import LspCommitCompletionWithOppositeInsertMode  # noqa: F401
-from .plugin.completion import LspResolveDocsCommand  # noqa: F401
-from .plugin.completion import LspSelectCompletionCommand  # noqa: F401
-from .plugin.configuration import LspDisableLanguageServerGloballyCommand  # noqa: F401
-from .plugin.configuration import LspDisableLanguageServerInProjectCommand  # noqa: F401
-from .plugin.configuration import LspEnableLanguageServerGloballyCommand  # noqa: F401
-from .plugin.configuration import LspEnableLanguageServerInProjectCommand  # noqa: F401
-from .plugin.core.collections import DottedDict  # noqa: F401
+from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_actions import LspRefactorCommand
+from .plugin.code_actions import LspSourceActionCommand
+from .plugin.code_lens import LspCodeLensCommand
+from .plugin.code_lens import LspToggleCodeLensesCommand
+from .plugin.color import LspColorPresentationCommand
+from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
+from .plugin.completion import LspResolveDocsCommand
+from .plugin.completion import LspSelectCompletionCommand
+from .plugin.configuration import LspDisableLanguageServerGloballyCommand
+from .plugin.configuration import LspDisableLanguageServerInProjectCommand
+from .plugin.configuration import LspEnableLanguageServerGloballyCommand
+from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
-from .plugin.core.protocol import Error  # noqa: F401
-from .plugin.core.registry import LspNextDiagnosticCommand  # noqa: F401
-from .plugin.core.registry import LspOpenLocationCommand  # noqa: F401
-from .plugin.core.registry import LspPrevDiagnosticCommand  # noqa: F401
-from .plugin.core.registry import LspRestartServerCommand  # noqa: F401
+from .plugin.core.protocol import Error
+from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspOpenLocationCommand
+from .plugin.core.registry import LspPrevDiagnosticCommand
+from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import register_plugin
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
-from .plugin.core.signature_help import LspSignatureHelpNavigateCommand  # noqa: F401
-from .plugin.core.signature_help import LspSignatureHelpShowCommand  # noqa: F401
+from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
+from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.tree_view import LspCollapseTreeItemCommand  # noqa: F401
-from .plugin.core.tree_view import LspExpandTreeItemCommand  # noqa: F401
-from .plugin.core.views import LspRunTextCommandHelperCommand  # noqa: F401
-from .plugin.document_link import LspOpenLinkCommand  # noqa: F401
-from .plugin.documents import DocumentSyncListener  # noqa: F401
-from .plugin.documents import TextChangeListener  # noqa: F401
-from .plugin.edit import LspApplyDocumentEditCommand  # noqa: F401
-from .plugin.edit import LspApplyWorkspaceEditCommand  # noqa: F401
-from .plugin.execute_command import LspExecuteCommand  # noqa: F401
-from .plugin.folding_range import LspFoldAllCommand  # noqa: F401
-from .plugin.folding_range import LspFoldCommand  # noqa: F401
-from .plugin.formatting import LspFormatCommand  # noqa: F401
-from .plugin.formatting import LspFormatDocumentCommand  # noqa: F401
-from .plugin.formatting import LspFormatDocumentRangeCommand  # noqa: F401
-from .plugin.goto import LspSymbolDeclarationCommand  # noqa: F401
-from .plugin.goto import LspSymbolDefinitionCommand  # noqa: F401
-from .plugin.goto import LspSymbolImplementationCommand  # noqa: F401
-from .plugin.goto import LspSymbolTypeDefinitionCommand  # noqa: F401
-from .plugin.goto_diagnostic import LspGotoDiagnosticCommand  # noqa: F401
-from .plugin.hierarchy import LspCallHierarchyCommand  # noqa: F401
-from .plugin.hierarchy import LspHierarchyToggleCommand  # noqa: F401
-from .plugin.hierarchy import LspTypeHierarchyCommand  # noqa: F401
-from .plugin.hover import LspHoverCommand  # noqa: F401
-from .plugin.hover import LspToggleHoverPopupsCommand  # noqa: F401
-from .plugin.inlay_hint import LspInlayHintClickCommand  # noqa: F401
-from .plugin.inlay_hint import LspToggleInlayHintsCommand  # noqa: F401
-from .plugin.panels import LspClearLogPanelCommand  # noqa: F401
-from .plugin.panels import LspClearPanelCommand  # noqa: F401
-from .plugin.panels import LspShowDiagnosticsPanelCommand  # noqa: F401
-from .plugin.panels import LspToggleLogPanelLinesLimitCommand  # noqa: F401
-from .plugin.panels import LspToggleServerPanelCommand  # noqa: F401
-from .plugin.panels import LspUpdateLogPanelCommand  # noqa: F401
-from .plugin.panels import LspUpdatePanelCommand  # noqa: F401
-from .plugin.references import LspSymbolReferencesCommand  # noqa: F401
-from .plugin.rename import LspHideRenameButtonsCommand  # noqa: F401
-from .plugin.rename import LspSymbolRenameCommand  # noqa: F401
-from .plugin.save_command import LspSaveAllCommand  # noqa: F401
-from .plugin.save_command import LspSaveCommand  # noqa: F401
-from .plugin.selection_range import LspExpandSelectionCommand  # noqa: F401
-from .plugin.semantic_highlighting import LspShowScopeNameCommand  # noqa: F401
-from .plugin.symbols import LspDocumentSymbolsCommand  # noqa: F401
-from .plugin.symbols import LspSelectionAddCommand  # noqa: F401
-from .plugin.symbols import LspSelectionClearCommand  # noqa: F401
-from .plugin.symbols import LspSelectionSetCommand  # noqa: F401
-from .plugin.symbols import LspWorkspaceSymbolsCommand  # noqa: F401
-from .plugin.tooling import LspCopyToClipboardFromBase64Command  # noqa: F401
-from .plugin.tooling import LspDumpBufferCapabilities  # noqa: F401
-from .plugin.tooling import LspDumpWindowConfigs  # noqa: F401
-from .plugin.tooling import LspOnDoubleClickCommand  # noqa: F401
-from .plugin.tooling import LspParseVscodePackageJson  # noqa: F401
-from .plugin.tooling import LspTroubleshootServerCommand  # noqa: F401
+from .plugin.core.tree_view import LspCollapseTreeItemCommand
+from .plugin.core.tree_view import LspExpandTreeItemCommand
+from .plugin.core.views import LspRunTextCommandHelperCommand
+from .plugin.document_link import LspOpenLinkCommand
+from .plugin.documents import DocumentSyncListener
+from .plugin.documents import TextChangeListener
+from .plugin.edit import LspApplyDocumentEditCommand
+from .plugin.edit import LspApplyWorkspaceEditCommand
+from .plugin.execute_command import LspExecuteCommand
+from .plugin.folding_range import LspFoldAllCommand
+from .plugin.folding_range import LspFoldCommand
+from .plugin.formatting import LspFormatCommand
+from .plugin.formatting import LspFormatDocumentCommand
+from .plugin.formatting import LspFormatDocumentRangeCommand
+from .plugin.goto import LspSymbolDeclarationCommand
+from .plugin.goto import LspSymbolDefinitionCommand
+from .plugin.goto import LspSymbolImplementationCommand
+from .plugin.goto import LspSymbolTypeDefinitionCommand
+from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
+from .plugin.hierarchy import LspCallHierarchyCommand
+from .plugin.hierarchy import LspHierarchyToggleCommand
+from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.hover import LspHoverCommand
+from .plugin.hover import LspToggleHoverPopupsCommand
+from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.inlay_hint import LspToggleInlayHintsCommand
+from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearPanelCommand
+from .plugin.panels import LspShowDiagnosticsPanelCommand
+from .plugin.panels import LspToggleLogPanelLinesLimitCommand
+from .plugin.panels import LspToggleServerPanelCommand
+from .plugin.panels import LspUpdateLogPanelCommand
+from .plugin.panels import LspUpdatePanelCommand
+from .plugin.references import LspSymbolReferencesCommand
+from .plugin.rename import LspHideRenameButtonsCommand
+from .plugin.rename import LspSymbolRenameCommand
+from .plugin.save_command import LspSaveAllCommand
+from .plugin.save_command import LspSaveCommand
+from .plugin.selection_range import LspExpandSelectionCommand
+from .plugin.semantic_highlighting import LspShowScopeNameCommand
+from .plugin.symbols import LspDocumentSymbolsCommand
+from .plugin.symbols import LspSelectionAddCommand
+from .plugin.symbols import LspSelectionClearCommand
+from .plugin.symbols import LspSelectionSetCommand
+from .plugin.symbols import LspWorkspaceSymbolsCommand
+from .plugin.tooling import LspCopyToClipboardFromBase64Command
+from .plugin.tooling import LspDumpBufferCapabilities
+from .plugin.tooling import LspDumpWindowConfigs
+from .plugin.tooling import LspOnDoubleClickCommand
+from .plugin.tooling import LspParseVscodePackageJson
+from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
+
+__all__ = (
+    "AbstractPlugin",
+    "client_configs",
+    "DocumentSyncListener",
+    "DottedDict",
+    "Error",
+    "kill_all_subprocesses",
+    "load_css",
+    "load_settings",
+    "LspApplyDocumentEditCommand",
+    "LspApplyWorkspaceEditCommand",
+    "LspCallHierarchyCommand",
+    "LspClearLogPanelCommand",
+    "LspClearPanelCommand",
+    "LspCodeActionsCommand",
+    "LspCodeLensCommand",
+    "LspCollapseTreeItemCommand",
+    "LspColorPresentationCommand",
+    "LspCommitCompletionWithOppositeInsertMode",
+    "LspCopyToClipboardFromBase64Command",
+    "LspDisableLanguageServerGloballyCommand",
+    "LspDisableLanguageServerInProjectCommand",
+    "LspDocumentSymbolsCommand",
+    "LspDumpBufferCapabilities",
+    "LspDumpWindowConfigs",
+    "LspEnableLanguageServerGloballyCommand",
+    "LspEnableLanguageServerInProjectCommand",
+    "LspExecuteCommand",
+    "LspExpandSelectionCommand",
+    "LspExpandTreeItemCommand",
+    "LspFoldAllCommand",
+    "LspFoldCommand",
+    "LspFormatCommand",
+    "LspFormatDocumentCommand",
+    "LspFormatDocumentRangeCommand",
+    "LspGotoDiagnosticCommand",
+    "LspHideRenameButtonsCommand",
+    "LspHierarchyToggleCommand",
+    "LspHoverCommand",
+    "LspInlayHintClickCommand",
+    "LspNextDiagnosticCommand",
+    "LspOnDoubleClickCommand",
+    "LspOpenLinkCommand",
+    "LspOpenLocationCommand",
+    "LspParseVscodePackageJson",
+    "LspPrevDiagnosticCommand",
+    "LspRefactorCommand",
+    "LspResolveDocsCommand",
+    "LspRestartServerCommand",
+    "LspRunTextCommandHelperCommand",
+    "LspSaveAllCommand",
+    "LspSaveCommand",
+    "LspSelectCompletionCommand",
+    "LspSelectionAddCommand",
+    "LspSelectionClearCommand",
+    "LspSelectionSetCommand",
+    "LspShowDiagnosticsPanelCommand",
+    "LspShowScopeNameCommand",
+    "LspSignatureHelpNavigateCommand",
+    "LspSignatureHelpShowCommand",
+    "LspSourceActionCommand",
+    "LspSymbolDeclarationCommand",
+    "LspSymbolDefinitionCommand",
+    "LspSymbolImplementationCommand",
+    "LspSymbolReferencesCommand",
+    "LspSymbolRenameCommand",
+    "LspSymbolTypeDefinitionCommand",
+    "LspToggleCodeLensesCommand",
+    "LspToggleHoverPopupsCommand",
+    "LspToggleInlayHintsCommand",
+    "LspToggleLogPanelLinesLimitCommand",
+    "LspToggleServerPanelCommand",
+    "LspTroubleshootServerCommand",
+    "LspTypeHierarchyCommand",
+    "LspUpdateLogPanelCommand",
+    "LspUpdatePanelCommand",
+    "LspWorkspaceSymbolsCommand",
+    "opening_files",
+    "PanelName",
+    "register_plugin",
+    "TextChangeListener",
+    "unload_settings",
+    "windows",
+)
 
 
 def _get_final_subclasses(derived: list[type], results: list[type]) -> None:

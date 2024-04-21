@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation

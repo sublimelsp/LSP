@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.registry import LspTextCommand
 from typing import Any, List, Tuple
 from typing import cast

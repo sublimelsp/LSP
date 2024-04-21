@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, debounced

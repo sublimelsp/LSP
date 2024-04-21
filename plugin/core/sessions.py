@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
 from .diagnostics_storage import DiagnosticsStorage
@@ -114,7 +115,7 @@ from abc import abstractproperty
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Dict, Generator, List, Optional, Protocol, Set, Tuple, Type, TypeVar, Union
 from typing import cast
-from typing_extensions import TypeGuard
+from typing_extensions import TypeAlias, TypeGuard
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -122,7 +123,7 @@ import os
 import sublime
 import weakref
 
-InitCallback = Callable[['Session', bool], None]
+InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
 
 
@@ -201,7 +202,7 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
+    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
@@ -240,7 +241,7 @@ class Manager(metaclass=ABCMeta):
     # Event callbacks
 
     @abstractmethod
-    def on_post_exit_async(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
+    def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         """
         The given Session has stopped with the given exit code.
         """
@@ -539,7 +540,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
 class SessionViewProtocol(Protocol):
 
     @property
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         ...
 
     @property
@@ -547,11 +548,11 @@ class SessionViewProtocol(Protocol):
         ...
 
     @property
-    def listener(self) -> 'weakref.ref[AbstractViewListener]':
+    def listener(self) -> weakref.ref[AbstractViewListener]:
         ...
 
     @property
-    def session_buffer(self) -> 'SessionBufferProtocol':
+    def session_buffer(self) -> SessionBufferProtocol:
         ...
 
     def get_uri(self) -> Optional[DocumentUri]:
@@ -608,11 +609,11 @@ class SessionViewProtocol(Protocol):
 class SessionBufferProtocol(Protocol):
 
     @property
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         ...
 
     @property
-    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+    def session_views(self) -> WeakSet[SessionViewProtocol]:
         ...
 
     @property
@@ -695,19 +696,19 @@ class AbstractViewListener(metaclass=ABCMeta):
     hover_provider_count = 0
 
     @abstractmethod
-    def session_async(self, capability: str, point: Optional[int] = None) -> Optional['Session']:
+    def session_async(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability: Optional[str] = None) -> Generator['Session', None, None]:
+    def sessions_async(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_buffers_async(self, capability: Optional[str] = None) -> Generator['SessionBufferProtocol', None, None]:
+    def session_buffers_async(self, capability: Optional[str] = None) -> Generator[SessionBufferProtocol, None, None]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_views_async(self) -> Generator['SessionViewProtocol', None, None]:
+    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -715,18 +716,18 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def on_session_initialized_async(self, session: 'Session') -> None:
+    def on_session_initialized_async(self, session: Session) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def on_session_shutdown_async(self, session: 'Session') -> None:
+    def on_session_shutdown_async(self, session: Session) -> None:
         raise NotImplementedError()
 
     @abstractmethod
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -734,13 +735,13 @@ class AbstractViewListener(metaclass=ABCMeta):
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     def diagnostics_intersecting_async(
         self,
         region_or_point: Union[sublime.Region, int]
-    ) -> Tuple[List[Tuple['SessionBufferProtocol', List[Diagnostic]]], sublime.Region]:
+    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         if isinstance(region_or_point, int):
             return self.diagnostics_touching_point_async(region_or_point)
         elif region_or_point.empty():
@@ -974,7 +975,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return None
 
-    def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
+    def __init__(self, weaksession: weakref.ref[Session]) -> None:
         """
         Constructs a new instance. Your instance is constructed after a response to the initialize request.
 

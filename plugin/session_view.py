@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .code_lens import CodeLensView
 from .code_lens import LspToggleCodeLensesCommand
 from .core.active_request import ActiveRequest
@@ -50,7 +51,7 @@ class SessionView:
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
     CODE_ACTIONS_KEY = "lsp_code_action"
 
-    _session_buffers: 'WeakValueDictionary[Tuple[int, int], SessionBuffer]' = WeakValueDictionary()
+    _session_buffers: WeakValueDictionary[Tuple[int, int], SessionBuffer] = WeakValueDictionary()
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
@@ -114,7 +115,7 @@ class SessionView:
         return self._view
 
     @property
-    def listener(self) -> 'ref[AbstractViewListener]':
+    def listener(self) -> ref[AbstractViewListener]:
         return self._listener
 
     @property

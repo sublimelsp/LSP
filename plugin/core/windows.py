@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin import apply_text_edits, Request
 from LSP.plugin.core.protocol import UINT_MAX
@@ -78,13 +79,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         ])
         self.assertEqual(entire_content(self.view), "a\nhello there\nc\n")
 
-    def test_did_close(self) -> 'Generator':
+    def test_did_close(self) -> Generator:
         self.assertTrue(self.view)
         self.assertTrue(self.view.is_valid())
         self.view.close()
         yield from self.await_message("textDocument/didClose")
 
-    def test_sends_save_with_purge(self) -> 'Generator':
+    def test_sends_save_with_purge(self) -> Generator:
         assert self.view
         self.view.settings().set("lsp_format_on_save", False)
         self.insert_characters("A")
@@ -93,7 +94,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
 
-    def test_formats_on_save(self) -> 'Generator':
+    def test_formats_on_save(self) -> Generator:
         assert self.view
         self.view.settings().set("lsp_format_on_save", True)
         self.insert_characters("A")
@@ -113,7 +114,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEquals("BBB", text)
         yield from self.await_clear_view_and_save()
 
-    def test_hover_info(self) -> 'Generator':
+    def test_hover_info(self) -> Generator:
         assert self.view
         self.set_response('textDocument/hover', {"contents": "greeting"})
         self.view.run_command('insert', {"characters": "Hello Wrld"})
@@ -123,7 +124,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         last_content = _test_contents[-1]
         self.assertTrue("greeting" in last_content)
 
-    def test_remove_line_and_then_insert_at_that_line_at_end(self) -> 'Generator':
+    def test_remove_line_and_then_insert_at_that_line_at_end(self) -> Generator:
         original = (
             'a\n'
             'b\n'
@@ -146,7 +147,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         # 2) deletes line index 2.
         yield from self.__run_formatting_test(original, expected, file_changes)
 
-    def test_apply_formatting(self) -> 'Generator':
+    def test_apply_formatting(self) -> Generator:
         original = (
             '<dom-module id="some-thing">\n'
             '<style></style>\n'
@@ -168,7 +169,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         )
         yield from self.__run_formatting_test(original, expected, file_changes)
 
-    def test_apply_formatting_and_preserve_order(self) -> 'Generator':
+    def test_apply_formatting_and_preserve_order(self) -> Generator:
         original = (
             'abcde\n'
             'fghij\n'
@@ -188,7 +189,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         )
         yield from self.__run_formatting_test(original, expected, file_changes)
 
-    def test_tabs_are_respected_even_when_translate_tabs_to_spaces_is_set_to_true(self) -> 'Generator':
+    def test_tabs_are_respected_even_when_translate_tabs_to_spaces_is_set_to_true(self) -> Generator:
         original = ' ' * 4
         file_changes = [((0, 0), (0, 4), '\t')]
         expected = '\t'
@@ -203,7 +204,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         original: 'Iterable[str]',
         expected: 'Iterable[str]',
         file_changes: 'List[Tuple[Tuple[int, int], Tuple[int, int], str]]'
-    ) -> 'Generator':
+    ) -> Generator:
         assert self.view
         original_change_count = self.insert_characters(''.join(original))
         # self.assertEqual(original_change_count, 1)
@@ -218,7 +219,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         edited_content = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals(edited_content, ''.join(expected))
 
-    def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> 'Generator':
+    def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> Generator:
         assert self.view
         self.insert_characters(GOTO_CONTENT)
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
@@ -241,31 +242,31 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         first = self.view.sel()[0].begin()
         self.assertEqual(self.view.substr(sublime.Region(first, first + 1)), "F")
 
-    def test_definition(self) -> 'Generator':
+    def test_definition(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE, 'definition', 'definition')
 
-    def test_definition_location_link(self) -> 'Generator':
+    def test_definition_location_link(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'definition', 'definition')
 
-    def test_type_definition(self) -> 'Generator':
+    def test_type_definition(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE, 'typeDefinition', 'type_definition')
 
-    def test_type_definition_location_link(self) -> 'Generator':
+    def test_type_definition_location_link(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'typeDefinition', 'type_definition')
 
-    def test_declaration(self) -> 'Generator':
+    def test_declaration(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE, 'declaration', 'declaration')
 
-    def test_declaration_location_link(self) -> 'Generator':
+    def test_declaration_location_link(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'declaration', 'declaration')
 
-    def test_implementation(self) -> 'Generator':
+    def test_implementation(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE, 'implementation', 'implementation')
 
-    def test_implementation_location_link(self) -> 'Generator':
+    def test_implementation_location_link(self) -> Generator:
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'implementation', 'implementation')
 
-    def test_expand_selection(self) -> 'Generator':
+    def test_expand_selection(self) -> Generator:
         self.insert_characters("abcba\nabcba\nabcba\n")
         self.view.run_command("lsp_selection_set", {"regions": [(2, 2)]})
         self.assertEqual(len(self.view.sel()), 1)
@@ -281,7 +282,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}}
         }]
 
-        def expand_and_check(a: int, b: int) -> 'Generator':
+        def expand_and_check(a: int, b: int) -> Generator:
             self.set_response("textDocument/selectionRange", response)
             self.view.run_command("lsp_expand_selection")
             yield from self.await_message("textDocument/selectionRange")
@@ -291,7 +292,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from expand_and_check(1, 3)
         yield from expand_and_check(0, 5)
 
-    def test_rename(self) -> 'Generator':
+    def test_rename(self) -> Generator:
         self.insert_characters("foo\nfoo\nfoo\n")
         self.set_response("textDocument/rename", {
                 'changes': {
@@ -323,7 +324,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_view_change(9)
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "bar\nbar\nbar\n")
 
-    def test_run_command(self) -> 'Generator':
+    def test_run_command(self) -> Generator:
         self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
         promise = YieldPromise()
         sublime.set_timeout_async(
@@ -337,7 +338,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("workspace/executeCommand")
         self.assertEqual(promise.result(), {"canReturnAnythingHere": "asdf"})
 
-    def test_progress(self) -> 'Generator':
+    def test_progress(self) -> Generator:
         request = Request("foobar", {"hello": "world"}, self.view, progress=True)
         self.set_response("foobar", {"general": "kenobi"})
         promise = self.session.send_request_task(request)
@@ -348,7 +349,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
 class SingleDocumentTestCase2(TextDocumentTestCase):
 
-    def test_did_change(self) -> 'Generator':
+    def test_did_change(self) -> Generator:
         assert self.view
         self.maxDiff = None
         self.insert_characters("A")
@@ -380,7 +381,7 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
     def get_test_name(cls) -> str:
         return "testfile2"
 
-    def test_did_change_before_did_close(self) -> 'Generator':
+    def test_did_change_before_did_close(self) -> Generator:
         assert self.view
         self.view.window().run_command("chain", {
             "commands": [
@@ -402,7 +403,7 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
         capabilities['capabilities']['textDocumentSync']['willSaveWaitUntil'] = True
         return capabilities
 
-    def test_will_save_wait_until(self) -> 'Generator':
+    def test_will_save_wait_until(self) -> Generator:
         assert self.view
         self.insert_characters("A")
         yield from self.await_message("textDocument/didChange")

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherEventType
@@ -32,7 +33,7 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers: List['TestFileWatcher'] = []
+    _active_watchers: List[TestFileWatcher] = []
 
     @classmethod
     def create(
@@ -42,7 +43,7 @@ class TestFileWatcher(FileWatcher):
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
-    ) -> 'TestFileWatcher':
+    ) -> TestFileWatcher:
         watcher = TestFileWatcher(root_path, patterns, events, ignores, handler)
         cls._active_watchers.append(watcher)
         return watcher

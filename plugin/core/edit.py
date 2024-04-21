@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .logging import debug
 from .protocol import Position
 from .protocol import TextEdit

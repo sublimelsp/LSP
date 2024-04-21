@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.protocol import Location
 from .core.protocol import LocationLink
 from .core.protocol import Request

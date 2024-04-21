@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -125,7 +126,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         def handler2(params: Any) -> None:
             promise2.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)

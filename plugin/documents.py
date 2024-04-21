@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
@@ -91,7 +92,7 @@ def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
 
 class TextChangeListener(sublime_plugin.TextChangeListener):
 
-    ids_to_listeners: 'WeakValueDictionary[int, TextChangeListener]' = WeakValueDictionary()
+    ids_to_listeners: WeakValueDictionary[int, TextChangeListener] = WeakValueDictionary()
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:

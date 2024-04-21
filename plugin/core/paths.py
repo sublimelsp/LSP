@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import DocumentUri
 from .sessions import Session
 from .views import parse_uri

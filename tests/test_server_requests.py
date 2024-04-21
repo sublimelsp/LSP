@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import ErrorCodes
 from LSP.plugin.core.protocol import TextDocumentSyncKind
 from LSP.plugin.core.sessions import SessionBufferProtocol

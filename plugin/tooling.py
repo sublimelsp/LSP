@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows

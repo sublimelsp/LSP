@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
@@ -281,7 +282,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
-_subprocesses: 'weakref.WeakSet[subprocess.Popen]' = weakref.WeakSet()
+_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:

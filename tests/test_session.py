@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import DocumentUri

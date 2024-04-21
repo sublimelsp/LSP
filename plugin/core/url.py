@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Tuple
 from urllib.parse import urljoin
 from urllib.parse import urlparse

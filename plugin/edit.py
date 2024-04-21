@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.edit import parse_range
 from .core.logging import debug
 from .core.protocol import TextEdit

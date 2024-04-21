@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin import apply_text_edits
 from LSP.plugin.core.edit import parse_workspace_edit
 from LSP.plugin.core.protocol import TextDocumentEdit, TextEdit, WorkspaceEdit

@@ -43,11 +43,11 @@ else:
     def final(func):  # type: ignore
         return func
 
-    def _make_type(name: str) -> _TypeMeta:
+    def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore
 
     class _TypeMeta(type):
-        def __getitem__(self, args: Any) -> Any:
+        def __getitem__(self, args: 'Any') -> 'Any':
             if not isinstance(args, tuple):
                 args = (args,)
 

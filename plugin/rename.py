@@ -298,7 +298,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 'commands': [
                     [
                         'lsp_apply_workspace_edit',
-                        {'session_name': session_name, 'edit': workspace_edit}
+                        {'session_name': session_name, 'edit': workspace_edit, 'is_refactoring': True}
                     ],
                     [
                         'hide_panel',

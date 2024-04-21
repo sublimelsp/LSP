@@ -59,7 +59,7 @@ class FileWatcher(metaclass=ABCMeta):
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
-    ) -> 'FileWatcher':
+    ) -> FileWatcher:
         """
         Creates a new instance of the file watcher.
 

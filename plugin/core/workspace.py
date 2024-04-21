@@ -27,7 +27,7 @@ class WorkspaceFolder:
         self.path = path
 
     @classmethod
-    def from_path(cls, path: str) -> 'WorkspaceFolder':
+    def from_path(cls, path: str) -> WorkspaceFolder:
         return cls(os.path.basename(path) or path, path)
 
     def __hash__(self) -> int:

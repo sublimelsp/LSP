@@ -196,7 +196,7 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
+    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
@@ -534,7 +534,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
 class SessionViewProtocol(Protocol):
 
     @property
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         ...
 
     @property
@@ -542,11 +542,11 @@ class SessionViewProtocol(Protocol):
         ...
 
     @property
-    def listener(self) -> 'weakref.ref[AbstractViewListener]':
+    def listener(self) -> weakref.ref[AbstractViewListener]:
         ...
 
     @property
-    def session_buffer(self) -> 'SessionBufferProtocol':
+    def session_buffer(self) -> SessionBufferProtocol:
         ...
 
     def get_uri(self) -> Optional[DocumentUri]:
@@ -603,11 +603,11 @@ class SessionViewProtocol(Protocol):
 class SessionBufferProtocol(Protocol):
 
     @property
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         ...
 
     @property
-    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+    def session_views(self) -> WeakSet[SessionViewProtocol]:
         ...
 
     @property

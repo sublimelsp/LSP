@@ -76,7 +76,7 @@ class Error(Exception):
         return {"code": self.code, "message": super().__str__()}
 
     @classmethod
-    def from_lsp(cls, d: StringDict) -> 'Error':
+    def from_lsp(cls, d: StringDict) -> Error:
         return Error(d["code"], d["message"])
 
     def __str__(self) -> str:

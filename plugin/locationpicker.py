@@ -18,7 +18,7 @@ import weakref
 
 def open_location_async(
     session: Session,
-    location: Union[Location, LocationLink],
+    location: Location | LocationLink,
     side_by_side: bool,
     force_group: bool,
     group: int = -1
@@ -29,7 +29,7 @@ def open_location_async(
     if side_by_side:
         flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
 
-    def check_success_async(view: Optional[sublime.View]) -> None:
+    def check_success_async(view: sublime.View | None) -> None:
         if not view:
             sublime.error_message("Unable to open URI")
 
@@ -41,8 +41,8 @@ def open_basic_file(
     uri: str,
     position: Position,
     flags: int = 0,
-    group: Optional[int] = None
-) -> Optional[sublime.View]:
+    group: int | None = None
+) -> sublime.View | None:
     if group is None:
         group = session.window.active_group()
     if uri.startswith("file:"):
@@ -63,7 +63,7 @@ class LocationPicker:
         self,
         view: sublime.View,
         session: Session,
-        locations: Union[List[Location], List[LocationLink]],
+        locations: list[Location] | list[LocationLink],
         side_by_side: bool,
         force_group: bool = True,
         group: int = -1,
@@ -82,7 +82,7 @@ class LocationPicker:
         self._force_group = force_group
         self._group = group
         self._items = locations
-        self._highlighted_view: Optional[sublime.View] = None
+        self._highlighted_view: sublime.View | None = None
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
         self._window.focus_group(group)
@@ -100,7 +100,7 @@ class LocationPicker:
             placeholder=placeholder
         )
 
-    def _unpack(self, index: int) -> Tuple[Optional[Session], Union[Location, LocationLink], DocumentUri, Position]:
+    def _unpack(self, index: int) -> tuple[Session | None, Location | LocationLink, DocumentUri, Position]:
         location = self._items[index]
         uri, position = get_uri_and_position_from_location(location)
         return self._weaksession(), location, uri, position
@@ -120,7 +120,7 @@ class LocationPicker:
                 if not self._side_by_side:
                     view = open_basic_file(session, uri, position, flags)
                     if not view:
-                        self._window.status_message("Unable to open {}".format(uri))
+                        self._window.status_message(f"Unable to open {uri}")
             else:
                 sublime.set_timeout_async(
                     functools.partial(

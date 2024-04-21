@@ -12,8 +12,8 @@ FilePath = str
 FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
 
-def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> List[FileWatcherEventType]:
-    event_types: List[FileWatcherEventType] = []
+def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> list[FileWatcherEventType]:
+    event_types: list[FileWatcherEventType] = []
     if kind & WatchKind.Create:
         event_types.append('create')
     if kind & WatchKind.Change:
@@ -32,7 +32,7 @@ def file_watcher_event_type_to_lsp_file_change_type(kind: FileWatcherEventType) 
 
 
 class FileWatcherProtocol(Protocol):
-    def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
+    def on_file_event_async(self, events: list[FileWatcherEvent]) -> None:
         """
         Called on file watcher events.
         This API must be triggered on async thread.
@@ -55,9 +55,9 @@ class FileWatcher(metaclass=ABCMeta):
     def create(
         cls,
         root_path: str,
-        patterns: List[str],
-        events: List[FileWatcherEventType],
-        ignores: List[str],
+        patterns: list[str],
+        events: list[FileWatcherEventType],
+        ignores: list[str],
         handler: FileWatcherProtocol
     ) -> FileWatcher:
         """
@@ -79,15 +79,15 @@ class FileWatcher(metaclass=ABCMeta):
         pass
 
 
-watcher_implementation: Optional[Type[FileWatcher]] = None
+watcher_implementation: type[FileWatcher] | None = None
 
 
-def register_file_watcher_implementation(file_watcher: Type[FileWatcher]) -> None:
+def register_file_watcher_implementation(file_watcher: type[FileWatcher]) -> None:
     global watcher_implementation
     if watcher_implementation:
         print('LSP: Watcher implementation already registered. Overwriting.')
     watcher_implementation = file_watcher
 
 
-def get_file_watcher_implementation() -> Optional[Type[FileWatcher]]:
+def get_file_watcher_implementation() -> type[FileWatcher] | None:
     return watcher_implementation

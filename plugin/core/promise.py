@@ -88,7 +88,7 @@ class Promise(Generic[T]):
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver: Optional[ResolveFunc[TExecutor]] = None
+                self.resolver: ResolveFunc[TExecutor] | None = None
 
             def __call__(self, resolver: ResolveFunc[TExecutor]) -> None:
                 self.resolver = resolver
@@ -100,7 +100,7 @@ class Promise(Generic[T]):
 
     # Could also support passing plain S.
     @staticmethod
-    def all(promises: List[Promise[S]]) -> Promise[List[S]]:
+    def all(promises: list[Promise[S]]) -> Promise[list[S]]:
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
         gets resolved.
@@ -110,7 +110,7 @@ class Promise(Generic[T]):
         :returns:   A promise that gets resolved when all passed promises gets resolved.
                     Gets passed a list with all resolved values.
         """
-        def executor(resolve: ResolveFunc[List[S]]) -> None:
+        def executor(resolve: ResolveFunc[list[S]]) -> None:
             was_resolved = False
 
             def recheck_resolve_status(_: S) -> None:
@@ -140,12 +140,12 @@ class Promise(Generic[T]):
         """
         self.resolved = False
         self.mutex = threading.Lock()
-        self.callbacks: List[ResolveFunc[T]] = []
+        self.callbacks: list[ResolveFunc[T]] = []
         executor_func(lambda resolve_value=None: self._do_resolve(resolve_value))
 
     def __repr__(self) -> str:
         if self.resolved:
-            return 'Promise({})'.format(self.value)
+            return f'Promise({self.value})'
         return 'Promise(<pending>)'
 
     def then(self, onfullfilled: FullfillFunc[T, TResult]) -> Promise[TResult]:

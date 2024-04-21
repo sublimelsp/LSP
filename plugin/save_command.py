@@ -33,7 +33,7 @@ class SaveTask(metaclass=ABCMeta):
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._cancelled:
-            self._set_view_status('LSP: Timeout processing {}'.format(self.__class__.__name__))
+            self._set_view_status(f'LSP: Timeout processing {self.__class__.__name__}')
             self._cancelled = True
             self._on_done()
 
@@ -64,12 +64,12 @@ class SaveTask(metaclass=ABCMeta):
 
 class SaveTasksRunner:
     def __init__(
-        self, text_command: LspTextCommand, tasks: List[Type[SaveTask]], on_complete: Callable[[], None]
+        self, text_command: LspTextCommand, tasks: list[type[SaveTask]], on_complete: Callable[[], None]
     ) -> None:
         self._text_command = text_command
         self._tasks = tasks
         self._on_tasks_completed = on_complete
-        self._pending_tasks: List[SaveTask] = []
+        self._pending_tasks: list[SaveTask] = []
         self._canceled = False
 
     def run(self) -> None:
@@ -108,18 +108,18 @@ class LspSaveCommand(LspTextCommand):
     A command used as a substitute for native save command. Runs code actions and document
     formatting before triggering the native save command.
     """
-    _tasks: List[Type[SaveTask]] = []
+    _tasks: list[type[SaveTask]] = []
 
     @classmethod
-    def register_task(cls, task: Type[SaveTask]) -> None:
+    def register_task(cls, task: type[SaveTask]) -> None:
         assert task not in cls._tasks
         cls._tasks.append(task)
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._save_tasks_runner: Optional[SaveTasksRunner] = None
+        self._save_tasks_runner: SaveTasksRunner | None = None
 
-    def run(self, edit: sublime.Edit, **kwargs: Dict[str, Any]) -> None:
+    def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
         if self._save_tasks_runner:
             self._save_tasks_runner.cancel()
         sublime.set_timeout_async(self._trigger_on_pre_save_async)
@@ -134,7 +134,7 @@ class LspSaveCommand(LspTextCommand):
                 listener.trigger_on_pre_save_async()  # type: ignore
                 break
 
-    def _on_tasks_completed(self, kwargs: Dict[str, Any]) -> None:
+    def _on_tasks_completed(self, kwargs: dict[str, Any]) -> None:
         self._save_tasks_runner = None
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))

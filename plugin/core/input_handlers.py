@@ -60,7 +60,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     """
 
     def __init__(
-        self, window: sublime.Window, initial_value: Optional[Union[str, sublime.ListInputItem]] = None
+        self, window: sublime.Window, initial_value: str | sublime.ListInputItem | None = None
     ) -> None:
         super().__init__()
         self._window = window
@@ -103,13 +103,13 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
     names are not used in another way in the command's class.
     """
 
-    def __init__(self, command: sublime_plugin.WindowCommand, args: Dict[str, Any]) -> None:
+    def __init__(self, command: sublime_plugin.WindowCommand, args: dict[str, Any]) -> None:
         super().__init__()
         self.command = command
         self.args = args
         self.text = getattr(command, '_text', '')
-        self.listener: Optional[sublime_plugin.TextChangeListener] = None
-        self.input_view: Optional[sublime.View] = None
+        self.listener: sublime_plugin.TextChangeListener | None = None
+        self.input_view: sublime.View | None = None
 
     def attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore
@@ -130,7 +130,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             selection.add(len(self.text))
 
     @final
-    def list_items(self) -> List[sublime.ListInputItem]:
+    def list_items(self) -> list[sublime.ListInputItem]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
         else:  # Items were updated after typing
@@ -142,7 +142,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
                     # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
                     sublime.set_timeout(self._select_first_row)
                     return [sublime.ListInputItem("", "")] + items
-            return [sublime.ListInputItem('No Symbol found: "{}"'.format(self.text), "")]
+            return [sublime.ListInputItem(f'No Symbol found: "{self.text}"', "")]
 
     def _select_first_row(self) -> None:
         self.command.window.run_command('move', {'by': 'lines', 'forward': True})
@@ -152,7 +152,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         sublime.set_timeout(self.attach_listener)
         return self.text
 
-    def initial_selection(self) -> List[Tuple[int, int]]:
+    def initial_selection(self) -> list[tuple[int, int]]:
         pt = len(self.text)
         return [(pt, pt)]
 
@@ -171,11 +171,11 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         """ Called after changes have been made to the input, with the text of the input field passed as argument. """
         pass
 
-    def get_list_items(self) -> List[sublime.ListInputItem]:
+    def get_list_items(self) -> list[sublime.ListInputItem]:
         """ The list items which are initially shown. """
         return []
 
-    def update(self, items: List[sublime.ListInputItem]) -> None:
+    def update(self, items: list[sublime.ListInputItem]) -> None:
         """ Call this method to update the list items. """
         if not self.input_view:
             return
@@ -202,7 +202,7 @@ class InputListener(sublime_plugin.TextChangeListener):
         return False
 
     @debounced
-    def on_text_changed(self, changes: List[sublime.TextChange]) -> None:
+    def on_text_changed(self, changes: list[sublime.TextChange]) -> None:
         handler = self.weakhandler()
         if not handler:
             return

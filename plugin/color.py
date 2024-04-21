@@ -30,7 +30,7 @@ class LspColorPresentationCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def _handle_response_async(self, response: List[ColorPresentation]) -> None:
+    def _handle_response_async(self, response: list[ColorPresentation]) -> None:
         if not response:
             return
         window = self.view.window()
@@ -39,7 +39,7 @@ class LspColorPresentationCommand(LspTextCommand):
         if self._version != self.view.change_count():
             return
         old_text = self.view.substr(range_to_region(self._range, self.view))
-        self._filtered_response: List[ColorPresentation] = []
+        self._filtered_response: list[ColorPresentation] = []
         for item in response:
             # Filter out items that would apply no change
             text_edit = item.get('textEdit')

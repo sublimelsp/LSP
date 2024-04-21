@@ -28,13 +28,13 @@ from weakref import WeakValueDictionary
 import functools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES: List[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+DIAGNOSTIC_TAG_VALUES: list[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
 
 
 class TagData:
     __slots__ = ('key', 'regions', 'scope')
 
-    def __init__(self, key: str, regions: List[sublime.Region] = [], scope: str = '') -> None:
+    def __init__(self, key: str, regions: list[sublime.Region] = [], scope: str = '') -> None:
         self.key = key
         self.regions = regions
         self.scope = scope
@@ -51,14 +51,14 @@ class SessionView:
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
     CODE_ACTIONS_KEY = "lsp_code_action"
 
-    _session_buffers: WeakValueDictionary[Tuple[int, int], SessionBuffer] = WeakValueDictionary()
+    _session_buffers: WeakValueDictionary[tuple[int, int], SessionBuffer] = WeakValueDictionary()
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
         self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
-        self._active_requests: Dict[int, ActiveRequest] = {}
+        self._active_requests: dict[int, ActiveRequest] = {}
         self._listener = ref(listener)
         self._code_lenses = CodeLensView(self._view)
         self.code_lenses_needs_refresh = False
@@ -96,10 +96,10 @@ class SessionView:
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, False)))
-            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, False)))
-            self.view.erase_regions("{}_icon".format(self.diagnostics_key(severity, True)))
-            self.view.erase_regions("{}_underline".format(self.diagnostics_key(severity, True)))
+            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
+            self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
+            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
+            self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
         self.view.erase_regions("lsp_document_link")
         self.session_buffer.remove_session_view(self)
         listener = self.listener()
@@ -134,35 +134,35 @@ class SessionView:
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
-        keys: List[str] = []
+        keys: list[str] = []
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
         for key in range(1, 100):
-            keys.append("lsp_semantic_{}".format(key))
+            keys.append(f"lsp_semantic_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
-                    keys.append("lsp_highlight_{}{}".format(kind, mode))
+                    keys.append(f"lsp_highlight_{kind}{mode}")
         if hover_highlight_style in ("background", "fill"):
             keys.append(HOVER_HIGHLIGHT_KEY)
         for severity in range(1, 5):
             for mode in line_modes:
                 for tag in range(1, 3):
-                    keys.append("lsp{}d{}{}_tags_{}".format(self.session.config.name, mode, severity, tag))
+                    keys.append(f"lsp{self.session.config.name}d{mode}{severity}_tags_{tag}")
         keys.append("lsp_document_link")
         for severity in range(1, 5):
             for mode in line_modes:
-                keys.append("lsp{}d{}{}_icon".format(self.session.config.name, mode, severity))
+                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_icon")
         for severity in range(4, 0, -1):
             for mode in line_modes:
-                keys.append("lsp{}d{}{}_underline".format(self.session.config.name, mode, severity))
+                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
-                    keys.append("lsp_highlight_{}{}".format(kind, mode))
+                    keys.append(f"lsp_highlight_{kind}{mode}")
         if hover_highlight_style in ("underline", "stippled"):
             keys.append(HOVER_HIGHLIGHT_KEY)
         for key in keys:
@@ -182,7 +182,7 @@ class SessionView:
         if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
             self._apply_auto_complete_triggers(settings, trigger_chars or [])
 
-    def _register_auto_complete_triggers(self, registration_id: str, trigger_chars: List[str]) -> None:
+    def _register_auto_complete_triggers(self, registration_id: str, trigger_chars: list[str]) -> None:
         """Register trigger characters from a dynamic server registration."""
         self._apply_auto_complete_triggers(self.view.settings(), trigger_chars, registration_id)
 
@@ -191,7 +191,7 @@ class SessionView:
         settings = self.view.settings()
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
-            new_triggers: List[Dict[str, str]] = []
+            new_triggers: list[dict[str, str]] = []
             name = self.session.config.name
             for trigger in triggers:
                 if not isinstance(trigger, dict):
@@ -204,8 +204,8 @@ class SessionView:
     def _apply_auto_complete_triggers(
         self,
         settings: sublime.Settings,
-        trigger_chars: List[str],
-        registration_id: Optional[str] = None
+        trigger_chars: list[str],
+        registration_id: str | None = None
     ) -> None:
         """This method actually modifies the auto_complete_triggers entries for the view."""
         selector = self.session.config.auto_complete_selector
@@ -224,7 +224,7 @@ class SessionView:
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
             trigger["registration_id"] = registration_id
-        triggers: List[Dict[str, str]] = settings.get(self.AC_TRIGGERS_KEY) or []
+        triggers: list[dict[str, str]] = settings.get(self.AC_TRIGGERS_KEY) or []
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
@@ -248,22 +248,22 @@ class SessionView:
     def reset_show_definitions(self) -> None:
         self.view.settings().erase(SHOW_DEFINITIONS_KEY)
 
-    def get_uri(self) -> Optional[DocumentUri]:
+    def get_uri(self) -> DocumentUri | None:
         listener = self.listener()
         return listener.get_uri() if listener else None
 
-    def get_language_id(self) -> Optional[str]:
+    def get_language_id(self) -> str | None:
         listener = self.listener()
         return listener.get_language_id() if listener else None
 
-    def get_view_for_group(self, group: int) -> Optional[sublime.View]:
+    def get_view_for_group(self, group: int) -> sublime.View | None:
         sheet = self.view.sheet()
         return self.view if sheet and sheet.group() == group else None
 
-    def get_capability_async(self, capability_path: str) -> Optional[Any]:
+    def get_capability_async(self, capability_path: str) -> Any | None:
         return self.session_buffer.get_capability(capability_path)
 
-    def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
+    def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
             self._increment_hover_count()
         elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
@@ -275,7 +275,7 @@ class SessionView:
             if listener:
                 listener.on_code_lens_capability_registered_async()
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: Dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded_capabilities:
             self._decrement_hover_count()
         elif self.COMPLETION_PROVIDER_KEY in discarded_capabilities:
@@ -292,14 +292,14 @@ class SessionView:
     def diagnostics_key(self, severity: int, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
-    def diagnostics_tag_scope(self, tag: int) -> Optional[str]:
+    def diagnostics_tag_scope(self, tag: int) -> str | None:
         for k, v in DiagnosticTag.__dict__.items():
             if v == tag:
-                return 'markup.{}.lsp'.format(k.lower())
+                return f'markup.{k.lower()}.lsp'
         return None
 
     def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
+        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
@@ -316,7 +316,7 @@ class SessionView:
 
     def _draw_diagnostics(
         self,
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
+        data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData],
         severity: int,
         max_severity_level: int,
         flags: int,
@@ -324,7 +324,7 @@ class SessionView:
     ) -> None:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         key = self.diagnostics_key(severity, multiline)
-        tags = {tag: TagData('{}_tags_{}'.format(key, tag)) for tag in DIAGNOSTIC_TAG_VALUES}
+        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_VALUES}
         data = data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
@@ -336,11 +336,11 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions("{}_icon".format(key), non_tag_regions, data.scope, data.icon, ICON_FLAGS)
-            self.view.add_regions("{}_underline".format(key), non_tag_regions, data.scope, "", flags)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, ICON_FLAGS)
+            self.view.add_regions(f"{key}_underline", non_tag_regions, data.scope, "", flags)
         else:
-            self.view.erase_regions("{}_icon".format(key))
-            self.view.erase_regions("{}_underline".format(key))
+            self.view.erase_regions(f"{key}_icon")
+            self.view.erase_regions(f"{key}_underline")
         for data in tags.values():
             if data.regions:
                 self.view.add_regions(
@@ -354,7 +354,7 @@ class SessionView:
     def on_request_finished_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)
 
-    def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
+    def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         request = self._active_requests.get(request_id, None)
         if request:
             request.update_progress_async(params)
@@ -391,7 +391,7 @@ class SessionView:
     def clear_code_lenses_async(self) -> None:
         self._code_lenses.clear_view()
 
-    def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
+    def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
         if not self._is_listener_alive() or not isinstance(response, list):
             return
         self._code_lenses.handle_response(self.session.config.name, response)
@@ -405,7 +405,7 @@ class SessionView:
             return
         if self._code_lenses.is_empty():
             return
-        promises: List[Promise[None]] = [Promise.resolve(None)]
+        promises: list[Promise[None]] = [Promise.resolve(None)]
         if self.get_capability_async('codeLensProvider.resolveProvider'):
             for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
                 request = Request("codeLens/resolve", code_lens.data, self.view)
@@ -426,4 +426,4 @@ class SessionView:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
 
     def __str__(self) -> str:
-        return '{}:{}'.format(self.session.config.name, self.view.id())
+        return f'{self.session.config.name}:{self.view.id()}'

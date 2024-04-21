@@ -11,7 +11,7 @@ import sublime
 import tempfile
 
 
-def get_auto_complete_trigger(sb: SessionBufferProtocol) -> Optional[List[Dict[str, str]]]:
+def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]] | None:
     for sv in sb.session_views:
         triggers = sv.view.settings().get("auto_complete_triggers")
         for trigger in triggers:
@@ -47,7 +47,7 @@ class ServerRequests(TextDocumentTestCase):
         class TempPlugin:
 
             @classmethod
-            def additional_variables(cls) -> Optional[Dict[str, str]]:
+            def additional_variables(cls) -> dict[str, str] | None:
                 return {"hello": "X", "world": "Y"}
 
         self.session._plugin_class = TempPlugin  # type: ignore
@@ -72,7 +72,7 @@ class ServerRequests(TextDocumentTestCase):
             initial_text = ["a b", "c d"]
             file_paths = []
             for i in range(0, 2):
-                file_paths.append(os.path.join(dirpath, "file{}.txt".format(i)))
+                file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
                 with open(file_paths[-1], "w") as fp:
                     fp.write(initial_text[i])
             yield from verify(

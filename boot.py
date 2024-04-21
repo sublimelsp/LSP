@@ -89,7 +89,7 @@ from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any, Dict, List, Optional, Type
 
 
-def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
+def _get_final_subclasses(derived: list[type], results: list[type]) -> None:
     for d in derived:
         d_subclasses = d.__subclasses__()
         if len(d_subclasses) > 0:
@@ -99,7 +99,7 @@ def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes: List[Type[AbstractPlugin]] = []
+    plugin_classes: list[type[AbstractPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:
@@ -187,7 +187,7 @@ class Listener(sublime_plugin.EventListener):
                     tup[1](None)
                     break
 
-    def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+    def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":
             wm = windows.lookup(window)
             if not wm:

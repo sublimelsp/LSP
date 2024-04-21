@@ -22,8 +22,8 @@ class LspGotoCommand(LspTextCommand):
 
     def is_enabled(
         self,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
@@ -33,8 +33,8 @@ class LspGotoCommand(LspTextCommand):
 
     def is_visible(
         self,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
@@ -47,8 +47,8 @@ class LspGotoCommand(LspTextCommand):
     def run(
         self,
         _: sublime.Edit,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
@@ -74,7 +74,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool,
         group: int,
         position: int,
-        response: Union[None, Location, List[Location], List[LocationLink]]
+        response: None | Location | list[Location] | list[LocationLink]
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})

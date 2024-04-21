@@ -21,24 +21,24 @@ RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 class WindowConfigChangeListener(metaclass=ABCMeta):
 
     @abstractmethod
-    def on_configs_changed(self, config_name: Optional[str] = None) -> None:
+    def on_configs_changed(self, config_name: str | None = None) -> None:
         raise NotImplementedError()
 
 
-class WindowConfigManager(object):
-    def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
+class WindowConfigManager:
+    def __init__(self, window: sublime.Window, global_configs: dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._disabled_for_session: Set[str] = set()
-        self._crashes: Dict[str, Deque[datetime]] = {}
-        self.all: Dict[str, ClientConfig] = {}
+        self._disabled_for_session: set[str] = set()
+        self._crashes: dict[str, deque[datetime]] = {}
+        self.all: dict[str, ClientConfig] = {}
         self._change_listeners: WeakSet[WindowConfigChangeListener] = WeakSet()
         self._reload_configs(notify_listeners=False)
 
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:
         self._change_listeners.add(listener)
 
-    def get_configs(self) -> List[ClientConfig]:
+    def get_configs(self) -> list[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
 
     def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
@@ -59,10 +59,10 @@ class WindowConfigManager(object):
         except (IndexError, RuntimeError):
             pass
 
-    def update(self, updated_config_name: Optional[str] = None) -> None:
+    def update(self, updated_config_name: str | None = None) -> None:
         self._reload_configs(updated_config_name, notify_listeners=True)
 
-    def _reload_configs(self, updated_config_name: Optional[str] = None, notify_listeners: bool = False) -> None:
+    def _reload_configs(self, updated_config_name: str | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
         project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
         if updated_config_name is None:
@@ -85,7 +85,7 @@ class WindowConfigManager(object):
             try:
                 self.all[name] = ClientConfig.from_dict(name, c)
             except Exception as ex:
-                exception_log("failed to load project-only configuration {}".format(name), ex)
+                exception_log(f"failed to load project-only configuration {name}", ex)
         if notify_listeners:
             for listener in self._change_listeners:
                 listener.on_configs_changed(updated_config_name)
@@ -102,7 +102,7 @@ class WindowConfigManager(object):
             disable_in_project(self._window, config_name)
         self.update(config_name)
 
-    def record_crash(self, config_name: str, exit_code: int, exception: Optional[Exception]) -> bool:
+    def record_crash(self, config_name: str, exit_code: int, exception: Exception | None) -> bool:
         """
         Signal that a session has crashed.
 
@@ -114,8 +114,7 @@ class WindowConfigManager(object):
         self._crashes[config_name].append(now)
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
-        printf("{} crashed ({} / {} times in the last {} seconds), exit code {}, exception: {}".format(
-            config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception))
+        printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last {RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:

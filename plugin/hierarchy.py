@@ -44,8 +44,8 @@ class HierarchyDataProvider(TreeDataProvider):
         self,
         weaksession: weakref.ref[Session],
         request: Callable[..., Request],
-        request_handler: Callable[..., List[HierarchyItemWrapper]],
-        root_elements: List[HierarchyItemWrapper]
+        request_handler: Callable[..., list[HierarchyItemWrapper]],
+        root_elements: list[HierarchyItemWrapper]
     ) -> None:
         self.weaksession = weaksession
         self.request = request
@@ -54,7 +54,7 @@ class HierarchyDataProvider(TreeDataProvider):
         session = self.weaksession()
         self.session_name = session.config.name if session else None
 
-    def get_children(self, element: Optional[HierarchyItemWrapper]) -> Promise[List[HierarchyItemWrapper]]:
+    def get_children(self, element: HierarchyItemWrapper | None) -> Promise[list[HierarchyItemWrapper]]:
         if element is None:
             return Promise.resolve(self.root_elements)
         session = self.weaksession()
@@ -85,7 +85,7 @@ class HierarchyDataProvider(TreeDataProvider):
 
 
 def make_data_provider(
-    weaksession: weakref.ref[Session], sheet_name: str, direction: int, response: List[HierarchyItemWrapper]
+    weaksession: weakref.ref[Session], sheet_name: str, direction: int, response: list[HierarchyItemWrapper]
 ) -> HierarchyDataProvider:
     if sheet_name == "Call Hierarchy":
         request = Request.incomingCalls if direction == 1 else Request.outgoingCalls
@@ -94,26 +94,26 @@ def make_data_provider(
         request = Request.supertypes if direction == 1 else Request.subtypes
         handler = type_hierarchy_handler
     else:
-        raise NotImplementedError('{} not implemented'.format(sheet_name))
+        raise NotImplementedError(f'{sheet_name} not implemented')
     return HierarchyDataProvider(weaksession, request, handler, response)
 
 
-def incoming_calls_handler(response: Union[List[CallHierarchyIncomingCall], None, Error]) -> List[HierarchyItemWrapper]:
+def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | None | Error) -> list[HierarchyItemWrapper]:
     return [
         to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
-def outgoing_calls_handler(response: Union[List[CallHierarchyOutgoingCall], None, Error]) -> List[HierarchyItemWrapper]:
+def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | None | Error) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
-def type_hierarchy_handler(response: Union[List[TypeHierarchyItem], None, Error]) -> List[HierarchyItemWrapper]:
+def type_hierarchy_handler(response: list[TypeHierarchyItem] | None | Error) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 
 def to_hierarchy_data(
-    item: Union[CallHierarchyItem, TypeHierarchyItem], selection_range: Optional[Range] = None
+    item: CallHierarchyItem | TypeHierarchyItem, selection_range: Range | None = None
 ) -> HierarchyItemWrapper:
     return {
         'item': item,
@@ -121,7 +121,7 @@ def to_hierarchy_data(
     }
 
 
-def make_header(session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItem]) -> str:
+def make_header(session_name: str, sheet_name: str, direction: int, root_elements: list[HierarchyItem]) -> str:
     if sheet_name == "Call Hierarchy":
         label = "Callers of…" if direction == 1 else "Calls from…"
         tooltip = "Show Outgoing Calls" if direction == 1 else "Show Incoming Calls"
@@ -129,7 +129,7 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
         label = "Supertypes of…" if direction == 1 else "Subtypes of…"
         tooltip = "Show Subtypes" if direction == 1 else "Show Supertypes"
     else:
-        raise NotImplementedError('{} not implemented'.format(sheet_name))
+        raise NotImplementedError(f'{sheet_name} not implemented')
     new_direction = 2 if direction == 1 else 1
     return '{}: {} {}'.format(sheet_name, label, make_command_link('lsp_hierarchy_toggle', "⇄", {
         'session_name': session_name,
@@ -145,16 +145,16 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
     @abstractmethod
     def request(
         cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[Union[List[HierarchyItem], Error, None]]:
+    ) -> Request[list[HierarchyItem] | Error | None]:
         """ A function that generates the initial request when this command is invoked. """
         raise NotImplementedError()
 
-    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point)
         return True
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None, point: int | None = None) -> None:
         self._window = self.view.window()
         session = self.best_session(self.capability)
         if not session:
@@ -167,7 +167,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
             self.request(params, self.view), partial(self._handle_response_async, weakref.ref(session)))
 
     def _handle_response_async(
-        self, weaksession: weakref.ref[Session], response: Optional[List[HierarchyItem]]
+        self, weaksession: weakref.ref[Session], response: list[HierarchyItem] | None
     ) -> None:
         if not self._window or not self._window.is_valid():
             return
@@ -176,9 +176,9 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
         elif self.capability == 'typeHierarchyProvider':
             sheet_name = "Type Hierarchy"
         else:
-            raise NotImplementedError('{} not implemented'.format(self.capability))
+            raise NotImplementedError(f'{self.capability} not implemented')
         if not response:
-            self._window.status_message("{} not available".format(sheet_name))
+            self._window.status_message(f"{sheet_name} not available")
             return
         session = weaksession()
         if not session:
@@ -193,7 +193,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
 class LspHierarchyToggleCommand(LspWindowCommand):
 
     def run(
-        self, session_name: str, sheet_name: str, direction: int, root_elements: List[HierarchyItemWrapper]
+        self, session_name: str, sheet_name: str, direction: int, root_elements: list[HierarchyItemWrapper]
     ) -> None:
         session = self.session_by_name(session_name)
         if not session:
@@ -204,7 +204,7 @@ class LspHierarchyToggleCommand(LspWindowCommand):
         open_first(self.window, session.config.name, root_elements)
 
 
-def open_first(window: sublime.Window, session_name: str, items: List[HierarchyItemWrapper]) -> None:
+def open_first(window: sublime.Window, session_name: str, items: list[HierarchyItemWrapper]) -> None:
     if items and window.is_valid():
         item = items[0]['item']
         window.run_command('lsp_open_location', {
@@ -225,7 +225,7 @@ class LspCallHierarchyCommand(LspHierarchyCommand):
     @classmethod
     def request(
         cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[Union[List[CallHierarchyItem], Error, None]]:
+    ) -> Request[list[CallHierarchyItem] | Error | None]:
         return Request.prepareCallHierarchy(cast(CallHierarchyPrepareParams, params), view)
 
 
@@ -236,5 +236,5 @@ class LspTypeHierarchyCommand(LspHierarchyCommand):
     @classmethod
     def request(
         cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[Union[List[TypeHierarchyItem], Error, None]]:
+    ) -> Request[list[TypeHierarchyItem] | Error | None]:
         return Request.prepareTypeHierarchy(cast(TypeHierarchyPrepareParams, params), view)

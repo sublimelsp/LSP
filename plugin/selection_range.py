@@ -15,18 +15,18 @@ class LspExpandSelectionCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._regions: List[sublime.Region] = []
+        self._regions: list[sublime.Region] = []
         self._change_count = 0
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
+    def is_enabled(self, event: dict | None = None, point: int | None = None, fallback: bool = False) -> bool:
         return fallback or super().is_enabled(event, point)
 
-    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
+    def is_visible(self, event: dict | None = None, point: int | None = None, fallback: bool = False) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point, fallback)
         return True
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, fallback: bool = False) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None, fallback: bool = False) -> None:
         position = get_position(self.view, event)
         if position is None:
             return
@@ -37,9 +37,9 @@ class LspExpandSelectionCommand(LspTextCommand):
             self._change_count = self.view.change_count()
             session.send_request(Request.selectionRange(params), self.on_result, self.on_error)
         elif fallback:
-            self._run_builtin_expand_selection("No {} found".format(self.capability))
+            self._run_builtin_expand_selection(f"No {self.capability} found")
 
-    def on_result(self, params: Optional[List[SelectionRange]]) -> None:
+    def on_result(self, params: list[SelectionRange] | None) -> None:
         if self._change_count != self.view.change_count():
             return
         if params:
@@ -59,10 +59,10 @@ class LspExpandSelectionCommand(LspTextCommand):
             window.status_message(msg)
 
     def _run_builtin_expand_selection(self, fallback_reason: str) -> None:
-        self._status_message("{}, reverting to built-in Expand Selection".format(fallback_reason))
+        self._status_message(f"{fallback_reason}, reverting to built-in Expand Selection")
         self.view.run_command("expand_selection", {"to": "smart"})
 
-    def _smallest_containing(self, region: sublime.Region, param: SelectionRange) -> Tuple[int, int]:
+    def _smallest_containing(self, region: sublime.Region, param: SelectionRange) -> tuple[int, int]:
         r = range_to_region(param["range"], self.view)
         # Test for *strict* containment
         if r.contains(region) and (r.a < region.a or r.b > region.b):

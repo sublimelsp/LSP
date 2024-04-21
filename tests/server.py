@@ -111,14 +111,14 @@ def dump(payload: PayloadLike) -> bytes:
         separators=(",", ":")).encode(ENCODING)
 
 
-def content_length(line: bytes) -> Optional[int]:
+def content_length(line: bytes) -> int | None:
     if line.startswith(b'Content-Length: '):
         _, value = line.split(b'Content-Length: ')
         value = value.strip()
         try:
             return int(value)
         except ValueError:
-            raise ValueError("Invalid Content-Length header: {}".format(value))
+            raise ValueError(f"Invalid Content-Length header: {value}")
     return None
 
 
@@ -147,7 +147,7 @@ class SimpleRequest(Request):
     def __init__(self) -> None:
         self.cv = asyncio.Condition()
         self.result: PayloadLike = None
-        self.error: Optional[Error] = None
+        self.error: Error | None = None
 
     async def on_result(self, params: PayloadLike) -> None:
         self.result = params
@@ -166,16 +166,16 @@ class Session:
         self._reader = reader
         self._writer = writer
 
-        self._response_handlers: Dict[Any, Request] = {}
-        self._request_handlers: Dict[str, Callable[[PayloadLike], Awaitable[PayloadLike]]] = {}
-        self._notification_handlers: Dict[str, Callable[[PayloadLike], Awaitable[None]]] = {}
+        self._response_handlers: dict[Any, Request] = {}
+        self._request_handlers: dict[str, Callable[[PayloadLike], Awaitable[PayloadLike]]] = {}
+        self._notification_handlers: dict[str, Callable[[PayloadLike], Awaitable[None]]] = {}
 
         # initialize/shutdown/exit dance
         self._received_shutdown = False
 
         # properties used for testing purposes
-        self._responses: List[Tuple[str, PayloadLike]] = []
-        self._received: Dict[str, PayloadLike] = {}
+        self._responses: list[tuple[str, PayloadLike]] = []
+        self._received: dict[str, PayloadLike] = {}
         self._received_cv = asyncio.Condition()
 
         self._install_handlers()
@@ -245,8 +245,8 @@ class Session:
     def _on_notification(self, notification_method: str, handler: Callable[[PayloadLike], Awaitable[None]]) -> None:
         self._notification_handlers[notification_method] = handler
 
-    async def _handle(self, typestr: str, message: Dict[str, Any], handlers: Dict[str, Callable],
-                      request_id: Optional[int]) -> None:
+    async def _handle(self, typestr: str, message: dict[str, Any], handlers: dict[str, Callable],
+                      request_id: int | None) -> None:
         method = message.get("method", "")
         params = message.get("params")
         unhandled = True
@@ -263,7 +263,7 @@ class Session:
                 self._reply(request_id, mocked_response)
             elif request_id is not None:
                 self._error(request_id, Error(
-                    ErrorCode.MethodNotFound, "method '{}' not found".format(method)))
+                    ErrorCode.MethodNotFound, f"method '{method}' not found"))
             else:
                 if unhandled:
                     self._log(f"unhandled {typestr} {method}")
@@ -285,7 +285,7 @@ class Session:
                 if not self._received_shutdown:
                     self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
 
-    def _get_mocked_response(self, method: str) -> Union[PayloadLike, bool]:
+    def _get_mocked_response(self, method: str) -> PayloadLike | bool:
         for response in self._responses:
             resp_method, resp_payload = response
             if resp_method == method:
@@ -296,7 +296,7 @@ class Session:
     async def _handle_body(self, body: bytes) -> None:
         try:
             await self._receive_payload(json.loads(body))
-        except IOError as ex:
+        except OSError as ex:
             self._log(f"malformed {ENCODING}: {ex}")
         except UnicodeDecodeError as ex:
             self._log(f"malformed {ENCODING}: {ex}")
@@ -357,7 +357,7 @@ class Session:
         return None
 
     async def _get_received(self, params: PayloadLike) -> PayloadLike:
-        method, payload = self._validate_request_params(params)
+        method, _payload = self._validate_request_params(params)
         async with self._received_cv:
             while True:
                 try:
@@ -370,7 +370,7 @@ class Session:
         method, payload = self._validate_request_params(params)
         return await self.request(method, payload)
 
-    def _validate_request_params(self, params: PayloadLike) -> Tuple[str, Optional[Union[Dict, List]]]:
+    def _validate_request_params(self, params: PayloadLike) -> tuple[str, dict | list | None]:
         if not isinstance(params, dict):
             raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
         if "method" not in params:
@@ -402,7 +402,7 @@ class Session:
 
 
 # START: https://stackoverflow.com/a/52702646/990142
-async def stdio() -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def stdio() -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     loop = asyncio.get_event_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
@@ -410,7 +410,7 @@ async def stdio() -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         return await _unix_stdio(loop)
 
 
-async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     reader = asyncio.StreamReader(loop=loop)
 
     def reader_factory() -> asyncio.StreamReaderProtocol:
@@ -426,7 +426,7 @@ async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamRe
     return reader, writer
 
 
-def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
     # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
     # use an executor to read from stdin and write to stdout
@@ -436,7 +436,7 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
             self.stdin = sys.stdin.buffer
-            self.__exception: Optional[Exception] = None
+            self.__exception: Exception | None = None
 
         def at_eof(self) -> bool:
             return self.__exception is not None
@@ -461,7 +461,7 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
-            self.buffer: List[bytes] = []
+            self.buffer: list[bytes] = []
             self.stdout = sys.stdout.buffer
 
         def write(self, data: bytes) -> None:
@@ -483,7 +483,7 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main(tcp_port: Optional[int] = None) -> bool:
+async def main(tcp_port: int | None = None) -> bool:
     if tcp_port is not None:
 
         class ClientConnectedCallback:

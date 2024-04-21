@@ -30,7 +30,7 @@ import sublime_plugin
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
-SYMBOL_KIND_NAMES: Dict[SymbolKind, str] = {
+SYMBOL_KIND_NAMES: dict[SymbolKind, str] = {
     SymbolKind.File: "File",
     SymbolKind.Module: "Module",
     SymbolKind.Namespace: "Namespace",
@@ -80,14 +80,14 @@ def is_document_symbol_value(val: Any) -> TypeGuard[DocumentSymbolValue]:
 
 
 def symbol_to_list_input_item(
-    item: Union[DocumentSymbol, WorkspaceSymbol, SymbolInformation],
+    item: DocumentSymbol | WorkspaceSymbol | SymbolInformation,
     hierarchy: str = '',
-    session_name: Optional[str] = None
+    session_name: str | None = None
 ) -> sublime.ListInputItem:
     name = item['name']
     kind = item['kind']
     st_kind = SYMBOL_KINDS.get(kind, sublime.KIND_AMBIGUOUS)
-    details: List[str] = []
+    details: list[str] = []
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
@@ -142,14 +142,14 @@ class LspSelectionClearCommand(sublime_plugin.TextCommand):
 
 class LspSelectionAddCommand(sublime_plugin.TextCommand):
 
-    def run(self, _: sublime.Edit, regions: List[Tuple[int, int]]) -> None:
+    def run(self, _: sublime.Edit, regions: list[tuple[int, int]]) -> None:
         for region in regions:
             self.view.sel().add(sublime.Region(*region))
 
 
 class LspSelectionSetCommand(sublime_plugin.TextCommand):
 
-    def run(self, _: sublime.Edit, regions: List[Tuple[int, int]]) -> None:
+    def run(self, _: sublime.Edit, regions: list[tuple[int, int]]) -> None:
         self.view.sel().clear()
         for region in regions:
             self.view.sel().add(sublime.Region(*region))
@@ -161,7 +161,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.items: List[sublime.ListInputItem] = []
+        self.items: list[sublime.ListInputItem] = []
         self.kind = 0
         self.cached = False
         self.has_matching_symbols = True
@@ -169,9 +169,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def run(
         self,
         edit: sublime.Edit,
-        event: Optional[Dict[str, Any]] = None,
+        event: dict[str, Any] | None = None,
         kind: int = 0,
-        index: Optional[int] = None
+        index: int | None = None
     ) -> None:
         if index is None:
             if not self.has_matching_symbols:
@@ -179,7 +179,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 window = self.view.window()
                 if window:
                     kind_name = SYMBOL_KIND_NAMES.get(cast(SymbolKind, self.kind))
-                    window.status_message('No symbols of kind "{}" in this file'.format(kind_name))
+                    window.status_message(f'No symbols of kind "{kind_name}" in this file')
                 return
             self.kind = kind
             session = self.best_session(self.capability)
@@ -189,7 +189,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 session.send_request(
                     Request.documentSymbols(params, self.view), self.handle_response_async, self.handle_response_error)
 
-    def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+    def input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         if self.cached:
             self.cached = False
             if self.kind and not any(item.value['kind'] == self.kind for item in self.items):
@@ -208,7 +208,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             return DocumentSymbolsKindInputHandler(window, initial_value, self.view, self.items)
         return None
 
-    def handle_response_async(self, response: Union[List[DocumentSymbol], List[SymbolInformation], None]) -> None:
+    def handle_response_async(self, response: list[DocumentSymbol] | list[SymbolInformation] | None) -> None:
         self.items.clear()
         if response and self.view.is_valid():
             if 'selectionRange' in response[0]:
@@ -234,7 +234,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def process_document_symbol_recursive(
         self, item: DocumentSymbol, hierarchy: str = ''
-    ) -> List[sublime.ListInputItem]:
+    ) -> list[sublime.ListInputItem]:
         name = item['name']
         name_hierarchy = hierarchy + " > " + name if hierarchy else name
         items = [symbol_to_list_input_item(item, hierarchy)]
@@ -250,7 +250,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
         window: sublime.Window,
         initial_value: sublime.ListInputItem,
         view: sublime.View,
-        items: List[sublime.ListInputItem],
+        items: list[sublime.ListInputItem],
     ) -> None:
         super().__init__(window, initial_value)
         self.view = view
@@ -264,7 +264,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def placeholder(self) -> str:
         return "Symbol Kind"
 
-    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> tuple[list[sublime.ListInputItem], int]:
         items = [sublime.ListInputItem('All Kinds', 0, kind=sublime.KIND_AMBIGUOUS)]
         items.extend([
             sublime.ListInputItem(SYMBOL_KIND_NAMES[lsp_kind], lsp_kind, kind=st_kind)
@@ -281,7 +281,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def confirm(self, text: int) -> None:
         self.last_selected = text
 
-    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+    def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         kind = args.get('kind')
         if kind is not None:
             return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
@@ -290,7 +290,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
 class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
 
     def __init__(
-        self, view: sublime.View, kind: int, items: List[sublime.ListInputItem], old_selection: List[sublime.Region]
+        self, view: sublime.View, kind: int, items: list[sublime.ListInputItem], old_selection: list[sublime.Region]
     ) -> None:
         super().__init__()
         self.view = view
@@ -301,7 +301,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
     def name(self) -> str:
         return 'index'
 
-    def list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def list_items(self) -> tuple[list[sublime.ListInputItem], int]:
         items = [item for item in self.items if not self.kind or item.value['kind'] == self.kind]
         selected_index = 0
         if self.old_selection:
@@ -315,7 +315,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
                     break
         return items, selected_index
 
-    def preview(self, text: Optional[DocumentSymbolValue]) -> Union[str, sublime.Html, None]:
+    def preview(self, text: DocumentSymbolValue | None) -> str | sublime.Html | None:
         if is_document_symbol_value(text):
             region = range_to_region(text['range'], self.view)
             self.view.run_command('lsp_selection_set', {'regions': [(region.a, region.b)]})
@@ -346,7 +346,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
                     Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
                     functools.partial(self._on_resolved_symbol_async, session_name))
 
-    def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.ListInputHandler]:
+    def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:
         if 'symbol' not in args:
             return WorkspaceSymbolsInputHandler(self, args)
         return None
@@ -366,7 +366,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
     def placeholder(self) -> str:
         return "Start typing to search"
 
-    def preview(self, text: Optional[WorkspaceSymbolValue]) -> Union[str, sublime.Html, None]:
+    def preview(self, text: WorkspaceSymbolValue | None) -> str | sublime.Html | None:
         if isinstance(text, dict) and text.get('deprecated'):
             return "⚠ Deprecated"
         return ""
@@ -376,7 +376,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             return
         change_count = self.input_view.change_count()
         self.command = cast(LspWindowCommand, self.command)
-        promises: List[Promise[List[sublime.ListInputItem]]] = []
+        promises: list[Promise[list[sublime.ListInputItem]]] = []
         for session in self.command.sessions():
             promises.append(
                 session.send_request_task(Request.workspaceSymbol({"query": text}))
@@ -384,13 +384,13 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         Promise.all(promises).then(functools.partial(self._on_all_responses, change_count))
 
     def _handle_response_async(
-        self, session_name: str, response: Union[List[SymbolInformation], List[WorkspaceSymbol], None]
-    ) -> List[sublime.ListInputItem]:
+        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | None
+    ) -> list[sublime.ListInputItem]:
         return [symbol_to_list_input_item(item, session_name=session_name) for item in response] if response else []
 
-    def _on_all_responses(self, change_count: int, item_lists: List[List[sublime.ListInputItem]]) -> None:
+    def _on_all_responses(self, change_count: int, item_lists: list[list[sublime.ListInputItem]]) -> None:
         if self.input_view and self.input_view.change_count() == change_count:
-            items: List[sublime.ListInputItem] = []
+            items: list[sublime.ListInputItem] = []
             for item_list in item_lists:
                 items.extend(item_list)
             self.update(items)

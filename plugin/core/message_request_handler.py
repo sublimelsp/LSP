@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 import sublime
 
 
-ICONS: Dict[MessageType, str] = {
+ICONS: dict[MessageType, str] = {
     MessageType.Error: '❗',
     MessageType.Warning: '⚠️',
     MessageType.Info: 'ℹ️',
@@ -17,7 +17,7 @@ ICONS: Dict[MessageType, str] = {
 }
 
 
-class MessageRequestHandler():
+class MessageRequestHandler:
     def __init__(
         self, view: sublime.View, session: Session, request_id: Any, params: ShowMessageRequestParams, source: str
     ) -> None:
@@ -32,14 +32,14 @@ class MessageRequestHandler():
         self.source = source
 
     def show(self) -> None:
-        formatted: List[str] = []
-        formatted.append("<h2>{}</h2>".format(self.source))
+        formatted: list[str] = []
+        formatted.append(f"<h2>{self.source}</h2>")
         icon = ICONS.get(self.message_type, '')
-        formatted.append("<div class='message'>{} {}</div>".format(icon, text2html(self.message)))
+        formatted.append(f"<div class='message'>{icon} {text2html(self.message)}</div>")
         if self.action_titles:
-            buttons: List[str] = []
+            buttons: list[str] = []
             for idx, title in enumerate(self.action_titles):
-                buttons.append("<a href='{}'>{}</a>".format(idx, text2html(title)))
+                buttons.append(f"<a href='{idx}'>{text2html(title)}</a>")
             formatted.append("<div class='actions'>" + " ".join(buttons) + "</div>")
         show_lsp_popup(
             self.view,

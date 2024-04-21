@@ -10,7 +10,7 @@ class SemanticToken:
 
     __slots__ = ("region", "type", "modifiers")
 
-    def __init__(self, region: sublime.Region, type: str, modifiers: List[str]):
+    def __init__(self, region: sublime.Region, type: str, modifiers: list[str]):
         self.region = region
         self.type = type
         self.modifiers = modifiers
@@ -53,7 +53,7 @@ class LspShowScopeNameCommand(LspTextCommand):
                 token_modifiers
             )
 
-    def _get_semantic_info(self, point: int) -> Tuple[str, str]:
+    def _get_semantic_info(self, point: int) -> tuple[str, str]:
         session = self.best_session('semanticTokensProvider')
         session_buffer = None
         if session:
@@ -76,7 +76,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         self,
         scope: str,
         scope_list: str,
-        stack: List[str],
+        stack: list[str],
         token_type: str,
         token_modifiers: str
     ) -> None:
@@ -93,7 +93,7 @@ class LspShowScopeNameCommand(LspTextCommand):
 
             if backtrace:
                 backtrace += '\n'
-            backtrace += '<div>%s%s</div>' % (nums, ctx)
+            backtrace += f'<div>{nums}{ctx}</div>'
 
         html = """
             <body id=show-scope>
@@ -139,7 +139,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         self,
         scope: str,
         scope_list: str,
-        stack: List[Any],
+        stack: list[Any],
         token_type: str,
         token_modifiers: str
     ) -> None:
@@ -168,11 +168,11 @@ class LspShowScopeNameCommand(LspTextCommand):
             else:
                 href = resource_path
                 location = display_path
-            link = '<a href="o:%s">%s</a>' % (href, location)
+            link = f'<a href="o:{href}">{location}</a>'
 
             if backtrace:
                 backtrace += '\n'
-            backtrace += '<div>%s%s%s</div>' % (nums, ctx, link)
+            backtrace += f'<div>{nums}{ctx}{link}</div>'
 
         html = """
             <body id=show-scope>

@@ -122,14 +122,14 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         new_name: str = "",
         placeholder: str = "",
-        event: Optional[dict] = None,
-        point: Optional[int] = None
+        event: dict | None = None,
+        point: int | None = None
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point)
         return True
 
-    def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
+    def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             # Defer to "run" and trigger rename.
             return None
@@ -154,8 +154,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
-        event: Optional[dict] = None,
-        point: Optional[int] = None
+        event: dict | None = None,
+        point: int | None = None
     ) -> None:
         listener = self.get_listener()
         if listener:
@@ -188,7 +188,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         request = Request.rename(params, self.view, progress=True)
         session.send_request(request, partial(self._on_rename_result_async, session))
 
-    def _on_rename_result_async(self, session: Session, response: Optional[WorkspaceEdit]) -> None:
+    def _on_rename_result_async(self, session: Session, response: WorkspaceEdit | None) -> None:
         if not response:
             return session.window.status_message('Nothing to rename')
         changes = parse_workspace_edit(response)
@@ -197,14 +197,14 @@ class LspSymbolRenameCommand(LspTextCommand):
             session.apply_parsed_workspace_edits(changes)
             return
         total_changes = sum(map(len, changes.values()))
-        message = "Replace {} occurrences across {} files?".format(total_changes, file_count)
+        message = f"Replace {total_changes} occurrences across {file_count} files?"
         choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
         if choice == sublime.DIALOG_YES:
             session.apply_parsed_workspace_edits(changes)
         elif choice == sublime.DIALOG_NO:
             self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
-    def _on_prepare_result(self, pos: int, response: Optional[PrepareRenameResult]) -> None:
+    def _on_prepare_result(self, pos: int, response: PrepareRenameResult | None) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -247,9 +247,9 @@ class LspSymbolRenameCommand(LspTextCommand):
         panel = pm.ensure_rename_panel()
         if not panel:
             return
-        to_render: List[str] = []
-        reference_document: List[str] = []
-        header_lines = "{} changes across {} files.\n".format(total_changes, file_count)
+        to_render: list[str] = []
+        reference_document: list[str] = []
+        header_lines = f"{total_changes} changes across {file_count} files.\n"
         to_render.append(header_lines)
         reference_document.append(header_lines)
         ROWCOL_PREFIX = " {:>4}:{:<4} {}"

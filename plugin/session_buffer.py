@@ -87,13 +87,13 @@ class SemanticTokensData:
         'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
 
     def __init__(self) -> None:
-        self.data: List[int] = []
-        self.result_id: Optional[str] = None
-        self.active_region_keys: Set[int] = set()
-        self.tokens: List[SemanticToken] = []
+        self.data: list[int] = []
+        self.result_id: str | None = None
+        self.active_region_keys: set[int] = set()
+        self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
         self.needs_refresh = False
-        self.pending_response: Optional[int] = None
+        self.pending_response: int | None = None
 
 
 class SessionBuffer:
@@ -115,21 +115,21 @@ class SessionBuffer:
         self._session_views.add(session_view)
         self._last_known_uri = uri
         self._id = buffer_id
-        self._pending_changes: Optional[PendingChanges] = None
-        self.diagnostics: List[Tuple[Diagnostic, sublime.Region]] = []
+        self._pending_changes: PendingChanges | None = None
+        self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
-        self._document_diagnostic_pending_response: Optional[int] = None
+        self._document_diagnostic_pending_response: int | None = None
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
-        self._document_links: List[DocumentLink] = []
+        self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
-        self._semantic_region_keys: Dict[str, int] = {}
+        self._semantic_region_keys: dict[str, int] = {}
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
@@ -146,7 +146,7 @@ class SessionBuffer:
         return self._session_views
 
     @property
-    def version(self) -> Optional[int]:
+    def version(self) -> int | None:
         view = self.some_view()
         return view.change_count() if view else None
 
@@ -174,12 +174,12 @@ class SessionBuffer:
             self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 
-    def get_uri(self) -> Optional[DocumentUri]:
+    def get_uri(self) -> DocumentUri | None:
         for sv in self.session_views:
             return sv.get_uri()
         return None
 
-    def get_language_id(self) -> Optional[str]:
+    def get_language_id(self) -> str | None:
         for sv in self.session_views:
             return sv.get_language_id()
         return None
@@ -227,10 +227,10 @@ class SessionBuffer:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: Dict[str, Any]
+        options: dict[str, Any]
     ) -> None:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
-        view: Optional[sublime.View] = None
+        view: sublime.View | None = None
         for sv in self.session_views:
             sv.on_capability_added_async(registration_id, capability_path, options)
             if view is None:
@@ -253,7 +253,7 @@ class SessionBuffer:
         for sv in self.session_views:
             sv.on_capability_removed_async(registration_id, discarded)
 
-    def get_capability(self, capability_path: str) -> Optional[Any]:
+    def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
             return None
         value = self.capabilities.get(capability_path)
@@ -273,7 +273,7 @@ class SessionBuffer:
     def should_notify_will_save(self) -> bool:
         return self.capabilities.should_notify_will_save() or self.session.should_notify_will_save()
 
-    def should_notify_did_save(self) -> Tuple[bool, bool]:
+    def should_notify_did_save(self) -> tuple[bool, bool]:
         do_it, include_text = self.capabilities.should_notify_did_save()
         return (do_it, include_text) if do_it else self.session.should_notify_did_save()
 
@@ -377,7 +377,7 @@ class SessionBuffer:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
 
-    def some_view(self) -> Optional[sublime.View]:
+    def some_view(self) -> sublime.View | None:
         if not self.session_views:
             return None
         # Prefer active view if possible
@@ -408,7 +408,7 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: List[ColorInformation]) -> None:
+    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
         if response is None:  # Guard against spec violation from certain language servers
             self._color_phantoms.update([])
             return
@@ -424,7 +424,7 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_document_link_async, version)
             )
 
-    def _on_document_link_async(self, view: sublime.View, response: Optional[List[DocumentLink]]) -> None:
+    def _on_document_link_async(self, view: sublime.View, response: list[DocumentLink] | None) -> None:
         self._document_links = response or []
         if self._document_links and userprefs().link_highlight_style == "underline":
             view.add_regions(
@@ -435,7 +435,7 @@ class SessionBuffer:
         else:
             view.erase_regions("lsp_document_link")
 
-    def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
+    def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
             if range_to_region(link["range"], view).contains(point):
                 return link
@@ -452,7 +452,7 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int | None = None) -> None:
         mgr = self.session.manager()
         if not mgr:
             return
@@ -481,7 +481,7 @@ class SessionBuffer:
         self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
 
     def _apply_document_diagnostic_async(
-        self, view: Optional[sublime.View], response: DocumentDiagnosticReport
+        self, view: sublime.View | None, response: DocumentDiagnosticReport
     ) -> None:
         self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
@@ -509,7 +509,7 @@ class SessionBuffer:
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
@@ -520,8 +520,8 @@ class SessionBuffer:
         if version != change_count:
             return
         diagnostics_version = version
-        diagnostics: List[Tuple[Diagnostic, sublime.Region]] = []
-        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData] = {}
+        diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
             region = range_to_region(diagnostic["range"], view)
             severity = diagnostic_severity(diagnostic)
@@ -576,7 +576,7 @@ class SessionBuffer:
         if self.semantic_tokens.pending_response:
             self.session.cancel_request(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
-        params: Dict[str, Any] = {"textDocument": text_document_identifier(view)}
+        params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
             params["range"] = region_to_range(view, view.visible_region())
             request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
@@ -597,18 +597,18 @@ class SessionBuffer:
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
 
-    def _on_semantic_tokens_async(self, response: Optional[Dict]) -> None:
+    def _on_semantic_tokens_async(self, response: dict | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: Optional[Dict]) -> None:
+    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: dict | None) -> None:
         self._on_semantic_tokens_async(response)
         self.do_semantic_tokens_async(view)  # now request semantic tokens for the full file
 
-    def _on_semantic_tokens_delta_async(self, response: Optional[Dict]) -> None:
+    def _on_semantic_tokens_delta_async(self, response: dict | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
@@ -635,7 +635,7 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions: Dict[int, Tuple[str, List[sublime.Region]]] = dict()
+        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = dict()
         prev_line = 0
         prev_col_utf16 = 0
         types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
@@ -662,13 +662,13 @@ class SessionBuffer:
                 # customizations in the color scheme for the scopes of custom token types would require a restart of
                 # Sublime Text to take effect.
                 token_general_style = view.style_for_scope("meta.semantic-token")
-                token_type_style = view.style_for_scope("meta.semantic-token.{}".format(token_type.lower()))
+                token_type_style = view.style_for_scope(f"meta.semantic-token.{token_type.lower()}")
                 if token_general_style["source_line"] != token_type_style["source_line"] or \
                         token_general_style["source_column"] != token_type_style["source_column"]:
                     if token_modifiers:
-                        scope = "meta.semantic-token.{}.{}.lsp".format(token_type.lower(), token_modifiers[0].lower())
+                        scope = f"meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
                     else:
-                        scope = "meta.semantic-token.{}.lsp".format(token_type.lower())
+                        scope = f"meta.semantic-token.{token_type.lower()}.lsp"
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
@@ -679,12 +679,12 @@ class SessionBuffer:
             if region_key not in scope_regions.keys():
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
-                    sv.view.erase_regions("lsp_semantic_{}".format(region_key))
+                    sv.view.erase_regions(f"lsp_semantic_{region_key}")
         for region_key, (scope, regions) in scope_regions.items():
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions("lsp_semantic_{}".format(region_key), regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
+                sv.view.add_regions(f"lsp_semantic_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:
@@ -694,12 +694,12 @@ class SessionBuffer:
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
         for region_key in self.semantic_tokens.active_region_keys:
-            view.erase_regions("lsp_semantic_{}".format(region_key))
+            view.erase_regions(f"lsp_semantic_{region_key}")
 
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh
 
-    def get_semantic_tokens(self) -> List[SemanticToken]:
+    def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
@@ -716,7 +716,7 @@ class SessionBuffer:
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
 
-    def _on_inlay_hints_async(self, response: Union[List[InlayHint], None]) -> None:
+    def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
             view = self.some_view()
             if not view:
@@ -726,7 +726,7 @@ class SessionBuffer:
         else:
             sublime.set_timeout(lambda: self.remove_all_inlay_hints())
 
-    def present_inlay_hints(self, phantoms: List[sublime.Phantom]) -> None:
+    def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
     def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
@@ -745,4 +745,4 @@ class SessionBuffer:
     # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(self.session.config.name, self._id, self.get_uri())
+        return f'{self.session.config.name}:{self._id}:{self.get_uri()}'

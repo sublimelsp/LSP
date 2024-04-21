@@ -20,12 +20,12 @@ import uuid
 class LspToggleInlayHintsCommand(LspWindowCommand):
     capability = 'inlayHintProvider'
 
-    def run(self, enable: Optional[bool] = None) -> None:
+    def run(self, enable: bool | None = None) -> None:
         if not isinstance(enable, bool):
             enable = not self.are_enabled(self.window)
         self.window.settings().set('lsp_show_inlay_hints', enable)
         status = 'on' if enable else 'off'
-        sublime.status_message('Inlay Hints are {}'.format(status))
+        sublime.status_message(f'Inlay Hints are {status}')
         for session in self.sessions():
             for sv in session.session_views_async():
                 sv.session_buffer.do_inlay_hints_async(sv.view)
@@ -34,7 +34,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         return self.are_enabled(self.window)
 
     @classmethod
-    def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
+    def are_enabled(cls, window: sublime.Window | None) -> bool:
         if not window:
             return userprefs().show_inlay_hints
         return bool(window.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints))
@@ -44,7 +44,7 @@ class LspInlayHintClickCommand(LspTextCommand):
     capability = 'inlayHintProvider'
 
     def run(self, _edit: sublime.Edit, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
-            event: Optional[dict] = None, label_part: Optional[InlayHintLabelPart] = None) -> None:
+            event: dict | None = None, label_part: InlayHintLabelPart | None = None) -> None:
         # Insert textEdits for the given inlay hint.
         # If a InlayHintLabelPart was clicked, label_part will be passed as an argument to the LspInlayHintClickCommand
         # and InlayHintLabelPart.command will be executed.
@@ -58,7 +58,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         self.handle(session_name, inlay_hint, phantom_uuid, label_part)
 
     def handle(self, session_name: str, inlay_hint: InlayHint, phantom_uuid: str,
-               label_part: Optional[InlayHintLabelPart] = None) -> None:
+               label_part: InlayHintLabelPart | None = None) -> None:
         self.handle_inlay_hint_text_edits(session_name, inlay_hint, phantom_uuid)
         self.handle_label_part_command(session_name, label_part)
 
@@ -73,7 +73,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             sb.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits(self.view, text_edits)
 
-    def handle_label_part_command(self, session_name: str, label_part: Optional[InlayHintLabelPart] = None) -> None:
+    def handle_label_part_command(self, session_name: str, label_part: InlayHintLabelPart | None = None) -> None:
         if not label_part:
             return
         command = label_part.get('command')
@@ -100,27 +100,23 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
-    html = """
+    html = f"""
     <body id="lsp-inlay-hint">
         <style>
             .inlay-hint {{
                 font-family: {font};
             }}
-            {css}
+            {css().inlay_hints}
         </style>
         <div class="inlay-hint">
             {label}
         </div>
     </body>
-    """.format(
-        font=font,
-        css=css().inlay_hints,
-        label=label
-    )
+    """
     return html
 
 
-def format_inlay_hint_tooltip(tooltip: Optional[Union[str, MarkupContent]]) -> str:
+def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
     if isinstance(tooltip, str):
         return html.escape(tooltip)
     if isinstance(tooltip, dict):  # MarkupContent
@@ -145,12 +141,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                     'phantom_uuid': phantom_uuid
                 }
             })
-            result += '<a href="{command}">'.format(command=inlay_hint_click_command)
+            result += f'<a href="{inlay_hint_click_command}">'
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
-        result += '<span title="{tooltip}">{value}</span>'.format(
-            tooltip=(tooltip + instruction_text).strip(),
-            value=html.escape(label)
-        )
+        result += f'<span title="{(tooltip + instruction_text).strip()}">{html.escape(label)}</span>'
         if is_clickable:
             result += "</a>"
         return result
@@ -169,14 +162,11 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                     'label_part': cast(dict, label_part)
                 }
             })
-            value += '<a href="{command}">'.format(command=inlay_hint_click_command)
+            value += f'<a href="{inlay_hint_click_command}">'
         value += html.escape(label_part['value'])
         if has_command:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
         instruction_text = '\nDouble-click to execute' if has_command else ""
-        result += "<span title=\"{tooltip}\">{value}</span>".format(
-            tooltip=(tooltip + instruction_text).strip(),
-            value=value
-        )
+        result += f"<span title=\"{(tooltip + instruction_text).strip()}\">{value}</span>"
     return result

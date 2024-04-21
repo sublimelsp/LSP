@@ -37,7 +37,7 @@ class Transport(Generic[T]):
 
 class TransportCallbacks(Protocol[T_contra]):
 
-    def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+    def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         ...
 
     def on_payload(self, payload: T_contra) -> None:
@@ -52,17 +52,17 @@ class AbstractProcessor(Generic[T]):
     def write_data(self, writer: IO[bytes], data: T) -> None:
         raise NotImplementedError()
 
-    def read_data(self, reader: IO[bytes]) -> Optional[T]:
+    def read_data(self, reader: IO[bytes]) -> T | None:
         raise NotImplementedError()
 
 
 class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
-    def write_data(self, writer: IO[bytes], data: Dict[str, Any]) -> None:
+    def write_data(self, writer: IO[bytes], data: dict[str, Any]) -> None:
         body = self._encode(data)
-        writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
+        writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode('ascii'), body))
 
-    def read_data(self, reader: IO[bytes]) -> Optional[Dict[str, Any]]:
+    def read_data(self, reader: IO[bytes]) -> dict[str, Any] | None:
         headers = http.client.parse_headers(reader)  # type: ignore
         try:
             body = reader.read(int(headers.get("Content-Length")))
@@ -72,14 +72,14 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
                 raise StopLoopError()
             else:
                 # Propagate server's output to the UI.
-                raise Exception("Unexpected payload in server's stdout:\n\n{}".format(headers))
+                raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}")
         try:
             return self._decode(body)
         except Exception as ex:
-            raise Exception("JSON decode error: {}".format(ex))
+            raise Exception(f"JSON decode error: {ex}")
 
     @staticmethod
-    def _encode(data: Dict[str, Any]) -> bytes:
+    def _encode(data: dict[str, Any]) -> bytes:
         return json.dumps(
             data,
             ensure_ascii=False,
@@ -89,14 +89,14 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
         ).encode('utf-8')
 
     @staticmethod
-    def _decode(message: bytes) -> Dict[str, Any]:
+    def _decode(message: bytes) -> dict[str, Any]:
         return json.loads(message.decode('utf-8'))
 
 
 class ProcessTransport(Transport[T]):
 
-    def __init__(self, name: str, process: Optional[subprocess.Popen], socket: Optional[socket.socket],
-                 reader: IO[bytes], writer: IO[bytes], stderr: Optional[IO[bytes]],
+    def __init__(self, name: str, process: subprocess.Popen | None, socket: socket.socket | None,
+                 reader: IO[bytes], writer: IO[bytes], stderr: IO[bytes] | None,
                  processor: AbstractProcessor[T], callback_object: TransportCallbacks[T]) -> None:
         self._closed = False
         self._process = process
@@ -105,14 +105,14 @@ class ProcessTransport(Transport[T]):
         self._writer = writer
         self._stderr = stderr
         self._processor = processor
-        self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
-        self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
+        self._reader_thread = threading.Thread(target=self._read_loop, name=f'{name}-reader')
+        self._writer_thread = threading.Thread(target=self._write_loop, name=f'{name}-writer')
         self._callback_object = weakref.ref(callback_object)
-        self._send_queue: Queue[Union[T, None]] = Queue(0)
+        self._send_queue: Queue[T | None] = Queue(0)
         self._reader_thread.start()
         self._writer_thread.start()
         if stderr:
-            self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
+            self._stderr_thread = threading.Thread(target=self._stderr_loop, name=f'{name}-stderr')
             self._stderr_thread.start()
 
     def send(self, payload: T) -> None:
@@ -131,7 +131,7 @@ class ProcessTransport(Transport[T]):
         try:
             t.join(2)
         except TimeoutError as ex:
-            exception_log("failed to join {} thread".format(t.name), ex)
+            exception_log(f"failed to join {t.name} thread", ex)
 
     def __del__(self) -> None:
         self.close()
@@ -165,7 +165,7 @@ class ProcessTransport(Transport[T]):
         else:
             self._send_queue.put_nowait(None)
 
-    def _end(self, exception: Optional[Exception]) -> None:
+    def _end(self, exception: Exception | None) -> None:
         exit_code = 0
         if self._process:
             if not exception:
@@ -195,7 +195,7 @@ class ProcessTransport(Transport[T]):
         self.close()
 
     def _write_loop(self) -> None:
-        exception: Optional[Exception] = None
+        exception: Exception | None = None
         try:
             while self._writer:
                 d = self._send_queue.get()
@@ -234,8 +234,8 @@ class ProcessTransport(Transport[T]):
 json_rpc_processor = JsonRpcProcessor()
 
 
-def create_transport(config: TransportConfig, cwd: Optional[str],
-                     callback_object: TransportCallbacks) -> Transport[Dict[str, Any]]:
+def create_transport(config: TransportConfig, cwd: str | None,
+                     callback_object: TransportCallbacks) -> Transport[dict[str, Any]]:
     if config.tcp_port is not None:
         assert config.tcp_port is not None
         if config.tcp_port < 0:
@@ -246,8 +246,8 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
-    sock: Optional[socket.socket] = None
-    process: Optional[subprocess.Popen] = None
+    sock: socket.socket | None = None
+    process: subprocess.Popen | None = None
 
     def start_subprocess() -> subprocess.Popen:
         startupinfo = _fixup_startup_args(config.command)
@@ -269,14 +269,14 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:
-                raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
+                raise RuntimeError(f"Failed to connect on port {config.tcp_port}")
             reader = sock.makefile('rwb')  # type: ignore
             writer = reader
         else:
             reader = process.stdout  # type: ignore
             writer = process.stdin  # type: ignore
     if not reader or not writer:
-        raise RuntimeError('Failed initializing transport: reader: {}, writer: {}'.format(reader, writer))
+        raise RuntimeError(f'Failed initializing transport: reader: {reader}, writer: {writer}')
     stderr = process.stderr if process else None
     return ProcessTransport(
         config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
@@ -300,7 +300,7 @@ def kill_all_subprocesses() -> None:
             pass
 
 
-def _fixup_startup_args(args: List[str]) -> Any:
+def _fixup_startup_args(args: list[str]) -> Any:
     startupinfo = None
     if sublime.platform() == "windows":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
@@ -321,15 +321,15 @@ def _fixup_startup_args(args: List[str]) -> Any:
 
 
 def _start_subprocess(
-    args: List[str],
+    args: list[str],
     stdin: int,
     stdout: int,
     stderr: int,
     startupinfo: Any,
-    env: Dict[str, str],
-    cwd: Optional[str]
+    env: dict[str, str],
+    cwd: str | None
 ) -> subprocess.Popen:
-    debug("starting {} in {}".format(args, cwd if cwd else os.getcwd()))
+    debug(f"starting {args} in {cwd if cwd else os.getcwd()}")
     process = subprocess.Popen(
         args=args,
         stdin=stdin,
@@ -342,7 +342,7 @@ def _start_subprocess(
     return process
 
 
-def _await_client_connection(listener_socket: socket.socket) -> Tuple[socket.socket, IO[bytes], IO[bytes]]:
+def _await_client_connection(listener_socket: socket.socket) -> tuple[socket.socket, IO[bytes], IO[bytes]]:
     with closing(listener_socket):
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
@@ -353,7 +353,7 @@ def _await_client_connection(listener_socket: socket.socket) -> Tuple[socket.soc
 
 def _start_subprocess_and_await_connection(
     listener_socket: socket.socket, subprocess_starter: Callable[[], subprocess.Popen]
-) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
+) -> tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
     process = None
 
     # We need to be able to start the process while also awaiting a client connection.
@@ -372,7 +372,7 @@ def _start_subprocess_and_await_connection(
     return process, sock, reader, writer  # type: ignore
 
 
-def _connect_tcp(port: int) -> Optional[socket.socket]:
+def _connect_tcp(port: int) -> socket.socket | None:
     start_time = time.time()
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:

@@ -10,7 +10,7 @@ from typing import List, Tuple
 import sublime
 
 
-class DiagnosticsAnnotationsView():
+class DiagnosticsAnnotationsView:
 
     def __init__(self, view: sublime.View, config_name: str) -> None:
         self._view = view
@@ -22,16 +22,16 @@ class DiagnosticsAnnotationsView():
             self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
-        return 'lsp_da-{}-{}'.format(severity, self._config_name)
+        return f'lsp_da-{severity}-{self._config_name}'
 
-    def draw(self, diagnostics: List[Tuple[Diagnostic, sublime.Region]]) -> None:
+    def draw(self, diagnostics: list[tuple[Diagnostic, sublime.Region]]) -> None:
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.
         for severity in DIAGNOSTIC_KINDS.keys():
             if severity <= max_severity_level:
-                matching_diagnostics: Tuple[List[Diagnostic], List[sublime.Region]] = ([], [])
+                matching_diagnostics: tuple[list[Diagnostic], list[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:
                     if diagnostic_severity(diagnostic) != severity:
                         continue

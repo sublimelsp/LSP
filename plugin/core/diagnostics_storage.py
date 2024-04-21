@@ -22,7 +22,7 @@ class DiagnosticsStorage(OrderedDict):
     #
     # https://microsoft.github.io/language-server-protocol/specification#textDocument_publishDiagnostics
 
-    def add_diagnostics_async(self, document_uri: DocumentUri, diagnostics: List[Diagnostic]) -> None:
+    def add_diagnostics_async(self, document_uri: DocumentUri, diagnostics: list[Diagnostic]) -> None:
         """
         Add `diagnostics` for `document_uri` to the store, replacing previously received `diagnoscis`
         for this `document_uri`. If `diagnostics` is the empty list, `document_uri` is removed from
@@ -38,7 +38,7 @@ class DiagnosticsStorage(OrderedDict):
 
     def filter_map_diagnostics_async(
         self, pred: Callable[[Diagnostic], bool], f: Callable[[ParsedUri, Diagnostic], T]
-    ) -> Iterator[Tuple[ParsedUri, List[T]]]:
+    ) -> Iterator[tuple[ParsedUri, list[T]]]:
         """
         Yields `(uri, results)` items with `results` being a list of `f(diagnostic)` for each
         diagnostic for this `uri` with `pred(diagnostic) == True`, filtered by `bool(f(diagnostic))`.
@@ -46,12 +46,12 @@ class DiagnosticsStorage(OrderedDict):
         not more than once. Items and results are ordered as they came in from the server.
         """
         for uri, diagnostics in self.items():
-            results: List[T] = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))
+            results: list[T] = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))
             if results:
                 yield uri, results
 
     def filter_map_diagnostics_flat_async(self, pred: Callable[[Diagnostic], bool],
-                                          f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[Tuple[ParsedUri, T]]:
+                                          f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[tuple[ParsedUri, T]]:
         """
         Flattened variant of `filter_map_diagnostics_async()`. Yields `(uri, result)` items for each
         of the `result`s per `uri` instead. Each `uri` can be yielded more than once. Items are
@@ -62,7 +62,7 @@ class DiagnosticsStorage(OrderedDict):
             for result in results:
                 yield uri, result
 
-    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
+    def sum_total_errors_and_warnings_async(self) -> tuple[int, int]:
         """
         Returns `(total_errors, total_warnings)` count of all diagnostics currently in store.
         """
@@ -71,21 +71,21 @@ class DiagnosticsStorage(OrderedDict):
             sum(map(severity_count(DiagnosticSeverity.Warning), self.values())),
         )
 
-    def diagnostics_by_document_uri(self, document_uri: DocumentUri) -> List[Diagnostic]:
+    def diagnostics_by_document_uri(self, document_uri: DocumentUri) -> list[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `document_uri`.
         """
         return self.get(parse_uri(document_uri), [])
 
-    def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> List[Diagnostic]:
+    def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> list[Diagnostic]:
         """
         Returns possibly empty list of diagnostic for `uri`.
         """
         return self.get(uri, [])
 
 
-def severity_count(severity: int) -> Callable[[List[Diagnostic]], int]:
-    def severity_count(diagnostics: List[Diagnostic]) -> int:
+def severity_count(severity: int) -> Callable[[list[Diagnostic]], int]:
+    def severity_count(diagnostics: list[Diagnostic]) -> int:
         return len(list(filter(has_severity(severity), diagnostics)))
 
     return severity_count

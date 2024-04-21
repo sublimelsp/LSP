@@ -16,7 +16,7 @@ class CSS:
         self.annotations_classname = "lsp_annotation"
 
 
-_css: Optional[CSS] = None
+_css: CSS | None = None
 
 
 def load() -> None:

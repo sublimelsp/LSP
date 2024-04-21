@@ -21,7 +21,7 @@ import sublime_plugin
 windows = WindowRegistry()
 
 
-def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
+def best_session(view: sublime.View, sessions: Iterable[Session], point: int | None = None) -> Session | None:
     if point is None:
         try:
             point = view.sel()[0].b
@@ -33,7 +33,7 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: Optiona
         return None
 
 
-def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[int]:
+def get_position(view: sublime.View, event: dict | None = None, point: int | None = None) -> int | None:
     if isinstance(point, int):
         return point
     if event:
@@ -63,7 +63,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
     def is_enabled(self) -> bool:
         return self.session() is not None
 
-    def session(self) -> Optional[Session]:
+    def session(self) -> Session | None:
         wm = windows.lookup(self.window)
         if not wm:
             return None
@@ -87,7 +87,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
                 continue
             yield session
 
-    def session_by_name(self, session_name: str) -> Optional[Session]:
+    def session_by_name(self, session_name: str) -> Session | None:
         wm = windows.lookup(self.window)
         if not wm:
             return None
@@ -114,7 +114,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
     # name attached to the active view.
     session_name = ''
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
             position = get_position(self.view, event, point)
@@ -135,17 +135,17 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return True
 
     @staticmethod
-    def applies_to_context_menu(event: Optional[dict]) -> bool:
+    def applies_to_context_menu(event: dict | None) -> bool:
         return event is not None and 'x' in event
 
-    def get_listener(self) -> Optional[AbstractViewListener]:
+    def get_listener(self) -> AbstractViewListener | None:
         return windows.listener_for_view(self.view)
 
-    def best_session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+    def best_session(self, capability: str, point: int | None = None) -> Session | None:
         listener = self.get_listener()
         return listener.session_async(capability, point) if listener else None
 
-    def session_by_name(self, name: Optional[str] = None, capability_path: Optional[str] = None) -> Optional[Session]:
+    def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
         target = name if name else self.session_name
         listener = self.get_listener()
         if listener:
@@ -157,7 +157,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
                         return None
         return None
 
-    def sessions(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
+    def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:
         listener = self.get_listener()
         if listener:
             for sv in listener.session_views_async():
@@ -172,11 +172,11 @@ class LspOpenLocationCommand(LspWindowCommand):
 
     def run(
         self,
-        location: Union[Location, LocationLink],
-        session_name: Optional[str] = None,
+        location: Location | LocationLink,
+        session_name: str | None = None,
         flags: int = 0,
         group: int = -1,
-        event: Optional[dict] = None
+        event: dict | None = None
     ) -> None:
         if event:
             modifier_keys = event.get('modifier_keys')
@@ -191,23 +191,23 @@ class LspOpenLocationCommand(LspWindowCommand):
         return True
 
     def _run_async(
-        self, location: Union[Location, LocationLink], session_name: Optional[str], flags: int, group: int
+        self, location: Location | LocationLink, session_name: str | None, flags: int, group: int
     ) -> None:
         session = self.session_by_name(session_name) if session_name else self.session()
         if session:
             session.open_location_async(location, flags, group) \
                 .then(lambda view: self._handle_continuation(location, view is not None))
 
-    def _handle_continuation(self, location: Union[Location, LocationLink], success: bool) -> None:
+    def _handle_continuation(self, location: Location | LocationLink, success: bool) -> None:
         if not success:
             uri, _ = get_uri_and_position_from_location(location)
-            message = "Failed to open {}".format(uri)
+            message = f"Failed to open {uri}"
             sublime.status_message(message)
 
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: Optional[str] = None) -> None:
+    def run(self, edit: Any, config_name: str | None = None) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
@@ -231,7 +231,7 @@ class LspRestartServerCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
 
-def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool = True) -> None:
+def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:
     try:
         uri = uri_from_view(view)
     except MissingUriError:
@@ -239,7 +239,7 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
     wm = windows.lookup(view.window())
     if not wm:
         return
-    diagnostics: List[Diagnostic] = []
+    diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
         diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
     if not diagnostics:
@@ -267,11 +267,11 @@ def navigate_diagnostics(view: sublime.View, point: Optional[int], forward: bool
 
 class LspNextDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
         navigate_diagnostics(self.view, point, forward=True)
 
 
 class LspPrevDiagnosticCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, point: int | None = None) -> None:
         navigate_diagnostics(self.view, point, forward=False)

@@ -27,7 +27,7 @@ def trace() -> None:
     previous_frame = current_frame.f_back
     file_name, line_number, function_name, _, _ = inspect.getframeinfo(previous_frame)  # type: ignore
     file_name = file_name[len(sublime.packages_path()) + len("/LSP/"):]
-    debug("TRACE {0:<32} {1}:{2}".format(function_name, file_name, line_number))
+    debug(f"TRACE {function_name:<32} {file_name}:{line_number}")
 
 
 def exception_log(message: str, ex: Exception) -> None:

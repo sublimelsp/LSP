@@ -6026,14 +6026,14 @@ class Request(Generic[R]):
         self,
         method: str,
         params: Any = None,
-        view: Optional[sublime.View] = None,
+        view: sublime.View | None = None,
         progress: bool = False,
         partial_results: bool = False
     ) -> None:
         self.method = method
         self.params = params
         self.view = view
-        self.progress: Union[bool, str] = progress
+        self.progress: bool | str = progress
         self.partial_results = partial_results
 
     @classmethod
@@ -6091,7 +6091,7 @@ class Request(Generic[R]):
     @classmethod
     def prepareCallHierarchy(
         cls, params: CallHierarchyPrepareParams, view: sublime.View
-    ) -> Request[Union[List[CallHierarchyItem], Error, None]]:
+    ) -> Request[list[CallHierarchyItem] | Error | None]:
         return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
 
     @classmethod
@@ -6169,7 +6169,7 @@ class Request(Generic[R]):
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id: int) -> Dict[str, Any]:
+    def to_payload(self, id: int) -> dict[str, Any]:
         payload = {
             "jsonrpc": "2.0",
             "id": id,
@@ -6191,14 +6191,14 @@ class Error(Exception):
     def from_lsp(cls, params: Any) -> Error:
         return Error(params["code"], params["message"], params.get("data"))
 
-    def to_lsp(self) -> Dict[str, Any]:
+    def to_lsp(self) -> dict[str, Any]:
         result = {"code": self.code, "message": super().__str__()}
         if self.data:
             result["data"] = self.data
         return result
 
     def __str__(self) -> str:
-        return "{} ({})".format(super().__str__(), self.code)
+        return f"{super().__str__()} ({self.code})"
 
     @classmethod
     def from_exception(cls, ex: Exception) -> Error:
@@ -6216,7 +6216,7 @@ class Response(Generic[T]):
         self.request_id = request_id
         self.result = result
 
-    def to_payload(self) -> Dict[str, Any]:
+    def to_payload(self) -> dict[str, Any]:
         return {
             "id": self.request_id,
             "jsonrpc": "2.0",
@@ -6275,7 +6275,7 @@ class Notification:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> Dict[str, Any]:
+    def to_payload(self) -> dict[str, Any]:
         payload = {
             "jsonrpc": "2.0",
             "method": self.method,
@@ -6286,13 +6286,13 @@ class Notification:
 
 
 @total_ordering
-class Point(object):
+class Point:
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
         self.col = int(col)  # in UTF-16
 
     def __repr__(self) -> str:
-        return "{}:{}".format(self.row, self.col)
+        return f"{self.row}:{self.col}"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Point):

@@ -61,7 +61,8 @@ class TreeItem:
         icon_html = '<span class="{}" title="{}">{}</span>'.format(
             self._kind_class_name(self.kind[0]), self.kind[2], self.kind[1] if self.kind[1] else '&nbsp;')
         if self.command_url and self.tooltip:
-            label_html = f'<a class="label" href="{self.command_url}" title="{html.escape(self.tooltip)}">{html.escape(self.label)}</a>'
+            label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
+                self.command_url, html.escape(self.tooltip), html.escape(self.label))
         elif self.command_url:
             label_html = f'<a class="label" href="{self.command_url}">{html.escape(self.label)}</a>'
         elif self.tooltip:
@@ -70,7 +71,8 @@ class TreeItem:
             label_html = f'<span class="label">{html.escape(self.label)}</span>'
         description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
-        return f'<div class="tree-view-row">{indent_html + disclosure_button_html + icon_html + label_html + description_html}</div>'
+        return '<div class="tree-view-row">{}</div>'.format(
+            indent_html + disclosure_button_html + icon_html + label_html + description_html)
 
     @staticmethod
     def _kind_class_name(kind_id: int) -> str:

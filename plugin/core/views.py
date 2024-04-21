@@ -701,7 +701,8 @@ def format_diagnostics_for_annotation(
         message = text2html(diagnostic.get('message') or '')
         source = diagnostic.get('source')
         line = f"[{text2html(source)}] {message}" if source else message
-        content = f'<body id="annotation" class="{lsp_css().annotations_classname}"><style>{lsp_css().annotations}</style><div class="{css_class}">{line}</div></body>'
+        content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
+            lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
         annotations.append(content)
     return (annotations, color)
 

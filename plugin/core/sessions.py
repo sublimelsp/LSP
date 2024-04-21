@@ -169,7 +169,8 @@ def decode_semantic_token(
             # this approach is limited to consider at most one modifier for the scope lookup
             key = f"{token_type}.{token_modifier}"
             if key in tokens_scope_map_dict:
-                scope = tokens_scope_map_dict[key] + f" meta.semantic-token.{token_type.lower()}.{token_modifier.lower()}.lsp"
+                scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
+                    token_type.lower(), token_modifier.lower())
                 break  # first match wins (in case of multiple modifiers)
         else:
             scope = tokens_scope_map_dict[token_type]

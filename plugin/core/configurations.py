@@ -114,7 +114,8 @@ class WindowConfigManager:
         self._crashes[config_name].append(now)
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
-        printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last {RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
+        printf("{} crashed ({} / {} times in the last {} seconds), exit code {}, exception: {}".format(
+            config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception))
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:

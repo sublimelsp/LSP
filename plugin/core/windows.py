@@ -659,7 +659,8 @@ class PanelLogger(Logger):
         self.log(self._format_notification(direction, method), params)
 
     def _format_response(self, direction: str, request_id: Any, duration: str) -> str:
-        return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} ({request_id}) (duration: {duration})"
+        return "[{}] {} {} ({}) (duration: {})".format(
+            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
 
     def _format_request(self, direction: str, method: str, request_id: Any) -> str:
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method} ({request_id})"

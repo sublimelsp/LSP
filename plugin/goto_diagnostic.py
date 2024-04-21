@@ -270,7 +270,8 @@ def open_location(session: Session, location: Location, flags: int = 0, group: i
 def diagnostic_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Path | None) -> sublime.Html:
     content = format_diagnostic_for_html(
         config, truncate_message(diagnostic), None if base_dir is None else str(base_dir))
-    return sublime.Html(f'<style>{PREVIEW_PANE_CSS}</style><div class="diagnostics {format_severity(diagnostic_severity(diagnostic))}">{content}</div>')
+    return sublime.Html('<style>{}</style><div class="diagnostics {}">{}</div>'.format(
+        PREVIEW_PANE_CSS, format_severity(diagnostic_severity(diagnostic)), content))
 
 
 def truncate_message(diagnostic: Diagnostic, max_lines: int = 6) -> Diagnostic:

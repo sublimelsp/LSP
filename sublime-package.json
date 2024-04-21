@@ -772,6 +772,7 @@
                 "Only save opened files that didn't have unsaved changes beforehand and open other files that were affected by the refactoring",
                 "Never save files automatically"
               ],
+              "default": "never",
               "markdownDescription": "Controls if files that were part of a refactoring (e.g. rename) are saved automatically."
             }
           },

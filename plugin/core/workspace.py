@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern

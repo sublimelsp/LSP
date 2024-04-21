@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .sessions import SessionViewProtocol
 from .progress import ProgressReporter
 from .progress import ViewProgressReporter

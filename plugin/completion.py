@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
@@ -28,17 +29,17 @@ from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 from typing import cast
-from typing_extensions import TypeGuard
+from typing_extensions import TypeAlias, TypeGuard
 import functools
 import html
 import sublime
 import weakref
 import webbrowser
 
-SessionName = str
-CompletionResponse = Union[List[CompletionItem], CompletionList, None]
-ResolvedCompletions = Tuple[Union[CompletionResponse, Error], 'weakref.ref[Session]']
-CompletionsStore = Tuple[List[CompletionItem], CompletionItemDefaults]
+SessionName: TypeAlias = str
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None]
+ResolvedCompletions: TypeAlias = Tuple[Union[CompletionResponse, Error], 'weakref.ref[Session]']
+CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
 def format_completion(
@@ -199,7 +200,7 @@ class QueryCompletionsTask:
         return promise.then(lambda response: self._on_completion_response_async(response, request_id, weak_session))
 
     def _on_completion_response_async(
-        self, response: CompletionResponse, request_id: int, weak_session: 'weakref.ref[Session]'
+        self, response: CompletionResponse, request_id: int, weak_session: weakref.ref[Session]
     ) -> ResolvedCompletions:
         self._pending_completion_requests.pop(request_id, None)
         return (response, weak_session)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.protocol import DiagnosticTag
 from LSP.plugin.core.protocol import PublishDiagnosticsParams

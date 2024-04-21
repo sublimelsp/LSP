@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import SYMBOL_KINDS
 from .core.paths import simple_path
 from .core.promise import Promise
@@ -41,7 +42,7 @@ class HierarchyDataProvider(TreeDataProvider):
 
     def __init__(
         self,
-        weaksession: 'weakref.ref[Session]',
+        weaksession: weakref.ref[Session],
         request: Callable[..., Request],
         request_handler: Callable[..., List[HierarchyItemWrapper]],
         root_elements: List[HierarchyItemWrapper]
@@ -84,7 +85,7 @@ class HierarchyDataProvider(TreeDataProvider):
 
 
 def make_data_provider(
-    weaksession: 'weakref.ref[Session]', sheet_name: str, direction: int, response: List[HierarchyItemWrapper]
+    weaksession: weakref.ref[Session], sheet_name: str, direction: int, response: List[HierarchyItemWrapper]
 ) -> HierarchyDataProvider:
     if sheet_name == "Call Hierarchy":
         request = Request.incomingCalls if direction == 1 else Request.outgoingCalls
@@ -166,7 +167,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
             self.request(params, self.view), partial(self._handle_response_async, weakref.ref(session)))
 
     def _handle_response_async(
-        self, weaksession: 'weakref.ref[Session]', response: Optional[List[HierarchyItem]]
+        self, weaksession: weakref.ref[Session], response: Optional[List[HierarchyItem]]
     ) -> None:
         if not self._window or not self._window.is_valid():
             return

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import CodeActionKind
 from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity

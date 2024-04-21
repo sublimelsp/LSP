@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.protocol import ColorInformation

@@ -20,6 +20,7 @@ resumes (since response to request will arrive after requested notification).
 
 TODO: Untested on Windows.
 """
+from __future__ import annotations
 from argparse import ArgumentParser
 from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable, Awaitable

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import FileChangeType
 from .protocol import WatchKind
 from abc import ABCMeta

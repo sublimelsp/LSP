@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request

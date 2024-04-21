@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import SignatureHelp
 from LSP.plugin.core.signature_help import SigHelp
 import sublime

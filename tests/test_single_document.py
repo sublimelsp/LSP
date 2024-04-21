@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin import apply_text_edits, Request
 from LSP.plugin.core.protocol import UINT_MAX

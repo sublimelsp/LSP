@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.protocol import FoldingRange
 from .core.protocol import FoldingRangeKind
 from .core.protocol import FoldingRangeParams

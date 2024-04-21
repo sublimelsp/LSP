@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .constants import ST_VERSION
 from abc import ABCMeta
 from abc import abstractmethod

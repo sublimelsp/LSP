@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.protocol import DocumentUri

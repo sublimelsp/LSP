@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.protocol import Request
 from .core.protocol import SelectionRange
 from .core.registry import get_position

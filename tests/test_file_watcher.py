@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherEventType

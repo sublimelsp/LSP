@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .logging import debug
 from .logging import exception_log
 from .logging import printf

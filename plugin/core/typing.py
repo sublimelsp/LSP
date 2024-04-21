@@ -37,7 +37,12 @@ if sys.version_info >= (3, 11):
         TypeGuard,
     )
 else:
-    _T = TypeVar("_T")
+    from typing_extensions import (  # noqa: F401
+        NotRequired,
+        ParamSpec,
+        Required,
+        TypeGuard,
+    )
 
     class StrEnum(str, Enum):
         """
@@ -48,19 +53,3 @@ else:
 
         __format__ = str.__format__
         __str__ = str.__str__
-
-    class NotRequired(Type, Generic[_T]):  # type: ignore
-        pass
-
-    class ParamSpec(Type):  # type: ignore
-        args = ...
-        kwargs = ...
-
-        def __init__(*args, **kwargs) -> None:  # type: ignore
-            pass
-
-    class Required(Type, Generic[_T]):  # type: ignore
-        pass
-
-    class TypeGuard(Type, Generic[_T]):  # type: ignore
-        pass

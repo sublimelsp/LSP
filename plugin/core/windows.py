@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -27,7 +28,6 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, TYPE_CHECKING
 from .url import parse_uri
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
@@ -39,6 +39,7 @@ from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
+from typing import Any, Deque, Dict, Generator, List, Optional, Tuple, TYPE_CHECKING
 from weakref import ref
 from weakref import WeakSet
 import functools
@@ -74,17 +75,17 @@ class WindowManager(Manager, WindowConfigChangeListener):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
-        self._sessions = WeakSet()  # type: WeakSet[Session]
+        self._sessions: WeakSet[Session] = WeakSet()
         self._workspace = workspace
-        self._pending_listeners = deque()  # type: Deque[AbstractViewListener]
-        self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
-        self._new_listener = None  # type: Optional[AbstractViewListener]
-        self._new_session = None  # type: Optional[Session]
-        self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
-        self._server_log = []  # type: List[Tuple[str, str]]
-        self.panel_manager = PanelManager(self._window)  # type: Optional[PanelManager]
-        self.tree_view_sheets = {}  # type: Dict[str, TreeViewSheet]
-        self.formatters = {}  # type: Dict[str, str]
+        self._pending_listeners: Deque[AbstractViewListener] = deque()
+        self._listeners: WeakSet[AbstractViewListener] = WeakSet()
+        self._new_listener: Optional[AbstractViewListener] = None
+        self._new_session: Optional[Session] = None
+        self._panel_code_phantoms: Optional[sublime.PhantomSet] = None
+        self._server_log: List[Tuple[str, str]] = []
+        self.panel_manager: Optional[PanelManager] = PanelManager(self._window)
+        self.tree_view_sheets: Dict[str, TreeViewSheet] = {}
+        self.formatters: Dict[str, str] = {}
         self.suppress_sessions_restart_on_project_update = False
         self.total_error_count = 0
         self.total_warning_count = 0
@@ -151,7 +152,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def _dequeue_listener_async(self) -> None:
-        listener = None  # type: Optional[AbstractViewListener]
+        listener: Optional[AbstractViewListener] = None
         if self._new_listener is not None:
             listener = self._new_listener
             # debug("re-checking listener", listener)
@@ -251,7 +252,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
-            cwd = None  # type: Optional[str]
+            cwd: Optional[str] = None
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
                     config.set_view_status(initiating_view, "installing...")
@@ -272,7 +273,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             if cwd:
-                transport_cwd = cwd  # type: Optional[str]
+                transport_cwd: Optional[str] = cwd
             else:
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
@@ -354,7 +355,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> Optional[str]:
-        candidate = None  # type: Optional[str]
+        candidate: Optional[str] = None
         for folder in self._workspace.folders:
             if file_path.startswith(folder):
                 if candidate is None or len(folder) > len(candidate):
@@ -470,12 +471,11 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.update_diagnostics_panel_async()
 
     def update_diagnostics_panel_async(self) -> None:
-        to_render = []  # type: List[str]
-        prephantoms = []  # type: List[Tuple[int, int, str, str]]
+        to_render: List[str] = []
+        prephantoms: List[Tuple[int, int, str, str]] = []
         row = 0
         max_severity = userprefs().diagnostics_panel_include_severity_level
-        contributions = OrderedDict(
-        )  # type: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]]
+        contributions: OrderedDict[str, List[Tuple[str, Optional[int], Optional[str], Optional[str]]]] = OrderedDict()
         for session in self._sessions:
             for (_, path), contribution in session.diagnostics.filter_map_diagnostics_async(
                     is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
@@ -505,7 +505,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel.run_command("lsp_update_panel", {"characters": characters})
         if self._panel_code_phantoms is None:
             self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
-        phantoms = []  # type: List[sublime.Phantom]
+        phantoms: List[sublime.Phantom] = []
         for row, col, code, href in prephantoms:
             point = panel.text_point(row, col)
             region = sublime.Region(point, point)
@@ -521,7 +521,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
 class WindowRegistry:
     def __init__(self) -> None:
         self._enabled = False
-        self._windows = {}  # type: Dict[int, WindowManager]
+        self._windows: Dict[int, WindowManager] = {}
         client_configs.set_listeners(self._on_client_config_updated, self._on_userprefs_updated)
 
     def _on_client_config_updated(self, config_name: Optional[str] = None) -> None:
@@ -584,7 +584,7 @@ class WindowRegistry:
 
 class RequestTimeTracker:
     def __init__(self) -> None:
-        self._start_times = {}  # type: Dict[int, float]
+        self._start_times: Dict[int, float] = {}
 
     def start_tracking(self, request_id: int) -> None:
         self._start_times[request_id] = perf_counter()
@@ -689,8 +689,8 @@ class RemoteLogger(Logger):
     PORT = 9981
     DIRECTION_OUTGOING = 1
     DIRECTION_INCOMING = 2
-    _ws_server = None  # type: Optional[WebsocketServer]
-    _ws_server_thread = None  # type: Optional[threading.Thread]
+    _ws_server: Optional[WebsocketServer] = None
+    _ws_server_thread: Optional[threading.Thread] = None
     _last_id = 0
 
     def __init__(self, manager: WindowManager, server_name: str) -> None:
@@ -824,7 +824,7 @@ class RemoteLogger(Logger):
 
 class RouterLogger(Logger):
     def __init__(self) -> None:
-        self._loggers = []  # type: List[Logger]
+        self._loggers: List[Logger] = []
 
     def append(self, logger: Logger) -> None:
         self._loggers.append(logger)

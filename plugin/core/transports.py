@@ -1,10 +1,11 @@
+from __future__ import annotations
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
-from .typing import Dict, Any, Optional, IO, Protocol, Generic, List, Callable, Tuple, TypeVar, Union
 from contextlib import closing
 from functools import partial
 from queue import Queue
+from typing import Any, Callable, Dict, Generic, IO, List, Optional, Protocol, Tuple, TypeVar, Union
 import http
 import json
 import os
@@ -107,7 +108,7 @@ class ProcessTransport(Transport[T]):
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
         self._callback_object = weakref.ref(callback_object)
-        self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
+        self._send_queue: Queue[Union[T, None]] = Queue(0)
         self._reader_thread.start()
         self._writer_thread.start()
         if stderr:
@@ -194,7 +195,7 @@ class ProcessTransport(Transport[T]):
         self.close()
 
     def _write_loop(self) -> None:
-        exception = None  # type: Optional[Exception]
+        exception: Optional[Exception] = None
         try:
             while self._writer:
                 d = self._send_queue.get()
@@ -245,8 +246,8 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
-    sock = None  # type: Optional[socket.socket]
-    process = None  # type: Optional[subprocess.Popen]
+    sock: Optional[socket.socket] = None
+    process: Optional[subprocess.Popen] = None
 
     def start_subprocess() -> subprocess.Popen:
         startupinfo = _fixup_startup_args(config.command)
@@ -281,7 +282,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
-_subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
+_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:

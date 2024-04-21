@@ -1,14 +1,15 @@
+from __future__ import annotations
 from .logging import debug
 from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
-from .typing import Generator, List, Optional, Set, Dict, Deque
 from .url import parse_uri
 from .workspace import enable_in_project, disable_in_project
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
 from datetime import datetime, timedelta
+from typing import Deque, Dict, Generator, List, Optional, Set
 from weakref import WeakSet
 import sublime
 
@@ -28,10 +29,10 @@ class WindowConfigManager(object):
     def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._disabled_for_session = set()  # type: Set[str]
-        self._crashes = {}  # type: Dict[str, Deque[datetime]]
-        self.all = {}  # type: Dict[str, ClientConfig]
-        self._change_listeners = WeakSet()  # type: WeakSet[WindowConfigChangeListener]
+        self._disabled_for_session: Set[str] = set()
+        self._crashes: Dict[str, Deque[datetime]] = {}
+        self.all: Dict[str, ClientConfig] = {}
+        self._change_listeners: WeakSet[WindowConfigChangeListener] = WeakSet()
         self._reload_configs(notify_listeners=False)
 
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:

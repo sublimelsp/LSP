@@ -1,4 +1,5 @@
-from .typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
+from __future__ import annotations
+from typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
 import functools
 import threading
 
@@ -65,7 +66,7 @@ class Promise(Generic[T]):
     """
 
     @staticmethod
-    def resolve(resolve_value: S) -> 'Promise[S]':
+    def resolve(resolve_value: S) -> Promise[S]:
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -87,19 +88,19 @@ class Promise(Generic[T]):
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver = None  # type: Optional[ResolveFunc[TExecutor]]
+                self.resolver: Optional[ResolveFunc[TExecutor]] = None
 
             def __call__(self, resolver: ResolveFunc[TExecutor]) -> None:
                 self.resolver = resolver
 
-        executor = Executor()  # type: Executor[S]
+        executor: Executor[S] = Executor()
         promise = Promise(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
 
     # Could also support passing plain S.
     @staticmethod
-    def all(promises: List['Promise[S]']) -> 'Promise[List[S]]':
+    def all(promises: List[Promise[S]]) -> Promise[List[S]]:
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
         gets resolved.
@@ -139,7 +140,7 @@ class Promise(Generic[T]):
         """
         self.resolved = False
         self.mutex = threading.Lock()
-        self.callbacks = []  # type: List[ResolveFunc[T]]
+        self.callbacks: List[ResolveFunc[T]] = []
         executor_func(lambda resolve_value=None: self._do_resolve(resolve_value))
 
     def __repr__(self) -> str:
@@ -147,7 +148,7 @@ class Promise(Generic[T]):
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> 'Promise[TResult]':
+    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> Promise[TResult]:
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the

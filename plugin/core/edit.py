@@ -1,9 +1,10 @@
+from __future__ import annotations
 from .logging import debug
 from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
-from .typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import sublime
 
 
@@ -11,7 +12,7 @@ WorkspaceChanges = Dict[str, Tuple[List[TextEdit], Optional[int]]]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
-    changes = {}  # type: WorkspaceChanges
+    changes: WorkspaceChanges = {}
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
         for document_change in document_changes:

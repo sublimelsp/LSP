@@ -1,11 +1,12 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import Point, Position, Range, Request, Notification
 from LSP.plugin.core.transports import JsonRpcProcessor
 import unittest
 
 
-LSP_START_POSITION = {'line': 10, 'character': 4}  # type: Position
-LSP_END_POSITION = {'line': 11, 'character': 3}  # type: Position
-LSP_RANGE = {'start': LSP_START_POSITION, 'end': LSP_END_POSITION}  # type: Range
+LSP_START_POSITION: Position = {'line': 10, 'character': 4}
+LSP_END_POSITION: Position = {'line': 11, 'character': 3}
+LSP_RANGE: Range = {'start': LSP_START_POSITION, 'end': LSP_END_POSITION}
 
 
 class PointTests(unittest.TestCase):

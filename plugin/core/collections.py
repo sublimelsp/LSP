@@ -1,8 +1,9 @@
 """
 Module with additional collections.
 """
-from .typing import Optional, Dict, Any, Generator
+from __future__ import annotations
 from copy import deepcopy
+from typing import Any, Dict, Generator, Optional
 import sublime
 
 
@@ -16,7 +17,7 @@ class DottedDict:
 
         :param      d:    An existing dictionary.
         """
-        self._d = {}  # type: Dict[str, Any]
+        self._d: Dict[str, Any] = {}
         if d is not None:
             self.update(d)
 
@@ -40,7 +41,7 @@ class DottedDict:
         """
         if path is None:
             return self._d
-        current = self._d  # type: Any
+        current: Any = self._d
         keys = path.split('.')
         for key in keys:
             if isinstance(current, dict):
@@ -50,7 +51,7 @@ class DottedDict:
         return current
 
     def walk(self, path: str) -> Generator[Any, None, None]:
-        current = self._d  # type: Any
+        current: Any = self._d
         keys = path.split('.')
         for key in keys:
             if isinstance(current, dict):

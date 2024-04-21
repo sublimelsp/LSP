@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.logging import debug
 from .core.open import open_file_uri
 from .core.open import open_in_browser
@@ -6,7 +7,7 @@ from .core.protocol import Request
 from .core.protocol import URI
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.typing import Optional
+from typing import Optional
 import sublime
 
 

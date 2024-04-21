@@ -1,7 +1,8 @@
+from __future__ import annotations
 from LSP.plugin.core.types import diff
 from LSP.plugin.core.types import basescope2languageid
 from LSP.plugin.core.types import DocumentSelector
-from LSP.plugin.core.typing import List
+from typing import List
 from unittest.mock import MagicMock
 import sublime
 import unittest
@@ -44,7 +45,7 @@ class TestDiff(unittest.TestCase):
 class TestDocumentSelector(unittest.TestCase):
 
     def setUp(self) -> None:
-        self._opened_views = []  # type: List[sublime.View]
+        self._opened_views: List[sublime.View] = []
 
     def tearDown(self) -> None:
         for view in self._opened_views:

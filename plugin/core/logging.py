@@ -1,4 +1,5 @@
-from .typing import Any
+from __future__ import annotations
+from typing import Any
 import traceback
 import inspect
 import sublime

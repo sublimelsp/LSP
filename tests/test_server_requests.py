@@ -1,10 +1,11 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import ErrorCodes
 from LSP.plugin.core.protocol import TextDocumentSyncKind
 from LSP.plugin.core.sessions import SessionBufferProtocol
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import Any, Dict, Generator, Optional, List
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
+from typing import Any, Dict, Generator, List, Optional
 import os
 import sublime
 import tempfile

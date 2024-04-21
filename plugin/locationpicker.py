@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.protocol import DocumentUri
@@ -5,10 +6,10 @@ from .core.protocol import Location
 from .core.protocol import LocationLink
 from .core.protocol import Position
 from .core.sessions import Session
-from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
 from .core.views import to_encoded_filename
+from typing import List, Optional, Tuple, Union
 from urllib.request import url2pathname
 import functools
 import sublime
@@ -81,7 +82,7 @@ class LocationPicker:
         self._force_group = force_group
         self._group = group
         self._items = locations
-        self._highlighted_view = None  # type: Optional[sublime.View]
+        self._highlighted_view: Optional[sublime.View] = None
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
         self._window.focus_group(group)

@@ -1,7 +1,7 @@
+from __future__ import annotations
 from LSP.plugin import apply_text_edits
 from LSP.plugin.core.edit import parse_workspace_edit
 from LSP.plugin.core.protocol import TextDocumentEdit, TextEdit, WorkspaceEdit
-from LSP.plugin.core.typing import List
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.edit import _parse_text_edit as parse_text_edit
@@ -9,31 +9,32 @@ from LSP.plugin.edit import _sort_by_application_order as sort_by_application_or
 from LSP.plugin.edit import temporary_setting
 from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
+from typing import List
 import sublime
 import unittest
 
 FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
 URI = filename_to_uri(FILENAME)
-LSP_TEXT_EDIT = {
+LSP_TEXT_EDIT: TextEdit = {
     'newText': 'newText\r\n',
     'range': LSP_RANGE
-}  # type: TextEdit
+}
 
-LSP_EDIT_CHANGES = {
+LSP_EDIT_CHANGES: WorkspaceEdit = {
     'changes': {URI: [LSP_TEXT_EDIT]}
-}  # type: WorkspaceEdit
+}
 
-LSP_TEXT_DOCUMENT_EDIT = {
+LSP_TEXT_DOCUMENT_EDIT: TextDocumentEdit = {
     'textDocument': {'uri': URI, 'version': None},
     'edits': [LSP_TEXT_EDIT]
-}  # type: TextDocumentEdit
+}
 
-LSP_EDIT_DOCUMENT_CHANGES = {
+LSP_EDIT_DOCUMENT_CHANGES: WorkspaceEdit = {
     'documentChanges': [LSP_TEXT_DOCUMENT_EDIT]
-}  # type: WorkspaceEdit
+}
 
 # Check that processing document changes does not result in clobbering.
-LSP_EDIT_DOCUMENT_CHANGES_2 = {
+LSP_EDIT_DOCUMENT_CHANGES_2: WorkspaceEdit = {
     "documentChanges": [
         {
             "edits": [
@@ -141,9 +142,9 @@ LSP_EDIT_DOCUMENT_CHANGES_2 = {
             }
         }
     ]
-}  # type: WorkspaceEdit
+}
 
-LSP_EDIT_DOCUMENT_CHANGES_3 = {
+LSP_EDIT_DOCUMENT_CHANGES_3: WorkspaceEdit = {
     'changes': {
         "file:///asdf/foo/bar": [
             {"newText": "hello there", "range": LSP_RANGE},
@@ -152,7 +153,7 @@ LSP_EDIT_DOCUMENT_CHANGES_3 = {
         ]
     },
     'documentChanges': [LSP_TEXT_DOCUMENT_EDIT]
-}  # type: WorkspaceEdit
+}
 
 
 class TextEditTests(unittest.TestCase):
@@ -230,7 +231,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
 
     def test_applies_text_edit(self) -> None:
         self.insert_characters('abc')
-        edits = [{
+        edits: List[TextEdit] = [{
             'newText': 'x$0y',
             'range': {
                 'start': {
@@ -242,13 +243,13 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                     'character': 2,
                 }
             }
-        }]  # type: List[TextEdit]
+        }]
         apply_text_edits(self.view, edits)
         self.assertEquals(entire_content(self.view), 'ax$0yc')
 
     def test_applies_text_edit_with_placeholder(self) -> None:
         self.insert_characters('abc')
-        edits = [{
+        edits: List[TextEdit] = [{
             'newText': 'x$0y',
             'range': {
                 'start': {
@@ -260,7 +261,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                     'character': 2,
                 }
             }
-        }]  # type: List[TextEdit]
+        }]
         apply_text_edits(self.view, edits, process_placeholders=True)
         self.assertEquals(entire_content(self.view), 'axyc')
         self.assertEqual(len(self.view.sel()), 1)
@@ -268,7 +269,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
 
     def test_applies_multiple_text_edits_with_placeholders(self) -> None:
         self.insert_characters('ab')
-        newline_edit = {
+        newline_edit: TextEdit = {
             'newText': '\n$0',
             'range': {
                 'start': {
@@ -280,8 +281,8 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                     'character': 1,
                 }
             }
-        }  # type: TextEdit
-        edits = [newline_edit, newline_edit]  # type: List[TextEdit]
+        }
+        edits: List[TextEdit] = [newline_edit, newline_edit]
         apply_text_edits(self.view, edits, process_placeholders=True)
         self.assertEquals(entire_content(self.view), 'a\n\nb')
         self.assertEqual(len(self.view.sel()), 2)

@@ -1,11 +1,12 @@
+from __future__ import annotations
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.settings import userprefs
-from .core.typing import List, Tuple
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
+from typing import List, Tuple
 import sublime
 
 
@@ -30,7 +31,7 @@ class DiagnosticsAnnotationsView():
         # most to the least severe.
         for severity in DIAGNOSTIC_KINDS.keys():
             if severity <= max_severity_level:
-                matching_diagnostics = ([], [])  # type: Tuple[List[Diagnostic], List[sublime.Region]]
+                matching_diagnostics: Tuple[List[Diagnostic], List[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:
                     if diagnostic_severity(diagnostic) != severity:
                         continue

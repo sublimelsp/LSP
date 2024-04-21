@@ -1,8 +1,9 @@
+from __future__ import annotations
 from .protocol import FileChangeType
 from .protocol import WatchKind
-from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
+from typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 
 DEFAULT_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 
@@ -12,7 +13,7 @@ FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
 
 def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> List[FileWatcherEventType]:
-    event_types = []  # type: List[FileWatcherEventType]
+    event_types: List[FileWatcherEventType] = []
     if kind & WatchKind.Create:
         event_types.append('create')
     if kind & WatchKind.Change:
@@ -58,7 +59,7 @@ class FileWatcher(metaclass=ABCMeta):
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
-    ) -> 'FileWatcher':
+    ) -> FileWatcher:
         """
         Creates a new instance of the file watcher.
 
@@ -78,7 +79,7 @@ class FileWatcher(metaclass=ABCMeta):
         pass
 
 
-watcher_implementation = None  # type: Optional[Type[FileWatcher]]
+watcher_implementation: Optional[Type[FileWatcher]] = None
 
 
 def register_file_watcher_implementation(file_watcher: Type[FileWatcher]) -> None:

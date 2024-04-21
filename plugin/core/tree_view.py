@@ -1,12 +1,14 @@
+from __future__ import annotations
 from .constants import SublimeKind
 from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
-from .typing import Dict, IntEnum, List, Optional, TypeVar
 from abc import ABCMeta
 from abc import abstractmethod
+from enum import IntEnum
 from functools import partial
+from typing import Dict, List, Optional, TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
@@ -102,7 +104,7 @@ class Node:
         self.element = element
         self.tree_item = tree_item
         self.indent_level = indent_level
-        self.child_ids = []  # type: List[str]
+        self.child_ids: List[str] = []
         self.is_resolved = False
 
 
@@ -125,8 +127,8 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def __init__(self, id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
         super().__init__(id)
-        self.nodes = {}  # type: Dict[str, Node]
-        self.root_nodes = []  # type: List[str]
+        self.nodes: Dict[str, Node] = {}
+        self.root_nodes: List[str] = []
         self.name = name
         self.data_provider = data_provider
         self.header = header
@@ -145,7 +147,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
     def _set_root_nodes(self, elements: List[T]) -> None:
-        promises = []  # type: List[Promise[None]]
+        promises: List[Promise[None]] = []
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED

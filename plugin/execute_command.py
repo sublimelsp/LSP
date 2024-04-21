@@ -1,13 +1,14 @@
+from __future__ import annotations
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional, Any
 from .core.views import first_selection_region
 from .core.views import offset_to_point
 from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import uri_from_view
+from typing import Any, List, Optional
 import sublime
 
 
@@ -24,7 +25,7 @@ class LspExecuteCommand(LspTextCommand):
             event: Optional[dict] = None) -> None:
         session = self.session_by_name(session_name if session_name else self.session_name)
         if session and command_name:
-            params = {"command": command_name}  # type: ExecuteCommandParams
+            params: ExecuteCommandParams = {"command": command_name}
             if command_args:
                 params["arguments"] = self._expand_variables(command_args)
 
@@ -59,7 +60,7 @@ class LspExecuteCommand(LspTextCommand):
         sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(error)))
 
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
-        view = self.view  # type: sublime.View
+        view = self.view
         region = first_selection_region(view)
         for i, arg in enumerate(command_args):
             if arg in ["$document_id", "${document_id}"]:

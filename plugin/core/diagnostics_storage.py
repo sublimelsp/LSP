@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
 from .url import parse_uri
 from .views import diagnostic_severity

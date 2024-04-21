@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
 from LSP.plugin.core.protocol import Point, Range

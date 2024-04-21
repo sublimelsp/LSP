@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.edit import apply_text_edits
 from .core.protocol import ColorInformation
 from .core.protocol import ColorPresentation

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .constants import ST_VERSION
 from .logging import exception_log
 from .promise import Promise

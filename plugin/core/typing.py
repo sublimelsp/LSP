@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sys
 from enum import Enum, IntEnum, IntFlag  # noqa: F401
 from typing import (  # noqa: F401

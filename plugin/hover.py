@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .constants import CODE_ACTION_KINDS
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind

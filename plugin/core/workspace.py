@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern
@@ -26,7 +27,7 @@ class WorkspaceFolder:
         self.path = path
 
     @classmethod
-    def from_path(cls, path: str) -> 'WorkspaceFolder':
+    def from_path(cls, path: str) -> WorkspaceFolder:
         return cls(os.path.basename(path) or path, path)
 
     def __hash__(self) -> int:

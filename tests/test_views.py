@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin.core.protocol import CodeActionKind
 from LSP.plugin.core.protocol import Diagnostic

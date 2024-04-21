@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
 import functools
 import threading
@@ -65,7 +66,7 @@ class Promise(Generic[T]):
     """
 
     @staticmethod
-    def resolve(resolve_value: S) -> 'Promise[S]':
+    def resolve(resolve_value: S) -> Promise[S]:
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -99,7 +100,7 @@ class Promise(Generic[T]):
 
     # Could also support passing plain S.
     @staticmethod
-    def all(promises: List['Promise[S]']) -> 'Promise[List[S]]':
+    def all(promises: List[Promise[S]]) -> Promise[List[S]]:
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
         gets resolved.
@@ -147,7 +148,7 @@ class Promise(Generic[T]):
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> 'Promise[TResult]':
+    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> Promise[TResult]:
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Diagnostic

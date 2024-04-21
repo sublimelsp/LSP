@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.promise import Promise
 from .core.protocol import CodeAction
 from .core.protocol import CodeActionKind

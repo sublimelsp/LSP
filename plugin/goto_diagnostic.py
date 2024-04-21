@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.diagnostics_storage import is_severity_included
 from .core.diagnostics_storage import ParsedUri

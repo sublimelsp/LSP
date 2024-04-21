@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler

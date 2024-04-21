@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging

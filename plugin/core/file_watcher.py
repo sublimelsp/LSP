@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import FileChangeType
 from .protocol import WatchKind
 from abc import ABCMeta
@@ -58,7 +59,7 @@ class FileWatcher(metaclass=ABCMeta):
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
-    ) -> 'FileWatcher':
+    ) -> FileWatcher:
         """
         Creates a new instance of the file watcher.
 

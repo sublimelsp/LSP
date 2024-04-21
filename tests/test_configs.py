@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sublime
 from LSP.plugin.core.settings import read_client_config, update_client_config
 from LSP.plugin.core.views import get_uri_and_position_from_location

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request

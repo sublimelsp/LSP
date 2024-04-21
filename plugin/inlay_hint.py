@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.protocol import InlayHint

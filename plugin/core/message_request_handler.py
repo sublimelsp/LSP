@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .protocol import MessageType
 from .protocol import Response
 from .protocol import ShowMessageRequestParams

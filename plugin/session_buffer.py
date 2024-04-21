@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.protocol import ColorInformation
@@ -141,7 +142,7 @@ class SessionBuffer:
         return self._session
 
     @property
-    def session_views(self) -> 'WeakSet[SessionViewProtocol]':
+    def session_views(self) -> WeakSet[SessionViewProtocol]:
         return self._session_views
 
     @property

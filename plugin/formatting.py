@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise

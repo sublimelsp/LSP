@@ -89,14 +89,8 @@ from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
 
 __all__ = (
-    "AbstractPlugin",
-    "client_configs",
     "DocumentSyncListener",
-    "DottedDict",
-    "Error",
-    "kill_all_subprocesses",
-    "load_css",
-    "load_settings",
+    "Listener",
     "LspApplyDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
     "LspCallHierarchyCommand",
@@ -165,12 +159,9 @@ __all__ = (
     "LspUpdateLogPanelCommand",
     "LspUpdatePanelCommand",
     "LspWorkspaceSymbolsCommand",
-    "opening_files",
-    "PanelName",
-    "register_plugin",
     "TextChangeListener",
-    "unload_settings",
-    "windows",
+    "plugin_loaded",
+    "plugin_unloaded",
 )
 
 

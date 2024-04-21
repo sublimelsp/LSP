@@ -4,7 +4,7 @@ from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
-from typing import Any, List, Union
+from typing import Any
 import sublime
 import os
 

@@ -5,7 +5,7 @@ from .types import TransportConfig
 from contextlib import closing
 from functools import partial
 from queue import Queue
-from typing import Any, Callable, Dict, Generic, IO, List, Optional, Protocol, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Generic, IO, Protocol, TypeVar
 import http
 import json
 import os

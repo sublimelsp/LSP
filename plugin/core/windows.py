@@ -39,7 +39,7 @@ from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
-from typing import Any, Deque, Dict, Generator, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Generator, TYPE_CHECKING
 from weakref import ref
 from weakref import WeakSet
 import functools

@@ -55,7 +55,7 @@ from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Generator, Iterable
 from typing import cast
 from weakref import WeakSet
 from weakref import WeakValueDictionary

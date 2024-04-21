@@ -41,7 +41,7 @@ from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Tuple
 from typing import cast
 import html
 import itertools

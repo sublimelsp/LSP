@@ -46,7 +46,7 @@ from .inlay_hint import inlay_hint_to_phantom
 from .inlay_hint import LspToggleInlayHintsCommand
 from .semantic_highlighting import SemanticToken
 from functools import partial
-from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Union
+from typing import Any, Callable, Iterable, List, Protocol
 from typing import cast
 from typing_extensions import TypeGuard
 from weakref import WeakSet

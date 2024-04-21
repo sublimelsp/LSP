@@ -5,7 +5,7 @@ from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 import os
 import sublime
 

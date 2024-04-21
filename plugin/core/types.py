@@ -5,7 +5,7 @@ from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKind
 from .url import filename_to_uri
 from .url import parse_uri
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple, TypedDict, TypeVar, Union
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
 from typing import cast
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch

@@ -39,7 +39,7 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Sequence, Union
 from urllib.parse import urlparse
 import html
 import mdpopups

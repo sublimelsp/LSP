@@ -3,7 +3,7 @@ from .core.registry import LspTextCommand
 from .core.settings import userprefs
 from abc import ABCMeta, abstractmethod
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable
 import sublime
 import sublime_plugin
 

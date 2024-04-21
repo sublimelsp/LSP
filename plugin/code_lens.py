@@ -10,7 +10,7 @@ from .core.views import make_command_link
 from .core.views import range_to_region
 from html import escape as html_escape
 from functools import partial
-from typing import Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import Generator, Iterable
 from typing import cast
 import itertools
 import sublime

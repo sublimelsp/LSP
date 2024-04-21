@@ -7,7 +7,6 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import text_document_identifier
-from typing import List
 import sublime
 
 

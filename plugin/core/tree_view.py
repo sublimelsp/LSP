@@ -8,7 +8,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
-from typing import Dict, List, Optional, TypeVar
+from typing import TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]

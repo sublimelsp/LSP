@@ -5,7 +5,7 @@ from .core.protocol import TextEdit
 from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
 from contextlib import contextmanager
-from typing import Any, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Generator, Iterable, Tuple
 import operator
 import re
 import sublime

@@ -17,7 +17,7 @@ from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 from typing import cast
 import json
 import mdpopups

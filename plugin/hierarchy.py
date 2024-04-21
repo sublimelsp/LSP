@@ -24,7 +24,7 @@ from .core.views import text_document_position_params
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, List, Optional, TypedDict, Union
+from typing import Callable, TypedDict, Union
 from typing import cast
 import sublime
 import weakref

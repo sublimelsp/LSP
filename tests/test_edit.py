@@ -9,7 +9,6 @@ from LSP.plugin.edit import _sort_by_application_order as sort_by_application_or
 from LSP.plugin.edit import temporary_setting
 from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
-from typing import List
 import sublime
 import unittest
 

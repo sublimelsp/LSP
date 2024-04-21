@@ -9,7 +9,7 @@ from LSP.plugin.session_view import SessionView
 from LSP.plugin.core.views import versioned_text_document_identifier
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Generator
 import unittest
 import sublime
 

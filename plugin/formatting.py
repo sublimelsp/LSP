@@ -18,7 +18,7 @@ from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
 from functools import partial
-from typing import Callable, Iterator, List, Optional, Union
+from typing import Callable, Iterator, List, Union
 import sublime
 
 

@@ -25,7 +25,7 @@ from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from collections import Counter, OrderedDict
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Iterator
 from typing import cast
 import functools
 import os

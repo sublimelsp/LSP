@@ -2,7 +2,7 @@ from __future__ import annotations
 from .typing import StrEnum
 from enum import IntEnum, IntFlag
 from functools import total_ordering
-from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, Optional, TypedDict, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, TypedDict, TypeVar, Union
 from typing_extensions import NotRequired
 import sublime
 

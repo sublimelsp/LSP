@@ -6,7 +6,6 @@ from .core.protocol import DiagnosticSeverity
 from .core.settings import userprefs
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
-from typing import List, Tuple
 import sublime
 
 

@@ -8,7 +8,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import uri_from_view
-from typing import Any, List, Optional
+from typing import Any
 import sublime
 
 

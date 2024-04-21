@@ -14,7 +14,7 @@ from .core.views import get_uri_and_position_from_location
 from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Literal
 import functools
 import linecache
 import os

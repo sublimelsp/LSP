@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
-from typing import List, Optional
 import sublime
 
 

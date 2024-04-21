@@ -5,7 +5,7 @@ from LSP.plugin.core.sessions import SessionBufferProtocol
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Generator
 import os
 import sublime
 import tempfile

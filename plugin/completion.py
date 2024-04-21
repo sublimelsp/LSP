@@ -27,7 +27,7 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Callable, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
 import functools

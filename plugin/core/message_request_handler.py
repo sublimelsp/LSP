@@ -5,7 +5,7 @@ from .protocol import ShowMessageRequestParams
 from .sessions import Session
 from .views import show_lsp_popup
 from .views import text2html
-from typing import Any, Dict, List
+from typing import Any
 import sublime
 
 

@@ -5,7 +5,7 @@ from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import selection_range_params
-from typing import Any, List, Optional, Tuple
+from typing import Any
 import sublime
 
 

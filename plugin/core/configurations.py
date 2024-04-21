@@ -9,7 +9,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
 from datetime import datetime, timedelta
-from typing import Deque, Dict, Generator, List, Optional, Set
+from typing import Generator
 from weakref import WeakSet
 import sublime
 

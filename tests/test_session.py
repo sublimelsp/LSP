@@ -11,7 +11,7 @@ from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
 from test_mocks import TEST_CONFIG
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Generator
 import sublime
 import unittest
 import unittest.mock

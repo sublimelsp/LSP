@@ -11,7 +11,7 @@ from LSP.plugin.core.types import sublime_pattern_to_glob
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
-from typing import Generator, List, Optional
+from typing import Generator
 import sublime
 import unittest
 

@@ -22,7 +22,7 @@ from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
-from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Generator, Iterable
 from weakref import ref
 from weakref import WeakValueDictionary
 import functools

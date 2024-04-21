@@ -10,7 +10,6 @@ from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from .locationpicker import open_location_async
 from functools import partial
-from typing import List, Optional, Union
 import sublime
 
 

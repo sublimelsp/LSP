@@ -10,7 +10,6 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import position_to_offset
-from typing import Optional, Union
 from typing import cast
 import html
 import sublime

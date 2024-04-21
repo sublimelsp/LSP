@@ -12,7 +12,7 @@ from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
-from typing import Any, Generator, Iterable, List, Optional, Union
+from typing import Any, Generator, Iterable
 import operator
 import sublime
 import sublime_plugin

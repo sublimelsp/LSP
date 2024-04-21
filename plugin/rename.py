@@ -18,7 +18,7 @@ from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from functools import partial
-from typing import Any, List, Optional
+from typing import Any
 from typing import cast
 from typing_extensions import TypeGuard
 import os

@@ -4,7 +4,7 @@ from .core.panels import PanelName
 from .core.registry import windows
 from contextlib import contextmanager
 from sublime_plugin import WindowCommand
-from typing import Generator, Optional
+from typing import Generator
 import sublime
 import sublime_plugin
 

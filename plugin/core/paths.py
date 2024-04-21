@@ -3,7 +3,7 @@ from .protocol import DocumentUri
 from .sessions import Session
 from .views import parse_uri
 from pathlib import Path
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 
 def simple_path(session: Session | None, uri: DocumentUri) -> str:

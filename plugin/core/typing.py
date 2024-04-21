@@ -1,148 +1,55 @@
 import sys
+from enum import Enum, IntEnum, IntFlag  # noqa: F401
+from typing import (  # noqa: F401
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Deque,
+    Dict,
+    Generator,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Protocol,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    TypedDict,
+    TypeVar,
+    Union,
+    cast,
+    final,
+)
 
-if sys.version_info >= (3, 11, 0):
-
-    from enum import Enum, IntEnum, IntFlag, StrEnum
-    from typing import Any
-    from typing import Callable
-    from typing import cast
-    from typing import Deque
-    from typing import Dict
-    from typing import final
-    from typing import Generator
-    from typing import Generic
-    from typing import IO
-    from typing import Iterable
-    from typing import Iterator
-    from typing import List
-    from typing import Literal
-    from typing import Mapping
-    from typing import NotRequired
-    from typing import Optional
-    from typing import ParamSpec
-    from typing import Protocol
-    from typing import Required
-    from typing import Sequence
-    from typing import Set
-    from typing import Tuple
-    from typing import Type
-    from typing import TYPE_CHECKING
-    from typing import TypedDict
-    from typing import TypeGuard
-    from typing import TypeVar
-    from typing import Union
-
+if sys.version_info >= (3, 11):
+    from enum import StrEnum  # noqa: F401
+    from typing import (  # noqa: F401
+        NotRequired,
+        ParamSpec,
+        Required,
+        TypeGuard,
+    )
 else:
+    _T = TypeVar("_T")
 
-    TYPE_CHECKING = False
+    class StrEnum(str, Enum):
+        """
+        Naive polyfill for Python 3.11's StrEnum.
 
-    def cast(typ, val):  # type: ignore
-        return val
+        See https://docs.python.org/3.11/library/enum.html#enum.StrEnum
+        """
 
-    def final(func):  # type: ignore
-        return func
+        __format__ = str.__format__
+        __str__ = str.__str__
 
-    def _make_type(name: str) -> '_TypeMeta':
-        return _TypeMeta(name, (Type,), {})  # type: ignore
-
-    class _TypeMeta(type):
-        def __getitem__(self, args: 'Any') -> 'Any':
-            if not isinstance(args, tuple):
-                args = (args,)
-
-            name = '{}[{}]'.format(
-                str(self),
-                ', '.join(map(str, args))
-            )
-            return _make_type(name)
-
-        def __str__(self) -> str:
-            return self.__name__
-
-    class Type(metaclass=_TypeMeta):  # type: ignore
+    class NotRequired(Type, Generic[_T]):  # type: ignore
         pass
-
-    class TypedDict(Type, dict):  # type: ignore
-        def __init__(*args, **kwargs) -> None:  # type: ignore
-            pass
-
-    class TypeGuard(Type):  # type: ignore
-        pass
-
-    class Enum(Type):  # type: ignore
-        pass
-
-    class IntEnum(Type):  # type: ignore
-        pass
-
-    class IntFlag(Type):  # type: ignore
-        pass
-
-    class StrEnum(Type):  # type: ignore
-        pass
-
-    class Any(Type):  # type: ignore
-        pass
-
-    class Callable(Type):  # type: ignore
-        pass
-
-    class Deque(Type):  # type: ignore
-        pass
-
-    class Dict(Type):  # type: ignore
-        pass
-
-    class Generic(Type):  # type: ignore
-        pass
-
-    class Generator(Type):  # type: ignore
-        pass
-
-    class IO(Type):  # type: ignore
-        pass
-
-    class Iterable(Type):  # type: ignore
-        pass
-
-    class Iterator(Type):  # type: ignore
-        pass
-
-    class List(Type):  # type: ignore
-        pass
-
-    class Literal(Type):  # type: ignore
-        pass
-
-    class Mapping(Type):  # type: ignore
-        pass
-
-    class Optional(Type):  # type: ignore
-        pass
-
-    class Set(Type):  # type: ignore
-        pass
-
-    class Tuple(Type):  # type: ignore
-        pass
-
-    class Union(Type):  # type: ignore
-        pass
-
-    class Protocol(Type):  # type: ignore
-        pass
-
-    class Sequence(Type):  # type: ignore
-        pass
-
-    class Required(Type):  # type: ignore
-        pass
-
-    class NotRequired(Type):  # type: ignore
-        pass
-
-    def TypeVar(*args, **kwargs) -> Any:  # type: ignore
-        return object
 
     class ParamSpec(Type):  # type: ignore
         args = ...
@@ -150,3 +57,9 @@ else:
 
         def __init__(*args, **kwargs) -> None:  # type: ignore
             pass
+
+    class Required(Type, Generic[_T]):  # type: ignore
+        pass
+
+    class TypeGuard(Type, Generic[_T]):  # type: ignore
+        pass

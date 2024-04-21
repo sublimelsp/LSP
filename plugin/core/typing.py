@@ -27,23 +27,16 @@ from typing import (  # noqa: F401
     cast,
     final,
 )
+from typing_extensions import (  # noqa: F401
+    NotRequired,
+    ParamSpec,
+    Required,
+    TypeGuard,
+)
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum  # noqa: F401
-    from typing import (  # noqa: F401
-        NotRequired,
-        ParamSpec,
-        Required,
-        TypeGuard,
-    )
 else:
-    from typing_extensions import (  # noqa: F401
-        NotRequired,
-        ParamSpec,
-        Required,
-        TypeGuard,
-    )
-
     class StrEnum(str, Enum):
         """
         Naive polyfill for Python 3.11's StrEnum.

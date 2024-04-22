@@ -15,6 +15,7 @@ from .core.protocol import Hover
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request
+from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import AbstractViewListener
@@ -23,7 +24,6 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Dict, Tuple, Sequence, Union
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
-from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
@@ -114,17 +114,12 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
-        temp_point = point
-        if temp_point is None:
-            region = first_selection_region(self.view)
-            if region is not None:
-                temp_point = region.b
-        if temp_point is None:
+        hover_point = get_position(self.view, event, point)
+        if hover_point is None:
             return
         wm = windows.lookup(self.view.window())
         if not wm:
             return
-        hover_point = temp_point
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses = []  # type: List[Tuple[Hover, Optional[MarkdownLangMap]]]
         self._document_links = []  # type: List[DocumentLink]

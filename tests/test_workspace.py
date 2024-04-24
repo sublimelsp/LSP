@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.workspace import sorted_workspace_folders, is_subpath_of, WorkspaceFolder
 import os
 import unittest

@@ -1,8 +1,10 @@
+from __future__ import annotations
 from .constants import ST_VERSION
-from .typing import Any, Callable, Dict, List, Optional, ParamSpec, Tuple, Union
-from .typing import final
 from abc import ABCMeta
 from abc import abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import final
+from typing_extensions import ParamSpec
 import functools
 import sublime
 import sublime_plugin
@@ -106,8 +108,8 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self.command = command
         self.args = args
         self.text = getattr(command, '_text', '')
-        self.listener = None  # type: Optional[sublime_plugin.TextChangeListener]
-        self.input_view = None  # type: Optional[sublime.View]
+        self.listener: Optional[sublime_plugin.TextChangeListener] = None
+        self.input_view: Optional[sublime.View] = None
 
     def attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore

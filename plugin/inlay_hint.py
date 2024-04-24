@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.protocol import InlayHint
@@ -8,8 +9,9 @@ from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.typing import cast, Optional, Union
 from .core.views import position_to_offset
+from typing import Optional, Union
+from typing import cast
 import html
 import sublime
 import uuid

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
@@ -35,8 +36,6 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
-from .core.typing import cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
@@ -56,6 +55,8 @@ from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
+from typing import cast
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -91,7 +92,7 @@ def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
 
 class TextChangeListener(sublime_plugin.TextChangeListener):
 
-    ids_to_listeners = WeakValueDictionary()  # type: WeakValueDictionary[int, TextChangeListener]
+    ids_to_listeners: WeakValueDictionary[int, TextChangeListener] = WeakValueDictionary()
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
@@ -100,7 +101,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     def __init__(self) -> None:
         super().__init__()
-        self.view_listeners = WeakSet()  # type: WeakSet[DocumentSyncListener]
+        self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -168,8 +169,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._change_count_on_last_save = -1
         self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
-        self._completions_task = None  # type: Optional[QueryCompletionsTask]
-        self._stored_selection = []  # type: List[sublime.Region]
+        self._completions_task: Optional[QueryCompletionsTask] = None
+        self._stored_selection: List[sublime.Region] = []
         self._should_format_on_paste = False
         self.hover_provider_count = 0
         self._setup()
@@ -180,22 +181,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _setup(self) -> None:
         syntax = self.view.syntax()
         if syntax:
-            self._language_id = basescope2languageid(syntax.scope)  # type: str
+            self._language_id = basescope2languageid(syntax.scope)
         else:
             debug("view", self.view.id(), "has no syntax")
             self._language_id = ""
-        self._manager = None  # type: Optional[WindowManager]
-        self._session_views = {}  # type: Dict[str, SessionView]
+        self._manager: Optional[WindowManager] = None
+        self._session_views: Dict[str, SessionView] = {}
         self._stored_selection = []
-        self._sighelp = None  # type: Optional[SigHelp]
-        self._lightbulb_line = None  # type: Optional[int]
-        self._diagnostics_for_selection = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
-        self._code_actions_for_selection = []  # type: List[CodeActionsByConfigName]
+        self._sighelp: Optional[SigHelp] = None
+        self._lightbulb_line: Optional[int] = None
+        self._diagnostics_for_selection: List[Tuple[SessionBufferProtocol, List[Diagnostic]]] = []
+        self._code_actions_for_selection: List[CodeActionsByConfigName] = []
         self._registered = False
 
     def _cleanup(self) -> None:
         settings = self.view.settings()
-        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
+        triggers: List[Dict[str, str]] = settings.get("auto_complete_triggers") or []
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_selection = []
@@ -262,9 +263,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         region: sublime.Region
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(region.begin(), region.end())
-        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        result: List[Tuple[SessionBufferProtocol, List[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
-            intersections = []  # type: List[Diagnostic]
+            intersections: List[Diagnostic] = []
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another region
                 # which is exclusive (at region end) and we want an inclusive behavior in this case.
@@ -281,9 +282,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
         covering = sublime.Region(pt, pt)
-        result = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+        result: List[Tuple[SessionBufferProtocol, List[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
-            intersections = []  # type: List[Diagnostic]
+            intersections: List[Diagnostic] = []
             for diagnostic, candidate in diagnostics:
                 severity = diagnostic_severity(diagnostic)
                 if severity > max_diagnostic_severity_level:
@@ -352,7 +353,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if initially_folded_kinds:
             session = self.session_async('foldingRangeProvider')
             if session:
-                params = {'textDocument': text_document_identifier(self.view)}  # type: FoldingRangeParams
+                params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
                     partial(self._on_initial_folding_ranges, initially_folded_kinds))
@@ -492,8 +493,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._lightbulb_line == self.view.rowcol(point)[0]:
             content += code_actions_content(self._code_actions_for_selection)
         if userprefs().show_diagnostics_severity_level:
-            diagnostics_with_config = []  # type: List[Tuple[ClientConfig, Diagnostic]]
-            diagnostics_by_session_buffer = []  # type: List[Tuple[SessionBufferProtocol, List[Diagnostic]]]
+            diagnostics_with_config: List[Tuple[ClientConfig, Diagnostic]] = []
+            diagnostics_by_session_buffer: List[Tuple[SessionBufferProtocol, List[Diagnostic]]] = []
             max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
             if userprefs().diagnostics_gutter_marker:
                 diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))[0]
@@ -586,7 +587,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not session or not self._stored_selection:
             return
         pos = self._stored_selection[0].a
-        triggers = []  # type: List[str]
+        triggers: List[str] = []
         if not manual:
             for sb in self.session_buffers_async():
                 if session == sb.session:
@@ -599,19 +600,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
             trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
-            context_params = {
+            context_params: SignatureHelpContext = {
                 'triggerKind': trigger_kind,
                 'isRetrigger': self._sighelp is not None,
-            }  # type: SignatureHelpContext
+            }
             if not manual:
                 context_params["triggerCharacter"] = last_char
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
-            params = {
+            params: SignatureHelpParams = {
                 "textDocument": position_params["textDocument"],
                 "position": position_params["position"],
                 "context": context_params
-            }  # type: SignatureHelpParams
+            }
             language_map = session.markdown_language_id_to_st_syntax_map()
             request = Request.signatureHelp(params, self.view)
             session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
@@ -793,10 +794,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _is_in_higlighted_region(self, point: int) -> bool:
         for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
-            regions = itertools.chain(
+            regions: Iterable[sublime.Region] = itertools.chain(
                 self.view.get_regions(self._highlights_key(kind, False)),
                 self.view.get_regions(self._highlights_key(kind, True))
-            )  # type: Iterable[sublime.Region]
+            )
             if any(region.contains(point) for region in regions):
                 return True
         return False
@@ -815,7 +816,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_highlights(self, response: Optional[List[DocumentHighlight]]) -> None:
         if not isinstance(response, list):
             response = []
-        kind2regions = {}  # type: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]]
+        kind2regions: Dict[Tuple[DocumentHighlightKind, bool], List[sublime.Region]] = {}
         for highlight in response:
             r = range_to_region(highlight["range"], self.view)
             multiline = len(self.view.split_by_newlines(r)) > 1
@@ -980,7 +981,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         split_clipboard_text = clipboard_text.split('\n')
         multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1
         original_selection = list(sel)
-        regions_to_format = []  # type: List[sublime.Region]
+        regions_to_format: List[sublime.Region] = []
         pasted_text = clipboard_text
         # add regions to selection, in order for lsp_format_document_range to format those regions
         for index, region in enumerate(sel):

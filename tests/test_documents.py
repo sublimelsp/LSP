@@ -1,8 +1,8 @@
+from __future__ import annotations
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.types import ClientStates
-from LSP.plugin.core.typing import Any, Generator
 from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
 from setup import add_config
@@ -13,6 +13,7 @@ from setup import remove_config
 from setup import TIMEOUT_TIME
 from setup import YieldPromise
 from sublime_plugin import view_event_listeners
+from typing import Any, Generator
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -125,7 +126,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         def handler2(params: Any) -> None:
             promise2.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)

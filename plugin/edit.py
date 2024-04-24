@@ -1,10 +1,11 @@
+from __future__ import annotations
 from .core.edit import parse_range
 from .core.logging import debug
 from .core.protocol import TextEdit
 from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
-from .core.typing import List, Optional, Any, Generator, Iterable, Tuple
 from contextlib import contextmanager
+from typing import Any, Generator, Iterable, List, Optional, Tuple
 import operator
 import re
 import sublime
@@ -60,7 +61,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
             for start, end, replacement in reversed(_sort_by_application_order(edits)):
-                placeholder_region = None  # type: Optional[Tuple[Tuple[int, int], Tuple[int, int]]]
+                placeholder_region: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
                 if process_placeholders and replacement:
                     parsed = self.parse_snippet(replacement)
                     if parsed:

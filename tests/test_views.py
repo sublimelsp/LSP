@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin.core.protocol import CodeActionKind
 from LSP.plugin.core.protocol import Diagnostic
@@ -342,7 +343,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_text_document_code_action_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
-        diagnostic = {
+        diagnostic: Diagnostic = {
             "message": "oops",
             "severity": DiagnosticSeverity.Error,
             "range": {
@@ -355,7 +356,7 @@ class ViewsTest(DeferrableTestCase):
                     "line": 0
                 }
             }
-        }  # type: Diagnostic
+        }
         self.view.run_command("append", {"characters": "a b c\n"})
         params = text_document_code_action_params(
             view=self.view,
@@ -366,7 +367,7 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
     def test_format_diagnostic_for_html(self) -> None:
-        diagnostic1 = {
+        diagnostic1: Diagnostic = {
             "message": "oops",
             "severity": DiagnosticSeverity.Error,
             # The relatedInformation is present here, but it's an empty list.
@@ -382,7 +383,7 @@ class ViewsTest(DeferrableTestCase):
                     "line": 0
                 }
             }
-        }  # type: Diagnostic
+        }
         # Make the same diagnostic but without the relatedInformation
         diagnostic2 = deepcopy(diagnostic1)
         diagnostic2.pop("relatedInformation")

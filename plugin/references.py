@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
@@ -7,13 +8,13 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.typing import Dict, List, Literal, Optional, Tuple
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
 from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
+from typing import Dict, List, Literal, Optional, Tuple
 import functools
 import linecache
 import os
@@ -196,7 +197,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if not panel:
             return
         base_dir = wm.get_project_path(self.view.file_name() or "")
-        to_render = []  # type: List[str]
+        to_render: List[str] = []
         references_count = 0
         references_by_file = _group_locations_by_uri(wm.window, session.config, locations)
         for file, references in references_by_file.items():
@@ -236,7 +237,7 @@ def _group_locations_by_uri(
     locations: List[Location]
 ) -> Dict[str, List[Tuple[Point, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations = {}  # type: Dict[str, List[Tuple[Point, str]]]
+    grouped_locations: Dict[str, List[Tuple[Point, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)

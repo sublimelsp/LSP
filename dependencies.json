@@ -3,7 +3,7 @@
         ">=4096": [
             "bracex",
             "mdpopups",
-            "pathlib",
+            "typing_extensions",
             "wcmatch"
         ]
     }

@@ -1,8 +1,9 @@
+from __future__ import annotations
 from .protocol import DocumentUri
 from .sessions import Session
-from .typing import Iterable, Optional, Tuple
 from .views import parse_uri
 from pathlib import Path
+from typing import Iterable, Optional, Tuple
 
 
 def simple_path(session: Optional[Session], uri: DocumentUri) -> str:

@@ -1,13 +1,14 @@
+from __future__ import annotations
+from typing import Optional, Union
 import sublime
-from .typing import Optional, Union
 
 
 class ProgressReporter:
 
     def __init__(self, title: str) -> None:
         self.title = title
-        self._message = None  # type: Optional[str]
-        self._percentage = None  # type: Union[None, int, float]
+        self._message: Optional[str] = None
+        self._percentage: Union[None, int, float] = None
 
     def __del__(self) -> None:
         pass

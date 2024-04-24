@@ -4,7 +4,7 @@ from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
 from .protocol import Request
-from typing import Any, Dict, Optional
+from typing import Any
 from weakref import ref
 import sublime
 
@@ -19,7 +19,7 @@ class ActiveRequest:
         self.weaksv = ref(sv)
         self.request_id = request_id
         self.request = request
-        self.progress: Optional[ProgressReporter] = None
+        self.progress: ProgressReporter | None = None
         # `request.progress` is either a boolean or a string. If it's a boolean, then that signals that the server does
         # not support client-initiated progress. However, for some requests we still want to notify some kind of
         # progress to the end-user. This is communicated by the boolean value being "True".
@@ -47,20 +47,20 @@ class ActiveRequest:
     def _start_progress_reporter_async(
         self,
         title: str,
-        message: Optional[str] = None,
-        percentage: Optional[float] = None
-    ) -> Optional[ProgressReporter]:
+        message: str | None = None,
+        percentage: float | None = None
+    ) -> ProgressReporter | None:
         sv = self.weaksv()
         if not sv:
             return None
         if self.request.view is not None:
-            key = "lspprogressview-{}-{}-{}".format(sv.session.config.name, self.request.view.id(), self.request_id)
+            key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.request_id}"
             return ViewProgressReporter(self.request.view, key, title, message, percentage)
         else:
-            key = "lspprogresswindow-{}-{}-{}".format(sv.session.config.name, sv.session.window.id(), self.request_id)
+            key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
             return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
-    def update_progress_async(self, params: Dict[str, Any]) -> None:
+    def update_progress_async(self, params: dict[str, Any]) -> None:
         value = params['value']
         kind = value['kind']
         message = value.get("message")

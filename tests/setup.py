@@ -10,7 +10,7 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Generator
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -18,16 +18,11 @@ import sublime
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 TIMEOUT_TIME = 10000 if CI else 2000
-text_config = ClientConfig(
-    name="textls",
-    selector="text.plain",
-    command=[],
-    tcp_port=None)
+text_config = ClientConfig(name="textls", selector="text.plain", command=[], tcp_port=None)
 
 
 class YieldPromise:
-
-    __slots__ = ('__done', '__result')
+    __slots__ = ("__done", "__result")
 
     def __init__(self) -> None:
         self.__done = False
@@ -49,7 +44,8 @@ def make_stdio_test_config() -> ClientConfig:
         name="TEST",
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
-        enabled=True)
+        enabled=True,
+    )
 
 
 def make_tcp_test_config() -> ClientConfig:
@@ -58,7 +54,8 @@ def make_tcp_test_config() -> ClientConfig:
         command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
         selector="text.plain",
         tcp_port=0,  # select a free one for me
-        enabled=True)
+        enabled=True,
+    )
 
 
 def add_config(config):
@@ -69,7 +66,7 @@ def remove_config(config):
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: Optional[sublime.View]) -> Generator:
+def close_test_view(view: sublime.View | None) -> Generator:
     if view:
         view.set_scratch(True)
         yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
@@ -81,7 +78,6 @@ def expand(s: str, w: sublime.Window) -> str:
 
 
 class TextDocumentTestCase(DeferrableTestCase):
-
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
         return make_stdio_test_config()
@@ -92,7 +88,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
         window = sublime.active_window()
-        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
+        filename = expand(join("$packages", "LSP", "tests", f"{test_name}.txt"), window)
         open_view = window.find_open_file(filename)
         yield from close_test_view(open_view)
         cls.config = cls.get_stdio_test_config()
@@ -102,9 +98,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.view = window.open_file(filename)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
-        yield {
-            "condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None,
-            "timeout": TIMEOUT_TIME}
+        yield {"condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None, "timeout": TIMEOUT_TIME}
         cls.session = cls.wm.get_session(cls.config.name, filename)
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         cls.initialize_params = yield from cls.await_message("initialize")
@@ -113,7 +107,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def setUp(self) -> Generator:
         window = sublime.active_window()
-        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(self.get_test_name())), window)
+        filename = expand(join("$packages", "LSP", "tests", f"{self.get_test_name()}.txt"), window)
         open_view = window.find_open_file(filename)
         if not open_view:
             self.__class__.view = window.open_file(filename)
@@ -122,7 +116,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.init_view_settings()
         yield self.ensure_document_listener_created
         params = yield from self.await_message("textDocument/didOpen")
-        self.assertEquals(params['textDocument']['version'], 0)
+        self.assertEqual(params["textDocument"]["version"], 0)
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -157,7 +151,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return False
 
     @classmethod
-    def await_message(cls, method: str, promise: Optional[YieldPromise] = None) -> Generator:
+    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator:
         """
         Awaits until server receives a request with a specified method.
 
@@ -199,7 +193,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return promise
 
     @classmethod
-    def await_promise(cls, promise: Union[YieldPromise, Promise]) -> Generator:
+    def await_promise(cls, promise: YieldPromise | Promise) -> Generator:
         if isinstance(promise, YieldPromise):
             yielder = promise
         else:
@@ -208,11 +202,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
         return yielder.result()
 
-    def await_run_code_action(self, code_action: Dict[str, Any]) -> Generator:
+    def await_run_code_action(self, code_action: dict[str, Any]) -> Generator:
         promise = YieldPromise()
         sublime.set_timeout_async(
-            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view)
-            .then(promise.fulfill))
+            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view).then(
+                promise.fulfill
+            )
+        )
         yield from self.await_promise(promise)
 
     def set_response(self, method: str, response: Any) -> None:
@@ -220,7 +216,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert self.session  # mypy
         self.session.send_notification(Notification("$test/setResponse", {"method": method, "response": response}))
 
-    def set_responses(self, responses: List[Tuple[str, Any]]) -> Generator:
+    def set_responses(self, responses: list[tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         promise = YieldPromise()
@@ -251,7 +247,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_promise(promise)
 
     def await_clear_view_and_save(self) -> Generator:
-        assert self.view  # type: Optional[sublime.View]
+        assert isinstance(self.view, sublime.View)
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
         self.view.run_command("save")
@@ -259,7 +255,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didSave")
 
     def await_view_change(self, expected_change_count: int) -> Generator:
-        assert self.view  # type: Optional[sublime.View]
+        assert isinstance(self.view, sublime.View)
 
         def condition() -> bool:
             nonlocal self
@@ -271,7 +267,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": condition, "timeout": TIMEOUT_TIME}
 
     def insert_characters(self, characters: str) -> int:
-        assert self.view  # type: Optional[sublime.View]
+        assert isinstance(self.view, sublime.View)
         self.view.run_command("insert", {"characters": characters})
         return self.view.change_count()
 

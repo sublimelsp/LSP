@@ -9,7 +9,7 @@ from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from setup import TextDocumentTestCase
-from typing import Any, Callable, Dict, Generator, List, Optional
+from typing import Any, Callable, Generator
 from unittest import TestCase
 import sublime
 
@@ -79,7 +79,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
 
-    def verify(self, *, completion_items: List[Dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
+    def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
         if insert_text:
             self.type(insert_text)
         self.set_response("textDocument/completion", completion_items)
@@ -421,7 +421,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield from self.select_completion()
         yield from self.await_message('textDocument/completion')
 
-        self.assertEquals(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')
+        self.assertEqual(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')
 
     def test_fuzzy_match_plaintext_insert_text(self) -> Generator:
         yield from self.verify(
@@ -467,7 +467,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             insert_text='aab',
             expected_text='aaca')
 
-    def verify_multi_cursor(self, completion: Dict[str, Any]) -> Generator:
+    def verify_multi_cursor(self, completion: dict[str, Any]) -> Generator:
         """
         This checks whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
         Turning the `d` into an `m` is an important part of the test.
@@ -687,7 +687,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             resolve_support: bool,
             expected_regex: str,
             label: str,
-            label_details: Optional[CompletionItemLabelDetails]
+            label_details: CompletionItemLabelDetails | None
         ) -> None:
             lsp: CompletionItem = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}
             if label_details is not None:
@@ -738,7 +738,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             resolve_support: bool,
             expected_regex: str,
             label: str,
-            label_details: Optional[CompletionItemLabelDetails]
+            label_details: CompletionItemLabelDetails | None
         ) -> None:
             lsp: CompletionItem = {"label": label}
             if label_details is not None:
@@ -913,10 +913,10 @@ class FormatCompletionsUnitTests(TestCase):
     ) -> None:
         item = format_completion(
             payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
-        self.assertEquals(item.trigger, trigger)
-        self.assertEquals(item.annotation, annotation)
-        self.assertEquals(item.details, details)
-        self.assertEquals(item.flags, flags)
+        self.assertEqual(item.trigger, trigger)
+        self.assertEqual(item.annotation, annotation)
+        self.assertEqual(item.details, details)
+        self.assertEqual(item.flags, flags)
 
     def test_label(self) -> None:
         self._verify_completion(

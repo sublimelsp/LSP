@@ -56,7 +56,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
-        self._diagnostics_data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
+        self._diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
         self._active_requests: dict[int, ActiveRequest] = {}

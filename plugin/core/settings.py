@@ -119,7 +119,7 @@ class ClientConfigs:
 
     def set_listeners(
         self,
-        clients_listener: Callable[[str | None], None]
+        clients_listener: Callable[[str | None], None],
         userprefs_listener: Callable[[], None]
     ) -> None:
         self._clients_listener = clients_listener

@@ -8,7 +8,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import uri_from_view
-from typing import Any, List, Optional
+from typing import Any
 import sublime
 
 
@@ -19,10 +19,10 @@ class LspExecuteCommand(LspTextCommand):
 
     def run(self,
             edit: sublime.Edit,
-            command_name: Optional[str] = None,
-            command_args: Optional[List[Any]] = None,
-            session_name: Optional[str] = None,
-            event: Optional[dict] = None) -> None:
+            command_name: str | None = None,
+            command_args: list[Any] | None = None,
+            session_name: str | None = None,
+            event: dict | None = None) -> None:
         session = self.session_by_name(session_name if session_name else self.session_name)
         if session and command_name:
             params: ExecuteCommandParams = {"command": command_name}
@@ -45,7 +45,7 @@ class LspExecuteCommand(LspTextCommand):
         :param result: The result returned from the server.
         :param command_name: The name of the command that was executed.
         """
-        msg = "command {} completed".format(command_name)
+        msg = f"command {command_name} completed"
         window = self.view.window()
         if window:
             window.status_message(msg)
@@ -57,9 +57,9 @@ class LspExecuteCommand(LspTextCommand):
         :param error: The Error object.
         :param command_name: The name of the command that was executed.
         """
-        sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(error)))
+        sublime.message_dialog(f"command {command_name} failed. Reason: {str(error)}")
 
-    def _expand_variables(self, command_args: List[Any]) -> List[Any]:
+    def _expand_variables(self, command_args: list[Any]) -> list[Any]:
         view = self.view
         region = first_selection_region(view)
         for i, arg in enumerate(command_args):

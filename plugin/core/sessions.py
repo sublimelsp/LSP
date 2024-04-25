@@ -112,7 +112,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
 from enum import IntEnum
-from typing import Any, Callable, Dict, Generator, List, Optional, Protocol, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
 from weakref import WeakSet
@@ -136,7 +136,7 @@ def is_diagnostic_server_cancellation_data(data: Any) -> TypeGuard[DiagnosticSer
     return isinstance(data, dict) and 'retriggerRequest' in data
 
 
-def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
+def get_semantic_tokens_map(custom_tokens_map: dict[str, str] | None) -> tuple[tuple[str, str], ...]:
     tokens_scope_map = SEMANTIC_TOKENS_MAP.copy()
     if custom_tokens_map is not None:
         tokens_scope_map.update(custom_tokens_map)
@@ -145,12 +145,12 @@ def get_semantic_tokens_map(custom_tokens_map: Optional[Dict[str, str]]) -> Tupl
 
 @functools.lru_cache(maxsize=128)
 def decode_semantic_token(
-    types_legend: Tuple[str, ...],
-    modifiers_legend: Tuple[str, ...],
-    tokens_scope_map: Tuple[Tuple[str, str], ...],
+    types_legend: tuple[str, ...],
+    modifiers_legend: tuple[str, ...],
+    tokens_scope_map: tuple[tuple[str, str], ...],
     token_type_encoded: int,
     token_modifiers_encoded: int
-) -> Tuple[str, List[str], Optional[str]]:
+) -> tuple[str, list[str], str | None]:
     """
     This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
     the server. It also returns the corresponding scope name, which will be used for the highlighting color, either
@@ -167,7 +167,7 @@ def decode_semantic_token(
     if token_type in tokens_scope_map_dict:
         for token_modifier in token_modifiers:
             # this approach is limited to consider at most one modifier for the scope lookup
-            key = "{}.{}".format(token_type, token_modifier)
+            key = f"{token_type}.{token_modifier}"
             if key in tokens_scope_map_dict:
                 scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
                     token_type.lower(), token_modifier.lower())
@@ -175,9 +175,9 @@ def decode_semantic_token(
         else:
             scope = tokens_scope_map_dict[token_type]
             if token_modifiers:
-                scope += " meta.semantic-token.{}.{}.lsp".format(token_type.lower(), token_modifiers[0].lower())
+                scope += f" meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
             else:
-                scope += " meta.semantic-token.{}.lsp".format(token_type.lower())
+                scope += f" meta.semantic-token.{token_type.lower()}.lsp"
     return token_type, token_modifiers, scope
 
 
@@ -196,21 +196,21 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    def get_project_path(self, file_path: str) -> Optional[str]:
+    def get_project_path(self, file_path: str) -> str | None:
         """
         Get the project path for the given file.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
         """
         Should the diagnostics for this URI be shown in the view? Return a reason why not
         """
@@ -235,22 +235,22 @@ class Manager(metaclass=ABCMeta):
     # Event callbacks
 
     @abstractmethod
-    def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+    def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         """
         The given Session has stopped with the given exit code.
         """
         raise NotImplementedError()
 
 
-def _enum_to_list(e: Type[IntEnum]) -> List[int]:
+def _enum_to_list(e: type[IntEnum]) -> list[int]:
     return [v.value for v in e]
 
 
-def _enum_like_class_to_list(c: Type[object]) -> List[Union[int, str]]:
+def _enum_like_class_to_list(c: type[object]) -> list[int | str]:
     return [v for k, v in c.__dict__.items() if not k.startswith('_')]
 
 
-def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
+def get_initialize_params(variables: dict[str, str], workspace_folders: list[WorkspaceFolder],
                           config: ClientConfig) -> InitializeParams:
     completion_kinds = cast(List[CompletionItemKind], _enum_to_list(CompletionItemKind))
     symbol_kinds = cast(List[SymbolKind], _enum_to_list(SymbolKind))
@@ -549,19 +549,19 @@ class SessionViewProtocol(Protocol):
     def session_buffer(self) -> SessionBufferProtocol:
         ...
 
-    def get_uri(self) -> Optional[DocumentUri]:
+    def get_uri(self) -> DocumentUri | None:
         ...
 
-    def get_language_id(self) -> Optional[str]:
+    def get_language_id(self) -> str | None:
         ...
 
-    def get_view_for_group(self, group: int) -> Optional[sublime.View]:
+    def get_view_for_group(self, group: int) -> sublime.View | None:
         ...
 
-    def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
+    def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: Dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -571,7 +571,7 @@ class SessionViewProtocol(Protocol):
         ...
 
     def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData]
+        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
     ) -> None:
         ...
 
@@ -584,7 +584,7 @@ class SessionViewProtocol(Protocol):
     def on_request_finished_async(self, request_id: int) -> None:
         ...
 
-    def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
+    def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         ...
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
@@ -614,13 +614,13 @@ class SessionBufferProtocol(Protocol):
         ...
 
     @property
-    def version(self) -> Optional[int]:
+    def version(self) -> int | None:
         ...
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> str | None:
         ...
 
-    def get_language_id(self) -> Optional[str]:
+    def get_language_id(self) -> str | None:
         ...
 
     def get_view_in_group(self, group: int) -> sublime.View:
@@ -631,7 +631,7 @@ class SessionBufferProtocol(Protocol):
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: Dict[str, Any]
+        options: dict[str, Any]
     ) -> None:
         ...
 
@@ -643,18 +643,18 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def get_capability(self, capability_path: str) -> Optional[Any]:
+    def get_capability(self, capability_path: str) -> Any | None:
         ...
 
     def has_capability(self, capability_path: str) -> bool:
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: List[Diagnostic], version: Optional[int], visible_session_views: Set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
-    def get_document_link_at_point(self, view: sublime.View, point: int) -> Optional[DocumentLink]:
+    def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         ...
 
     def update_document_link(self, new_link: DocumentLink) -> None:
@@ -669,7 +669,7 @@ class SessionBufferProtocol(Protocol):
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
-    def get_semantic_tokens(self) -> List[Any]:
+    def get_semantic_tokens(self) -> list[Any]:
         ...
 
     def clear_semantic_tokens_async(self) -> None:
@@ -684,7 +684,7 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: Optional[int] = None) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int | None = None) -> None:
         ...
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
@@ -699,15 +699,15 @@ class AbstractViewListener(metaclass=ABCMeta):
     hover_provider_count = 0
 
     @abstractmethod
-    def session_async(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+    def session_async(self, capability: str, point: int | None = None) -> Session | None:
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    def sessions_async(self, capability: str | None = None) -> Generator[Session, None, None]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_buffers_async(self, capability: Optional[str] = None) -> Generator[SessionBufferProtocol, None, None]:
+    def session_buffers_async(self, capability: str | None = None) -> Generator[SessionBufferProtocol, None, None]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -730,7 +730,7 @@ class AbstractViewListener(metaclass=ABCMeta):
     def diagnostics_intersecting_region_async(
         self,
         region: sublime.Region
-    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
+    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -738,13 +738,13 @@ class AbstractViewListener(metaclass=ABCMeta):
         self,
         pt: int,
         max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
+    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
 
     def diagnostics_intersecting_async(
         self,
-        region_or_point: Union[sublime.Region, int]
-    ) -> Tuple[List[Tuple[SessionBufferProtocol, List[Diagnostic]]], sublime.Region]:
+        region_or_point: sublime.Region | int
+    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
         if isinstance(region_or_point, int):
             return self.diagnostics_touching_point_async(region_or_point)
         elif region_or_point.empty():
@@ -813,7 +813,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @classmethod
-    def configuration(cls) -> Tuple[sublime.Settings, str]:
+    def configuration(cls) -> tuple[sublime.Settings, str]:
         """
         Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",
         "default_settings", "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
@@ -853,12 +853,12 @@ class AbstractPlugin(metaclass=ABCMeta):
         "command" should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
         """
         name = cls.name()
-        basename = "LSP-{}.sublime-settings".format(name)
-        filepath = "Packages/LSP-{}/{}".format(name, basename)
+        basename = f"LSP-{name}.sublime-settings"
+        filepath = f"Packages/LSP-{name}/{basename}"
         return sublime.load_settings(basename), filepath
 
     @classmethod
-    def additional_variables(cls) -> Optional[Dict[str, str]]:
+    def additional_variables(cls) -> dict[str, str] | None:
         """
         In addition to the above variables, add more variables here to be expanded.
         """
@@ -907,7 +907,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
     def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                  workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
+                  workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> str | None:
         """
         Determines ability to start. This is called after needs_update_or_installation and after install_or_update.
         So you may assume that if you're managing your server binary, then it is already installed when this
@@ -925,7 +925,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
     def on_pre_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                     workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
+                     workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> str | None:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
         adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
@@ -943,7 +943,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
     def on_post_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                      workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> None:
+                      workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> None:
         """
         Callback invoked when the subprocess was just started.
 
@@ -967,7 +967,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         return False
 
     @classmethod
-    def markdown_language_id_to_st_syntax_map(cls) -> Optional[MarkdownLangMap]:
+    def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
         The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
@@ -996,7 +996,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: Dict, configuration: Any) -> Any:
+    def on_workspace_configuration(self, params: dict, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
@@ -1068,7 +1068,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_session_end_async(self, exit_code: Optional[int], exception: Optional[Exception]) -> None:
+    def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
         any stored state or delete references to the session or plugin instance that would otherwise prevent the
@@ -1083,10 +1083,10 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
 
-_plugins: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]] = {}
+_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
 
 
-def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
+def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
     global _plugins
     name = plugin.name()
     if name in _plugins:
@@ -1097,10 +1097,10 @@ def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -
             on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
             _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
-        exception_log('Failed to register plugin "{}"'.format(name), ex)
+        exception_log(f'Failed to register plugin "{name}"', ex)
 
 
-def register_plugin(plugin: Type[AbstractPlugin], notify_listener: bool = True) -> None:
+def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
 
@@ -1145,7 +1145,7 @@ def register_plugin(plugin: Type[AbstractPlugin], notify_listener: bool = True) 
         _register_plugin_impl(plugin, notify_listener)
 
 
-def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
+def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     """
     Unregister an LSP plugin in LSP.
 
@@ -1159,10 +1159,10 @@ def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
         _plugins.pop(name, None)
         client_configs.remove_external_config(name)
     except Exception as ex:
-        exception_log('Failed to unregister plugin "{}"'.format(name), ex)
+        exception_log(f'Failed to unregister plugin "{name}"', ex)
 
 
-def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
+def get_plugin(name: str) -> type[AbstractPlugin] | None:
     global _plugins
     tup = _plugins.get(name, None)
     return tup[0] if tup else None
@@ -1191,7 +1191,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
         pass
 
     @abstractmethod
@@ -1203,7 +1203,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
 
-def print_to_status_bar(error: Dict[str, Any]) -> None:
+def print_to_status_bar(error: dict[str, Any]) -> None:
     sublime.status_message(error["message"])
 
 
@@ -1223,7 +1223,7 @@ class _RegistrationData:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: Dict[str, Any]
+        options: dict[str, Any]
     ) -> None:
         self.registration_id = registration_id
         self.registration_path = registration_path
@@ -1255,13 +1255,13 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 class Session(TransportCallbacks):
 
-    def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
-        self.transport: Optional[Transport] = None
-        self.working_directory: Optional[str] = None
+    def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
+                 config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
+        self.transport: Transport | None = None
+        self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]] = {}
+        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None] | None]] = {}
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1269,23 +1269,23 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self.diagnostics_result_ids: Dict[DocumentUri, Optional[str]] = {}
-        self.workspace_diagnostics_pending_response: Optional[int] = None
+        self.diagnostics_result_ids: dict[DocumentUri, str | None] = {}
+        self.workspace_diagnostics_pending_response: int | None = None
         self.exiting = False
-        self._registrations: Dict[str, _RegistrationData] = {}
-        self._init_callback: Optional[InitCallback] = None
-        self._initialize_error: Optional[Tuple[int, Optional[Exception]]] = None
+        self._registrations: dict[str, _RegistrationData] = {}
+        self._init_callback: InitCallback | None = None
+        self._initialize_error: tuple[int, Exception | None] | None = None
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
         self._session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
-        self._progress: Dict[ProgressToken, Optional[WindowProgressReporter]] = {}
+        self._progress: dict[ProgressToken, WindowProgressReporter | None] = {}
         self._watcher_impl = get_file_watcher_implementation()
-        self._static_file_watchers: List[FileWatcher] = []
-        self._dynamic_file_watchers: Dict[str, List[FileWatcher]] = {}
+        self._static_file_watchers: list[FileWatcher] = []
+        self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
         self._plugin_class = plugin_class
-        self._plugin: Optional[AbstractPlugin] = None
-        self._status_messages: Dict[str, str] = {}
+        self._plugin: AbstractPlugin | None = None
+        self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
 
     def __getattr__(self, name: str) -> Any:
@@ -1299,7 +1299,7 @@ class Session(TransportCallbacks):
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
-    def get_workspace_folders(self) -> List[WorkspaceFolder]:
+    def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
 
     def uses_plugin(self) -> bool:
@@ -1325,7 +1325,7 @@ class Session(TransportCallbacks):
         """
         yield from self._session_views
 
-    def session_view_for_view_async(self, view: sublime.View) -> Optional[SessionViewProtocol]:
+    def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:
         for sv in self.session_views_async():
             if sv.view == view:
                 return sv
@@ -1367,7 +1367,7 @@ class Session(TransportCallbacks):
                 self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: List[Diagnostic], version: Optional[int]
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -1381,11 +1381,11 @@ class Session(TransportCallbacks):
         """
         yield from self._session_buffers
 
-    def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
+    def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> SessionBufferProtocol | None:
         scheme, path = parse_uri(uri)
         if scheme == "file":
 
-            def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
+            def compare_by_samefile(sb: SessionBufferProtocol | None) -> bool:
                 if not sb:
                     return False
                 candidate = sb.get_uri()
@@ -1404,7 +1404,7 @@ class Session(TransportCallbacks):
             predicate = compare_by_samefile
         else:
 
-            def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
+            def compare_by_string(sb: SessionBufferProtocol | None) -> bool:
                 return sb.get_uri() == path if sb else False
 
             predicate = compare_by_string
@@ -1412,7 +1412,7 @@ class Session(TransportCallbacks):
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
-    def can_handle(self, view: sublime.View, scheme: str, capability: Optional[str], inside_workspace: bool) -> bool:
+    def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
             return False
         if self._plugin and self._plugin.should_ignore(view):
@@ -1440,7 +1440,7 @@ class Session(TransportCallbacks):
         value = self.get_capability(capability)
         return value is not False and value is not None
 
-    def get_capability(self, capability: str) -> Optional[Any]:
+    def get_capability(self, capability: str) -> Any | None:
         if self.config.is_disabled_capability(capability):
             return None
         return self.capabilities.get(capability)
@@ -1457,7 +1457,7 @@ class Session(TransportCallbacks):
     def should_notify_will_save(self) -> bool:
         return self.capabilities.should_notify_will_save()
 
-    def should_notify_did_save(self) -> Tuple[bool, bool]:
+    def should_notify_did_save(self) -> tuple[bool, bool]:
         return self.capabilities.should_notify_did_save()
 
     def should_notify_did_close(self) -> bool:
@@ -1465,8 +1465,8 @@ class Session(TransportCallbacks):
 
     # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
 
-    def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
-        changes: List[FileEvent] = []
+    def on_file_event_async(self, events: list[FileWatcherEvent]) -> None:
+        changes: list[FileEvent] = []
         for event in events:
             event_type, filepath = event
             changes.append({
@@ -1477,10 +1477,10 @@ class Session(TransportCallbacks):
 
     # --- misc methods -------------------------------------------------------------------------------------------------
 
-    def markdown_language_id_to_st_syntax_map(self) -> Optional[MarkdownLangMap]:
+    def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
         return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
 
-    def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
+    def handles_path(self, file_path: str | None, inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():
             # A workspace-aware language server handles any path, both inside and outside the workspaces.
             return True
@@ -1496,7 +1496,7 @@ class Session(TransportCallbacks):
                 return True
         return False
 
-    def update_folders(self, folders: List[WorkspaceFolder]) -> None:
+    def update_folders(self, folders: list[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():
             added, removed = diff(self._workspace_folders, folders)
             if added or removed:
@@ -1514,8 +1514,8 @@ class Session(TransportCallbacks):
 
     def initialize_async(
         self,
-        variables: Dict[str, str],
-        working_directory: Optional[str],
+        variables: dict[str, str],
+        working_directory: str | None,
         transport: Transport,
         init_callback: InitCallback
     ) -> None:
@@ -1540,16 +1540,16 @@ class Session(TransportCallbacks):
         self._maybe_send_did_change_configuration()
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
-            debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
+            debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
-            debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+            debug(f'{self.config.name}: supported code action kinds: {code_action_kinds}')
         semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
         if semantic_token_types:
-            debug('{}: Supported semantic token types: {}'.format(self.config.name, semantic_token_types))
+            debug(f'{self.config.name}: Supported semantic token types: {semantic_token_types}')
         semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
         if semantic_token_modifiers:
-            debug('{}: Supported semantic token modifiers: {}'.format(self.config.name, semantic_token_modifiers))
+            debug(f'{self.config.name}: Supported semantic token modifiers: {semantic_token_modifiers}')
         if self._watcher_impl:
             config = self.config.file_watcher
             patterns = config.get('patterns')
@@ -1571,7 +1571,7 @@ class Session(TransportCallbacks):
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
 
-    def _get_global_ignore_globs(self, root_path: str) -> List[str]:
+    def _get_global_ignore_globs(self, root_path: str) -> list[str]:
         folder_exclude_patterns = cast(List[str], globalprefs().get('folder_exclude_patterns'))
         folder_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
@@ -1604,7 +1604,7 @@ class Session(TransportCallbacks):
             resolved = self.config.settings.get_resolved(variables)
             self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved}))
 
-    def _template_variables(self) -> Dict[str, str]:
+    def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
         if self._plugin_class is not None:
             extra_vars = self._plugin_class.additional_variables()
@@ -1613,7 +1613,7 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, progress: bool, view: Optional[sublime.View] = None
+        self, command: ExecuteCommandParams, progress: bool, view: sublime.View | None = None
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1650,7 +1650,7 @@ class Session(TransportCallbacks):
         )
 
     def run_code_action_async(
-        self, code_action: Union[Command, CodeAction], progress: bool, view: Optional[sublime.View] = None
+        self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
     ) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
@@ -1671,10 +1671,10 @@ class Session(TransportCallbacks):
     def try_open_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[Range] = None,
+        r: Range | None = None,
         flags: int = 0,
         group: int = -1
-    ) -> Optional[Promise[Optional[sublime.View]]]:
+    ) -> Promise[sublime.View | None] | None:
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
@@ -1693,23 +1693,23 @@ class Session(TransportCallbacks):
     def open_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[Range] = None,
+        r: Range | None = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
+    ) -> Promise[sublime.View | None]:
         promise = self.try_open_uri_async(uri, r, flags, group)
         return Promise.resolve(None) if promise is None else promise
 
     def _open_file_uri_async(
         self,
         uri: DocumentUri,
-        r: Optional[Range] = None,
+        r: Range | None = None,
         flags: int = 0,
         group: int = -1
-    ) -> Promise[Optional[sublime.View]]:
-        result: PackagedTask[Optional[sublime.View]] = Promise.packaged_task()
+    ) -> Promise[sublime.View | None]:
+        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
-        def handle_continuation(view: Optional[sublime.View]) -> None:
+        def handle_continuation(view: sublime.View | None) -> None:
             if view and r:
                 center_selection(view, r)
             sublime.set_timeout_async(lambda: result[1](view))
@@ -1721,16 +1721,16 @@ class Session(TransportCallbacks):
         self,
         plugin: AbstractPlugin,
         uri: DocumentUri,
-        r: Optional[Range],
+        r: Range | None,
         flags: int,
         group: int,
-    ) -> Optional[Promise[Optional[sublime.View]]]:
+    ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
-        pair: PackagedTask[Tuple[str, str, str]] = Promise.packaged_task()
+        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
-            result: PackagedTask[Optional[sublime.View]] = Promise.packaged_task()
+            result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
             def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
                 if group > -1:
@@ -1751,8 +1751,8 @@ class Session(TransportCallbacks):
             return result[0]
         return None
 
-    def open_location_async(self, location: Union[Location, LocationLink], flags: int = 0,
-                            group: int = -1) -> Promise[Optional[sublime.View]]:
+    def open_location_async(self, location: Location | LocationLink, flags: int = 0,
+                            group: int = -1) -> Promise[sublime.View | None]:
         uri, r = get_uri_and_range_from_location(location)
         return self.open_uri_async(uri, r, flags, group)
 
@@ -1761,8 +1761,8 @@ class Session(TransportCallbacks):
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
     def _maybe_resolve_code_action(
-        self, code_action: CodeAction, view: Optional[sublime.View]
-    ) -> Promise[Union[CodeAction, Error]]:
+        self, code_action: CodeAction, view: sublime.View | None
+    ) -> Promise[CodeAction | Error]:
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
@@ -1776,13 +1776,13 @@ class Session(TransportCallbacks):
         return Promise.resolve(code_action)
 
     def _apply_code_action_async(
-        self, code_action: Union[CodeAction, Error, None], view: Optional[sublime.View]
+        self, code_action: CodeAction | Error | None, view: sublime.View | None
     ) -> Promise[None]:
         if not code_action:
             return Promise.resolve(None)
         if isinstance(code_action, Error):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
-            self.window.status_message("Failed to apply code action: {}".format(code_action))
+            self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
         promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
@@ -1807,7 +1807,7 @@ class Session(TransportCallbacks):
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
-        promises: List[Promise[None]] = []
+        promises: list[Promise[None]] = []
         for uri, (edits, view_version) in changes.items():
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
@@ -1817,35 +1817,35 @@ class Session(TransportCallbacks):
             .then(lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
-        self, edits: List[TextEdit], view_version: Optional[int], uri: str, view: Optional[sublime.View]
+        self, edits: list[TextEdit], view_version: int | None, uri: str, view: sublime.View | None
     ) -> None:
         if view is None or not view.is_valid():
-            print('LSP: ignoring edits due to no view for uri: {}'.format(uri))
+            print(f'LSP: ignoring edits due to no view for uri: {uri}')
             return
         apply_text_edits(view, edits, required_view_version=view_version)
 
-    def _set_selected_sheets(self, sheets: List[sublime.Sheet]) -> None:
+    def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):
             self.window.select_sheets(sheets)
 
-    def _set_focused_sheet(self, sheet: Optional[sublime.Sheet]) -> None:
+    def _set_focused_sheet(self, sheet: sublime.Sheet | None) -> None:
         if sheet and sheet != self.window.active_sheet():
             self.window.focus_sheet(sheet)
 
     def decode_semantic_token(
         self,
-        types_legend: Tuple[str, ...],
-        modifiers_legend: Tuple[str, ...],
+        types_legend: tuple[str, ...],
+        modifiers_legend: tuple[str, ...],
         token_type_encoded: int,
         token_modifiers_encoded: int
-    ) -> Tuple[str, List[str], Optional[str]]:
+    ) -> tuple[str, list[str], str | None]:
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
-    def session_views_by_visibility(self) -> Tuple[Set[SessionViewProtocol], Set[SessionViewProtocol]]:
-        visible_session_views: Set[SessionViewProtocol] = set()
-        not_visible_session_views: Set[SessionViewProtocol] = set()
-        selected_sheets: Set[sublime.Sheet] = set()
+    def session_views_by_visibility(self) -> tuple[set[SessionViewProtocol], set[SessionViewProtocol]]:
+        visible_session_views: set[SessionViewProtocol] = set()
+        not_visible_session_views: set[SessionViewProtocol] = set()
+        selected_sheets: set[sublime.Sheet] = set()
         for group in range(self.window.num_groups()):
             selected_sheets = selected_sheets.union(self.window.selected_sheets_in_group(group))
         for sheet in self.window.sheets():
@@ -1868,7 +1868,7 @@ class Session(TransportCallbacks):
             # The server is probably leaving the request open intentionally, in order to continuously stream updates via
             # $/progress notifications.
             return
-        previous_result_ids: List[PreviousResultId] = [
+        previous_result_ids: list[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
             if result_id is not None
         ]
@@ -1949,9 +1949,9 @@ class Session(TransportCallbacks):
         """handles the workspace/workspaceFolders request"""
         self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def m_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
+    def m_workspace_configuration(self, params: dict[str, Any], request_id: Any) -> None:
         """handles the workspace/configuration request"""
-        items: List[Any] = []
+        items: list[Any] = []
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
@@ -2026,7 +2026,7 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(registration["method"])
             if self.config.is_disabled_capability(capability_path):
                 continue
-            debug("{}: registering capability:".format(self.config.name), capability_path)
+            debug(f"{self.config.name}: registering capability:", capability_path)
             options = registration.get("registerOptions")
             if not isinstance(options, dict):
                 options = {}
@@ -2050,7 +2050,7 @@ class Session(TransportCallbacks):
                     sublime.set_timeout_async(inform)
             if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
-                file_watchers: List[FileWatcher] = []
+                file_watchers: list[FileWatcher] = []
                 for config in capability_options.get("watchers", []):
                     pattern = config.get("globPattern", '')
                     if not isinstance(pattern, str):
@@ -2070,7 +2070,7 @@ class Session(TransportCallbacks):
         for unregistration in unregistrations:
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
-            debug("{}: unregistering capability:".format(self.config.name), capability_path)
+            debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
             if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
                 file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
@@ -2090,7 +2090,7 @@ class Session(TransportCallbacks):
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
-        def success(b: Union[None, bool, sublime.View]) -> None:
+        def success(b: None | bool | sublime.View) -> None:
             if isinstance(b, bool):
                 pass
             elif isinstance(b, sublime.View):
@@ -2122,7 +2122,7 @@ class Session(TransportCallbacks):
     def _create_window_progress_reporter(self, token: ProgressToken, value: WorkDoneProgressBegin) -> None:
         self._progress[token] = WindowProgressReporter(
             window=self.window,
-            key="lspprogress{}{}".format(self.config.name, token),
+            key=f"lspprogress{self.config.name}{token}",
             title=value["title"],
             message=value.get("message")
         )
@@ -2167,7 +2167,7 @@ class Session(TransportCallbacks):
                         value = cast(WorkDoneProgressBegin, value)
                         self._create_window_progress_reporter(token, value)
                         return
-                debug('unknown $/progress token: {}'.format(token))
+                debug(f'unknown $/progress token: {token}')
                 return
             if kind == 'begin':
                 value = cast(WorkDoneProgressBegin, value)
@@ -2216,7 +2216,7 @@ class Session(TransportCallbacks):
     def _handle_shutdown_result(self, _: Any) -> None:
         self.exit()
 
-    def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+    def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
         self.state = ClientStates.STOPPING
         self.transport = None
@@ -2240,7 +2240,7 @@ class Session(TransportCallbacks):
             self,
             request: Request,
             on_result: Callable[[Any], None],
-            on_error: Optional[Callable[[Any], None]] = None
+            on_error: Callable[[Any], None] | None = None
     ) -> int:
         """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
         self.request_id += 1
@@ -2261,7 +2261,7 @@ class Session(TransportCallbacks):
             self,
             request: Request,
             on_result: Callable[[Any], None],
-            on_error: Optional[Callable[[Any], None]] = None,
+            on_error: Callable[[Any], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
@@ -2272,7 +2272,7 @@ class Session(TransportCallbacks):
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
-    def send_request_task_2(self, request: Request) -> Tuple[Promise, int]:
+    def send_request_task_2(self, request: Request) -> tuple[Promise, int]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
@@ -2305,7 +2305,7 @@ class Session(TransportCallbacks):
         except AttributeError:
             pass
 
-    def send_payload(self, payload: Dict[str, Any]) -> None:
+    def send_payload(self, payload: dict[str, Any]) -> None:
         try:
             self.transport.send(payload)  # type: ignore
         except AttributeError:
@@ -2313,8 +2313,8 @@ class Session(TransportCallbacks):
 
     def deduce_payload(
         self,
-        payload: Dict[str, Any]
-    ) -> Tuple[Optional[Callable], Any, Optional[int], Optional[str], Optional[str]]:
+        payload: dict[str, Any]
+    ) -> tuple[Callable | None, Any, int | None, str | None, str | None]:
         if "method" in payload:
             method = payload["method"]
             handler = self._get_handler(method)
@@ -2346,8 +2346,8 @@ class Session(TransportCallbacks):
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)
 
-    def on_payload(self, payload: Dict[str, Any]) -> None:
-        handler, result, req_id, typestr, method = self.deduce_payload(payload)
+    def on_payload(self, payload: dict[str, Any]) -> None:
+        handler, result, req_id, typestr, _method = self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:
@@ -2363,16 +2363,16 @@ class Session(TransportCallbacks):
                         self.send_error_response(req_id, Error.from_exception(ex))
                         raise
             except Exception as err:
-                exception_log("Error handling {}".format(typestr), err)
+                exception_log(f"Error handling {typestr}", err)
 
     def response_handler(
         self,
         response_id: int,
-        response: Dict[str, Any]
-    ) -> Tuple[Optional[Callable], Optional[str], Any, bool]:
+        response: dict[str, Any]
+    ) -> tuple[Callable | None, str | None, Any, bool]:
         request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
-            error = {"code": ErrorCodes.InvalidParams, "message": "unknown response ID {}".format(response_id)}
+            error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
@@ -2385,5 +2385,5 @@ class Session(TransportCallbacks):
             error = {"code": ErrorCodes.InvalidParams, "message": "invalid response payload"}
         return (error_handler, request.method, error, True)
 
-    def _get_handler(self, method: str) -> Optional[Callable]:
+    def _get_handler(self, method: str) -> Callable | None:
         return getattr(self, method2attr(method), None)

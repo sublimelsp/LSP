@@ -7,14 +7,13 @@ from .core.protocol import Request
 from .core.protocol import URI
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from typing import Optional
 import sublime
 
 
 class LspOpenLinkCommand(LspTextCommand):
     capability = 'documentLinkProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled(event, point):
             return False
         position = get_position(self.view, event)
@@ -29,7 +28,7 @@ class LspOpenLinkCommand(LspTextCommand):
         link = sv.session_buffer.get_document_link_at_point(self.view, position)
         return link is not None
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         point = get_position(self.view, event)
         if not point:
             return

@@ -33,16 +33,16 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
     return changes
 
 
-def parse_range(range: Position) -> Tuple[int, int]:
+def parse_range(range: Position) -> tuple[int, int]:
     return range['line'], min(UINT_MAX, range['character'])
 
 
 def apply_text_edits(
     view: sublime.View,
-    edits: Optional[List[TextEdit]],
+    edits: list[TextEdit] | None,
     *,
-    process_placeholders: Optional[bool] = False,
-    required_view_version: Optional[int] = None
+    process_placeholders: bool | None = False,
+    required_view_version: int | None = None
 ) -> None:
     if not edits:
         return

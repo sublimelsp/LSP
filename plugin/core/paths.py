@@ -3,10 +3,10 @@ from .protocol import DocumentUri
 from .sessions import Session
 from .views import parse_uri
 from pathlib import Path
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 
-def simple_path(session: Optional[Session], uri: DocumentUri) -> str:
+def simple_path(session: Session | None, uri: DocumentUri) -> str:
     scheme, path = parse_uri(uri)
     if not session or scheme != 'file':
         return path
@@ -14,7 +14,7 @@ def simple_path(session: Optional[Session], uri: DocumentUri) -> str:
     return str(simple_path) if simple_path else path
 
 
-def project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+def project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
     """
     The project path of `/path/to/project/file` in the project `/path/to/project` is `file`.
     """
@@ -25,7 +25,7 @@ def project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[P
     return file
 
 
-def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
     """
     The simple project path of `/path/to/project/file` in the project `/path/to/project` is `project/file`.
     """
@@ -36,7 +36,7 @@ def simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Opt
     return folder.name / file
 
 
-def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path) -> Path | None:
     """
     The inverse of `simple_project_path()`.
     """
@@ -48,7 +48,7 @@ def resolve_simple_project_path(project_folders: Iterable[Path], file_path: Path
     return None
 
 
-def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Optional[Path]:
+def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Path | None:
     """
     The project base dir of `/path/to/project/file` in the project `/path/to/project` is `/path/to`.
     """
@@ -59,7 +59,7 @@ def project_base_dir(project_folders: Iterable[Path], file_path: Path) -> Option
     return folder.parent
 
 
-def split_project_path(project_folders: Iterable[Path], file_path: Path) -> Optional[Tuple[Path, Path]]:
+def split_project_path(project_folders: Iterable[Path], file_path: Path) -> tuple[Path, Path] | None:
     abs_path = file_path.resolve()
     for folder in project_folders:
         try:

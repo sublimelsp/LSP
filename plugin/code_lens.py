@@ -10,7 +10,7 @@ from .core.views import make_command_link
 from .core.views import range_to_region
 from html import escape as html_escape
 from functools import partial
-from typing import Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import Generator, Iterable
 from typing import cast
 import itertools
 import sublime
@@ -20,7 +20,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
     capability = 'codeLensProvider'
 
     @classmethod
-    def are_enabled(cls, window: Optional[sublime.Window]) -> bool:
+    def are_enabled(cls, window: sublime.Window | None) -> bool:
         if not window:
             return False
         return bool(window.settings().get(CODE_LENS_ENABLED_KEY, True))
@@ -63,7 +63,7 @@ class CodeLensData:
         self.is_resolve_error = False
 
     def __repr__(self) -> str:
-        return 'CodeLensData(resolved={0}, region={1!r})'.format(self.is_resolved(), self.region)
+        return f'CodeLensData(resolved={self.is_resolved()}, region={self.region!r})'
 
     def is_resolved(self) -> bool:
         """A code lens is considered resolved if the inner data contains the 'command' key."""
@@ -76,7 +76,7 @@ class CodeLensData:
 
     @property
     def small_html(self) -> str:
-        return '<small style="font-family: system">{}</small>'.format(self.annotation)
+        return f'<small style="font-family: system">{self.annotation}</small>'
 
     def resolve_annotation(self, view_id: int) -> None:
         command = self.data.get('command')
@@ -93,7 +93,7 @@ class CodeLensData:
         else:
             self.annotation = '...'
 
-    def resolve(self, view: sublime.View, code_lens_or_error: Union[CodeLens, Error]) -> None:
+    def resolve(self, view: sublime.View, code_lens_or_error: CodeLens | Error) -> None:
         if isinstance(code_lens_or_error, Error):
             self.is_resolve_error = True
             self.annotation = '<span style="color: color(var(--redish)">error</span>'
@@ -110,7 +110,7 @@ class CodeLensView:
         self.view = view
         self._init = False
         self._phantom = sublime.PhantomSet(view, self.CODE_LENS_KEY)
-        self._code_lenses: Dict[Tuple[int, int], List[CodeLensData]] = {}
+        self._code_lenses: dict[tuple[int, int], list[CodeLensData]] = {}
 
     def clear(self) -> None:
         self._code_lenses.clear()
@@ -126,17 +126,17 @@ class CodeLensView:
             self.view.erase_regions(self._region_key(lens.session_name, index))
 
     def _region_key(self, session_name: str, index: int) -> str:
-        return '{0}.{1}.{2}'.format(self.CODE_LENS_KEY, session_name, index)
+        return f'{self.CODE_LENS_KEY}.{session_name}.{index}'
 
     def clear_view(self) -> None:
         self._phantom.update([])
         self._clear_annotations()
 
-    def handle_response(self, session_name: str, response: List[CodeLens]) -> None:
+    def handle_response(self, session_name: str, response: list[CodeLens]) -> None:
         self._init = True
         responses = [CodeLensData(data, self.view, session_name) for data in response]
         responses.sort(key=lambda c: c.region)
-        result: Dict[Tuple[int, int], List[CodeLensData]] = {
+        result: dict[tuple[int, int], list[CodeLensData]] = {
             region.to_tuple(): list(groups)
             for region, groups in itertools.groupby(responses, key=lambda c: c.region)
         }
@@ -217,7 +217,7 @@ class LspCodeLensCommand(LspTextCommand):
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
-        code_lenses: List[CodeLensExtended] = []
+        code_lenses: list[CodeLensExtended] = []
         for region in self.view.sel():
             for sv in listener.session_views_async():
                 code_lenses.extend(sv.get_resolved_code_lenses_for_region(region))
@@ -240,7 +240,7 @@ class LspCodeLensCommand(LspTextCommand):
                 lambda i: self.on_select(code_lenses, i)
             )
 
-    def on_select(self, code_lenses: List[CodeLensExtended], index: int) -> None:
+    def on_select(self, code_lenses: list[CodeLensExtended], index: int) -> None:
         try:
             code_lens = code_lenses[index]
         except IndexError:

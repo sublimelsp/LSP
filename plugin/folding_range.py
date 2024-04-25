@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
-from typing import List, Optional
 import sublime
 
 
@@ -26,7 +25,7 @@ def folding_range_to_range(folding_range: FoldingRange) -> Range:
     }
 
 
-def sorted_folding_ranges(folding_ranges: List[FoldingRange]) -> List[FoldingRange]:
+def sorted_folding_ranges(folding_ranges: list[FoldingRange]) -> list[FoldingRange]:
     # Sort by reversed position and from innermost to outermost (if nested)
     return sorted(
         folding_ranges,
@@ -55,17 +54,17 @@ class LspFoldCommand(LspTextCommand):
     """
 
     capability = 'foldingRangeProvider'
-    folding_ranges: List[FoldingRange] = []
+    folding_ranges: list[FoldingRange] = []
     change_count = -1
-    folding_region: Optional[sublime.Region] = None
+    folding_region: sublime.Region | None = None
 
     def is_visible(
         self,
         prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
-        event: Optional[dict] = None,
-        point: Optional[int] = None
+        event: dict | None = None,
+        point: int | None = None
     ) -> bool:
         if not prefetch:
             return True
@@ -91,7 +90,7 @@ class LspFoldCommand(LspTextCommand):
             return False
         return self.folding_region is not None  # Already set or unset by self.description
 
-    def _handle_response_async(self, change_count: int, response: Optional[List[FoldingRange]]) -> None:
+    def _handle_response_async(self, change_count: int, response: list[FoldingRange] | None) -> None:
         self.change_count = change_count
         self.folding_ranges = response or []
 
@@ -100,8 +99,8 @@ class LspFoldCommand(LspTextCommand):
         prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
-        event: Optional[dict] = None,
-        point: Optional[int] = None
+        event: dict | None = None,
+        point: int | None = None
     ) -> str:
         if not prefetch:
             return "LSP: Fold"
@@ -128,7 +127,7 @@ class LspFoldCommand(LspTextCommand):
                 if kind == FoldingRangeKind.Imports:
                     return "LSP: Fold Imports"
                 elif kind:
-                    return "LSP: Fold this {}".format(kind.title())
+                    return f"LSP: Fold this {kind.title()}"
                 else:
                     return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
@@ -139,8 +138,8 @@ class LspFoldCommand(LspTextCommand):
         prefetch: bool = False,
         hidden: bool = False,
         strict: bool = True,
-        event: Optional[dict] = None,
-        point: Optional[int] = None
+        event: dict | None = None,
+        point: int | None = None
     ) -> None:
         if prefetch:
             if self.folding_region is not None:
@@ -162,7 +161,7 @@ class LspFoldCommand(LspTextCommand):
                     partial(self._handle_response_manual_async, pt, strict)
                 )
 
-    def _handle_response_manual_async(self, point: int, strict: bool, response: Optional[List[FoldingRange]]) -> None:
+    def _handle_response_manual_async(self, point: int, strict: bool, response: list[FoldingRange] | None) -> None:
         if not response:
             window = self.view.window()
             if window:
@@ -185,14 +184,14 @@ class LspFoldAllCommand(LspTextCommand):
 
     capability = 'foldingRangeProvider'
 
-    def run(self, edit: sublime.Edit, kind: Optional[str] = None, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, kind: str | None = None, event: dict | None = None) -> None:
         session = self.best_session(self.capability)
         if session:
             params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
             session.send_request_async(
                 Request.foldingRange(params, self.view), partial(self._handle_response_async, kind))
 
-    def _handle_response_async(self, kind: Optional[str], response: Optional[List[FoldingRange]]) -> None:
+    def _handle_response_async(self, kind: str | None, response: list[FoldingRange] | None) -> None:
         if not response:
             return
         regions = [

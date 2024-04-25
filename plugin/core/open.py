@@ -8,7 +8,6 @@ from .protocol import Range
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
-from typing import Dict, Optional, Tuple
 from typing import cast
 from urllib.parse import unquote, urlparse
 import os
@@ -19,17 +18,17 @@ import subprocess
 import webbrowser
 
 
-opening_files: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]] = {}
+opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
-def lsp_range_from_uri_fragment(fragment: str) -> Optional[Range]:
+def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
     match = FRAGMENT_PATTERN.match(fragment)
     if match:
         selection: Range = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}
         # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
         # numbers for the LSP Position structure.
-        start_line, start_column, end_line, end_column = [max(0, int(g) - 1) if g else None for g in match.groups()]
+        start_line, start_column, end_line, end_column = (max(0, int(g) - 1) if g else None for g in match.groups())
         if start_line:
             selection['start']['line'] = start_line
             selection['end']['line'] = start_line
@@ -47,7 +46,7 @@ def lsp_range_from_uri_fragment(fragment: str) -> Optional[Range]:
 
 def open_file_uri(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
-) -> Promise[Optional[sublime.View]]:
+) -> Promise[sublime.View | None]:
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
     parsed = urlparse(decoded_uri)
@@ -59,7 +58,7 @@ def open_file_uri(
     return open_promise
 
 
-def _select_and_center(view: Optional[sublime.View], r: Range) -> Optional[sublime.View]:
+def _select_and_center(view: sublime.View | None, r: Range) -> sublime.View | None:
     if view:
         return center_selection(view, r)
     return None
@@ -75,7 +74,7 @@ def _return_existing_view(flags: int, existing_view_group: int, active_group: in
     return not bool(flags & sublime.FORCE_GROUP)
 
 
-def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> Optional[sublime.View]:
+def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> sublime.View | None:
     """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
     _group = window.active_group() if group == -1 else group
     view = window.active_view_in_group(_group)
@@ -86,7 +85,7 @@ def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> Opti
 
 def open_file(
     window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
-) -> Promise[Optional[sublime.View]]:
+) -> Promise[sublime.View | None]:
     """
     Open a file asynchronously.
     It is only safe to call this function from the UI thread.
@@ -116,7 +115,7 @@ def open_file(
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
-    def fullfill(resolve: ResolveFunc[Optional[sublime.View]]) -> None:
+    def fullfill(resolve: ResolveFunc[sublime.View | None]) -> None:
         global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
         opening_files[file] = (None, resolve)  # type: ignore
@@ -164,5 +163,5 @@ def open_externally(uri: str, take_focus: bool) -> bool:
             subprocess.check_call(("xdg-open", uri))
         return True
     except Exception as ex:
-        exception_log("Failed to open {}".format(uri), ex)
+        exception_log(f"Failed to open {uri}", ex)
         return False

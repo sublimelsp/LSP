@@ -3,7 +3,7 @@ Module with additional collections.
 """
 from __future__ import annotations
 from copy import deepcopy
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Generator
 import sublime
 
 
@@ -11,24 +11,24 @@ class DottedDict:
 
     __slots__ = ('_d',)
 
-    def __init__(self, d: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, d: dict[str, Any] | None = None) -> None:
         """
         Construct a DottedDict, optionally from an existing dictionary.
 
         :param      d:    An existing dictionary.
         """
-        self._d: Dict[str, Any] = {}
+        self._d: dict[str, Any] = {}
         if d is not None:
             self.update(d)
 
     @classmethod
-    def from_base_and_override(cls, base: "DottedDict", override: Optional[Dict[str, Any]]) -> "DottedDict":
+    def from_base_and_override(cls, base: DottedDict, override: dict[str, Any] | None) -> DottedDict:
         result = DottedDict(base.copy())
         if override:
             result.update(override)
         return result
 
-    def get(self, path: Optional[str] = None) -> Any:
+    def get(self, path: str | None = None) -> Any:
         """
         Get a value from the dictionary.
 
@@ -95,7 +95,7 @@ class DottedDict:
             current = next_current
         current.pop(keys[-1], None)
 
-    def copy(self, path: Optional[str] = None) -> Any:
+    def copy(self, path: str | None = None) -> Any:
         """
         Get a copy of the value from the dictionary or copy of whole dictionary.
 
@@ -126,7 +126,7 @@ class DottedDict:
         """
         self._d.clear()
 
-    def assign(self, d: Dict[str, Any]) -> None:
+    def assign(self, d: dict[str, Any]) -> None:
         """
         Overwrites the old stored dictionary with a fresh new dictionary.
 
@@ -134,7 +134,7 @@ class DottedDict:
         """
         self._d = d
 
-    def update(self, d: Dict[str, Any]) -> None:
+    def update(self, d: dict[str, Any]) -> None:
         """
         Overwrite and/or add new key-value pairs to the collection.
 
@@ -146,7 +146,7 @@ class DottedDict:
             else:
                 self.set(key, value)
 
-    def get_resolved(self, variables: Dict[str, str]) -> Dict[str, Any]:
+    def get_resolved(self, variables: dict[str, str]) -> dict[str, Any]:
         """
         Resolve a DottedDict that may potentially contain template variables like $folder.
 
@@ -156,18 +156,18 @@ class DottedDict:
         """
         return sublime.expand_variables(self._d, variables)
 
-    def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
+    def _update_recursive(self, current: dict[str, Any], prefix: str) -> None:
         if not current or any(filter(lambda key: isinstance(key, str) and (":" in key or "/" in key), current.keys())):
             return self.set(prefix, current)
         for key, value in current.items():
-            path = "{}.{}".format(prefix, key)
+            path = f"{prefix}.{key}"
             if isinstance(value, dict):
                 self._update_recursive(value, path)
             else:
                 self.set(path, value)
 
     def __repr__(self) -> str:
-        return "{}({})".format(self.__class__.__name__, repr(self._d))
+        return f"{self.__class__.__name__}({repr(self._d)})"
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, DottedDict):

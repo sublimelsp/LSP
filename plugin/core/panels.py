@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
-from typing import Iterable, Optional
+from typing import Iterable
 import sublime
 
 
@@ -39,7 +39,7 @@ class PanelName:
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self._rename_panel_buttons: Optional[sublime.PhantomSet] = None
+        self._rename_panel_buttons: sublime.PhantomSet | None = None
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
@@ -51,12 +51,12 @@ class PanelManager:
         self._rename_panel_buttons = None
 
     def toggle_output_panel(self, panel_type: str) -> None:
-        panel_name = "output.{}".format(panel_type)
+        panel_name = f"output.{panel_type}"
         command = "hide_panel" if self.is_panel_open(panel_type) else "show_panel"
         self._window.run_command(command, {"panel": panel_name})
 
     def is_panel_open(self, panel_name: str) -> bool:
-        return self._window.is_valid() and self._window.active_panel() == "output.{}".format(panel_name)
+        return self._window.is_valid() and self._window.active_panel() == f"output.{panel_name}"
 
     def update_log_panel(self, scroll_to_selection: bool = False) -> None:
         panel = self.ensure_log_panel()
@@ -66,31 +66,31 @@ class PanelManager:
                 panel.show(panel.sel(), animate=False)
 
     def ensure_panel(self, name: str, result_file_regex: str, result_line_regex: str,
-                     syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
+                     syntax: str, context_menu: str | None = None) -> sublime.View | None:
         return self.get_panel(name) or \
             self._create_panel(name, result_file_regex, result_line_regex, syntax, context_menu)
 
-    def ensure_diagnostics_panel(self) -> Optional[sublime.View]:
+    def ensure_diagnostics_panel(self) -> sublime.View | None:
         return self.ensure_panel("diagnostics", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/Diagnostics.sublime-syntax")
 
-    def ensure_log_panel(self) -> Optional[sublime.View]:
+    def ensure_log_panel(self) -> sublime.View | None:
         return self.ensure_panel(PanelName.Log, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
                                  "Context LSP Log Panel.sublime-menu")
 
-    def ensure_references_panel(self) -> Optional[sublime.View]:
+    def ensure_references_panel(self) -> sublime.View | None:
         return self.ensure_panel("references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
-    def ensure_rename_panel(self) -> Optional[sublime.View]:
+    def ensure_rename_panel(self) -> sublime.View | None:
         return self.ensure_panel(PanelName.Rename, PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
-    def get_panel(self, panel_name: str) -> Optional[sublime.View]:
+    def get_panel(self, panel_name: str) -> sublime.View | None:
         return self._window.find_output_panel(panel_name)
 
     def _create_panel(self, name: str, result_file_regex: str, result_line_regex: str,
-                      syntax: str, context_menu: Optional[str] = None) -> Optional[sublime.View]:
+                      syntax: str, context_menu: str | None = None) -> sublime.View | None:
         panel = self.create_output_panel(name)
         if not panel:
             return None
@@ -112,7 +112,7 @@ class PanelManager:
             panel.set_read_only(True)
         return panel
 
-    def create_output_panel(self, name: str) -> Optional[sublime.View]:
+    def create_output_panel(self, name: str) -> sublime.View | None:
         panel = self._window.create_output_panel(name)
         settings = panel.settings()
         for key, value in OUTPUT_PANEL_SETTINGS.items():

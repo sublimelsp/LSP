@@ -18,23 +18,23 @@ from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
 from functools import partial
-from typing import Callable, Iterator, List, Optional, Union
+from typing import Callable, Iterator, List, Union
 import sublime
 
 
 FormatResponse = Union[List[TextEdit], None, Error]
 
 
-def get_formatter(window: Optional[sublime.Window], base_scope: str) -> Optional[str]:
+def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
     window_manager = windows.lookup(window)
     if not window_manager:
         return None
     project_data = window_manager.window.project_data()
-    return DottedDict(project_data).get('settings.LSP.formatters.{}'.format(base_scope)) if \
+    return DottedDict(project_data).get(f'settings.LSP.formatters.{base_scope}') if \
         isinstance(project_data, dict) else window_manager.formatters.get(base_scope)
 
 
-def format_document(text_command: LspTextCommand, formatter: Optional[str] = None) -> Promise[FormatResponse]:
+def format_document(text_command: LspTextCommand, formatter: str | None = None) -> Promise[FormatResponse]:
     view = text_command.view
     if formatter:
         session = text_command.session_by_name(formatter, LspFormatDocumentCommand.capability)
@@ -58,7 +58,7 @@ class WillSaveWaitTask(SaveTask):
 
     def __init__(self, task_runner: LspTextCommand, on_complete: Callable[[], None]) -> None:
         super().__init__(task_runner, on_complete)
-        self._session_iterator: Optional[Iterator[Session]] = None
+        self._session_iterator: Iterator[Session] | None = None
 
     def run_async(self) -> None:
         super().run_async()
@@ -114,12 +114,12 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, select: bool = False) -> bool:
+    def is_enabled(self, event: dict | None = None, select: bool = False) -> bool:
         if select:
             return len(list(self.sessions(self.capability))) > 1
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, select: bool = False) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None, select: bool = False) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         base_scope = self.view.syntax().scope
         if select:
@@ -139,14 +139,14 @@ class LspFormatDocumentCommand(LspTextCommand):
         if result and not isinstance(result, Error):
             apply_text_edits(self.view, result)
 
-    def select_formatter(self, base_scope: str, session_names: List[str]) -> None:
+    def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
         window = self.view.window()
         if not window:
             return
         window.show_quick_panel(
             session_names, partial(self.on_select_formatter, base_scope, session_names), placeholder="Select Formatter")
 
-    def on_select_formatter(self, base_scope: str, session_names: List[str], index: int) -> None:
+    def on_select_formatter(self, base_scope: str, session_names: list[str], index: int) -> None:
         if index == -1:
             return
         session_name = session_names[index]
@@ -172,7 +172,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     capability = 'documentRangeFormattingProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled(event, point):
             return False
         if has_single_nonempty_selection(self.view):
@@ -182,7 +182,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             return True
         return False
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)
@@ -198,13 +198,13 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
 class LspFormatCommand(LspTextCommand):
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled():
             return False
         return bool(self.best_session('documentFormattingProvider')) or \
             bool(self.best_session('documentRangeFormattingProvider'))
 
-    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         return self.is_enabled(event, point)
 
     def description(self, **kwargs) -> str:
@@ -214,7 +214,7 @@ class LspFormatCommand(LspTextCommand):
             return "Format Selections"
         return "Format File"
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         command = 'lsp_format_document_range' if self._range_formatting_available() else 'lsp_format_document'
         self.view.run_command(command)
 

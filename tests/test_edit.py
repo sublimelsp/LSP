@@ -9,7 +9,6 @@ from LSP.plugin.edit import _sort_by_application_order as sort_by_application_or
 from LSP.plugin.edit import temporary_setting
 from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
-from typing import List
 import sublime
 import unittest
 
@@ -231,7 +230,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
 
     def test_applies_text_edit(self) -> None:
         self.insert_characters('abc')
-        edits: List[TextEdit] = [{
+        edits: list[TextEdit] = [{
             'newText': 'x$0y',
             'range': {
                 'start': {
@@ -245,11 +244,11 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
             }
         }]
         apply_text_edits(self.view, edits)
-        self.assertEquals(entire_content(self.view), 'ax$0yc')
+        self.assertEqual(entire_content(self.view), 'ax$0yc')
 
     def test_applies_text_edit_with_placeholder(self) -> None:
         self.insert_characters('abc')
-        edits: List[TextEdit] = [{
+        edits: list[TextEdit] = [{
             'newText': 'x$0y',
             'range': {
                 'start': {
@@ -263,7 +262,7 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
             }
         }]
         apply_text_edits(self.view, edits, process_placeholders=True)
-        self.assertEquals(entire_content(self.view), 'axyc')
+        self.assertEqual(entire_content(self.view), 'axyc')
         self.assertEqual(len(self.view.sel()), 1)
         self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
 
@@ -282,9 +281,9 @@ class ApplyDocumentEditTestCase(TextDocumentTestCase):
                 }
             }
         }
-        edits: List[TextEdit] = [newline_edit, newline_edit]
+        edits: list[TextEdit] = [newline_edit, newline_edit]
         apply_text_edits(self.view, edits, process_placeholders=True)
-        self.assertEquals(entire_content(self.view), 'a\n\nb')
+        self.assertEqual(entire_content(self.view), 'a\n\nb')
         self.assertEqual(len(self.view.sel()), 2)
         self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
         self.assertEqual(self.view.sel()[1], sublime.Region(3, 3))

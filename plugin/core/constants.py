@@ -4,7 +4,7 @@ from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentHighlightKind
 from .protocol import SymbolKind
-from typing import Dict, Tuple
+from typing import Tuple
 import sublime
 
 
@@ -72,7 +72,7 @@ KIND_QUICKFIX = (sublime.KIND_ID_COLOR_YELLOWISH, "f", "QuickFix")
 KIND_REFACTOR = (sublime.KIND_ID_COLOR_CYANISH, "r", "Refactor")
 KIND_SOURCE = (sublime.KIND_ID_COLOR_PURPLISH, "s", "Source")
 
-COMPLETION_KINDS: Dict[CompletionItemKind, SublimeKind] = {
+COMPLETION_KINDS: dict[CompletionItemKind, SublimeKind] = {
     CompletionItemKind.Text: KIND_TEXT,
     CompletionItemKind.Method: KIND_METHOD,
     CompletionItemKind.Function: KIND_FUNCTION,
@@ -100,7 +100,7 @@ COMPLETION_KINDS: Dict[CompletionItemKind, SublimeKind] = {
     CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-SYMBOL_KINDS: Dict[SymbolKind, SublimeKind] = {
+SYMBOL_KINDS: dict[SymbolKind, SublimeKind] = {
     SymbolKind.File: KIND_FILE,
     SymbolKind.Module: KIND_MODULE,
     SymbolKind.Namespace: KIND_NAMESPACE,
@@ -129,21 +129,21 @@ SYMBOL_KINDS: Dict[SymbolKind, SublimeKind] = {
     SymbolKind.TypeParameter: KIND_TYPEPARAMETER
 }
 
-DIAGNOSTIC_KINDS: Dict[DiagnosticSeverity, SublimeKind] = {
+DIAGNOSTIC_KINDS: dict[DiagnosticSeverity, SublimeKind] = {
     DiagnosticSeverity.Error: KIND_ERROR,
     DiagnosticSeverity.Warning: KIND_WARNING,
     DiagnosticSeverity.Information: KIND_INFORMATION,
     DiagnosticSeverity.Hint: KIND_HINT
 }
 
-CODE_ACTION_KINDS: Dict[CodeActionKind, SublimeKind] = {
+CODE_ACTION_KINDS: dict[CodeActionKind, SublimeKind] = {
     CodeActionKind.QuickFix: KIND_QUICKFIX,
     CodeActionKind.Refactor: KIND_REFACTOR,
     CodeActionKind.Source: KIND_SOURCE
 }
 
 
-DOCUMENT_HIGHLIGHT_KIND_NAMES: Dict[DocumentHighlightKind, str] = {
+DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
@@ -151,7 +151,7 @@ DOCUMENT_HIGHLIGHT_KIND_NAMES: Dict[DocumentHighlightKind, str] = {
 
 
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
-SUBLIME_KIND_SCOPES: Dict[SublimeKind, str] = {
+SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
     sublime.KIND_TYPE: "entity.name.type | entity.name.class | entity.name.enum | entity.name.trait | entity.name.struct | entity.name.impl | entity.name.interface | entity.name.union | support.type | support.class",  # noqa: E501
     sublime.KIND_FUNCTION: "entity.name.function | entity.name.method | entity.name.macro | meta.method entity.name.function | support.function | meta.function-call variable.function | meta.function-call support.function | support.method | meta.method-call variable.function",  # noqa: E501
@@ -161,7 +161,7 @@ SUBLIME_KIND_SCOPES: Dict[SublimeKind, str] = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }
 
-DOCUMENT_HIGHLIGHT_KIND_SCOPES: Dict[DocumentHighlightKind, str] = {
+DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"

@@ -14,7 +14,7 @@ from .core.views import get_uri_and_position_from_location
 from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Literal
 import functools
 import linecache
 import os
@@ -30,27 +30,27 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def is_enabled(
         self,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        output_mode: Optional[OutputMode] = None,
+        output_mode: OutputMode | None = None,
     ) -> bool:
         return fallback or super().is_enabled(event, point)
 
     def is_visible(
         self,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        output_mode: Optional[OutputMode] = None,
+        output_mode: OutputMode | None = None,
     ) -> bool:
         # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
         # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
@@ -66,14 +66,14 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def run(
         self,
         _: sublime.Edit,
-        event: Optional[dict] = None,
-        point: Optional[int] = None,
+        event: dict | None = None,
+        point: int | None = None,
         side_by_side: bool = False,
         force_group: bool = True,
         fallback: bool = False,
         group: int = -1,
         include_declaration: bool = False,
-        output_mode: Optional[OutputMode] = None,
+        output_mode: OutputMode | None = None,
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -115,10 +115,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         force_group: bool,
         fallback: bool,
         group: int,
-        output_mode: Optional[OutputMode],
-        event: Optional[dict],
+        output_mode: OutputMode | None,
+        event: dict | None,
         position: int,
-        response: Optional[List[Location]]
+        response: list[Location] | None
     ) -> None:
         sublime.set_timeout(lambda: self._handle_response(
             word, session, side_by_side, force_group, fallback, group, output_mode, event, position, response))
@@ -131,10 +131,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         force_group: bool,
         fallback: bool,
         group: int,
-        output_mode: Optional[OutputMode],
-        event: Optional[dict],
+        output_mode: OutputMode | None,
+        event: dict | None,
         position: int,
-        response: Optional[List[Location]]
+        response: list[Location] | None
     ) -> None:
         if not response:
             self._handle_no_results(fallback, side_by_side)
@@ -166,7 +166,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self,
         word: str,
         session: Session,
-        locations: List[Location],
+        locations: list[Location],
         side_by_side: bool,
         force_group: bool,
         group: int,
@@ -189,7 +189,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     break
         LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 
-    def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
+    def _show_references_in_output_panel(self, word: str, session: Session, locations: list[Location]) -> None:
         wm = windows.lookup(session.window)
         if not wm:
             return
@@ -197,31 +197,31 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if not panel:
             return
         base_dir = wm.get_project_path(self.view.file_name() or "")
-        to_render: List[str] = []
+        to_render: list[str] = []
         references_count = 0
         references_by_file = _group_locations_by_uri(wm.window, session.config, locations)
         for file, references in references_by_file.items():
-            to_render.append('{}:'.format(_get_relative_path(base_dir, file)))
+            to_render.append(f'{_get_relative_path(base_dir, file)}:')
             for reference in references:
                 references_count += 1
                 point, line = reference
-                to_render.append(" {:>4}:{:<4} {}".format(point.row + 1, point.col + 1, line))
+                to_render.append(f" {point.row + 1:>4}:{point.col + 1:<4} {line}")
             to_render.append("")  # add spacing between filenames
         characters = "\n".join(to_render)
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
         wm.window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
-            'characters': "{} references for '{}'\n\n{}".format(references_count, word, characters),
+            'characters': f"{references_count} references for '{word}'\n\n{characters}",
             'force': True,
             'scroll_to_end': False
         })
         # highlight all word occurrences
-        regions = panel.find_all(r"\b{}\b".format(word))
+        regions = panel.find_all(rf"\b{word}\b")
         panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_NO_FILL | sublime.NO_UNDO)
 
 
-def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:
+def _get_relative_path(base_dir: str | None, file_path: str) -> str:
     if base_dir:
         try:
             return os.path.relpath(file_path, base_dir)
@@ -234,10 +234,10 @@ def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:
 def _group_locations_by_uri(
     window: sublime.Window,
     config: ClientConfig,
-    locations: List[Location]
-) -> Dict[str, List[Tuple[Point, str]]]:
+    locations: list[Location]
+) -> dict[str, list[tuple[Point, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations: Dict[str, List[Tuple[Point, str]]] = {}
+    grouped_locations: dict[str, list[tuple[Point, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)

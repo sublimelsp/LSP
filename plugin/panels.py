@@ -4,7 +4,7 @@ from .core.panels import PanelName
 from .core.registry import windows
 from contextlib import contextmanager
 from sublime_plugin import WindowCommand
-from typing import Generator, Optional
+from typing import Generator
 import sublime
 import sublime_plugin
 
@@ -50,12 +50,12 @@ class LspShowDiagnosticsPanelCommand(WindowCommand):
 
 class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
     @classmethod
-    def is_limit_enabled(cls, window: Optional[sublime.Window]) -> bool:
+    def is_limit_enabled(cls, window: sublime.Window | None) -> bool:
         wm = windows.lookup(window)
         return bool(wm and wm.is_log_lines_limit_enabled())
 
     @classmethod
-    def get_lines_limit(cls, window: Optional[sublime.Window]) -> int:
+    def get_lines_limit(cls, window: sublime.Window | None) -> int:
         wm = windows.lookup(window)
         return wm.get_log_lines_limit() if wm else 0
 
@@ -86,7 +86,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     A update_panel command to update the error panel with new text.
     """
 
-    def run(self, edit: sublime.Edit, characters: Optional[str] = "") -> None:
+    def run(self, edit: sublime.Edit, characters: str | None = "") -> None:
         # Clear folds
         self.view.unfold(sublime.Region(0, self.view.size()))
 
@@ -109,7 +109,7 @@ class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
             new_lines = []
             for prefix, message in wm.get_and_clear_server_log():
                 message = message.replace("\r\n", "\n")  # normalize Windows eol
-                new_lines.append("{}: {}\n".format(prefix, message))
+                new_lines.append(f"{prefix}: {message}\n")
             if new_lines:
                 self.view.insert(edit, self.view.size(), ''.join(new_lines))
                 last_region_end = 0  # Starting from point 0 in the panel ...

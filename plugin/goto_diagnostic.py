@@ -25,7 +25,7 @@ from .core.views import to_encoded_filename
 from .core.views import uri_from_view
 from collections import Counter, OrderedDict
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Iterator
 from typing import cast
 import functools
 import os
@@ -50,10 +50,10 @@ def get_sessions(window: sublime.Window) -> Iterator[Session]:
 
 
 class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
-    def run(self, uri: Optional[DocumentUri], diagnostic: Optional[dict]) -> None:  # type: ignore
+    def run(self, uri: DocumentUri | None, diagnostic: dict | None) -> None:  # type: ignore
         pass
 
-    def is_enabled(self, uri: Optional[DocumentUri] = None, diagnostic: Optional[dict] = None) -> bool:  # type: ignore
+    def is_enabled(self, uri: DocumentUri | None = None, diagnostic: dict | None = None) -> bool:  # type: ignore
         view = self.window.active_view()
         if view is None:
             return False
@@ -73,7 +73,7 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                    for diagnostic in diagnostics
                    if is_severity_included(max_severity)(diagnostic))
 
-    def input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+    def input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")
         view = self.window.active_view()
         if view is None:
@@ -95,10 +95,10 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
 
 
 class DiagnosticUriInputHandler(PreselectedListInputHandler):
-    _preview: Optional[sublime.View] = None
-    uri: Optional[DocumentUri] = None
+    _preview: sublime.View | None = None
+    uri: DocumentUri | None = None
 
-    def __init__(self, window: sublime.Window, view: sublime.View, initial_value: Optional[DocumentUri] = None) -> None:
+    def __init__(self, window: sublime.Window, view: sublime.View, initial_value: DocumentUri | None = None) -> None:
         super().__init__(window, initial_value)
         self.window = window
         self.view = view
@@ -106,11 +106,11 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def name(self) -> str:
         return "uri"
 
-    def get_list_items(self) -> Tuple[List[sublime.ListInputItem], int]:
+    def get_list_items(self) -> tuple[list[sublime.ListInputItem], int]:
         max_severity = userprefs().diagnostics_panel_include_severity_level
         # collect severities and location of first diagnostic per uri
-        severities_per_path: OrderedDict[ParsedUri, List[DiagnosticSeverity]] = OrderedDict()
-        self.first_locations: Dict[ParsedUri, Tuple[Session, Location]] = dict()
+        severities_per_path: OrderedDict[ParsedUri, list[DiagnosticSeverity]] = OrderedDict()
+        self.first_locations: dict[ParsedUri, tuple[Session, Location]] = dict()
         for session in get_sessions(self.window):
             for parsed_uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
@@ -125,9 +125,8 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         selected = 0
         for i, (parsed_uri, severities) in enumerate(severities_per_path.items()):
             counts = Counter(severities)
-            text = "{}: {}".format(format_severity(min(counts)), self._simple_project_path(parsed_uri))
-            annotation = "E: {}, W: {}".format(counts.get(DiagnosticSeverity.Error, 0),
-                                               counts.get(DiagnosticSeverity.Warning, 0))
+            text = f"{format_severity(min(counts))}: {self._simple_project_path(parsed_uri)}"
+            annotation = f"E: {counts.get(DiagnosticSeverity.Error, 0)}, W: {counts.get(DiagnosticSeverity.Warning, 0)}"
             kind = DIAGNOSTIC_KINDS[min(counts)]
             uri = unparse_uri(parsed_uri)
             if uri == self.uri:
@@ -138,7 +137,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def placeholder(self) -> str:
         return "Select file"
 
-    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+    def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         uri, diagnostic = args.get("uri"), args.get("diagnostic")
         if uri is None:
             return None
@@ -147,7 +146,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
             return DiagnosticInputHandler(self.window, self.view, uri)
         return sublime_plugin.BackInputHandler()
 
-    def confirm(self, value: Optional[DocumentUri]) -> None:
+    def confirm(self, value: DocumentUri | None) -> None:
         self.uri = value
 
     def description(self, value: DocumentUri, text: str) -> str:
@@ -160,7 +159,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
                 self._preview.close()
         self.window.focus_view(self.view)
 
-    def preview(self, value: Optional[DocumentUri]) -> str:
+    def preview(self, value: DocumentUri | None) -> str:
         if not value or not hasattr(self, 'first_locations'):
             return ""
         parsed_uri = parse_uri(value)
@@ -185,7 +184,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
 
 
 class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
-    _preview: Optional[sublime.View] = None
+    _preview: sublime.View | None = None
 
     def __init__(self, window: sublime.Window, view: sublime.View, uri: DocumentUri) -> None:
         self.window = window
@@ -196,8 +195,8 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def name(self) -> str:
         return "diagnostic"
 
-    def list_items(self) -> List[sublime.ListInputItem]:
-        list_items: List[sublime.ListInputItem] = []
+    def list_items(self) -> list[sublime.ListInputItem]:
+        list_items: list[sublime.ListInputItem] = []
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
             for diagnostic in filter(is_severity_included(max_severity),
@@ -206,7 +205,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
                 first_line = lines[0] if lines else ""
                 if len(lines) > 1:
                     first_line += " …"
-                text = "{}: {}".format(format_severity(diagnostic_severity(diagnostic)), first_line)
+                text = f"{format_severity(diagnostic_severity(diagnostic))}: {first_line}"
                 annotation = format_diagnostic_source_and_code(diagnostic)
                 kind = DIAGNOSTIC_KINDS[diagnostic_severity(diagnostic)]
                 list_items.append(sublime.ListInputItem(text, [i, diagnostic], annotation=annotation, kind=kind))
@@ -215,10 +214,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def placeholder(self) -> str:
         return "Select diagnostic"
 
-    def next_input(self, args: dict) -> Optional[sublime_plugin.CommandInputHandler]:
+    def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         return None if args.get("diagnostic") else sublime_plugin.BackInputHandler()  # type: ignore
 
-    def confirm(self, value: Optional[list]) -> None:
+    def confirm(self, value: list | None) -> None:
         if not value:
             return
         i = cast(int, value[0])
@@ -238,7 +237,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
                 self._preview.close()
         self.window.focus_view(self.view)
 
-    def preview(self, value: Optional[list]) -> Union[str, sublime.Html]:
+    def preview(self, value: list | None) -> str | sublime.Html:
         if not value:
             return ""
         i = cast(int, value[0])
@@ -268,7 +267,7 @@ def open_location(session: Session, location: Location, flags: int = 0, group: i
     return session.window.open_file(file_name, flags=flags | sublime.ENCODED_POSITION, group=group)
 
 
-def diagnostic_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[Path]) -> sublime.Html:
+def diagnostic_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Path | None) -> sublime.Html:
     content = format_diagnostic_for_html(
         config, truncate_message(diagnostic), None if base_dir is None else str(base_dir))
     return sublime.Html('<style>{}</style><div class="diagnostics {}">{}</div>'.format(

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Tuple
+from typing import Any
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
@@ -27,7 +27,7 @@ def filename_to_uri(file_name: str) -> str:
 def view_to_uri(view: sublime.View) -> str:
     file_name = view.file_name()
     if not file_name:
-        return "buffer:{}".format(view.buffer_id())
+        return f"buffer:{view.buffer_id()}"
     return filename_to_uri(file_name)
 
 
@@ -41,7 +41,7 @@ def uri_to_filename(uri: str) -> str:
     return path
 
 
-def parse_uri(uri: str) -> Tuple[str, str]:
+def parse_uri(uri: str) -> tuple[str, str]:
     """
     Parses an URI into a tuple where the first element is the URI scheme. The
     second element is the local filesystem path if the URI is a file URI,
@@ -57,7 +57,7 @@ def parse_uri(uri: str) -> Tuple[str, str]:
             path = re.sub(r"^([a-z]):", _uppercase_driveletter, path)
             if netloc:
                 # Convert to UNC path
-                return parsed.scheme, "\\\\{}\\{}".format(netloc, path)
+                return parsed.scheme, f"\\\\{netloc}\\{path}"
             else:
                 return parsed.scheme, path
         return parsed.scheme, path
@@ -67,7 +67,7 @@ def parse_uri(uri: str) -> Tuple[str, str]:
     return parsed.scheme, uri
 
 
-def unparse_uri(parsed_uri: Tuple[str, str]) -> str:
+def unparse_uri(parsed_uri: tuple[str, str]) -> str:
     """
     Reverse of `parse_uri()`.
     """
@@ -81,11 +81,11 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 
     See: https://github.com/sublimehq/sublime_text/issues/3742
     """
-    return "res:/Packages{}".format(pathname2url(path[len(prefix):]))
+    return f"res:/Packages{pathname2url(path[len(prefix):])}"
 
 
 def _uppercase_driveletter(match: Any) -> str:
     """
     For compatibility with Sublime's VCS status in the status bar.
     """
-    return "{}:".format(match.group(1).upper())
+    return f"{match.group(1).upper()}:"

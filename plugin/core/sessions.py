@@ -1857,7 +1857,7 @@ class Session(TransportCallbacks):
                 actions |= ViewStateActions.Save
         return actions
 
-    def _set_view_state(self, actions: int, view: Optional[sublime.View]) -> None:
+    def _set_view_state(self, actions: int, view: sublime.View | None) -> None:
         if not view:
             return
         should_save = bool(actions & ViewStateActions.Save)

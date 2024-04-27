@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: SublimeText/UnitTesting/actions/setup@v1
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
+        with:
+          coverage: true
 
   Lint:
     runs-on: ubuntu-latest

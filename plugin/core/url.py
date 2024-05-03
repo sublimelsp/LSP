@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any
+from typing_extensions import deprecated
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
@@ -31,6 +32,7 @@ def view_to_uri(view: sublime.View) -> str:
     return filename_to_uri(file_name)
 
 
+@deprecated("Use parse_uri() instead")
 def uri_to_filename(uri: str) -> str:
     """
     DEPRECATED: An URI associated to a view does not necessarily have a "file:" scheme.

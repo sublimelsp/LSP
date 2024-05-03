@@ -49,6 +49,7 @@ from functools import partial
 from typing import Any, Callable, Iterable, List, Protocol
 from typing import cast
 from typing_extensions import TypeGuard
+from typing_extensions import deprecated
 from weakref import WeakSet
 import sublime
 import time
@@ -192,6 +193,7 @@ class SessionBuffer:
         return next(iter(self.session_views)).view
 
     @property
+    @deprecated("Use get_language_id() instead")
     def language_id(self) -> str:
         """
         Deprecated: use get_language_id

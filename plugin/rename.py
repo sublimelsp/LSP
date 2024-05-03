@@ -194,13 +194,13 @@ class LspSymbolRenameCommand(LspTextCommand):
         changes = parse_workspace_edit(response)
         file_count = len(changes.keys())
         if file_count == 1:
-            session.apply_parsed_workspace_edits(changes)
+            session.apply_parsed_workspace_edits(changes, True)
             return
         total_changes = sum(map(len, changes.values()))
         message = f"Replace {total_changes} occurrences across {file_count} files?"
         choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
         if choice == sublime.DIALOG_YES:
-            session.apply_parsed_workspace_edits(changes)
+            session.apply_parsed_workspace_edits(changes, True)
         elif choice == sublime.DIALOG_NO:
             self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
@@ -298,7 +298,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 'commands': [
                     [
                         'lsp_apply_workspace_edit',
-                        {'session_name': session_name, 'edit': workspace_edit}
+                        {'session_name': session_name, 'edit': workspace_edit, 'is_refactoring': True}
                     ],
                     [
                         'hide_panel',

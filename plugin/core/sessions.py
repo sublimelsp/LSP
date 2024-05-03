@@ -85,6 +85,7 @@ from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
+from .settings import userprefs
 from .transports import Transport
 from .transports import TransportCallbacks
 from .types import Capabilities
@@ -111,7 +112,7 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
-from enum import IntEnum
+from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
@@ -124,6 +125,11 @@ import weakref
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
+
+
+class ViewStateActions(IntFlag):
+    Close = 2
+    Save = 1
 
 
 def is_workspace_full_document_diagnostic_report(
@@ -1785,7 +1791,8 @@ class Session(TransportCallbacks):
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        promise = self.apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
+        is_refactoring = code_action.get('kind') == CodeActionKind.Refactor
+        promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1797,20 +1804,23 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
         return promise
 
-    def apply_workspace_edit_async(self, edit: WorkspaceEdit) -> Promise[None]:
+    def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit))
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
 
-    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges) -> Promise[None]:
+    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
+        auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         for uri, (edits, view_version) in changes.items():
+            view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
                 self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
+                    .then(functools.partial(self._set_view_state, view_state_actions))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
@@ -1818,11 +1828,59 @@ class Session(TransportCallbacks):
 
     def _apply_text_edits(
         self, edits: list[TextEdit], view_version: int | None, uri: str, view: sublime.View | None
-    ) -> None:
+    ) -> sublime.View | None:
         if view is None or not view.is_valid():
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
-            return
+            return None
         apply_text_edits(view, edits, required_view_version=view_version)
+        return view
+
+    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> int:
+        """
+        Determine the required actions for a view after applying a WorkspaceEdit, depending on the
+        "refactoring_auto_save" user setting. Returns a bitwise combination of ViewStateActions.Save and
+        ViewStateActions.Close, or 0 if no action is necessary.
+        """
+        if auto_save == 'never':
+            return 0  # Never save or close automatically
+        scheme, filepath = parse_uri(uri)
+        if scheme != 'file':
+            return 0  # Can't save or close unsafed buffers (and other schemes) without user dialog
+        view = self.window.find_open_file(filepath)
+        if view:
+            is_opened = True
+            is_dirty = view.is_dirty()
+        else:
+            is_opened = False
+            is_dirty = False
+        actions = 0
+        if auto_save == 'always':
+            actions |= ViewStateActions.Save  # Always save
+            if not is_opened:
+                actions |= ViewStateActions.Close  # Close if file was previously closed
+        elif auto_save == 'preserve':
+            if not is_dirty:
+                actions |= ViewStateActions.Save  # Only save if file didn't have unsaved changes
+            if not is_opened:
+                actions |= ViewStateActions.Close  # Close if file was previously closed
+        elif auto_save == 'preserve_opened':
+            if is_opened and not is_dirty:
+                # Only save if file was already open and didn't have unsaved changes, but never close
+                actions |= ViewStateActions.Save
+        return actions
+
+    def _set_view_state(self, actions: int, view: sublime.View | None) -> None:
+        if not view:
+            return
+        should_save = bool(actions & ViewStateActions.Save)
+        should_close = bool(actions & ViewStateActions.Close)
+        if should_save and view.is_dirty():
+            # The save operation must be blocking in case the tab should be closed afterwards
+            view.run_command('save', {'async': not should_close, 'quiet': True})
+        if should_close and not view.is_dirty():
+            if view != self.window.active_view():
+                self.window.focus_view(view)
+            self.window.run_command('close')
 
     def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):

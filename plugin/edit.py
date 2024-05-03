@@ -30,12 +30,12 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
-    def run(self, session_name: str, edit: WorkspaceEdit) -> None:
+    def run(self, session_name: str, edit: WorkspaceEdit, is_refactoring: bool = False) -> None:
         session = self.session_by_name(session_name)
         if not session:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
             return
-        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit))
+        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, is_refactoring))
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):

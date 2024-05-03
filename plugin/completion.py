@@ -27,7 +27,7 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Callable, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
 import functools
@@ -59,13 +59,13 @@ def format_completion(
     lsp_detail = (item.get('detail') or "").replace("\n", " ")
     completion_kind = item.get('kind')
     kind = COMPLETION_KINDS.get(completion_kind, sublime.KIND_AMBIGUOUS) if completion_kind else sublime.KIND_AMBIGUOUS
-    details: List[str] = []
+    details: list[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
         args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
             view_id, index, session_name)
-        href = 'subl:lsp_run_text_command_helper {}'.format(args)
-        details.append("<a href='{}'>More</a>".format(href))
+        href = f'subl:lsp_run_text_command_helper {args}'
+        details.append(f"<a href='{href}'>More</a>")
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
         if lsp_label_detail[0].isalnum() and lsp_label.startswith(lsp_filter_text):
             # labelDetails.detail is likely a type annotation
@@ -97,12 +97,12 @@ def format_completion(
         insert_mode = userprefs().completion_insert_mode
         oposite_insert_mode = 'Replace' if insert_mode == 'insert' else 'Insert'
         command_url = "subl:lsp_commit_completion_with_opposite_insert_mode"
-        details.append("<a href='{}'>{}</a>".format(command_url, oposite_insert_mode))
+        details.append(f"<a href='{command_url}'>{oposite_insert_mode}</a>")
     completion = sublime.CompletionItem(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        'lsp_select_completion {{"index":{},"session_name":"{}"}}'.format(index, session_name),
+        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
         sublime.COMPLETION_FORMAT_COMMAND,
         kind,
         details=" | ".join(details)
@@ -112,7 +112,7 @@ def format_completion(
     return completion
 
 
-def get_text_edit_range(text_edit: Union[TextEdit, InsertReplaceEdit]) -> Range:
+def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
@@ -135,7 +135,7 @@ def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItem
     """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
     if not item_defaults:
         return item
-    default_text_edit: Optional[Union[TextEdit, InsertReplaceEdit]] = None
+    default_text_edit: TextEdit | InsertReplaceEdit | None = None
     edit_range = item_defaults.get('editRange')
     if edit_range:
         #  If textEditText is not provided and a list's default range is provided
@@ -178,16 +178,16 @@ class QueryCompletionsTask:
         view: sublime.View,
         location: int,
         triggered_manually: bool,
-        on_done_async: Callable[[List[sublime.CompletionItem], int], None]
+        on_done_async: Callable[[list[sublime.CompletionItem], int], None]
     ) -> None:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
         self._on_done_async = on_done_async
         self._resolved = False
-        self._pending_completion_requests: Dict[int, weakref.ref[Session]] = {}
+        self._pending_completion_requests: dict[int, weakref.ref[Session]] = {}
 
-    def query_completions_async(self, sessions: List[Session]) -> None:
+    def query_completions_async(self, sessions: list[Session]) -> None:
         promises = [self._create_completion_request_async(session) for session in sessions]
         Promise.all(promises).then(lambda response: self._resolve_completions_async(response))
 
@@ -205,13 +205,13 @@ class QueryCompletionsTask:
         self._pending_completion_requests.pop(request_id, None)
         return (response, weak_session)
 
-    def _resolve_completions_async(self, responses: List[ResolvedCompletions]) -> None:
+    def _resolve_completions_async(self, responses: list[ResolvedCompletions]) -> None:
         if self._resolved:
             return
         LspSelectCompletionCommand.completions = {}
-        items: List[sublime.CompletionItem] = []
+        items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
-        errors: List[Error] = []
+        errors: list[Error] = []
         flags = 0
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
@@ -228,7 +228,7 @@ class QueryCompletionsTask:
             session = weak_session()
             if not session:
                 continue
-            response_items: List[CompletionItem] = []
+            response_items: list[CompletionItem] = []
             if isinstance(response, dict):
                 response_items = response["items"] or []
                 item_defaults = response.get('itemDefaults') or {}
@@ -249,7 +249,7 @@ class QueryCompletionsTask:
             flags |= sublime.INHIBIT_REORDER
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
-            sublime.status_message('Completion error: {}'.format(error_messages))
+            sublime.status_message(f'Completion error: {error_messages}')
         self._resolve_task_async(items, flags)
 
     def cancel_async(self) -> None:
@@ -263,7 +263,7 @@ class QueryCompletionsTask:
                 session.cancel_request(request_id, False)
         self._pending_completion_requests.clear()
 
-    def _resolve_task_async(self, completions: List[sublime.CompletionItem], flags: int = 0) -> None:
+    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: int = 0) -> None:
         if not self._resolved:
             self._resolved = True
             self._on_done_async(completions, flags)
@@ -271,7 +271,7 @@ class QueryCompletionsTask:
 
 class LspResolveDocsCommand(LspTextCommand):
 
-    def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, index: int, session_name: str, event: dict | None = None) -> None:
 
         def run_async() -> None:
             items, item_defaults = LspSelectCompletionCommand.completions[session_name]
@@ -287,7 +287,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
-    def _handle_resolve_response_async(self, language_map: Optional[MarkdownLangMap], item: CompletionItem) -> None:
+    def _handle_resolve_response_async(self, language_map: MarkdownLangMap | None, item: CompletionItem) -> None:
         detail = ""
         documentation = ""
         if item:
@@ -299,7 +299,7 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += "<div class='highlight'>{}</div>".format(detail)
+            minihtml_content += f"<div class='highlight'>{detail}</div>"
         if documentation:
             minihtml_content += documentation
 
@@ -320,8 +320,8 @@ class LspResolveDocsCommand(LspTextCommand):
 
     def _format_documentation(
         self,
-        content: Union[MarkedString, MarkupContent],
-        language_map: Optional[MarkdownLangMap]
+        content: MarkedString | MarkupContent,
+        language_map: MarkdownLangMap | None
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
@@ -332,7 +332,7 @@ class LspResolveDocsCommand(LspTextCommand):
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
     active = False
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         LspCommitCompletionWithOppositeInsertMode.active = True
         self.view.run_command("commit_completion")
         LspCommitCompletionWithOppositeInsertMode.active = False
@@ -340,7 +340,7 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions: Dict[SessionName, CompletionsStore] = {}
+    completions: dict[SessionName, CompletionsStore] = {}
 
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
@@ -377,7 +377,7 @@ class LspSelectCompletionCommand(LspTextCommand):
             apply_text_edits(self.view, additional_edits)
         command = item.get("command")
         if command:
-            debug('Running server command "{}" for view {}'.format(command, self.view.id()))
+            debug(f'Running server command "{command}" for view {self.view.id()}')
             args = {
                 "command_name": command["command"],
                 "command_args": command.get("arguments"),

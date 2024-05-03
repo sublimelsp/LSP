@@ -4,7 +4,7 @@ from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
-from typing import Any, List, Union
+from typing import Any
 import sublime
 import os
 
@@ -34,7 +34,7 @@ class WorkspaceFolder:
         return hash((self.name, self.path))
 
     def __repr__(self) -> str:
-        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
+        return f"{self.__class__.__name__}('{self.name}', '{self.path}')"
 
     def __str__(self) -> str:
         return self.path
@@ -54,16 +54,16 @@ class WorkspaceFolder:
         return uri.startswith(self.uri())
 
 
-class ProjectFolders(object):
+class ProjectFolders:
 
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self.folders: List[str] = self._window.folders()
+        self.folders: list[str] = self._window.folders()
         # Per-folder ignore patterns. The list order matches the order of self.folders.
-        self._folders_exclude_patterns: List[List[str]] = []
+        self._folders_exclude_patterns: list[list[str]] = []
         self._update_exclude_patterns(self.folders)
 
-    def _update_exclude_patterns(self, folders: List[str]) -> None:
+    def _update_exclude_patterns(self, folders: list[str]) -> None:
         # Ensure that the number of patterns matches the number of folders so that accessing by index never throws.
         self._folders_exclude_patterns = [[]] * len(folders)
         project_data = self._window.project_data()
@@ -112,17 +112,17 @@ class ProjectFolders(object):
                 break
         return is_excluded
 
-    def contains(self, view_or_file_name: Union[str, sublime.View]) -> bool:
+    def contains(self, view_or_file_name: str | sublime.View) -> bool:
         file_path = view_or_file_name.file_name() if isinstance(view_or_file_name, sublime.View) else view_or_file_name
         return self.includes_path(file_path) if file_path else False
 
-    def get_workspace_folders(self) -> List[WorkspaceFolder]:
+    def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return [WorkspaceFolder.from_path(f) for f in self.folders]
 
 
-def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
-    matching_paths: List[str] = []
-    other_paths: List[str] = []
+def sorted_workspace_folders(folders: list[str], file_path: str) -> list[WorkspaceFolder]:
+    matching_paths: list[str] = []
+    other_paths: list[str] = []
 
     for folder in folders:
         is_subpath = is_subpath_of(file_path, folder)
@@ -147,7 +147,7 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
         window.set_project_data(project_data)
     else:
         sublime.message_dialog(
-            "Can't enable {} in the current workspace. Ensure that the project is saved first.".format(config_name))
+            f"Can't enable {config_name} in the current workspace. Ensure that the project is saved first.")
 
 
 def disable_in_project(window: sublime.Window, config_name: str) -> None:
@@ -160,4 +160,4 @@ def disable_in_project(window: sublime.Window, config_name: str) -> None:
         window.set_project_data(project_data)
     else:
         sublime.message_dialog(
-            "Can't disable {} in the current workspace. Ensure that the project is saved first.".format(config_name))
+            f"Can't disable {config_name} in the current workspace. Ensure that the project is saved first.")

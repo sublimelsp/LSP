@@ -7,7 +7,6 @@ from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
-from typing import List, Optional
 import functools
 import html
 import re
@@ -42,7 +41,7 @@ class SigHelp:
     determined by what the end-user is doing.
     """
 
-    def __init__(self, state: SignatureHelp, language_map: Optional[MarkdownLangMap]) -> None:
+    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap | None) -> None:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
@@ -57,9 +56,9 @@ class SigHelp:
     @classmethod
     def from_lsp(
         cls,
-        sighelp: Optional[SignatureHelp],
-        language_map: Optional[MarkdownLangMap]
-    ) -> "Optional[SigHelp]":
+        sighelp: SignatureHelp | None,
+        language_map: MarkdownLangMap | None
+    ) -> SigHelp | None:
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
         if sighelp is None or not sighelp.get("signatures"):
             return None
@@ -71,7 +70,7 @@ class SigHelp:
             signature = self._signatures[self._active_signature_index]
         except IndexError:
             return ""
-        formatted: List[str] = []
+        formatted: list[str] = []
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
         self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
@@ -112,8 +111,8 @@ class SigHelp:
             len(self._signatures),
         )
 
-    def _render_label(self, signature: SignatureInformation) -> List[str]:
-        formatted: List[str] = []
+    def _render_label(self, signature: SignatureInformation) -> list[str]:
+        formatted: list[str] = []
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
         formatted.append('<div class="highlight"><pre>')
@@ -132,10 +131,10 @@ class SigHelp:
                     # route relies on the client being smart enough to figure where the parameter is inside of
                     # the signature label. The above case where the label is a tuple of (start, end) positions is much
                     # more robust.
-                    label_match = re.search(r"(?<!\w){}(?!\w)".format(re.escape(rawlabel)), label[prev:])
+                    label_match = re.search(rf"(?<!\w){re.escape(rawlabel)}(?!\w)", label[prev:])
                     start = label_match.start() if label_match else -1
                     if start == -1:
-                        debug("no match found for {}".format(rawlabel))
+                        debug(f"no match found for {rawlabel}")
                         continue
                     start += prev
                     end = start + len(rawlabel)
@@ -150,8 +149,8 @@ class SigHelp:
         formatted.append("</pre></div>")
         return formatted
 
-    def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> List[str]:
-        formatted: List[str] = []
+    def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
+        formatted: list[str] = []
         docs = self._parameter_documentation(view, signature)
         if docs:
             formatted.append(docs)
@@ -164,7 +163,7 @@ class SigHelp:
             formatted.append('</div>')
         return formatted
 
-    def _parameter_documentation(self, view: sublime.View, signature: SignatureInformation) -> Optional[str]:
+    def _parameter_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         parameters = signature.get("parameters")
         if not parameters:
             return None
@@ -178,7 +177,7 @@ class SigHelp:
             return minihtml(view, documentation, allowed_formats, self._language_map)
         return None
 
-    def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> Optional[str]:
+    def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         documentation = signature.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
@@ -196,9 +195,9 @@ class SigHelp:
 
 
 def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:
-    style = 'color: {}'.format(color)
+    style = f'color: {color}'
     if bold:
         style += '; font-weight: bold'
     if underline:
         style += '; text-decoration: underline'
-    return '<span style="{}">{}</span>'.format(style, html.escape(content, quote=False))
+    return f'<span style="{style}">{html.escape(content, quote=False)}</span>'

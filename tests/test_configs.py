@@ -81,7 +81,7 @@ class ConfigParsingTests(DeferrableTestCase):
         transport_config = config.resolve_transport_config({})
         original_path = environ.copy()['PATH']
         resolved_path = transport_config.env['PATH']
-        self.assertEqual(resolved_path, '/a/b/{}{}'.format(pathsep, original_path))
+        self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
 
     def test_list_in_environment(self):
         settings = {

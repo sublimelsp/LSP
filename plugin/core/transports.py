@@ -251,7 +251,8 @@ def create_transport(config: TransportConfig, cwd: str | None,
 
     def start_subprocess() -> subprocess.Popen:
         startupinfo = _fixup_startup_args(config.command)
-        return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
+        env = {**os.environ, **config.env}
+        return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, env, cwd)
 
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0

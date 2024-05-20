@@ -15,7 +15,6 @@ else:
     from socketserver import ThreadingMixIn, TCPServer, StreamRequestHandler
 
 logger = logging.getLogger(__name__)
-logging.basicConfig()
 
 '''
 +-+-+-+-+-------+-+-------------+-------------------------------+

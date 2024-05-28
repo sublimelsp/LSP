@@ -403,9 +403,10 @@ def text_document_code_action_params(
     only_kinds: list[CodeActionKind] | None = None,
     manual: bool = False
 ) -> CodeActionParams:
+    trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds

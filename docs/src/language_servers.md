@@ -500,6 +500,7 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
         }
     }
 }
+```
 
 ## Ruby / Ruby on Rails
 

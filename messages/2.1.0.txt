@@ -1,0 +1,11 @@
+=> 2.1.0
+
+# Features
+
+- Add `refactoring_auto_save` setting to save modified files after applying a refactoring (#2433) (Janos Wortmann)
+
+# Fixes and Improvements
+
+- Respect semantic token capability when dynamically registered (#2453) (Rafał Chłodnicki)
+- Use caret for point to look up symbol (#2440) (Troels Bjørnskov)
+- Various typing improvements (#2446, #2450, #2456, #2458, #2460, #2459) (Janos Wortmann, Jack Cherng, deathaxe)

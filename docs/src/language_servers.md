@@ -484,6 +484,24 @@ Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP
 
 Follow installation instructions on [R-IDE](https://github.com/REditorSupport/sublime-ide-r#installation).
 
+## Racket
+
+1. Install the [Racket](https://packagecontrol.io/packages/Racket) package from Package Control for syntax highlighting.
+2. Follow the instructions for installation at [racket-langserver](https://github.com/jeapostrophe/racket-langserver).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"racket-langserver"` client configuration to the `"clients"`:
+
+```jsonc
+{
+    "clients": {
+        "racket-langserver": {
+            "enabled": true,
+            "command": ["racket", "-l", "racket-langserver"],
+            "selector": "source.racket"
+        }
+    }
+}
+```
+
 ## Ruby / Ruby on Rails
 
 There are multiple options:

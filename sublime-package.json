@@ -621,6 +621,11 @@
               "default": "annotation",
               "markdownDescription": "Where to show `\"code lens\"`."
             },
+            "show_diagnostics_in_hover": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show diagnostics in hover popup if available."
+            },
             "show_code_actions_in_hover": {
               "type": "boolean",
               "default": true,

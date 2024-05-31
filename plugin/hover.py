@@ -278,10 +278,11 @@ class LspHoverCommand(LspTextCommand):
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         hover_content = self.hover_content()
-        contents = self.diagnostics_content() + hover_content + code_actions_content(self._actions_by_config)
+        prefs = userprefs()
+        diganostics_content = "" if not prefs.show_diagnostics_in_hover else self.diagnostics_content()
+        contents = diganostics_content + hover_content + code_actions_content(self._actions_by_config)
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
-        prefs = userprefs()
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
             symbol_actions_content = self.symbol_actions_content(listener, point)
             if link_content:

@@ -136,6 +136,9 @@
   // The maximum number of characters (approximately) before a scrollbar appears.
   "popup_max_characters_height": 1000,
 
+  // Show diagnostics in hover popup if available
+  "show_diagnostics_in_hover": true,
+
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
 

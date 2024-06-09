@@ -219,6 +219,9 @@ class LspRestartServerCommand(LspTextCommand):
         else:
             wm.window.show_quick_panel(self._config_names, partial(self.restart_server, wm))
 
+    def want_event(self) -> bool:
+        return False
+
     def restart_server(self, wm: WindowManager, index: int) -> None:
         if index == -1:
             return
@@ -270,8 +273,14 @@ class LspNextDiagnosticCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, point: int | None = None) -> None:
         navigate_diagnostics(self.view, point, forward=True)
 
+    def want_event(self) -> bool:
+        return False
+
 
 class LspPrevDiagnosticCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: int | None = None) -> None:
         navigate_diagnostics(self.view, point, forward=False)
+
+    def want_event(self) -> bool:
+        return False

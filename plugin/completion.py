@@ -368,6 +368,9 @@ class LspSelectCompletionCommand(LspTextCommand):
         else:
             self._on_resolved(session_name, item)
 
+    def want_event(self) -> bool:
+        return False
+
     def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
         sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
 

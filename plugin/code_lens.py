@@ -240,6 +240,9 @@ class LspCodeLensCommand(LspTextCommand):
                 lambda i: self.on_select(code_lenses, i)
             )
 
+    def want_event(self) -> bool:
+        return False
+
     def on_select(self, code_lenses: list[CodeLensExtended], index: int) -> None:
         try:
             code_lens = code_lenses[index]

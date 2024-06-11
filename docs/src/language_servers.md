@@ -778,7 +778,9 @@ See [Javascript/TypeScript](#javascripttypescript).
 ## Typst
 
 1. Install the [Typst](https://packagecontrol.io/packages/Typst) package from Package Control for syntax highlighting.
-2. Download the [typst-lsp](https://github.com/nvarner/typst-lsp/releases) language server executable for your platform.
+2. There are 2 available languages servers, and their configuration is mostly the same:
+    1. [tinymist](https://github.com/Myriad-Dreamin/tinymist) - has more features, like go to definition, rename, etc.
+    2. [typst-lsp](https://github.com/nvarner/typst-lsp/releases).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
 
     ```jsonc
@@ -786,9 +788,21 @@ See [Javascript/TypeScript](#javascripttypescript).
         "clients": {
             "typst-lsp": {
                 "enabled": true,
-                "command": ["C:\\path\\to\\typst-lsp-win32-x64.exe"],  // adjust this path according to your platform/setup
+                "command": ["path/to/typst-lsp"],  // adjust this path according to your platform/setup
                 "selector": "text.typst"
             }
+        }
+    }
+    ```
+
+    If you want to provide some initialization options to tinymist, like exportPdf of typstExtraArgs, set it like
+
+    ```jsonc
+    "tinymist": {
+        // ...
+        "initializationOptions": {
+            "exportPdf": "never",
+            "typstExtraArgs": [],
         }
     }
     ```
@@ -811,7 +825,7 @@ See [Javascript/TypeScript](#javascripttypescript).
     <!-- how to call: see https://github.com/nvarner/typst-lsp/blob/master/editors/vscode/src/extension.ts -->
     ```jsonc title="Packages/User/Default.sublime-commands"
     [
-        // ...
+        // typst-lsp:
         {
             "caption": "typst-lsp - Pin the main file to the currently opened document",
             "command": "lsp_execute",

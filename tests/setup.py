@@ -1,15 +1,16 @@
+from __future__ import annotations
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, ClientStates
-from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -68,7 +69,7 @@ def remove_config(config):
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: Optional[sublime.View]) -> 'Generator':
+def close_test_view(view: Optional[sublime.View]) -> Generator:
     if view:
         view.set_scratch(True)
         yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
@@ -117,7 +118,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         if not open_view:
             self.__class__.view = window.open_file(filename)
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-            self.assertTrue(self.wm._configs.match_view(self.view))
+            self.assertTrue(self.wm.get_config_manager().match_view(self.view))
         self.init_view_settings()
         yield self.ensure_document_listener_created
         params = yield from self.await_message("textDocument/didOpen")
@@ -156,7 +157,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return False
 
     @classmethod
-    def await_message(cls, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':
+    def await_message(cls, method: str, promise: Optional[YieldPromise] = None) -> Generator:
         """
         Awaits until server receives a request with a specified method.
 
@@ -210,8 +211,8 @@ class TextDocumentTestCase(DeferrableTestCase):
     def await_run_code_action(self, code_action: Dict[str, Any]) -> Generator:
         promise = YieldPromise()
         sublime.set_timeout_async(
-            lambda: self.session.run_code_action_async(code_action, progress=False).then(
-                promise.fulfill))
+            lambda: self.session.run_code_action_async(code_action, progress=False, view=self.view)
+            .then(promise.fulfill))
         yield from self.await_promise(promise)
 
     def set_response(self, method: str, response: Any) -> None:
@@ -234,7 +235,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
         yield from self.await_promise(promise)
 
-    def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
+    def await_client_notification(self, method: str, params: Any = None) -> Generator:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         promise = YieldPromise()
@@ -249,7 +250,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(req, handler, error_handler)
         yield from self.await_promise(promise)
 
-    def await_clear_view_and_save(self) -> 'Generator':
+    def await_clear_view_and_save(self) -> Generator:
         assert self.view  # type: Optional[sublime.View]
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
@@ -257,7 +258,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 
-    def await_view_change(self, expected_change_count: int) -> 'Generator':
+    def await_view_change(self, expected_change_count: int) -> Generator:
         assert self.view  # type: Optional[sublime.View]
 
         def condition() -> bool:
@@ -275,7 +276,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return self.view.change_count()
 
     @classmethod
-    def tearDownClass(cls) -> 'Generator':
+    def tearDownClass(cls) -> Generator:
         if cls.session and cls.wm:
             sublime.set_timeout_async(cls.session.end_async)
             yield lambda: cls.session.state == ClientStates.STOPPING
@@ -287,7 +288,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         remove_config(cls.config)
         super().tearDownClass()
 
-    def doCleanups(self) -> 'Generator':
+    def doCleanups(self) -> Generator:
         if self.view and self.view.is_valid():
             yield from close_test_view(self.view)
         yield from super().doCleanups()

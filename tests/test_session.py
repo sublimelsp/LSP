@@ -1,18 +1,17 @@
+from __future__ import annotations
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import DocumentUri
 from LSP.plugin.core.protocol import Error
-from LSP.plugin.core.protocol import TextDocumentSyncKindFull
-from LSP.plugin.core.protocol import TextDocumentSyncKindIncremental
-from LSP.plugin.core.protocol import TextDocumentSyncKindNone
-from LSP.plugin.core.protocol import WorkspaceFolder
+from LSP.plugin.core.protocol import TextDocumentSyncKind
 from LSP.plugin.core.sessions import get_initialize_params
 from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import Any, Optional, Generator, List, Dict
+from LSP.plugin.core.workspace import WorkspaceFolder
 from test_mocks import TEST_CONFIG
+from typing import Any, Dict, Generator, List, Optional
 import sublime
 import unittest
 import unittest.mock
@@ -33,7 +32,7 @@ class MockManager(Manager):
     def get_project_path(self, file_name: str) -> Optional[str]:
         return None
 
-    def should_present_diagnostics(self, uri: DocumentUri) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
         return None
 
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
@@ -42,10 +41,7 @@ class MockManager(Manager):
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         pass
 
-    def update_diagnostics_panel_async(self) -> None:
-        pass
-
-    def show_diagnostics_panel_async(self) -> None:
+    def on_diagnostics_updated(self) -> None:
         pass
 
 
@@ -66,7 +62,7 @@ class MockLogger(Logger):
     def outgoing_notification(self, method: str, params: Any) -> None:
         pass
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
@@ -84,7 +80,7 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
-    def get_uri(self) -> Optional[str]:
+    def get_uri(self) -> Optional[DocumentUri]:
         return self.mock_uri
 
     def get_language_id(self) -> Optional[str]:
@@ -163,11 +159,11 @@ class SessionTest(unittest.TestCase):
         session.capabilities.assign({
             'textDocumentSync': {
                 "openClose": True,
-                "change": TextDocumentSyncKindFull,
+                "change": TextDocumentSyncKind.Full,
                 "save": True}})  # A boolean with value true means "send didSave"
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.Full)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
@@ -175,24 +171,24 @@ class SessionTest(unittest.TestCase):
             'textDocumentSync': {
                 "didOpen": {},
                 "didClose": {},
-                "change": TextDocumentSyncKindFull,
+                "change": TextDocumentSyncKind.Full,
                 "save": True}})  # A boolean with value true means "send didSave"
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.Full)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
         session.capabilities.assign({
             'textDocumentSync': {
                 "openClose": False,
-                "change": TextDocumentSyncKindNone,
+                "change": TextDocumentSyncKind.None_,
                 "save": {},  # An empty dict means "send didSave"
                 "willSave": True,
                 "willSaveWaitUntil": False}})
         self.assertFalse(session.should_notify_did_open())
         self.assertFalse(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.None_)
         self.assertTrue(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (True, False))
         # Nested capabilities.
@@ -205,28 +201,28 @@ class SessionTest(unittest.TestCase):
         session.capabilities.assign({
             'textDocumentSync': {
                 "openClose": False,
-                "change": TextDocumentSyncKindIncremental,
+                "change": TextDocumentSyncKind.Incremental,
                 "save": {"includeText": True},
                 "willSave": False,
                 "willSaveWaitUntil": True}})
         self.assertFalse(session.should_notify_did_open())
         self.assertFalse(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.Incremental)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (True, True))
 
-        session.capabilities.assign({'textDocumentSync': TextDocumentSyncKindIncremental})
+        session.capabilities.assign({'textDocumentSync': TextDocumentSyncKind.Incremental})
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.Incremental)
         self.assertFalse(session.should_notify_will_save())  # old-style text sync will never send willSave
         # old-style text sync will always send didSave
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
-        session.capabilities.assign({'textDocumentSync': TextDocumentSyncKindNone})
+        session.capabilities.assign({'textDocumentSync': TextDocumentSyncKind.None_})
         self.assertTrue(session.should_notify_did_open())  # old-style text sync will always send didOpen
         self.assertTrue(session.should_notify_did_close())  # old-style text sync will always send didClose
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.None_)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
@@ -234,10 +230,10 @@ class SessionTest(unittest.TestCase):
             'textDocumentSync': {
                 "openClose": True,
                 "save": False,
-                "change": TextDocumentSyncKindIncremental}})
+                "change": TextDocumentSyncKind.Incremental}})
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
-        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKind.Incremental)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (False, False))
 

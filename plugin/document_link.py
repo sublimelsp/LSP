@@ -1,12 +1,14 @@
+from __future__ import annotations
 from .core.logging import debug
-from .core.protocol import DocumentLink, Request
+from .core.open import open_file_uri
+from .core.open import open_in_browser
+from .core.protocol import DocumentLink
+from .core.protocol import Request
+from .core.protocol import URI
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.typing import Optional
-from urllib.parse import unquote, urlparse
-import re
+from typing import Optional
 import sublime
-import webbrowser
 
 
 class LspOpenLinkCommand(LspTextCommand):
@@ -51,21 +53,14 @@ class LspOpenLinkCommand(LspTextCommand):
             session.send_request_async(Request.resolveDocumentLink(link, self.view), self._on_resolved_async)
 
     def _on_resolved_async(self, response: DocumentLink) -> None:
-        self.open_target(response["target"])
+        target = response.get("target")
+        if target is not None:
+            self.open_target(target)
 
-    def open_target(self, target: str) -> None:
+    def open_target(self, target: URI) -> None:
         if target.startswith("file:"):
             window = self.view.window()
             if window:
-                decoded = unquote(target)  # decode percent-encoded characters
-                parsed = urlparse(decoded)
-                filepath = parsed.path
-                if sublime.platform() == "windows":
-                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
-                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
-                window.open_file(fn, flags=sublime.ENCODED_POSITION)
+                open_file_uri(window, target)
         else:
-            if not (target.lower().startswith("http://") or target.lower().startswith("https://")):
-                target = "http://" + target
-            if not webbrowser.open(target):
-                sublime.status_message("failed to open: " + target)
+            open_in_browser(target)

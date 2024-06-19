@@ -1,7 +1,9 @@
+from __future__ import annotations
 from .core.registry import LspTextCommand
 from .core.settings import userprefs
-from .core.typing import Callable, List, Type
 from abc import ABCMeta, abstractmethod
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Type
 import sublime
 import sublime_plugin
 
@@ -60,12 +62,53 @@ class SaveTask(metaclass=ABCMeta):
                 break
 
 
+class SaveTasksRunner:
+    def __init__(
+        self, text_command: LspTextCommand, tasks: List[Type[SaveTask]], on_complete: Callable[[], None]
+    ) -> None:
+        self._text_command = text_command
+        self._tasks = tasks
+        self._on_tasks_completed = on_complete
+        self._pending_tasks: List[SaveTask] = []
+        self._canceled = False
+
+    def run(self) -> None:
+        for task in self._tasks:
+            if task.is_applicable(self._text_command.view):
+                self._pending_tasks.append(task(self._text_command, self._on_task_completed_async))
+        self._process_next_task()
+
+    def cancel(self) -> None:
+        for task in self._pending_tasks:
+            task.cancel()
+        self._pending_tasks = []
+        self._canceled = True
+
+    def _process_next_task(self) -> None:
+        if self._pending_tasks:
+            # Even though we might be on an async thread already, we want to give ST a chance to notify us about
+            # potential document changes.
+            sublime.set_timeout_async(self._run_next_task_async)
+        else:
+            self._on_tasks_completed()
+
+    def _run_next_task_async(self) -> None:
+        if self._canceled:
+            return
+        current_task = self._pending_tasks[0]
+        current_task.run_async()
+
+    def _on_task_completed_async(self) -> None:
+        self._pending_tasks.pop(0)
+        self._process_next_task()
+
+
 class LspSaveCommand(LspTextCommand):
     """
     A command used as a substitute for native save command. Runs code actions and document
     formatting before triggering the native save command.
     """
-    _tasks = []  # type: List[Type[SaveTask]]
+    _tasks: List[Type[SaveTask]] = []
 
     @classmethod
     def register_task(cls, task: Type[SaveTask]) -> None:
@@ -74,21 +117,14 @@ class LspSaveCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._pending_tasks = []  # type: List[SaveTask]
+        self._save_tasks_runner: Optional[SaveTasksRunner] = None
 
-    def run(self, edit: sublime.Edit) -> None:
-        if self._pending_tasks:
-            for task in self._pending_tasks:
-                task.cancel()
-            self._pending_tasks = []
+    def run(self, edit: sublime.Edit, **kwargs: Dict[str, Any]) -> None:
+        if self._save_tasks_runner:
+            self._save_tasks_runner.cancel()
         sublime.set_timeout_async(self._trigger_on_pre_save_async)
-        for Task in self._tasks:
-            if Task.is_applicable(self.view):
-                self._pending_tasks.append(Task(self, self._on_task_completed_async))
-        if self._pending_tasks:
-            sublime.set_timeout_async(self._run_next_task_async)
-        else:
-            self._trigger_native_save()
+        self._save_tasks_runner = SaveTasksRunner(self, self._tasks, partial(self._on_tasks_completed, kwargs))
+        self._save_tasks_runner.run()
 
     def _trigger_on_pre_save_async(self) -> None:
         # Supermassive hack that will go away later.
@@ -98,24 +134,14 @@ class LspSaveCommand(LspTextCommand):
                 listener.trigger_on_pre_save_async()  # type: ignore
                 break
 
-    def _run_next_task_async(self) -> None:
-        current_task = self._pending_tasks[0]
-        current_task.run_async()
-
-    def _on_task_completed_async(self) -> None:
-        self._pending_tasks.pop(0)
-        if self._pending_tasks:
-            self._run_next_task_async()
-        else:
-            self._trigger_native_save()
-
-    def _trigger_native_save(self) -> None:
+    def _on_tasks_completed(self, kwargs: Dict[str, Any]) -> None:
+        self._save_tasks_runner = None
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
-        sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
+        sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 
 
 class LspSaveAllCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
+    def run(self, only_files: bool = False) -> None:
         done = set()
         for view in self.window.views():
             buffer_id = view.buffer_id()
@@ -123,5 +149,7 @@ class LspSaveAllCommand(sublime_plugin.WindowCommand):
                 continue
             if not view.is_dirty():
                 continue
+            if only_files and view.file_name() is None:
+                continue
             done.add(buffer_id)
-            view.run_command("lsp_save", None)
+            view.run_command("lsp_save", {'async': True})

@@ -1,16 +1,17 @@
+from __future__ import annotations
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherEventType
 from LSP.plugin import FileWatcherProtocol
 from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
-from LSP.plugin.core.protocol import WatchKindChange, WatchKindCreate, WatchKindDelete
+from LSP.plugin.core.protocol import WatchKind
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import sublime_pattern_to_glob
-from LSP.plugin.core.typing import Generator, List, Optional
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
+from typing import Generator, List, Optional
 import sublime
 import unittest
 
@@ -32,7 +33,7 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers = []  # type: List[TestFileWatcher]
+    _active_watchers: List[TestFileWatcher] = []
 
     @classmethod
     def create(
@@ -42,7 +43,7 @@ class TestFileWatcher(FileWatcher):
         events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
-    ) -> 'TestFileWatcher':
+    ) -> TestFileWatcher:
         watcher = TestFileWatcher(root_path, patterns, events, ignores, handler)
         cls._active_watchers.append(watcher)
         return watcher
@@ -102,7 +103,7 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
         self.assertEqual(len(TestFileWatcher._active_watchers), 0)
         # Restore original project data.
         window = sublime.active_window()
-        window.set_project_data(None)
+        window.set_project_data({})
 
 
 class FileWatcherStaticTests(FileWatcherDocumentTestCase):
@@ -156,7 +157,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                         'watchers': [
                             {
                                 'globPattern': '*.py',
-                                'kind': WatchKindCreate | WatchKindChange | WatchKindDelete,
+                                'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
                             }
                         ]
                     }

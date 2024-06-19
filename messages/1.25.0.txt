@@ -1,0 +1,22 @@
+=> 1.25.0
+
+⚠️ To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
+Sublime Text once it finishes updating all packages. ⚠️
+
+# New features
+
+- Add option to show diagnostics as annotations (#1702) (Rafał Chłodnicki)
+- Add argument "include_declaration" to "lsp_symbol_references" (#2275) (Magnus Karlsson)
+
+# Fixes
+
+- Fix rare KeyError (Janos Wortmann)
+- fix "Error rewriting command" warning triggered on startup (#2277) (Rafał Chłodnicki)
+- fix crash on checking excluded folders with missing project data (#2276) (Rafał Chłodnicki)
+- Fix tagged diagnostics flickering on document changes (#2274) (Rafał Chłodnicki)
+
+# Improvements
+
+- Show server crashed dialog on unexpected output in server's stdout (Rafal Chlodnicki)
+- Only do a single pass on running code actions on save (#2283) (Rafał Chłodnicki)
+- Take font style of sighelp active parameter from color scheme (#2279) (jwortmann)

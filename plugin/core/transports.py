@@ -1,11 +1,13 @@
+from __future__ import annotations
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
-from .typing import Dict, Any, Optional, IO, Protocol, Generic, List, Callable, Tuple, TypeVar, Union
 from contextlib import closing
 from functools import partial
 from queue import Queue
+from typing import Any, Callable, Dict, Generic, IO, List, Optional, Protocol, Tuple, TypeVar, Union
 import http.client
+import http
 import json
 import multiprocessing.connection
 import os
@@ -85,9 +87,16 @@ class StandardProcessor(AbstractProcessor[Dict[str, Any]]):
         try:
             body = reader.read(int(headers.get("Content-Length")))
         except TypeError:
-            # Expected error on process stopping. Stop the read loop.
-            raise StopLoopError()
-        return decode_payload(body)
+            if str(headers) == '\n':
+                # Expected on process stopping. Gracefully stop the transport.
+                raise StopLoopError()
+            else:
+                # Propagate server's output to the UI.
+                raise Exception("Unexpected payload in server's stdout:\n\n{}".format(headers))
+        try:
+            return decode_payload(body)
+        except Exception as ex:
+            raise Exception("JSON decode error: {}".format(ex))
 
 
 class NodeIpcProcessor(AbstractProcessor[Dict[str, Any]]):
@@ -129,12 +138,13 @@ class ProcessTransport(Transport[T]):
         self._processor = processor
         self._reader_thread = threading.Thread(target=self._read_loop, name='{}-reader'.format(name))
         self._writer_thread = threading.Thread(target=self._write_loop, name='{}-writer'.format(name))
-        self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
         self._callback_object = weakref.ref(callback_object)
-        self._send_queue = Queue(0)  # type: Queue[Union[T, None]]
+        self._send_queue: Queue[Union[T, None]] = Queue(0)
         self._reader_thread.start()
         self._writer_thread.start()
-        self._stderr_thread.start()
+        if stderr:
+            self._stderr_thread = threading.Thread(target=self._stderr_loop, name='{}-stderr'.format(name))
+            self._stderr_thread.start()
 
     def send(self, payload: T) -> None:
         self._send_queue.put_nowait(payload)
@@ -158,9 +168,11 @@ class ProcessTransport(Transport[T]):
         self.close()
         self._join_thread(self._writer_thread)
         self._join_thread(self._reader_thread)
-        self._join_thread(self._stderr_thread)
+        if self._stderr_thread:
+            self._join_thread(self._stderr_thread)
 
     def _read_loop(self) -> None:
+        exception = None
         try:
             while self._reader:
                 payload = self._processor.read_data(self._reader)
@@ -178,28 +190,32 @@ class ProcessTransport(Transport[T]):
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
-            exception_log("Unexpected exception", ex)
-        self._send_queue.put_nowait(None)
+            exception = ex
+        if exception:
+            self._end(exception)
+        else:
+            self._send_queue.put_nowait(None)
 
     def _end(self, exception: Optional[Exception]) -> None:
         exit_code = 0
-        if not exception:
-            try:
-                # Allow the process to stop itself.
-                exit_code = self._process.wait(1)
-            except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
-                pass
-        if self._process.poll() is None:
-            try:
-                # The process didn't stop itself. Terminate!
-                self._process.kill()
-                # still wait for the process to die, or zombie processes might be the result
-                # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
-                self._process.wait()
-            except (AttributeError, ProcessLookupError):
-                pass
-            except Exception as ex:
-                exception = ex  # TODO: Old captured exception is overwritten
+        if self._process:
+            if not exception:
+                try:
+                    # Allow the process to stop itself.
+                    exit_code = self._process.wait(1)
+                except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
+                    pass
+            if self._process.poll() is None:
+                try:
+                    # The process didn't stop itself. Terminate!
+                    self._process.kill()
+                    # still wait for the process to die, or zombie processes might be the result
+                    # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
+                    self._process.wait()
+                except (AttributeError, ProcessLookupError):
+                    pass
+                except Exception as ex:
+                    exception = ex  # TODO: Old captured exception is overwritten
 
         def invoke() -> None:
             callback_object = self._callback_object()
@@ -210,7 +226,7 @@ class ProcessTransport(Transport[T]):
         self.close()
 
     def _write_loop(self) -> None:
-        exception = None  # type: Optional[Exception]
+        exception: Optional[Exception] = None
         try:
             while self._writer:
                 d = self._send_queue.get()
@@ -271,22 +287,25 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
         stdin = subprocess.PIPE
 
     startupinfo = _fixup_startup_args(config.command)
-    sock = None  # type: Optional[socket.socket]
-    process = None  # type: Optional[subprocess.Popen]
+    sock: Optional[socket.socket] = None
+    process: Optional[subprocess.Popen] = None
 
     def start_subprocess() -> subprocess.Popen:
         return _start_subprocess(config.command, stdin, stdout, stderr, startupinfo, config.env, cwd, close_fds)
 
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
-        process, sock, reader, writer = _await_tcp_connection(
-            config.name,
-            config.tcp_port,
-            config.listener_socket,
-            start_subprocess
-        )
+        if config.command:
+            process, sock, reader, writer = _start_subprocess_and_await_connection(
+                config.listener_socket, start_subprocess
+            )
+        else:
+            sock, reader, writer = _await_client_connection(config.listener_socket)
     else:
-        process = start_subprocess()
+        if config.command:
+            process = start_subprocess()
+        elif not config.tcp_port:
+            raise RuntimeError("Failed to provide command or tcp_port, at least one of them has to be configured")
         if config.tcp_port:
             sock = _connect_tcp(config.tcp_port)
             if sock is None:
@@ -312,7 +331,7 @@ def create_transport(config: TransportConfig, cwd: Optional[str],
                             callback_object)
 
 
-_subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
+_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:
@@ -374,38 +393,34 @@ def _start_subprocess(
     return process
 
 
-class _SubprocessData:
-    def __init__(self) -> None:
-        self.process = None  # type: Optional[subprocess.Popen]
-
-
-def _await_tcp_connection(
-    name: str,
-    tcp_port: int,
-    listener_socket: socket.socket,
-    subprocess_starter: Callable[[], subprocess.Popen]
-) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
-
-    # After we have accepted one client connection, we can close the listener socket.
+def _await_client_connection(listener_socket: socket.socket) -> Tuple[socket.socket, IO[bytes], IO[bytes]]:
     with closing(listener_socket):
-
-        # We need to be able to start the process while also awaiting a client connection.
-        def start_in_background(d: _SubprocessData) -> None:
-            # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
-            # subprocess. This is hacky, and will get better when we can use asyncio.
-            time.sleep(1)
-            process = subprocess_starter()
-            d.process = process
-
-        data = _SubprocessData()
-        thread = threading.Thread(target=lambda: start_in_background(data))
-        thread.start()
         # Await one client connection (blocking!)
         sock, _ = listener_socket.accept()
-        thread.join()
-        reader = writer = sock.makefile('rwb')
-        assert data.process
-        return data.process, sock, reader, writer
+        reader = sock.makefile('rwb')  # type: ignore
+        writer = reader
+        return sock, reader, writer  # type: ignore
+
+
+def _start_subprocess_and_await_connection(
+    listener_socket: socket.socket, subprocess_starter: Callable[[], subprocess.Popen]
+) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
+    process = None
+
+    # We need to be able to start the process while also awaiting a client connection.
+    def start_in_background() -> None:
+        nonlocal process
+        # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
+        # subprocess. This is hacky, and will get better when we can use asyncio.
+        time.sleep(1)
+        process = subprocess_starter()
+
+    thread = threading.Thread(target=start_in_background)
+    thread.start()
+    sock, reader, writer = _await_client_connection(listener_socket)
+    thread.join()
+    assert process is not None
+    return process, sock, reader, writer  # type: ignore
 
 
 def _connect_tcp(port: int) -> Optional[socket.socket]:

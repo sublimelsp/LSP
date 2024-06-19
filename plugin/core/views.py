@@ -1,13 +1,25 @@
+from __future__ import annotations
+from .constants import CODE_ACTION_KINDS
+from .constants import SUBLIME_KIND_SCOPES
+from .constants import SublimeKind
 from .css import css as lsp_css
-from .protocol import CompletionItem
-from .protocol import CompletionItemKind
-from .protocol import CompletionItemTag
+from .protocol import CodeAction
+from .protocol import CodeActionKind
+from .protocol import CodeActionContext
+from .protocol import CodeActionParams
+from .protocol import CodeActionTriggerKind
+from .protocol import Color
+from .protocol import ColorInformation
+from .protocol import Command
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
-from .protocol import DocumentHighlightKind
+from .protocol import DidChangeTextDocumentParams
+from .protocol import DidCloseTextDocumentParams
+from .protocol import DidOpenTextDocumentParams
+from .protocol import DidSaveTextDocumentParams
+from .protocol import DocumentColorParams
 from .protocol import DocumentUri
-from .protocol import ExperimentalTextDocumentRangeParams
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -16,16 +28,21 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Position
 from .protocol import Range
-from .protocol import RangeLsp
 from .protocol import Request
-from .protocol import SymbolKind
+from .protocol import SelectionRangeParams
+from .protocol import TextDocumentContentChangeEvent
 from .protocol import TextDocumentIdentifier
+from .protocol import TextDocumentItem
 from .protocol import TextDocumentPositionParams
+from .protocol import TextDocumentSaveReason
+from .protocol import VersionedTextDocumentIdentifier
+from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
-from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
 from .url import parse_uri
 from .workspace import is_subpath_of
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import cast
 import html
 import itertools
 import linecache
@@ -38,206 +55,29 @@ import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
-DOCUMENT_LINK_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+_baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
+_multilineflags = sublime.DRAW_NO_FILL | sublime.NO_UNDO
 
-_baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
-
-DIAGNOSTIC_SEVERITY = [
+DIAGNOSTIC_SEVERITY: List[Tuple[str, str, str, str, int, int]] = [
     # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
-    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, sublime.DRAW_NO_FILL),  # noqa: E501
-]  # type: List[Tuple[str, str, str, str, int, int]]
+    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+]
 
-# sublime.Kind tuples for sublime.CompletionItem, sublime.QuickPanelItem, sublime.ListInputItem
-# https://www.sublimetext.com/docs/api_reference.html#sublime.Kind
-KIND_ARRAY = (sublime.KIND_ID_TYPE, "a", "Array")
-KIND_BOOLEAN = (sublime.KIND_ID_VARIABLE, "b", "Boolean")
-KIND_CLASS = (sublime.KIND_ID_TYPE, "c", "Class")
-KIND_COLOR = (sublime.KIND_ID_MARKUP, "c", "Color")
-KIND_CONSTANT = (sublime.KIND_ID_VARIABLE, "c", "Constant")
-KIND_CONSTRUCTOR = (sublime.KIND_ID_FUNCTION, "c", "Constructor")
-KIND_ENUM = (sublime.KIND_ID_TYPE, "e", "Enum")
-KIND_ENUMMEMBER = (sublime.KIND_ID_VARIABLE, "e", "Enum Member")
-KIND_EVENT = (sublime.KIND_ID_FUNCTION, "e", "Event")
-KIND_FIELD = (sublime.KIND_ID_VARIABLE, "f", "Field")
-KIND_FILE = (sublime.KIND_ID_NAVIGATION, "f", "File")
-KIND_FOLDER = (sublime.KIND_ID_NAVIGATION, "f", "Folder")
-KIND_FUNCTION = (sublime.KIND_ID_FUNCTION, "f", "Function")
-KIND_INTERFACE = (sublime.KIND_ID_TYPE, "i", "Interface")
-KIND_KEY = (sublime.KIND_ID_NAVIGATION, "k", "Key")
-KIND_KEYWORD = (sublime.KIND_ID_KEYWORD, "k", "Keyword")
-KIND_METHOD = (sublime.KIND_ID_FUNCTION, "m", "Method")
-KIND_MODULE = (sublime.KIND_ID_NAMESPACE, "m", "Module")
-KIND_NAMESPACE = (sublime.KIND_ID_NAMESPACE, "n", "Namespace")
-KIND_NULL = (sublime.KIND_ID_VARIABLE, "n", "Null")
-KIND_NUMBER = (sublime.KIND_ID_VARIABLE, "n", "Number")
-KIND_OBJECT = (sublime.KIND_ID_TYPE, "o", "Object")
-KIND_OPERATOR = (sublime.KIND_ID_KEYWORD, "o", "Operator")
-KIND_PACKAGE = (sublime.KIND_ID_NAMESPACE, "p", "Package")
-KIND_PROPERTY = (sublime.KIND_ID_VARIABLE, "p", "Property")
-KIND_REFERENCE = (sublime.KIND_ID_NAVIGATION, "r", "Reference")
-KIND_SNIPPET = (sublime.KIND_ID_SNIPPET, "s", "Snippet")
-KIND_STRING = (sublime.KIND_ID_VARIABLE, "s", "String")
-KIND_STRUCT = (sublime.KIND_ID_TYPE, "s", "Struct")
-KIND_TEXT = (sublime.KIND_ID_MARKUP, "t", "Text")
-KIND_TYPEPARAMETER = (sublime.KIND_ID_TYPE, "t", "Type Parameter")
-KIND_UNIT = (sublime.KIND_ID_VARIABLE, "u", "Unit")
-KIND_VALUE = (sublime.KIND_ID_VARIABLE, "v", "Value")
-KIND_VARIABLE = (sublime.KIND_ID_VARIABLE, "v", "Variable")
 
-KIND_UNSPECIFIED = (sublime.KIND_ID_AMBIGUOUS, "?", "???")
+class DiagnosticSeverityData:
 
-COMPLETION_KINDS = {
-    CompletionItemKind.Text: KIND_TEXT,
-    CompletionItemKind.Method: KIND_METHOD,
-    CompletionItemKind.Function: KIND_FUNCTION,
-    CompletionItemKind.Constructor: KIND_CONSTRUCTOR,
-    CompletionItemKind.Field: KIND_FIELD,
-    CompletionItemKind.Variable: KIND_VARIABLE,
-    CompletionItemKind.Class: KIND_CLASS,
-    CompletionItemKind.Interface: KIND_INTERFACE,
-    CompletionItemKind.Module: KIND_MODULE,
-    CompletionItemKind.Property: KIND_PROPERTY,
-    CompletionItemKind.Unit: KIND_UNIT,
-    CompletionItemKind.Value: KIND_VALUE,
-    CompletionItemKind.Enum: KIND_ENUM,
-    CompletionItemKind.Keyword: KIND_KEYWORD,
-    CompletionItemKind.Snippet: KIND_SNIPPET,
-    CompletionItemKind.Color: KIND_COLOR,
-    CompletionItemKind.File: KIND_FILE,
-    CompletionItemKind.Reference: KIND_REFERENCE,
-    CompletionItemKind.Folder: KIND_FOLDER,
-    CompletionItemKind.EnumMember: KIND_ENUMMEMBER,
-    CompletionItemKind.Constant: KIND_CONSTANT,
-    CompletionItemKind.Struct: KIND_STRUCT,
-    CompletionItemKind.Event: KIND_EVENT,
-    CompletionItemKind.Operator: KIND_OPERATOR,
-    CompletionItemKind.TypeParameter: KIND_TYPEPARAMETER
-}
+    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
 
-SYMBOL_KINDS = {
-    SymbolKind.File: KIND_FILE,
-    SymbolKind.Module: KIND_MODULE,
-    SymbolKind.Namespace: KIND_NAMESPACE,
-    SymbolKind.Package: KIND_PACKAGE,
-    SymbolKind.Class: KIND_CLASS,
-    SymbolKind.Method: KIND_METHOD,
-    SymbolKind.Property: KIND_PROPERTY,
-    SymbolKind.Field: KIND_FIELD,
-    SymbolKind.Constructor: KIND_CONSTRUCTOR,
-    SymbolKind.Enum: KIND_ENUM,
-    SymbolKind.Interface: KIND_INTERFACE,
-    SymbolKind.Function: KIND_FUNCTION,
-    SymbolKind.Variable: KIND_VARIABLE,
-    SymbolKind.Constant: KIND_CONSTANT,
-    SymbolKind.String: KIND_STRING,
-    SymbolKind.Number: KIND_NUMBER,
-    SymbolKind.Boolean: KIND_BOOLEAN,
-    SymbolKind.Array: KIND_ARRAY,
-    SymbolKind.Object: KIND_OBJECT,
-    SymbolKind.Key: KIND_KEY,
-    SymbolKind.Null: KIND_NULL,
-    SymbolKind.EnumMember: KIND_ENUMMEMBER,
-    SymbolKind.Struct: KIND_STRUCT,
-    SymbolKind.Event: KIND_EVENT,
-    SymbolKind.Operator: KIND_OPERATOR,
-    SymbolKind.TypeParameter: KIND_TYPEPARAMETER
-}
-
-SYMBOL_KIND_SCOPES = {
-    SymbolKind.File: "string",
-    SymbolKind.Module: "entity.name.namespace",
-    SymbolKind.Namespace: "entity.name.namespace",
-    SymbolKind.Package: "entity.name.namespace",
-    SymbolKind.Class: "entity.name.class",
-    SymbolKind.Method: "entity.name.function",
-    SymbolKind.Property: "variable.other.member",
-    SymbolKind.Field: "variable.other.member",
-    SymbolKind.Constructor: "entity.name.function.constructor",
-    SymbolKind.Enum: "entity.name.enum",
-    SymbolKind.Interface: "entity.name.interface",
-    SymbolKind.Function: "entity.name.function",
-    SymbolKind.Variable: "variable.other",
-    SymbolKind.Constant: "variable.other.constant",
-    SymbolKind.String: "string",
-    SymbolKind.Number: "constant.numeric",
-    SymbolKind.Boolean: "constant.language.boolean",
-    SymbolKind.Array: "meta.sequence",
-    SymbolKind.Object: "meta.mapping",
-    SymbolKind.Key: "meta.mapping.key string",
-    SymbolKind.Null: "constant.language.null",
-    SymbolKind.EnumMember: "constant.other.enum",
-    SymbolKind.Struct: "entity.name.struct",
-    SymbolKind.Event: "entity.name.function",
-    SymbolKind.Operator: "keyword.operator",
-    SymbolKind.TypeParameter: "variable.parameter.type"
-}
-
-DOCUMENT_HIGHLIGHT_KINDS = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
-DOCUMENT_HIGHLIGHT_KIND_SCOPES = {
-    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
-    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
-    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
-}
-
-SEMANTIC_TOKENS_MAP = {
-    "namespace": "variable.other.namespace.lsp",
-    "namespace.declaration": "entity.name.namespace.lsp",
-    "namespace.definition": "entity.name.namespace.lsp",
-    "type": "storage.type.lsp",
-    "type.declaration": "entity.name.type.lsp",
-    "type.defaultLibrary": "support.type.lsp",
-    "type.definition": "entity.name.type.lsp",
-    "class": "storage.type.class.lsp",
-    "class.declaration": "entity.name.class.lsp",
-    "class.defaultLibrary": "support.class.lsp",
-    "class.definition": "entity.name.class.lsp",
-    "enum": "variable.other.enum.lsp",
-    "enum.declaration": "entity.name.enum.lsp",
-    "enum.definition": "entity.name.enum.lsp",
-    "interface": "entity.other.inherited-class.lsp",
-    "interface.declaration": "entity.name.interface.lsp",
-    "interface.definition": "entity.name.interface.lsp",
-    "struct": "storage.type.struct.lsp",
-    "struct.declaration": "entity.name.struct.lsp",
-    "struct.defaultLibrary": "support.struct.lsp",
-    "struct.definition": "entity.name.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
-    "parameter": "variable.parameter.lsp",
-    "variable": "variable.other.lsp",
-    "variable.readonly": "variable.other.constant.lsp",
-    "property": "variable.other.property.lsp",
-    "enumMember": "constant.other.enum.lsp",
-    "event": "entity.name.function.lsp",
-    "function": "variable.function.lsp",
-    "function.declaration": "entity.name.function.lsp",
-    "function.defaultLibrary": "support.function.builtin.lsp",
-    "function.definition": "entity.name.function.lsp",
-    "method": "variable.function.lsp",
-    "method.declaration": "entity.name.function.lsp",
-    "method.defaultLibrary": "support.function.builtin.lsp",
-    "method.definition": "entity.name.function.lsp",
-    "macro": "variable.macro.lsp",
-    "macro.declaration": "entity.name.macro.lsp",
-    "macro.defaultLibrary": "support.macro.lsp",
-    "macro.definition": "entity.name.macro.lsp",
-    "keyword": "keyword.lsp",
-    "modifier": "storage.modifier.lsp",
-    "comment": "comment.lsp",
-    "comment.documentation": "comment.block.documentation.lsp",
-    "string": "string.lsp",
-    "number": "constant.numeric.lsp",
-    "regexp": "string.regexp.lsp",
-    "operator": "keyword.operator.lsp",
-    "decorator": "variable.annotation.lsp",
-}
+    def __init__(self, severity: int) -> None:
+        self.regions: List[sublime.Region] = []
+        self.regions_with_tag: Dict[int, List[sublime.Region]] = {}
+        self.annotations: List[str] = []
+        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
+        if userprefs().diagnostics_gutter_marker != "sign":
+            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class InvalidUriSchemeException(Exception):
@@ -248,7 +88,7 @@ class InvalidUriSchemeException(Exception):
         return "invalid URI scheme: {}".format(self.uri)
 
 
-def get_line(window: sublime.Window, file_name: str, row: int) -> str:
+def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
     '''
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
@@ -257,11 +97,12 @@ def get_line(window: sublime.Window, file_name: str, row: int) -> str:
     if view:
         # get from buffer
         point = view.text_point(row, 0)
-        return view.substr(view.line(point)).strip()
+        line = view.substr(view.line(point))
     else:
         # get from linecache
         # linecache row is not 0 based, so we increment it by 1 to get the correct line.
-        return linecache.getline(file_name, row + 1).strip()
+        line = linecache.getline(file_name, row + 1)
+    return line.strip() if strip else line
 
 
 def get_storage_path() -> str:
@@ -270,8 +111,8 @@ def get_storage_path() -> str:
     Its path is '$DATA/Package Storage', where $DATA means:
 
     - on macOS: ~/Library/Application Support/Sublime Text
-    - on Windows: %AppData%/Sublime Text/Roaming
-    - on Linux: $XDG_CONFIG_DIR/sublime-text
+    - on Windows: %LocalAppData%/Sublime Text
+    - on Linux: ~/.cache/sublime-text
     """
     return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
 
@@ -299,15 +140,30 @@ def position(view: sublime.View, offset: int) -> Position:
     return offset_to_point(view, offset).to_lsp()
 
 
+def position_to_offset(position: Position, view: sublime.View) -> int:
+    return point_to_offset(Point.from_lsp(position), view)
+
+
+def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
+    best_kind = sublime.KIND_AMBIGUOUS
+    best_kind_score = 0
+    for kind, selector in SUBLIME_KIND_SCOPES.items():
+        score = sublime.score_selector(scope_name, selector)
+        if score > best_kind_score:
+            best_kind = kind
+            best_kind_score = score
+    return best_kind
+
+
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(point_to_offset(range.start, view), point_to_offset(range.end, view))
+    return sublime.Region(position_to_offset(range['start'], view), position_to_offset(range['end'], view))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
-    return Range(
-        offset_to_point(view, region.begin()),
-        offset_to_point(view, region.end())
-    )
+    return {
+        'start': offset_to_point(view, region.begin()).to_lsp(),
+        'end': offset_to_point(view, region.end()).to_lsp(),
+    }
 
 
 def to_encoded_filename(path: str, position: Position) -> str:
@@ -315,7 +171,7 @@ def to_encoded_filename(path: str, position: Position) -> str:
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
 
 
-def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, RangeLsp]:
+def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Range]:
     if "targetUri" in location:
         location = cast(LocationLink, location)
         uri = location["targetUri"]
@@ -379,6 +235,11 @@ def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:
         return None
 
 
+def has_single_nonempty_selection(view: sublime.View) -> bool:
+    selections = view.sel()
+    return len(selections) == 1 and not selections[0].empty()
+
+
 def entire_content_region(view: sublime.View) -> sublime.Region:
     return sublime.Region(0, view.size())
 
@@ -391,7 +252,7 @@ def entire_content_range(view: sublime.View) -> Range:
     return region_to_range(view, entire_content_region(view))
 
 
-def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -400,7 +261,7 @@ def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
     }
 
 
-def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict[str, Any]:
+def versioned_text_document_identifier(view: sublime.View, version: int) -> VersionedTextDocumentIdentifier:
     return {"uri": uri_from_view(view), "version": version}
 
 
@@ -408,20 +269,11 @@ def text_document_position_params(view: sublime.View, location: int) -> TextDocu
     return {"textDocument": text_document_identifier(view), "position": position(view, location)}
 
 
-def text_document_range_params(view: sublime.View, location: int,
-                               region: sublime.Region) -> ExperimentalTextDocumentRangeParams:
-    return {
-        "textDocument": text_document_identifier(view),
-        "position": position(view, location),
-        "range": region_to_range(view, region).to_lsp()
-    }
-
-
-def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def did_open_text_document_params(view: sublime.View, language_id: str) -> DidOpenTextDocumentParams:
     return {"textDocument": text_document_item(view, language_id)}
 
 
-def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
+def render_text_change(change: sublime.TextChange) -> TextDocumentContentChangeEvent:
     # Note: cannot use protocol.Range because these are "historic" points.
     return {
         "range": {
@@ -432,35 +284,42 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
     }
 
 
-def did_change_text_document_params(view: sublime.View, version: int,
-                                    changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
-    content_changes = []  # type: List[Dict[str, Any]]
-    result = {"textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes}
+def did_change_text_document_params(
+    view: sublime.View, version: int, changes: Optional[Iterable[sublime.TextChange]] = None
+) -> DidChangeTextDocumentParams:
+    content_changes: List[TextDocumentContentChangeEvent] = []
+    result: DidChangeTextDocumentParams = {
+        "textDocument": versioned_text_document_identifier(view, version),
+        "contentChanges": content_changes
+    }
     if changes is None:
-        # TextDocumentSyncKindFull
+        # TextDocumentSyncKind.Full
         content_changes.append({"text": entire_content(view)})
     else:
-        # TextDocumentSyncKindIncremental
+        # TextDocumentSyncKind.Incremental
         for change in changes:
             content_changes.append(render_text_change(change))
     return result
 
 
-def will_save_text_document_params(view_or_uri: Union[DocumentUri, sublime.View], reason: int) -> Dict[str, Any]:
+def will_save_text_document_params(
+    view_or_uri: Union[DocumentUri, sublime.View], reason: TextDocumentSaveReason
+) -> WillSaveTextDocumentParams:
     return {"textDocument": text_document_identifier(view_or_uri), "reason": reason}
 
 
 def did_save_text_document_params(
     view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
-) -> Dict[str, Any]:
-    identifier = text_document_identifier(uri if uri is not None else view)
-    result = {"textDocument": identifier}  # type: Dict[str, Any]
+) -> DidSaveTextDocumentParams:
+    result: DidSaveTextDocumentParams = {
+        "textDocument": text_document_identifier(uri if uri is not None else view)
+    }
     if include_text:
         result["text"] = entire_content(view)
     return result
 
 
-def did_close_text_document_params(uri: DocumentUri) -> Dict[str, Any]:
+def did_close_text_document_params(uri: DocumentUri) -> DidCloseTextDocumentParams:
     return {"textDocument": text_document_identifier(uri)}
 
 
@@ -473,11 +332,11 @@ def did_change(view: sublime.View, version: int,
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 
-def will_save(uri: DocumentUri, reason: int) -> Notification:
+def will_save(uri: DocumentUri, reason: TextDocumentSaveReason) -> Notification:
     return Notification.willSave(will_save_text_document_params(uri, reason))
 
 
-def will_save_wait_until(view: sublime.View, reason: int) -> Request:
+def will_save_wait_until(view: sublime.View, reason: TextDocumentSaveReason) -> Request:
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
@@ -518,11 +377,19 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     return Request("textDocument/rangeFormatting", {
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
-        "range": region_to_range(view, region).to_lsp()
+        "range": region_to_range(view, region)
     }, view, progress=True)
 
 
-def selection_range_params(view: sublime.View) -> Dict[str, Any]:
+def text_document_ranges_formatting(view: sublime.View) -> Request:
+    return Request("textDocument/rangesFormatting", {
+        "textDocument": text_document_identifier(view),
+        "options": formatting_options(view.settings()),
+        "ranges": [region_to_range(view, region) for region in view.sel() if not region.empty()]
+    }, view, progress=True)
+
+
+def selection_range_params(view: sublime.View) -> SelectionRangeParams:
     return {
         "textDocument": text_document_identifier(view),
         "positions": [position(view, r.b) for r in view.sel()]
@@ -532,34 +399,47 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
 def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
-    diagnostics: Sequence[Diagnostic],
-    on_save_actions: Optional[Sequence[str]] = None
-) -> Dict[str, Any]:
-    context = {
-        "diagnostics": diagnostics
-    }  # type: Dict[str, Any]
-    if on_save_actions:
-        context['only'] = on_save_actions
+    diagnostics: List[Diagnostic],
+    only_kinds: Optional[List[CodeActionKind]] = None,
+    manual: bool = False
+) -> CodeActionParams:
+    context: CodeActionContext = {
+        "diagnostics": diagnostics,
+        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+    }
+    if only_kinds:
+        context["only"] = only_kinds
     return {
         "textDocument": text_document_identifier(view),
-        "range": region_to_range(view, region).to_lsp(),
+        "range": region_to_range(view, region),
         "context": context
     }
 
 
-# Workaround for a limited margin-collapsing capabilities of the minihtml.
+# Workaround for limited margin-collapsing capabilities of the minihtml.
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
-def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
-                   css: Optional[str] = None, wrapper_class: Optional[str] = None,
-                   on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
+def show_lsp_popup(
+    view: sublime.View,
+    contents: str,
+    *,
+    location: int = -1,
+    md: bool = False,
+    flags: int = 0,
+    css: Optional[str] = None,
+    wrapper_class: Optional[str] = None,
+    body_id: Optional[str] = None,
+    on_navigate: Optional[Callable[..., None]] = None,
+    on_hide: Optional[Callable[..., None]] = None
+) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
+    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
-        contents,
+        body_wrapper.format(contents),
         css=css,
         md=md,
         flags=flags,
@@ -567,15 +447,24 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         wrapper_class=wrapper_class,
         max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
         max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
-        on_navigate=on_navigate)
+        on_navigate=on_navigate,
+        on_hide=on_hide)
 
 
-def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: Optional[str] = None,
-                     wrapper_class: Optional[str] = None) -> None:
+def update_lsp_popup(
+    view: sublime.View,
+    contents: str,
+    *,
+    md: bool = False,
+    css: Optional[str] = None,
+    wrapper_class: Optional[str] = None,
+    body_id: Optional[str] = None
+) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
-    mdpopups.update_popup(view, contents, css=css, md=md, wrapper_class=wrapper_class)
+    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
+    mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
 
 FORMAT_STRING = 0x1
@@ -661,12 +550,6 @@ def minihtml(
             "markdown_extensions": [
                 "markdown.extensions.admonition",
                 {
-                    "pymdownx.escapeall": {
-                        "hardbreak": True,
-                        "nbsp": False
-                    }
-                },
-                {
                     "pymdownx.magiclink": {
                         # links are displayed without the initial ftp://, http://, https://, or ftps://.
                         "hide_protocol": True,
@@ -717,24 +600,32 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
-    if isinstance(text, str):
-        text = text.replace(' ', '&nbsp;')
+def make_link(href: str, text: Any, class_name: Optional[str] = None, tooltip: Optional[str] = None) -> str:
+    link = "<a href='{}'".format(href)
     if class_name:
-        return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
-    else:
-        return "<a href='{}'>{}</a>".format(href, text)
+        link += " class='{}'".format(class_name)
+    if tooltip:
+        link += " title='{}'".format(html.escape(tooltip))
+    text = text2html(str(text)).replace(' ', '&nbsp;')
+    link += ">{}</a>".format(text)
+    return link
 
 
-def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
-                      class_name: Optional[str] = None, view: Optional[sublime.View] = None) -> str:
-    if view:
+def make_command_link(
+    command: str,
+    text: str,
+    command_args: Optional[Dict[str, Any]] = None,
+    class_name: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    view_id: Optional[int] = None
+) -> str:
+    if view_id is not None:
         cmd = "lsp_run_text_command_helper"
-        args = {"view_id": view.id(), "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
+        args: Optional[Dict[str, Any]] = {"view_id": view_id, "command": command, "args": command_args}
     else:
         cmd = command
         args = command_args
-    return make_link(sublime.command_url(cmd, args), text, class_name)
+    return make_link(sublime.command_url(cmd, args), text, class_name, tooltip)
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
@@ -745,31 +636,47 @@ class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
 
 
 COLOR_BOX_HTML = """
-<style>html {{padding: 0; background-color: transparent}}</style>
+<style>
+    html {{
+        padding: 0;
+        background-color: transparent;
+    }}
+    a {{
+        display: inline-block;
+        height: 0.8rem;
+        width: 0.8rem;
+        margin-top: 0.1em;
+        border: 1px solid color(var(--foreground) alpha(0.25));
+        background-color: {color};
+        text-decoration: none;
+    }}
+</style>
 <body id='lsp-color-box'>
-<div style='padding: 0.4em;
-            margin-top: 0.2em;
-            border: 1px solid color(var(--foreground) alpha(0.25));
-            background-color: rgba({}, {}, {}, {})'>
-</div>
+    <a href='{command}'>&nbsp;</a>
 </body>"""
 
 
-def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
-    color = color_info['color']
-    red = color['red'] * 255
-    green = color['green'] * 255
-    blue = color['blue'] * 255
-    alpha = color['alpha']
-    return COLOR_BOX_HTML.format(red, green, blue, alpha)
+def color_to_hex(color: Color) -> str:
+    red = round(color['red'] * 255)
+    green = round(color['green'] * 255)
+    blue = round(color['blue'] * 255)
+    alpha_dec = color['alpha']
+    if alpha_dec < 1:
+        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, round(alpha_dec * 255))
+    return "#{:02x}{:02x}{:02x}".format(red, green, blue)
 
 
-def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
-    region = range_to_region(Range.from_lsp(color_info['range']), view)
+def lsp_color_to_html(color_info: ColorInformation) -> str:
+    command = sublime.command_url('lsp_color_presentation', {'color_information': color_info})
+    return COLOR_BOX_HTML.format(command=command, color=color_to_hex(color_info['color']))
+
+
+def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
+    region = range_to_region(color_info['range'], view)
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
 
 
-def document_color_params(view: sublime.View) -> Dict[str, Any]:
+def document_color_params(view: sublime.View) -> DocumentColorParams:
     return {"textDocument": text_document_identifier(view)}
 
 
@@ -779,12 +686,25 @@ def format_severity(severity: int) -> str:
     return "???"
 
 
-def diagnostic_severity(diagnostic: Diagnostic) -> int:
+def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def diagnostic_source(diagnostic: Diagnostic) -> str:
-    return diagnostic.get("source", "unknown-source")
+def format_diagnostics_for_annotation(
+    diagnostics: List[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
+) -> Tuple[List[str], str]:
+    css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
+    scope = DIAGNOSTIC_SEVERITY[severity - 1][2]
+    color = view.style_for_scope(scope).get('foreground') or 'red'
+    annotations = []
+    for diagnostic in diagnostics:
+        message = text2html(diagnostic.get('message') or '')
+        source = diagnostic.get('source')
+        line = "[{}] {}".format(text2html(source), message) if source else message
+        content = '<body id="annotation" class="{1}"><style>{0}</style><div class="{2}">{3}</div></body>'.format(
+            lsp_css().annotations, lsp_css().annotations_classname, css_class, line)
+        annotations.append(content)
+    return (annotations, color)
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
@@ -794,19 +714,20 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     :param      diagnostic:  The diagnostic
     :returns:   Tuple of (content, optional offset, optional code, optional href)
                 When the last three elements are optional, don't show an inline phantom
-                When the last three elemenst are not optional, show an inline phantom
+                When the last three elements are not optional, show an inline phantom
                 using the information given.
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     lines = diagnostic["message"].splitlines() or [""]
-    # \u200B is the zero-width space
-    result = " {:>4}:{:<4}{:<8}{} \u200B{}".format(
+    result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
         format_severity(diagnostic_severity(diagnostic)),
-        lines[0],
-        formatted
+        lines[0]
     )
+    if formatted != "" or code is not None:
+        # \u200B is the zero-width space
+        result += " \u200B{}".format(formatted)
     offset = len(result) if href else None
     for line in itertools.islice(lines, 1, None):
         result += "\n" + 18 * " " + line
@@ -817,22 +738,21 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     if href is None or code is None:
         return formatted
-    return formatted + code
+    return formatted + "({})".format(code)
 
 
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
-    formatted = [diagnostic_source(diagnostic)]
+    formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
     if code is not None:
         code = str(code)
-        formatted.append(":")
         code_description = diagnostic.get("codeDescription")
         if code_description:
             href = code_description["href"]
         else:
-            formatted.append(code)
-    return "".join(formatted), code, href
+            formatted += "({})".format(code)
+    return formatted, code, href
 
 
 def location_to_human_readable(
@@ -893,97 +813,50 @@ def _format_diagnostic_related_info(
     location = info["location"]
     return '<a href="{}">{}</a>: {}'.format(
         location_to_href(config, location),
-        location_to_human_readable(config, base_dir, location),
-        info["message"]
+        text2html(location_to_human_readable(config, base_dir, location)),
+        text2html(info["message"])
     )
 
 
-def _with_color(text: Any, hexcolor: str) -> str:
-    return '<span style="color: {};">{}</span>'.format(hexcolor, text)
+def _html_element(name: str, text: str, class_name: Optional[str] = None, escape: bool = True) -> str:
+    return '<{0}{2}>{1}</{0}>'.format(
+        name,
+        text2html(text) if escape else text,
+        ' class="{}"'.format(text2html(class_name)) if class_name else ''
+    )
 
 
-def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
-    return _with_color(text, view.style_for_scope(scope)["foreground"])
-
-
-def format_diagnostic_for_html(
-    view: sublime.View,
-    config: ClientConfig,
-    diagnostic: Diagnostic,
-    base_dir: Optional[str] = None
-) -> str:
-    formatted = [
-        '<pre class="',
-        DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1],
-        '">',
-        text2html(diagnostic["message"])
-    ]
-    code_description = diagnostic.get("codeDescription")
-    if code_description:
-        code = make_link(code_description["href"], diagnostic["code"])  # type: Optional[str]
-    elif "code" in diagnostic:
-        code = _with_color(diagnostic["code"], "color(var(--foreground) alpha(0.6))")
-    else:
-        code = None
-    source = diagnostic_source(diagnostic)
-    formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
-    if code:
-        formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
+def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+    html = _html_element('span', diagnostic["message"])
+    code = diagnostic.get("code")
+    source = diagnostic.get("source")
+    if source or code is not None:
+        meta_info = ""
+        if source:
+            meta_info += text2html(source)
+        if code is not None:
+            code_description = diagnostic.get("codeDescription")
+            meta_info += "({})".format(
+                make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
+        html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        formatted.append('<pre class="related_info">')
-        formatted.append("<br>".join(_format_diagnostic_related_info(config, info, base_dir)
-                                     for info in related_infos))
-        formatted.append("</pre>")
-    formatted.append("</pre>")
-    return "".join(formatted)
+        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
+        html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
+    severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
+    return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
-def format_completion(
-    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
-) -> sublime.CompletionItem:
-    # This is a hot function. Don't do heavy computations or IO in this function.
-
-    lsp_label = item['label']
-    lsp_label_details = item.get('labelDetails') or {}
-    lsp_label_detail = lsp_label_details.get('detail') or ""
-    lsp_label_description = lsp_label_details.get('description') or ""
-    lsp_filter_text = item.get('filterText') or ""
-    lsp_detail = (item.get('detail') or "").replace("\n", " ")
-
-    kind = COMPLETION_KINDS.get(item.get('kind', -1), KIND_UNSPECIFIED)
-
-    details = []  # type: List[str]
-    if can_resolve_completion_items or item.get('documentation'):
-        details.append(make_command_link('lsp_resolve_docs', "More", {'index': index, 'session_name': session_name}))
-
-    if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
-        trigger = lsp_label + lsp_label_detail
-        annotation = lsp_label_description or lsp_detail
-    elif lsp_label.startswith(lsp_filter_text):
-        trigger = lsp_label
-        annotation = lsp_detail
-        if lsp_label_detail:
-            details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-    else:
-        trigger = lsp_filter_text
-        annotation = lsp_detail
-        details.append(html.escape(lsp_label + lsp_label_detail))
-        if lsp_label_description:
-            details.append(html.escape(lsp_label_description))
-
-    if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):
-        annotation = "DEPRECATED - " + annotation if annotation else "DEPRECATED"
-
-    completion = sublime.CompletionItem.command_completion(
-        trigger=trigger,
-        command='lsp_select_completion_item',
-        args={"item": item, "session_name": session_name},
-        annotation=annotation,
-        kind=kind,
-        details=" | ".join(details))
-    if item.get('textEdit'):
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    return completion
+def format_code_actions_for_quick_panel(
+    session_actions: Iterable[Tuple[str, Union[CodeAction, Command]]]
+) -> Tuple[List[sublime.QuickPanelItem], int]:
+    items: List[sublime.QuickPanelItem] = []
+    selected_index = -1
+    for idx, (config_name, code_action) in enumerate(session_actions):
+        lsp_kind = code_action.get("kind", "")
+        first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
+        kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
+        items.append(sublime.QuickPanelItem(code_action["title"], annotation=config_name, kind=kind))
+        if code_action.get('isPreferred', False):
+            selected_index = idx
+    return items, selected_index

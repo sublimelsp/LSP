@@ -1,11 +1,15 @@
+from __future__ import annotations
+from .core.constants import SublimeKind
 from .core.logging import debug
-from .core.protocol import DocumentUri, Location, Position
+from .core.protocol import DocumentUri
+from .core.protocol import Location
 from .core.protocol import LocationLink
+from .core.protocol import Position
 from .core.sessions import Session
-from .core.typing import Union, List, Optional, Tuple
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
 from .core.views import to_encoded_filename
+from typing import List, Optional, Tuple, Union
 from urllib.request import url2pathname
 import functools
 import sublime
@@ -16,7 +20,8 @@ def open_location_async(
     session: Session,
     location: Union[Location, LocationLink],
     side_by_side: bool,
-    force_group: bool
+    force_group: bool,
+    group: int = -1
 ) -> None:
     flags = sublime.ENCODED_POSITION
     if force_group:
@@ -28,7 +33,7 @@ def open_location_async(
         if not view:
             sublime.error_message("Unable to open URI")
 
-    session.open_location_async(location, flags).then(check_success_async)
+    session.open_location_async(location, flags, group).then(check_success_async)
 
 
 def open_basic_file(
@@ -43,7 +48,7 @@ def open_basic_file(
     if uri.startswith("file:"):
         filename = session.config.map_server_uri_to_client_path(uri)
     else:
-        prefix = 'res://Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
+        prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)
         filename = sublime.packages_path() + url2pathname(uri[len(prefix):])
         # Window.open_file can only focus and scroll to a location in a resource file if it is already opened
@@ -59,7 +64,12 @@ class LocationPicker:
         view: sublime.View,
         session: Session,
         locations: Union[List[Location], List[LocationLink]],
-        side_by_side: bool
+        side_by_side: bool,
+        force_group: bool = True,
+        group: int = -1,
+        placeholder: str = "",
+        kind: SublimeKind = sublime.KIND_AMBIGUOUS,
+        selected_index: int = -1
     ) -> None:
         self._view = view
         self._view_states = ([r.to_tuple() for r in view.sel()], view.viewport_position())
@@ -69,15 +79,25 @@ class LocationPicker:
         self._window = window
         self._weaksession = weakref.ref(session)
         self._side_by_side = side_by_side
+        self._force_group = force_group
+        self._group = group
         self._items = locations
-        self._highlighted_view = None  # type: Optional[sublime.View]
+        self._highlighted_view: Optional[sublime.View] = None
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
+        self._window.focus_group(group)
+        config_name = session.config.name
         self._window.show_quick_panel(
-            items=[location_to_human_readable(session.config, base_dir, location) for location in locations],
+            items=[
+                sublime.QuickPanelItem(
+                    location_to_human_readable(session.config, base_dir, location), annotation=config_name, kind=kind)
+                for location in locations
+            ],
             on_select=self._select_entry,
+            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+            selected_index=selected_index,
             on_highlight=self._highlight_entry,
-            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST
+            placeholder=placeholder
         )
 
     def _unpack(self, index: int) -> Tuple[Optional[Session], Union[Location, LocationLink], DocumentUri, Position]:
@@ -103,9 +123,16 @@ class LocationPicker:
                         self._window.status_message("Unable to open {}".format(uri))
             else:
                 sublime.set_timeout_async(
-                    functools.partial(open_location_async, session, location, self._side_by_side, True))
+                    functools.partial(
+                        open_location_async, session, location, self._side_by_side, self._force_group, self._group))
         else:
             self._window.focus_view(self._view)
+            # When a group was specified close the current highlighted
+            # sheet upon canceling if the sheet is transient
+            if self._group > -1 and self._highlighted_view:
+                sheet = self._highlighted_view.sheet()
+                if sheet and sheet.is_transient():
+                    self._highlighted_view.close()
             # When in side-by-side mode close the current highlighted
             # sheet upon canceling if the sheet is semi-transient
             if self._side_by_side and self._highlighted_view:

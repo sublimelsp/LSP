@@ -1,23 +1,21 @@
+from __future__ import annotations
 from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from .typing import Any, Optional, Dict, Callable
+from typing import Any, Callable, Dict, Optional
 import os
 import sublime
-
-
-PLUGIN_NAME = 'LSP'
 
 
 class ClientConfigs:
 
     def __init__(self) -> None:
-        self.all = {}  # type: Dict[str, ClientConfig]
-        self.external = {}  # type: Dict[str, ClientConfig]
-        self._listener = None  # type: Optional[Callable[[Optional[str]], None]]
+        self.all: Dict[str, ClientConfig] = {}
+        self.external: Dict[str, ClientConfig] = {}
+        self._listener: Optional[Callable[[Optional[str]], None]] = None
 
     def _notify_listener(self, config_name: Optional[str] = None) -> None:
         if callable(self._listener):
@@ -45,12 +43,12 @@ class ClientConfigs:
             # Each plugin is loaded 100 milliseconds after the previous plugin.
             # Therefore, we get a sequence of calls to `register_plugin` from all LSP-* helper packages, separated
             # in time intervals of 100 milliseconds.
-            # When calling self._notify_listener, we are calling ConfigManager.update.
+            # When calling self._notify_listener, we are calling WindowConfigManager.update.
             # That object, in turn, calls WindowConfigManager.update for each window.
             # In turn, each window starts iterating all of its attached views for language servers to attach.
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
-            # operation. To ensure that this dance is done only once, we delay notifying the ConfigManager until all
-            # plugins have done their `register_plugin` call.
+            # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
+            # all plugins have done their `register_plugin` call.
             debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
         return True
 
@@ -110,17 +108,14 @@ class ClientConfigs:
         self._listener = recipient
 
 
-_settings_obj = None  # type: Optional[sublime.Settings]
-_settings = None  # type: Optional[Settings]
-_settings_registration = None  # type: Optional[SettingsRegistration]
-_global_settings = None  # type: Optional[sublime.Settings]
+_settings_obj: Optional[sublime.Settings] = None
+_settings: Optional[Settings] = None
+_settings_registration: Optional[SettingsRegistration] = None
+_global_settings: Optional[sublime.Settings] = None
 client_configs = ClientConfigs()
 
 
 def _on_sublime_settings_changed() -> None:
-    global _settings_obj
-    global _settings
-    global client_configs
     if _settings_obj is None or _settings is None:
         return
     _settings.update(_settings_obj)
@@ -132,30 +127,29 @@ def load_settings() -> None:
     global _settings_obj
     global _settings
     global _settings_registration
-    if _settings_obj is None:
+    if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
+    if _settings_obj is None:
         _settings_obj = sublime.load_settings("LSP.sublime-settings")
         _settings = Settings(_settings_obj)
         _settings_registration = SettingsRegistration(_settings_obj, _on_sublime_settings_changed)
 
 
 def unload_settings() -> None:
-    global _global_settings
     global _settings_obj
+    global _settings
     global _settings_registration
     if _settings_obj is not None:
-        _global_settings = None
         _settings_registration = None
-        _settings_obj = None
+        _settings_obj = sublime.load_settings("")
+        _settings = Settings(_settings_obj)
 
 
 def userprefs() -> Settings:
-    global _settings
     return _settings  # type: ignore
 
 
 def globalprefs() -> sublime.Settings:
-    global _global_settings
     return _global_settings  # type: ignore
 
 

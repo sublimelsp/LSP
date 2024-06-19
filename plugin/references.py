@@ -1,37 +1,79 @@
-from .core.panels import ensure_panel
+from __future__ import annotations
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.sessions import Session
-from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.types import PANEL_FILE_REGEX
-from .core.types import PANEL_LINE_REGEX
-from .core.typing import Dict, List, Optional, Tuple
 from .core.views import get_line
+from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
+from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
+from typing import Dict, List, Literal, Optional, Tuple
 import functools
 import linecache
 import os
 import sublime
 
 
-def ensure_references_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
-                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
+OutputMode = Literal['output_panel', 'quick_panel']
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
 
     capability = 'referencesProvider'
 
+    def is_enabled(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        force_group: bool = True,
+        fallback: bool = False,
+        group: int = -1,
+        include_declaration: bool = False,
+        output_mode: Optional[OutputMode] = None,
+    ) -> bool:
+        return fallback or super().is_enabled(event, point)
+
+    def is_visible(
+        self,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        force_group: bool = True,
+        fallback: bool = False,
+        group: int = -1,
+        include_declaration: bool = False,
+        output_mode: Optional[OutputMode] = None,
+    ) -> bool:
+        # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
+        # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
+        # setting).
+        if output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel or \
+                output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel:
+            return False
+        if self.applies_to_context_menu(event):
+            return self.is_enabled(
+                event, point, side_by_side, force_group, fallback, group, include_declaration, output_mode)
+        return True
+
     def run(
-        self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None, side_by_side: bool = False
+        self,
+        _: sublime.Edit,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False,
+        force_group: bool = True,
+        fallback: bool = False,
+        group: int = -1,
+        include_declaration: bool = False,
+        output_mode: Optional[OutputMode] = None,
     ) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
@@ -41,53 +83,123 @@ class LspSymbolReferencesCommand(LspTextCommand):
             params = {
                 'textDocument': position_params['textDocument'],
                 'position': position_params['position'],
-                'context': {"includeDeclaration": False},
+                'context': {
+                    "includeDeclaration": include_declaration,
+                },
             }
             request = Request("textDocument/references", params, self.view, progress=True)
+            word_range = self.view.word(pos)
             session.send_request(
                 request,
                 functools.partial(
                     self._handle_response_async,
-                    self.view.substr(self.view.word(pos)),
+                    self.view.substr(word_range),
                     session,
-                    side_by_side
+                    side_by_side,
+                    force_group,
+                    fallback,
+                    group,
+                    output_mode,
+                    event,
+                    word_range.begin()
                 )
             )
+        else:
+            self._handle_no_results(fallback, side_by_side)
 
     def _handle_response_async(
-        self, word: str, session: Session, side_by_side: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        force_group: bool,
+        fallback: bool,
+        group: int,
+        output_mode: Optional[OutputMode],
+        event: Optional[dict],
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
-        sublime.set_timeout(lambda: self._handle_response(word, session, side_by_side, response))
+        sublime.set_timeout(lambda: self._handle_response(
+            word, session, side_by_side, force_group, fallback, group, output_mode, event, position, response))
 
     def _handle_response(
-        self, word: str, session: Session, side_by_side: bool, response: Optional[List[Location]]
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        force_group: bool,
+        fallback: bool,
+        group: int,
+        output_mode: Optional[OutputMode],
+        event: Optional[dict],
+        position: int,
+        response: Optional[List[Location]]
     ) -> None:
-        if response:
-            if userprefs().show_references_in_quick_panel:
-                self._show_references_in_quick_panel(session, response, side_by_side)
-            else:
-                self._show_references_in_output_panel(word, session, response)
+        if not response:
+            self._handle_no_results(fallback, side_by_side)
+            return
+        modifier_keys = (event or {}).get('modifier_keys', {})
+        if output_mode is None:
+            show_in_quick_panel = userprefs().show_references_in_quick_panel
+            if modifier_keys.get('shift'):
+                show_in_quick_panel = not show_in_quick_panel
         else:
-            window = self.view.window()
-            if window:
-                window.status_message("No references found")
+            show_in_quick_panel = output_mode == 'quick_panel'
+        if show_in_quick_panel:
+            if modifier_keys.get('primary'):
+                side_by_side = True
+            self._show_references_in_quick_panel(word, session, response, side_by_side, force_group, group, position)
+        else:
+            self._show_references_in_output_panel(word, session, response)
 
-    def _show_references_in_quick_panel(self, session: Session, locations: List[Location], side_by_side: bool) -> None:
-        self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
-        LocationPicker(self.view, session, locations, side_by_side)
+    def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        if fallback:
+            window.run_command("goto_reference", {"side_by_side": side_by_side})
+        else:
+            window.status_message("No references found")
+
+    def _show_references_in_quick_panel(
+        self,
+        word: str,
+        session: Session,
+        locations: List[Location],
+        side_by_side: bool,
+        force_group: bool,
+        group: int,
+        position: int
+    ) -> None:
+        selection = self.view.sel()
+        self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in selection]})
+        placeholder = "References to " + word
+        kind = get_symbol_kind_from_scope(self.view.scope_name(position))
+        index = 0
+        locations.sort(key=lambda l: (l['uri'], Point.from_lsp(l['range']['start'])))
+        if len(selection):
+            pt = selection[0].b
+            view_filename = self.view.file_name()
+            for idx, location in enumerate(locations):
+                if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
+                    continue
+                index = idx
+                if position_to_offset(location['range']['start'], self.view) > pt:
+                    break
+        LocationPicker(self.view, session, locations, side_by_side, force_group, group, placeholder, kind, index)
 
     def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
-        window = session.window
-        panel = ensure_references_panel(window)
+        wm = windows.lookup(session.window)
+        if not wm:
+            return
+        panel = wm.panel_manager and wm.panel_manager.ensure_references_panel()
         if not panel:
             return
-        manager = session.manager()
-        if not manager:
-            return
-        base_dir = manager.get_project_path(self.view.file_name() or "")
-        to_render = []  # type: List[str]
+        base_dir = wm.get_project_path(self.view.file_name() or "")
+        to_render: List[str] = []
         references_count = 0
-        references_by_file = _group_locations_by_uri(window, session.config, locations)
+        references_by_file = _group_locations_by_uri(wm.window, session.config, locations)
         for file, references in references_by_file.items():
             to_render.append('{}:'.format(_get_relative_path(base_dir, file)))
             for reference in references:
@@ -98,7 +210,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         characters = "\n".join(to_render)
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.references"})
+        wm.window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
             'characters': "{} references for '{}'\n\n{}".format(references_count, word, characters),
             'force': True,
@@ -106,7 +218,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         })
         # highlight all word occurrences
         regions = panel.find_all(r"\b{}\b".format(word))
-        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
+        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_NO_FILL | sublime.NO_UNDO)
 
 
 def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:
@@ -125,7 +237,7 @@ def _group_locations_by_uri(
     locations: List[Location]
 ) -> Dict[str, List[Tuple[Point, str]]]:
     """Return a dictionary that groups locations by the URI it belongs."""
-    grouped_locations = {}  # type: Dict[str, List[Tuple[Point, str]]]
+    grouped_locations: Dict[str, List[Tuple[Point, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
         file_path = config.map_server_uri_to_client_path(uri)

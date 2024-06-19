@@ -1,8 +1,8 @@
+from __future__ import annotations
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.types import ClientStates
-from LSP.plugin.core.typing import Any, Generator
 from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
 from setup import add_config
@@ -13,6 +13,7 @@ from setup import remove_config
 from setup import TIMEOUT_TIME
 from setup import YieldPromise
 from sublime_plugin import view_event_listeners
+from typing import Any, Generator
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -56,8 +57,8 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
-        self.wm._configs.all[self.config1.name] = self.config1
-        self.wm._configs.all[self.config2.name] = self.config2
+        self.wm.get_config_manager().all[self.config1.name] = self.config1
+        self.wm.get_config_manager().all[self.config2.name] = self.config2
 
     def test_sends_did_open_to_multiple_sessions(self) -> Generator:
         filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
@@ -65,7 +66,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from close_test_view(open_view)
         self.view = self.window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-        self.assertTrue(self.wm._configs.match_view(self.view))
+        self.assertTrue(self.wm.get_config_manager().match_view(self.view))
         # self.init_view_settings()
         yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {
@@ -111,8 +112,8 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             remove_config(self.config1)
         except ValueError:
             pass
-        self.wm._configs.all.pop(self.config2.name, None)
-        self.wm._configs.all.pop(self.config1.name, None)
+        self.wm.get_config_manager().all.pop(self.config2.name, None)
+        self.wm.get_config_manager().all.pop(self.config1.name, None)
         yield from super().doCleanups()
 
     def await_message(self, method: str) -> Generator:
@@ -125,7 +126,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         def handler2(params: Any) -> None:
             promise2.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)

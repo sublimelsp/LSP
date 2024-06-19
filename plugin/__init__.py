@@ -1,5 +1,6 @@
 from .core.collections import DottedDict
 from .core.css import css
+from .core.edit import apply_text_edits
 from .core.file_watcher import FileWatcher
 from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherEventType
@@ -8,7 +9,6 @@ from .core.file_watcher import register_file_watcher_implementation
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
-from .core.protocol import WorkspaceFolder
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import AbstractPlugin
@@ -23,11 +23,14 @@ from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
 from .core.views import MarkdownLangMap
+from .core.views import uri_from_view
+from .core.workspace import WorkspaceFolder
 
 # This is the public API for LSP-* packages
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'apply_text_edits',
     'ClientConfig',
     'css',
     'DottedDict',
@@ -49,6 +52,7 @@ __all__ = [
     'Session',
     'SessionBufferProtocol',
     'unregister_plugin',
+    'uri_from_view',
     'uri_to_filename',  # deprecated
     'WorkspaceFolder',
 ]

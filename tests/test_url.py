@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.url import parse_uri
 from LSP.plugin.core.url import view_to_uri
@@ -62,7 +63,7 @@ class MultiplatformTests(unittest.TestCase):
 
     def test_resource_path(self):
         uri = filename_to_uri(os.path.join(sublime.installed_packages_path(), "Package Control", "dir", "file.py"))
-        self.assertEqual(uri, "res://Packages/Package%20Control/dir/file.py")
+        self.assertEqual(uri, "res:/Packages/Package%20Control/dir/file.py")
 
     def test_buffer_uri(self):
         view = sublime.active_window().active_view()
@@ -70,4 +71,10 @@ class MultiplatformTests(unittest.TestCase):
         view.file_name = unittest.mock.MagicMock(return_value=None)
         view.buffer_id = unittest.mock.MagicMock(return_value=42)
         uri = view_to_uri(view)
-        self.assertEqual(uri, "buffer://sublime/42")
+        self.assertEqual(uri, "buffer:42")
+
+    def test_parse_uri(self):
+        scheme, _ = parse_uri("buffer:42")
+        self.assertEqual(scheme, "buffer")
+        scheme, _ = parse_uri("www.example.com/foo:bar")
+        self.assertEqual(scheme, "")

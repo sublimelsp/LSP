@@ -4,7 +4,7 @@ Follow the setup steps for a language server to get it up and running.
 
 If you encounter problems, consult the [common issues](troubleshooting.md#common-problems) page or search the [LSP issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
-If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./guides/client_configuration.md). Pull requests for adding a new client configuration are welcome.
+If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./client_configuration.md). Pull requests for adding a new client configuration are welcome.
 
 !!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
     [LSP-json](https://packagecontrol.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
@@ -15,6 +15,30 @@ If there are no setup steps for a language server on this page, but a [language 
 ## Angular
 
 Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).
+
+## Assembly
+
+1. Install `asm-lsp` via Cargo (see [github:bergercookie/asm-lsp](https://github.com/bergercookie/asm-lsp)):
+
+    ```sh
+    cargo install asm-lsp
+    ```
+
+2. Install the [x86 and x86_64 Assembly](https://packagecontrol.io/packages/x86%20and%20x86_64%20Assembly) package from Package Control.
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"asm-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "asm-lsp": {
+                "enabled": true,
+                "command": ["asm-lsp"],
+                "selector": "source.asm | source.assembly"
+            }
+        }
+    }
+    ```
 
 ## Bash
 
@@ -28,7 +52,7 @@ Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LS
 
 ## C/C++
 
-See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
+Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/LSP-clangd).
 
 ## C\#
 
@@ -36,15 +60,15 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
 
 ## Clojure
 
-1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
+1. Download [clojure-lsp](https://clojure-lsp.io/installation/).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"clojure-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "clojure-lsp": {
                 "enabled": true,
-                "command": ["java", "-jar", "/PATH/TO/clojure-lsp"], // Update the PATH
+                "command": ["/PATH/TO/clojure-lsp"], // Update the PATH
                 "selector": "source.clojure",
                 "initializationOptions": {}
             }
@@ -52,7 +76,7 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
     }
     ```
 
-!!! info "See available [initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions)."
+!!! info "See available [initializationOptions](https://clojure-lsp.io/settings/#initializationoptions)."
 
 ## CSS
 
@@ -63,19 +87,19 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 1. Install the [D Language Server](https://github.com/Pure-D/serve-d#installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"serve-d"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
-    	"clients": {
-    		"serve-d": {
-    			"enabled": true,
-    			"command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
-    			"selector": "source.d",
-    			"settings": {
-    				"d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
-	    			"d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
-    			}
-    		}
-    	}
+        "clients": {
+            "serve-d": {
+                "enabled": true,
+                "command": ["C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/serve-d.exe"],
+                "selector": "source.d",
+                "settings": {
+                    "d.dcdServerPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-server.exe",
+                    "d.dcdClientPath": "C:/Users/MY_NAME_HERE/AppData/Roaming/code-d/bin/dcd-client.exe",
+                }
+            }
+        }
     }
     ```
 
@@ -100,7 +124,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"erlang-ls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "erlang-ls": {
@@ -124,12 +148,12 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 4. Open `Preferences > Package Settings > LSP > Settings` and add the `"fsautocomplete"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "fsautocomplete": {
                 "enabled": true,
-                "command": ["fsautocomplete", "--background-service-enabled"],
+                "command": ["fsautocomplete"],
                 "selector": "source.fsharp",
                 "initializationOptions": {
                     "AutomaticWorkspaceInit": true
@@ -144,24 +168,23 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## Fortran
 
-1. Install the [ Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
-2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server#installation).
+1. Install the [ModernFortran](https://packagecontrol.io/packages/ModernFortran) or the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+2. Install the [fortls](https://fortls.fortran-lang.org/quickstart.html#download) language server.
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"fortls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "fortls": {
                 "enabled": true,
-                "command": ["fortls"],
-                "selector": "source.modern-fortran | source.fixedform-fortran"
+                "command": ["fortls", "--notify_init"],
+                "selector": "source.fortran | source.modern-fortran | source.fixedform-fortran"
             }
         }
     }
     ```
 
-!!! info "See available [configuration options](https://github.com/hansec/fortran-language-server#language-server-settings)."
-    For example set `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
+!!! info "See available [configuration options](https://fortls.fortran-lang.org/options.html)."
 
 ## Go
 
@@ -169,25 +192,27 @@ Follow installation instructions on [LSP-gopls](https://github.com/sublimelsp/LS
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
     Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
-    
+
 ## GDScript (Godot Engine)
 
 1. Install the [GDScript (Godot Engine)](https://packagecontrol.io/packages/GDScript%20(Godot%20Engine)) package from Package Control for syntax highlighting.
 2. Launch the Godot Editor on the project you are working on and leave it running.
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"godot-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "godot-lsp": {
                 "enabled": true,
                 "command": ["/PATH/TO/godot-editor.exe"], // Update the PATH
-                "tcp_port": 6008,
+                "tcp_port": 6005, // Older versions of Godot(3.x) use port 6008
                 "selector": "source.gdscript",
             }
         }
     }
     ```
+
+If you encounter high cpu load or any other issues you can try omitting the [command] line, and ensure the godot editor is running while you work in sublime.
 
 ## GraphQL
 
@@ -198,7 +223,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"haskell-language-server"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "haskell-language-server": {
@@ -224,6 +249,10 @@ See also [Vue](#vue).
 
 There are multiple options:
 
+### Biome
+
+Follow installation instructions on [LSP-biome](https://github.com/sublimelsp/LSP-biome).
+
 ### Deno
 
 Follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
@@ -241,7 +270,7 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 1. Install the [quick-lint-js LSP server](https://quick-lint-js.com/install/cli/) for JavaScript.
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"quick-lint-js"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "quick-lint-js": {
@@ -253,7 +282,7 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
     }
     ```
 
-### TypeScript
+### TypeScript Language Server
 
 Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
 
@@ -271,7 +300,7 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"kotlinls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "kotlinls": {
@@ -290,16 +319,45 @@ Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LS
 
 ## LaTeX
 
+### TexLab
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
 
-Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
+### LTeX
+
+Spell check can be provided by [LSP-ltex-ls](https://github.com/sublimelsp/LSP-ltex-ls).
+
+### Digestif
+
+1. Follow [installation instructions for Digestif](https://github.com/astoff/digestif#installation) to install the server, and make sure it is available in your PATH.
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"digestif"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "digestif": {
+                "enabled": true,
+                "command": ["digestif"],
+                "selector": "text.tex.latex"
+            }
+        }
+    }
+    ```
+
+3. To enable auto-completions for the relevant situations in LaTeX files, adjust Sublime's `"auto_complete_selector"` setting (`Preferences > Settings`); for example
+
+    ```jsonc
+    {
+        "auto_complete_selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc, text.tex constant.other.citation, text.tex constant.other.reference, text.tex support.function, text.tex variable.parameter.function",
+    }
+    ```
 
 ## Lisp
 
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"cc-lsp"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "cc-lsp": {
@@ -323,6 +381,27 @@ Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-
 
 Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls).
 
+### markmark
+
+[Markmark](https://github.com/nikku/markmark) is a language server for Markdown files, supporting go to definition / references [and more](https://github.com/nikku/markmark#features).
+
+1. [Install Markmark](https://github.com/nikku/markmark#installation) (requires `Node >= 16`)
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"markmark"` client configuration to the `"clients"`:
+
+
+    ```jsonc
+    {
+        "clients": {
+            "markmark": {
+                "enabled": true,
+                "command": ["markmark-lsp", "--stdio"],
+                "selector": "text.html.markdown"
+            }
+        }
+    }
+    ```
+
+
 ## OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
@@ -330,7 +409,7 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"reason"` client configuration to the `"clients"`:
 
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "reason": {
@@ -341,6 +420,10 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
         }
     }
     ```
+
+## Odin
+
+Follow installation instructions on [ols](https://github.com/DanielGavin/ols/).
 
 ## PromQL
 
@@ -359,7 +442,7 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
 1. Install [Phpactor globally](https://phpactor.readthedocs.io/en/master/usage/standalone.html#installation-global).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"phpactor"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "phpactor": {
@@ -381,11 +464,21 @@ There are multiple options:
 
 ### Pyright
 
+> A full-featured, standards-based static type checker for Python. It is designed for high performance and can be used with large Python source bases.
+
 Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
-### Python LSP Server
+### Python LSP Server (pylsp)
+
+> A [Jedi](https://github.com/davidhalter/jedi)-powered language server that also supports running various linters through built-in plugins.
 
 Follow installation instructions on [LSP-pylsp](https://github.com/sublimelsp/LSP-pylsp).
+
+### LSP-ruff
+
+> An extremely fast Python linter and code transformation tool, written in Rust.
+
+Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP-ruff).
 
 ## R
 
@@ -401,7 +494,7 @@ There are multiple options:
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "ruby": {
@@ -409,7 +502,7 @@ There are multiple options:
                 "command": ["solargraph", "stdio"],
                 "selector": "source.ruby | text.html.ruby",
                 "initializationOptions": {
-                    "diagnostics": false
+                    "diagnostics": true
                 }
             }
         }
@@ -418,23 +511,99 @@ There are multiple options:
 
 ### Sorbet
 
-1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
+1. Install the `sorbet` and `sorbet-runtime` gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
-        gem install sorbet
-        gem install sorbet-runtime
+    ```sh
+    gem install sorbet
+    gem install sorbet-runtime
+    ```
 
     If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
 
-        bundle install
+    ```sh
+    bundle install
+    ```
 
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"sorbet"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "sorbet": {
                 "enabled": true,
                 "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+                "selector": "source.ruby | text.html.ruby",
+            }
+        }
+    }
+    ```
+
+### Stimulus LSP
+
+1. Install the `stimulus-language-server` package (see [github:marcoroth/stimulus-lsp](https://github.com/marcoroth/stimulus-lsp)):
+
+    ```sh
+    npm install -g stimulus-language-server
+    ```
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"stimulus"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "stimulus": {
+                "enabled": true,
+                "command": ["stimulus-language-server", "--stdio"],
+                "selector": "text.html.rails"
+            }
+        }
+    }
+    ```
+
+### Ruby LSP
+
+1. Install the `ruby-lsp` gem (see [github:Shopify/ruby-lsp](https://github.com/Shopify/ruby-lsp)):
+
+    ```sh
+    gem install ruby-lsp
+    ```
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"ruby-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "ruby-lsp": {
+                "enabled": true,
+                "command": ["ruby-lsp"],
+                "selector": "source.ruby | text.html.ruby",
+                "initializationOptions": {
+                    "enabledFeatures": {
+                        "diagnostics": true
+                    },
+                    "experimentalFeaturesEnabled": true
+                }
+            }
+        }
+    }
+    ```
+
+### Steep
+
+1. Install the `steep` gem (see [github:soutaro/steep](https://github.com/soutaro/steep)):
+
+    ```sh
+    gem install steep
+    ```
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"steep"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "steep": {
+                "enabled": true,
+                "command": ["steep", "langserver"],
                 "selector": "source.ruby | text.html.ruby",
             }
         }
@@ -462,7 +631,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     ```
 3.  Open `Preferences > Package Settings > LSP > Settings` and add the `"diagnostic-ls"` client configuration to the `"clients"`:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "diagnostic-ls": {
@@ -504,6 +673,24 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+## Solidity
+
+1. Install the [Ethereum](https://packagecontrol.io/packages/Ethereum) package from Package Control for syntax highlighting.
+2. Install the [github:NomicFoundation/hardhat-vscode](https://github.com/NomicFoundation/hardhat-vscode/tree/development/server) language server.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"solidity"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "solidity": {
+                "enabled": true,
+                "command": ["nomicfoundation-solidity-language-server", "--stdio"],
+                "selector": "source.solidity"
+            }
+        }
+    }
+    ```
+
 ## Stylelint
 
 Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).
@@ -516,6 +703,26 @@ Follow installation instructions on [LSP-svelte](https://github.com/sublimelsp/L
 
 Follow installation instructions on [LSP-SourceKit](https://github.com/sublimelsp/LSP-SourceKit).
 
+## SystemVerilog
+
+1. Install the [SystemVerilog](https://packagecontrol.io/packages/SystemVerilog) package from Package Control for syntax highlighting.
+2. Make sure you install the latest version of [Verible](https://github.com/chipsalliance/verible).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"verible"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "verible": {
+                "enabled": true,
+                "command": [
+                    "/PATH/TO/verible-verilog-ls"
+                ],
+                "selector": "source.systemverilog"
+            }
+        }
+    }
+    ```
+
 ## TAGML
 
 Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LSP-tagml).
@@ -526,36 +733,86 @@ Follow installation instructions on [LSP-tailwindcss](https://github.com/sublime
 
 ## Terraform
 
-1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
-2. Install [terraform-ls](https://github.com/hashicorp/terraform-ls) or [terraform-lsp](https://github.com/juliosueiras/terraform-lsp).
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"terraform"` client configuration to the `"clients"`:
+Follow installation instructions on [LSP-terraform](https://github.com/sublimelsp/LSP-terraform).
 
-    For `terraform-ls`:
+## Toit
 
-    ```json
+1. Install the [Toit](https://packagecontrol.io/packages/Toit) package from Package Control for syntax highlighting.
+2. Install the [Jaguar Language Server](https://github.com/toitlang/jaguar).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"jag"` client configuration to the `"clients"`:
+
+    ```jsonc
     {
         "clients": {
-            "terraform": {
+            "jag": {
                 "enabled": true,
-                "command": ["terraform-ls", "serve"],
-                "selector": "source.terraform"
+                "command": ["jag" "lsp"],
+                "selector": "source.toit"
             }
         }
     }
     ```
 
-    For `terraform-lsp`:
+## TypeScript
 
-    ```json
+See [Javascript/TypeScript](#javascripttypescript).
+
+## Typst
+
+1. Install the [Typst](https://packagecontrol.io/packages/Typst) package from Package Control for syntax highlighting.
+2. Download the [typst-lsp](https://github.com/nvarner/typst-lsp/releases) language server executable for your platform.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
     {
         "clients": {
-            "terraform": {
+            "typst-lsp": {
                 "enabled": true,
-                "command": ["terraform-lsp"],
-                "selector": "source.terraform"
+                "command": ["C:\\path\\to\\typst-lsp-win32-x64.exe"],  // adjust this path according to your platform/setup
+                "selector": "text.typst"
             }
         }
     }
+    ```
+
+4. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
+
+    ```jsonc
+    {
+        "auto_complete_triggers":
+        [
+            {"selector": "text.html, text.xml", "characters": "<"},
+            {"selector": "punctuation.accessor", "rhs_empty": true},
+            {"selector": "text.typst", "characters": "#", "rhs_empty": true},
+        ],
+    }
+    ```
+
+5. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
+
+    <!-- how to call: see https://github.com/nvarner/typst-lsp/blob/master/editors/vscode/src/extension.ts -->
+    ```jsonc title="Packages/User/Default.sublime-commands"
+    [
+        // ...
+        {
+            "caption": "typst-lsp - Pin the main file to the currently opened document",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "typst-lsp",
+                "command_name": "typst-lsp.doPinMain",
+                "command_args": ["${file_uri}"]
+            }
+        },
+        {
+            "caption": "typst-lsp - Unpin the main file",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "typst-lsp",
+                "command_name": "typst-lsp.doPinMain",
+                "command_args": ["detached"]
+            }
+        },
+    ]
     ```
 
 ## Vue
@@ -576,7 +833,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
 2. Install the [Vala Language Server](https://github.com/Prince781/vala-language-server)
 3. Add Vala Langauge Server to LSP settings:
 
-    ```json
+    ```jsonc
     {
         "clients": {
             "vala-language-server": {
@@ -590,7 +847,7 @@ Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LS
     }
     ```
 
-!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details." 
+!!! warning "Only works for certain project types. Visit [vala-language-server repo](https://github.com/Prince781/vala-language-server) for more details."
 
 ## XML
 

@@ -1,5 +1,6 @@
+from __future__ import annotations
+from typing import Optional
 import sublime
-from .typing import Optional
 
 
 class CSS:
@@ -10,9 +11,12 @@ class CSS:
         self.notification_classname = "notification"
         self.sheets = sublime.load_resource("Packages/LSP/sheets.css")
         self.sheets_classname = "lsp_sheet"
+        self.inlay_hints = sublime.load_resource("Packages/LSP/inlay_hints.css")
+        self.annotations = sublime.load_resource("Packages/LSP/annotations.css")
+        self.annotations_classname = "lsp_annotation"
 
 
-_css = None  # type: Optional[CSS]
+_css: Optional[CSS] = None
 
 
 def load() -> None:

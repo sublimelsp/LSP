@@ -1,38 +1,40 @@
-from LSP.plugin.core.edit import parse_workspace_edit, parse_text_edit
-from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
+from __future__ import annotations
+from LSP.plugin import apply_text_edits
+from LSP.plugin.core.edit import parse_workspace_edit
+from LSP.plugin.core.protocol import TextDocumentEdit, TextEdit, WorkspaceEdit
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.views import entire_content
+from LSP.plugin.edit import _parse_text_edit as parse_text_edit
+from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.edit import temporary_setting
+from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
+from typing import List
 import sublime
 import unittest
 
-TYPE_CHECKING = False
-if TYPE_CHECKING:
-    from typing import List, Dict, Optional, Any, Iterable
-    assert List and Dict and Optional and Any and Iterable
-
-LSP_TEXT_EDIT = dict(newText='newText\r\n', range=LSP_RANGE)
 FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
 URI = filename_to_uri(FILENAME)
-LSP_EDIT_CHANGES = {'changes': {URI: [LSP_TEXT_EDIT]}}
-
-LSP_EDIT_DOCUMENT_CHANGES = {
-    'documentChanges': [{
-        'textDocument': {'uri': URI},
-        'edits': [LSP_TEXT_EDIT]
-    }]
+LSP_TEXT_EDIT: TextEdit = {
+    'newText': 'newText\r\n',
+    'range': LSP_RANGE
 }
 
-LSP_EDIT_DOCUMENT_CHANGES_2 = {
-    'changes': None,
-    'documentChanges': [{
-        'textDocument': {'uri': URI},
-        'edits': [LSP_TEXT_EDIT]
-    }]
+LSP_EDIT_CHANGES: WorkspaceEdit = {
+    'changes': {URI: [LSP_TEXT_EDIT]}
+}
+
+LSP_TEXT_DOCUMENT_EDIT: TextDocumentEdit = {
+    'textDocument': {'uri': URI, 'version': None},
+    'edits': [LSP_TEXT_EDIT]
+}
+
+LSP_EDIT_DOCUMENT_CHANGES: WorkspaceEdit = {
+    'documentChanges': [LSP_TEXT_DOCUMENT_EDIT]
 }
 
 # Check that processing document changes does not result in clobbering.
-LSP_EDIT_DOCUMENT_CHANGES_3 = {
+LSP_EDIT_DOCUMENT_CHANGES_2: WorkspaceEdit = {
     "documentChanges": [
         {
             "edits": [
@@ -142,7 +144,7 @@ LSP_EDIT_DOCUMENT_CHANGES_3 = {
     ]
 }
 
-LSP_EDIT_DOCUMENT_CHANGES_4 = {
+LSP_EDIT_DOCUMENT_CHANGES_3: WorkspaceEdit = {
     'changes': {
         "file:///asdf/foo/bar": [
             {"newText": "hello there", "range": LSP_RANGE},
@@ -150,61 +152,50 @@ LSP_EDIT_DOCUMENT_CHANGES_4 = {
             {"newText": "kenobi", "range": LSP_RANGE}
         ]
     },
-    'documentChanges': [{
-        'textDocument': {'uri': URI},
-        'edits': [LSP_TEXT_EDIT]
-    }]
+    'documentChanges': [LSP_TEXT_DOCUMENT_EDIT]
 }
 
 
 class TextEditTests(unittest.TestCase):
 
     def test_parse_from_lsp(self):
-        (start, end, newText, version) = parse_text_edit(LSP_TEXT_EDIT, 0)
+        (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
         self.assertEqual(newText, 'newText\n')  # Without the \r
         self.assertEqual(start[0], 10)
         self.assertEqual(start[1], 4)
         self.assertEqual(end[0], 11)
         self.assertEqual(end[1], 3)
-        self.assertEqual(version, 0)
 
 
 class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_no_changes_from_lsp(self):
-        edit = parse_workspace_edit(dict())
-        self.assertEqual(len(edit), 0)
+        changes = parse_workspace_edit({})
+        self.assertEqual(len(changes), 0)
 
     def test_parse_changes_from_lsp(self):
-        edit = parse_workspace_edit(LSP_EDIT_CHANGES)
-        self.assertIn(URI, edit)
-        self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[URI]), 1)
+        changes = parse_workspace_edit(LSP_EDIT_CHANGES)
+        self.assertIn(URI, changes)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(len(changes[URI][0]), 1)
 
     def test_parse_document_changes_from_lsp(self):
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
-        self.assertIn(URI, edit)
-        self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[URI]), 1)
-
-    def test_protocol_violation(self):
-        # This should ignore the None in 'changes'
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
-        self.assertIn(URI, edit)
-        self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[URI]), 1)
+        changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
+        self.assertIn(URI, changes)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(len(changes[URI][0]), 1)
 
     def test_no_clobbering_of_previous_edits(self):
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
-        self.assertIn(URI, edit)
-        self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[URI]), 5)
+        changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
+        self.assertIn(URI, changes)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(len(changes[URI][0]), 5)
 
     def test_prefers_document_edits_over_changes(self):
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_4)
-        self.assertIn(URI, edit)
-        self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit[URI]), 1)  # not 3
+        changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
+        self.assertIn(URI, changes)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(len(changes[URI][0]), 1)  # not 3
 
 
 class SortByApplicationOrderTests(unittest.TestCase):
@@ -225,12 +216,78 @@ class SortByApplicationOrderTests(unittest.TestCase):
         self.assertEqual(sorted_edits[2][2], 'c')
 
     def test_sorts_in_application_order2(self):
-        edits = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
-        sorted_edits = list(reversed(sort_by_application_order(edits[URI])))
+        changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
+        (edits, version) = changes[URI]
+        self.assertEqual(version, 6)
+        parsed_edits = [parse_text_edit(edit) for edit in edits]
+        sorted_edits = list(reversed(sort_by_application_order(parsed_edits)))
         self.assertEqual(sorted_edits[0][0], (39, 26))
         self.assertEqual(sorted_edits[0][1], (39, 30))
         self.assertEqual(sorted_edits[1][0], (27, 28))
         self.assertEqual(sorted_edits[1][1], (27, 32))
+
+
+class ApplyDocumentEditTestCase(TextDocumentTestCase):
+
+    def test_applies_text_edit(self) -> None:
+        self.insert_characters('abc')
+        edits: List[TextEdit] = [{
+            'newText': 'x$0y',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 2,
+                }
+            }
+        }]
+        apply_text_edits(self.view, edits)
+        self.assertEquals(entire_content(self.view), 'ax$0yc')
+
+    def test_applies_text_edit_with_placeholder(self) -> None:
+        self.insert_characters('abc')
+        edits: List[TextEdit] = [{
+            'newText': 'x$0y',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 2,
+                }
+            }
+        }]
+        apply_text_edits(self.view, edits, process_placeholders=True)
+        self.assertEquals(entire_content(self.view), 'axyc')
+        self.assertEqual(len(self.view.sel()), 1)
+        self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
+
+    def test_applies_multiple_text_edits_with_placeholders(self) -> None:
+        self.insert_characters('ab')
+        newline_edit: TextEdit = {
+            'newText': '\n$0',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1,
+                },
+                'end': {
+                    'line': 0,
+                    'character': 1,
+                }
+            }
+        }
+        edits: List[TextEdit] = [newline_edit, newline_edit]
+        apply_text_edits(self.view, edits, process_placeholders=True)
+        self.assertEquals(entire_content(self.view), 'a\n\nb')
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.sel()[0], sublime.Region(2, 2))
+        self.assertEqual(self.view.sel()[1], sublime.Region(3, 3))
 
 
 class TemporarySetting(unittest.TestCase):

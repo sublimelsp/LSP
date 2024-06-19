@@ -1,11 +1,11 @@
-from LSP.plugin.core.protocol import ErrorCode
-from LSP.plugin.core.protocol import TextDocumentSyncKindFull
-from LSP.plugin.core.protocol import TextDocumentSyncKindIncremental
+from __future__ import annotations
+from LSP.plugin.core.protocol import ErrorCodes
+from LSP.plugin.core.protocol import TextDocumentSyncKind
 from LSP.plugin.core.sessions import SessionBufferProtocol
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import Any, Dict, Generator, Optional, List
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
+from typing import Any, Dict, Generator, List, Optional
 import os
 import sublime
 import tempfile
@@ -29,7 +29,7 @@ def verify(testcase: TextDocumentTestCase, method: str, input_params: Any, expec
 class ServerRequests(TextDocumentTestCase):
 
     def test_unknown_method(self) -> Generator:
-        yield from verify(self, "foobar/qux", {}, {"code": ErrorCode.MethodNotFound, "message": "foobar/qux"})
+        yield from verify(self, "foobar/qux", {}, {"code": ErrorCodes.MethodNotFound, "message": "foobar/qux"})
 
     def test_m_workspace_workspaceFolders(self) -> Generator:
         expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}
@@ -131,14 +131,14 @@ class ServerRequests(TextDocumentTestCase):
                     {"method": "workspace/didChangeWorkspaceFolders", "id": "asdf"},
                     {"method": "textDocument/didOpen", "id": "1"},
                     {"method": "textDocument/willSaveWaitUntil", "id": "2",
-                     "registerOptions": {"documentSelector": [{"language": "txt"}]}},
+                     "registerOptions": {"documentSelector": [{"language": "plaintext"}]}},
                     {"method": "textDocument/didChange", "id": "adsf",
-                     "registerOptions": {"syncKind": TextDocumentSyncKindFull, "documentSelector": [
-                       {"language": "txt"}
+                     "registerOptions": {"syncKind": TextDocumentSyncKind.Full, "documentSelector": [
+                       {"language": "plaintext"}
                      ]}},
                     {"method": "textDocument/completion", "id": "myCompletionRegistrationId",
                      "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
-                       {"language": "txt"}
+                       {"language": "plaintext"}
                      ]}}
                 ]
             },
@@ -154,9 +154,9 @@ class ServerRequests(TextDocumentTestCase):
         # willSaveWaitUntil is *only* registered on the buffer
         self.assertFalse(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"))
         sb = next(self.session.session_buffers_async())
-        self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKindFull)
+        self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKind.Full)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
-        self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKindIncremental)
+        self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKind.Incremental)
 
         # Check that textDocument/completion was registered onto the SessionBuffer, and check that the trigger
         # characters for each view were updated
@@ -207,7 +207,7 @@ class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
                     # Note that the triggerCharacters are disabled in the configuration.
                     {"method": "textDocument/completion", "id": "anotherCompletionRegistrationId",
                      "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
-                       {"language": "txt"}
+                       {"language": "plaintext"}
                      ]}}
                 ]
             },

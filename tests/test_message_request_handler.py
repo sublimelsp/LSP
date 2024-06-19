@@ -1,7 +1,8 @@
-import unittest
-from test_mocks import MockSession
+from __future__ import annotations
 from LSP.plugin.core.message_request_handler import MessageRequestHandler
+from test_mocks import MockSession
 import sublime
+import unittest
 
 
 class MessageRequestHandlerTest(unittest.TestCase):

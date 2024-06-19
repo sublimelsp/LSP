@@ -1,0 +1,16 @@
+=> 1.18.0
+
+# Features and Fixes
+
+- Implement inlay hints (#2018) (predragnikolic & jwortmann) (documentation: https://lsp.sublimetext.io/features/#inlay-hints)
+- Add option to highlight hover range (#2030) (jwortmann)
+- Optionally fallback to goto_reference in lsp_symbol_references (#2029) (timfjord)
+- Delay re-calculation of code lenses and inlay hints for currently not visible views (#2025) (jwortmann)
+- Improve strategy for semantic highlighting requests (#2020) (jwortmann)
+- Follow global settings more accurately whether to show snippet completions (#2017) (jwortmann)
+- docs: Add ruby steep language server (#2019) (jalkoby)
+- docs: Update F# guidance (#2011) (baronfel)
+
+# API changes
+
+- Define overridable methods in LspExecuteCommand (#2024) (rchl)

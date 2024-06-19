@@ -4,48 +4,66 @@ repo_url: https://github.com/sublimelsp/LSP/
 edit_uri: edit/main/docs/src/
 docs_dir: 'src'
 
+plugins:
+  - search
+  - redirects:
+      redirect_maps:
+        'guides/cplusplus.md': 'https://github.com/sublimelsp/LSP-clangd'
+        'guides/client_configuration.md': 'client_configuration.md'
+
 theme:
   name: material
   palette:
     scheme: slate
     accent: orange
     primary: orange
-
-  icon:
-    logo: fontawesome/solid/book-open
+  logo: images/logo.svg
+  favicon: images/favicon.svg
+  features:
+    - content.code.copy
+    - content.tooltips
+    - navigation.top
 
 # override css
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - js/redirect.js
+
 markdown_extensions:
   # tabs for ST4 and ST3 content
   - pymdownx.tabbed
 
-  # higlight code block
-  - pymdownx.highlight
+  # highlight code blocks
+  - pymdownx.highlight:
+      extend_pygments_lang:
+        - name: jsonc
+          lang: json
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
 
   # add tip, warning info boxes
   - admonition
+
+  - md_in_html
 
   # show # after each header
   - toc:
       permalink: '#'
 
 nav:
-    - Getting Started: index.md
-    - Features: features.md
-    - Language Servers: language_servers.md
-    - Commands: commands.md
-    - Keyboard Shortcuts: keyboard_shortcuts.md
-    - Customization: customization.md
-    - Guides:
-      - Client Configuration: guides/client_configuration.md
-      - Setup C/C++: guides/cplusplus.md
-    - Troubleshooting: troubleshooting.md
+  - Getting Started: index.md
+  - Language Servers: language_servers.md
+  - Features: features.md
+  - Commands: commands.md
+  - Keyboard Shortcuts: keyboard_shortcuts.md
+  - Customization: customization.md
+  - Client Configuration: client_configuration.md
+  - Troubleshooting: troubleshooting.md
 
 extra:
   social:
     - icon: fontawesome/brands/discord
-      link: https://discordapp.com/channels/280102180189634562/645268178397560865
+      link: https://discord.gg/TZ5WN8t

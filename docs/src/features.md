@@ -15,6 +15,11 @@ The LSP package enhances the auto-complete list with results provided by the lan
 To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
 or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
 
+To insert or replace a completion item using the opposite "completion_insert_mode" setting value, the following keybinding can be used <kbd>alt+enter</kbd>.
+Note, this feature can only be used if **Replace** or **Insert** are shown at the bottom of the autocomplete popup.
+
+[Example GIF 3](https://user-images.githubusercontent.com/22029477/189607770-1a8018f6-1fd1-40de-b6d9-be1f657dfc0d.gif)
+
 ## Goto Definition
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128551655-bfd55991-70a9-43da-a54a-f8d4cb3244c4.gif)
@@ -34,6 +39,8 @@ In addition to the basic "Goto Definition", the protocol also provides further r
 Additionally, the LSP's "Goto Definition" command can fall back to the built-in Sublime's "Goto Definition" if the `fallback` argument is set to `true`.
 This way, when there are no results found the built-in "Goto Definition" command will be triggered.
 
+To attempt to open the results in a certain group, you can use the `group` argument. If the specified `group` does not exist, then it will be ignored.
+
 ## Find References
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128551752-b37fe407-148c-41cf-b1e4-6fe96ed0f77c.gif)
@@ -43,6 +50,9 @@ This way, when there are no results found the built-in "Goto Definition" command
 By parsing and indexing a project with `.sublime-syntax` files, Sublime Text is able to provide an approximation of where a type or function is used.
 
 This package provides a replacement of that functionality if your language server has this capability.
+
+Additionally, the LSP's "Find References" command can fall back to the built-in Sublime's "Goto Reference" if the `fallback` argument is set to `true`.
+This way, when there are no results found the built-in "Goto Reference" command will be triggered.
 
 ## Highlights
 
@@ -124,9 +134,9 @@ Some language servers provide _global_ rename functionality as well. This packag
 
 Code Actions are an umbrella term for "Quick Fixes" and "Refactorings". They are actions that change the file (or more than one file) to resolve a diagnostic or apply a standard refactor technique. For instance, extracting a block of code into a separate method is usually called "Extract Method" and is a "Refactoring". Whereas "add a missing semicolon" would resolve a diagnostic that warns about a missing semicolon.
 
-Formatting is different from Code Actions, because Formatting is supposed to _not_ mutate the abstract syntax tree of the file, only move around white space. Any Code Action will mutate the abstract syntax tree.
+Formatting is different from Code Actions because Formatting is supposed to _not_ mutate the abstract syntax tree of the file, only move around white space. Any Code Action will mutate the abstract syntax tree.
 
-This package presents Code Actions as a bluish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as a light bulb in the Gutter Area.
+This package presents "Quick Fix" Code Actions as a bluish clickable annotation positioned to the right of the viewport. Alternatively, they can be presented as a light bulb in the Gutter Area.
 
 Sublime Text has no concept of Code Actions.
 
@@ -142,6 +152,24 @@ This package presents Code Lenses as a greenish clickable annotation positioned 
 
 Sublime Text has no concept of Code Lenses.
 
+=== ""show_code_lens": "annotation""
+
+    ![code-lens](./images/code-lens-annotation.png)
+
+=== ""show_code_lens": "phantom""
+
+    ![code-lens](./images/code-lens-phantom.png)
+
+## Inlay Hints
+
+Inlay hints are short textual annotations that show parameter names and type hints for servers that support that feature.
+
+![inlay-hints](./images/inlay-hints.png)
+
+Inlay hints are disabled by default and can be enabled with the `"show_inlay_hints": true` setting through `Preferences: LSP Settings`.
+
+!!! info "Some servers require additional settings to be enabled in order to show inlay hints."
+
 ## Server Commands
 
 In Sublime Text you can bind any runnable command to a key or add it to various UI elements. Commands in Sublime Text are normally supplied by plugins or packages written in Python. A language server may provide a runnable command as well. These kinds of commands are wrapped in an `lsp_execute` Sublime command that you can bind to a key.
@@ -154,8 +182,8 @@ A language server may itself also expose settings that you can use to customize 
 
 ## Server Initialization Options
 
-Initialization Options are like [Server Settings](concepts.md#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
+Initialization Options are like [Server Settings](#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
 
 ## Subprocesses
 
-A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](guides/client_configuration.md) matches, a subprocess is started that will then serve you language smartness.
+A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](client_configuration.md) matches, a subprocess is started that will then serve you language smartness.

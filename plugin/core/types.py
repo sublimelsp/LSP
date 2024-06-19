@@ -1,12 +1,12 @@
+from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
-from .typing import cast
+from .protocol import TextDocumentSyncKind
 from .url import filename_to_uri
 from .url import parse_uri
-from threading import RLock
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple, TypedDict, TypeVar, Union
+from typing import cast
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -18,11 +18,11 @@ import posixpath
 import socket
 import sublime
 import time
-import urllib.parse
 
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
+WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
@@ -37,7 +37,18 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
-    result = base_scope_map.get(base_scope, base_scope.split(".")[-1])
+    result = ""
+    # Try to find exact match or less specific match consisting of at least 2 components.
+    scope_parts = base_scope.split('.')
+    while len(scope_parts) >= 2:
+        result = base_scope_map.get('.'.join(scope_parts))
+        if result:
+            break
+        scope_parts.pop()
+    if not result:
+        # If no match, use the second component of the scope as the language ID.
+        scope_parts = base_scope.split('.')
+        result = scope_parts[1] if len(scope_parts) > 1 else scope_parts[0]
     return result if isinstance(result, str) else ""
 
 
@@ -111,7 +122,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
     :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
-    :param      condition:     The condition that must evaluate to True in order to run the funtion
+    :param      condition:     The condition that must evaluate to True in order to run the function
     :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
                                main thread
     """
@@ -135,41 +146,46 @@ class SettingsRegistration:
         self._settings.clear_on_change("LSP")
 
 
-class Debouncer:
+class DebouncerNonThreadSafe:
+    """
+    Debouncer for delaying execution of a function until specified timeout time.
 
-    def __init__(self) -> None:
+    When calling `debounce()` multiple times, if the time span between calls is shorter than the specified `timeout_ms`,
+    the callback function will only be called once, after `timeout_ms` since the last call.
+
+    This implementation is not thread safe. You must ensure that `debounce()` is called from the same thread as
+    was chosen during initialization through the `async_thread` argument.
+    """
+
+    def __init__(self, async_thread: bool) -> None:
+        self._async_thread = async_thread
         self._current_id = -1
         self._next_id = 0
-        self._current_id_lock = RLock()
 
-    def debounce(self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
-                 async_thread: bool = False) -> None:
+    def debounce(
+        self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True
+    ) -> None:
         """
-        Possibly run a function at a later point in time, either on the async thread or on the main thread.
+        Possibly run a function at a later point in time on the thread chosen during initialization.
 
         :param      f:             The function to possibly run
         :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
-        :param      condition:     The condition that must evaluate to True in order to run the funtion
-        :param      async_thread:  If true, run the function on the async worker thread, otherwise run
-                                   the function on the main thread
+        :param      condition:     The condition that must evaluate to True in order to run the function
         """
 
         def run(debounce_id: int) -> None:
-            with self._current_id_lock:
-                if debounce_id != self._current_id:
-                    return
+            if debounce_id != self._current_id:
+                return
             if condition():
                 f()
 
-        runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
-        with self._current_id_lock:
-            current_id = self._current_id = self._next_id
+        runner = sublime.set_timeout_async if self._async_thread else sublime.set_timeout
+        current_id = self._current_id = self._next_id
         self._next_id += 1
         runner(lambda: run(current_id), timeout_ms)
 
     def cancel_pending(self) -> None:
-        with self._current_id_lock:
-            self._current_id = -1
+        self._current_id = -1
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
@@ -184,44 +200,49 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 
 class Settings:
 
-    # This is only for mypy
-    diagnostics_additional_delay_auto_complete_ms = None  # type: int
-    diagnostics_delay_ms = None  # type: int
-    diagnostics_gutter_marker = None  # type: str
-    diagnostics_highlight_style = None  # type: Union[str, Dict[str, str]]
-    diagnostics_panel_include_severity_level = None  # type: int
-    disabled_capabilities = None  # type: List[str]
-    document_highlight_style = None  # type: str
-    inhibit_snippet_completions = None  # type: bool
-    inhibit_word_completions = None  # type: bool
-    link_highlight_style = None  # type: str
-    log_debug = None  # type: bool
-    log_max_size = None  # type: int
-    log_server = None  # type: List[str]
-    lsp_code_actions_on_save = None  # type: Dict[str, bool]
-    lsp_format_on_save = None  # type: bool
-    on_save_task_timeout_ms = None  # type: int
-    only_show_lsp_completions = None  # type: bool
-    popup_max_characters_height = None  # type: int
-    popup_max_characters_width = None  # type: int
-    semantic_highlighting = None  # type: bool
-    show_code_actions = None  # type: str
-    show_code_lens = None  # type: str
-    show_code_actions_in_hover = None  # type: bool
-    show_diagnostics_count_in_view_status = None  # type: bool
-    show_multiline_diagnostics_highlights = None  # type: bool
-    show_diagnostics_in_view_status = None  # type: bool
-    show_diagnostics_panel_on_save = None  # type: int
-    show_diagnostics_severity_level = None  # type: int
-    show_references_in_quick_panel = None  # type: bool
-    show_symbol_action_links = None  # type: bool
-    show_view_status = None  # type: bool
+    diagnostics_additional_delay_auto_complete_ms = cast(int, None)
+    diagnostics_delay_ms = cast(int, None)
+    diagnostics_gutter_marker = cast(str, None)
+    diagnostics_highlight_style = cast(Union[str, Dict[str, str]], None)
+    diagnostics_panel_include_severity_level = cast(int, None)
+    disabled_capabilities = cast(List[str], None)
+    document_highlight_style = cast(str, None)
+    hover_highlight_style = cast(str, None)
+    inhibit_snippet_completions = cast(bool, None)
+    inhibit_word_completions = cast(bool, None)
+    initially_folded = cast(List[str], None)
+    link_highlight_style = cast(str, None)
+    completion_insert_mode = cast(str, None)
+    log_debug = cast(bool, None)
+    log_max_size = cast(int, None)
+    log_server = cast(List[str], None)
+    lsp_code_actions_on_save = cast(Dict[str, bool], None)
+    lsp_format_on_paste = cast(bool, None)
+    lsp_format_on_save = cast(bool, None)
+    on_save_task_timeout_ms = cast(int, None)
+    only_show_lsp_completions = cast(bool, None)
+    popup_max_characters_height = cast(int, None)
+    popup_max_characters_width = cast(int, None)
+    semantic_highlighting = cast(bool, None)
+    show_code_actions = cast(str, None)
+    show_code_lens = cast(str, None)
+    show_inlay_hints = cast(bool, None)
+    show_code_actions_in_hover = cast(bool, None)
+    show_diagnostics_annotations_severity_level = cast(int, None)
+    show_diagnostics_count_in_view_status = cast(bool, None)
+    show_multiline_diagnostics_highlights = cast(bool, None)
+    show_multiline_document_highlights = cast(bool, None)
+    show_diagnostics_in_view_status = cast(bool, None)
+    show_diagnostics_panel_on_save = cast(int, None)
+    show_diagnostics_severity_level = cast(int, None)
+    show_references_in_quick_panel = cast(bool, None)
+    show_symbol_action_links = cast(bool, None)
+    show_view_status = cast(bool, None)
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
 
     def update(self, s: sublime.Settings) -> None:
-
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
@@ -232,25 +253,32 @@ class Settings:
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
+        r("hover_highlight_style", "")
+        r("initially_folded", [])
         r("link_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
+        r("lsp_format_on_paste", False)
         r("lsp_format_on_save", False)
         r("on_save_task_timeout_ms", 2000)
         r("only_show_lsp_completions", False)
+        r("completion_insert_mode", 'insert')
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
         r("semantic_highlighting", False)
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
+        r("show_inlay_hints", False)
         r("show_code_actions_in_hover", True)
+        r("show_diagnostics_annotations_severity_level", 0)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
         r("show_multiline_diagnostics_highlights", True)
-        r("show_diagnostics_panel_on_save", 2)
+        r("show_multiline_document_highlights", True)
+        r("show_diagnostics_panel_on_save", 0)
         r("show_diagnostics_severity_level", 2)
-        r("show_references_in_quick_panel", False)
+        r("show_references_in_quick_panel", True)
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 
@@ -295,30 +323,34 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
-        if self.document_highlight_style == "fill":
-            return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
-        elif self.document_highlight_style == "stippled":
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        else:
-            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+    def highlight_style_region_flags(self, style_str: str) -> Tuple[int, int]:
+        default = sublime.NO_UNDO
+        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
+            style = default | sublime.DRAW_NO_OUTLINE
+            return style, style
+        if style_str == "outline":
+            style = default | sublime.DRAW_NO_FILL
+            return style, style
+        if style_str == "stippled":
+            return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+        return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
     def _style_str_to_flag(style_str: str) -> Optional[int]:
+        default = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.NO_UNDO
         # This method could be a dict or lru_cache
         if style_str == "":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        elif style_str == "box":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL
-        elif style_str == "underline":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
-        elif style_str == "stippled":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        elif style_str == "squiggly":
-            return sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE  # noqa: E501
-        else:
-            # default style
-            return None
+            return default | sublime.DRAW_NO_OUTLINE
+        if style_str == "box":
+            return default
+        if style_str == "underline":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+        if style_str == "stippled":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE
+        if style_str == "squiggly":
+            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE
+        # default style (includes NO_UNDO)
+        return None
 
     def diagnostics_highlight_style_flags(self) -> List[Optional[int]]:
         """Returns flags for highlighting diagnostics on single lines per severity"""
@@ -326,7 +358,7 @@ class Settings:
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
         elif isinstance(self.diagnostics_highlight_style, dict):
-            flags = []  # type: List[Optional[int]]
+            flags: List[Optional[int]] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style
@@ -378,7 +410,7 @@ class DocumentFilter:
                 return False
         if self.scheme:
             uri = view.settings().get("lsp_uri")
-            if isinstance(uri, str) and urllib.parse.urlparse(uri).scheme != self.scheme:
+            if isinstance(uri, str) and parse_uri(uri)[0] != self.scheme:
                 return False
         if self.pattern:
             if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):
@@ -407,7 +439,7 @@ class DocumentSelector:
 
 # method -> (capability dotted path, optional registration dotted path)
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
-_METHOD_TO_CAPABILITY_EXCEPTIONS = {
+_METHOD_TO_CAPABILITY_EXCEPTIONS: Dict[str, Tuple[str, Optional[str]]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
@@ -419,7 +451,7 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS = {
     'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
     'textDocument/formatting': ('documentFormattingProvider', None),
     'textDocument/documentColor': ('colorProvider', None)
-}  # type: Dict[str, Tuple[str, Optional[str]]]
+}
 
 
 def method_to_capability(method: str) -> Tuple[str, str]:
@@ -447,9 +479,9 @@ def normalize_text_sync(textsync: Union[None, int, Dict[str, Any]]) -> Dict[str,
     """
     Brings legacy text sync capabilities to the most modern format
     """
-    result = {}  # type: Dict[str, Any]
+    result: Dict[str, Any] = {}
     if isinstance(textsync, int):
-        change = {"syncKind": textsync}  # type: Optional[Dict[str, Any]]
+        change: Optional[Dict[str, Any]] = {"syncKind": textsync}
         result["textDocumentSync"] = {"didOpen": {}, "save": {}, "didClose": {}, "change": change}
     elif isinstance(textsync, dict):
         new = {}
@@ -534,9 +566,9 @@ class Capabilities(DottedDict):
     def should_notify_did_open(self) -> bool:
         return "textDocumentSync.didOpen" in self
 
-    def text_sync_kind(self) -> int:
-        value = self.get("textDocumentSync.change.syncKind")
-        return value if isinstance(value, int) else TextDocumentSyncKindNone
+    def text_sync_kind(self) -> TextDocumentSyncKind:
+        value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
+        return value if isinstance(value, int) else TextDocumentSyncKind.None_
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
@@ -578,7 +610,7 @@ class PathMap:
     def parse(cls, json: Any) -> "Optional[List[PathMap]]":
         if not isinstance(json, list):
             return None
-        result = []  # type: List[PathMap]
+        result: List[PathMap] = []
         for path_map in json:
             if not isinstance(path_map, dict):
                 debug('path map entry is not an object')
@@ -654,12 +686,13 @@ class ClientConfig:
                  disabled_capabilities: DottedDict = DottedDict(),
                  file_watcher: FileWatcherConfig = {},
                  semantic_tokens: Optional[Dict[str, str]] = None,
+                 diagnostics_mode: str = "open_files",
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
         if isinstance(schemes, list):
-            self.schemes = schemes  # type: List[str]
+            self.schemes: List[str] = schemes
         else:
             self.schemes = ["file"]
         if isinstance(command, list):
@@ -680,6 +713,7 @@ class ClientConfig:
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
         self.semantic_tokens = semantic_tokens
+        self.diagnostics_mode = diagnostics_mode
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> "ClientConfig":
@@ -713,6 +747,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
+            diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -743,6 +778,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
+            diagnostics_mode=d.get("diagnostics_mode", "open_files"),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -773,12 +809,13 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
+            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
     def resolve_transport_config(self, variables: Dict[str, str]) -> TransportConfig:
-        tcp_port = None  # type: Optional[int]
-        listener_socket = None  # type: Optional[socket.socket]
+        tcp_port: Optional[int] = None
+        listener_socket: Optional[socket.socket] = None
         if self.tcp_port is not None:
             # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
@@ -813,7 +850,7 @@ class ClientConfig:
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = "{}: {}".format(self.name, message) if message else self.name
+            status = "{} ({})".format(self.name, message) if message else self.name
             view.set_status(self.status_key, status)
 
     def erase_view_status(self, view: sublime.View) -> None:
@@ -823,11 +860,10 @@ class ClientConfig:
         syntax = view.syntax()
         if not syntax:
             return False
-        # Every part of a x.y.z scope seems to contribute 8.
-        # An empty selector result in a score of 1.
-        # A non-matching non-empty selector results in a score of 0.
-        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
-        return scheme in self.schemes and sublime.score_selector(syntax.scope, self.selector) >= 8
+        selector = self.selector.strip()
+        if not selector:
+            return False
+        return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
 
     def map_client_path_to_server_uri(self, path: str) -> str:
         if self.path_maps:
@@ -839,7 +875,7 @@ class ClientConfig:
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
         scheme, path = parse_uri(uri)
-        if scheme != "file":
+        if scheme not in ("file", "res"):
             raise ValueError("{}: {} URI scheme is unsupported".format(uri, scheme))
         if self.path_maps:
             for path_map in self.path_maps:
@@ -862,14 +898,14 @@ class ClientConfig:
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> Dict[str, Any]:
-        result = {}  # type: Dict[str, Any]
+        result: Dict[str, Any] = {}
         for k, v in options.items():
             if not self.is_disabled_capability("{}.{}".format(capability_path, k)):
                 result[k] = v
         return result
 
     def __repr__(self) -> str:
-        items = []  # type: List[str]
+        items: List[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
                 items.append("{}={}".format(k, repr(v)))

@@ -5,10 +5,23 @@
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
-  // Run the server's formatProvider (if supported) on a file before saving.
+  // --- Document Formatting ------------------------------------------------------------
+
+  // If supported, format the pasted text.
+  "lsp_format_on_paste": false,
+
+  // If supported, format a file before saving.
   // This option is also supported in syntax-specific settings and/or in the
   // "settings" section of project files.
   "lsp_format_on_save": false,
+
+  // --- Code Actions -------------------------------------------------------------------
+
+  // Show code actions:
+  // "annotation" - show an annotation on the right when code actions are available.
+  // "bulb" - show a bulb in the gutter when code actions are available.
+  // "" - don't show code actions.
+  "show_code_actions": "annotation",
 
   // A dictionary of code action identifiers that should be triggered on save.
   //
@@ -31,14 +44,7 @@
   // formatting or WillSaveWaitUntil) are each allowed to run for.
   "on_save_task_timeout_ms": 2000,
 
-  // Open the diagnostics panel automatically on save when diagnostics level is
-  // equal to or less than:
-  // none: 0 (never open the panel automatically)
-  // error: 1
-  // warning: 2
-  // info: 3
-  // hint: 4
-  "show_diagnostics_panel_on_save": 2,
+  // --- Diagnostics --------------------------------------------------------------------
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
@@ -55,6 +61,25 @@
   // info: 3
   // hint: 4
   "show_diagnostics_severity_level": 4,
+
+  // Show diagnostics as annotations with level equal to or less than:
+  // none: 0 (never show)
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  // When enabled, it's recommended not to use the "annotation" value for the
+  // `show_code_actions` option as it's impossible to enforce which one gets shown first.
+  "show_diagnostics_annotations_severity_level": 0,
+
+  // Open the diagnostics panel automatically on save when diagnostics level is
+  // equal to or less than:
+  // none: 0 (never open the panel automatically)
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "show_diagnostics_panel_on_save": 0,
 
   // Only show diagnostics in the panel with level equal to or less than:
   // error: 1
@@ -79,12 +104,6 @@
   // See also: "diagnostics_delay_ms".
   "diagnostics_additional_delay_auto_complete_ms": 0,
 
-  // Highlighting style of "highlights": accentuating nearby text entities that
-  // are related to the one under your cursor.
-  // Valid values are "fill", "underline", "stippled", or "".
-  // When set to the empty string (""), no document highlighting is requested.
-  "document_highlight_style": "underline",
-
   // Highlight style of code diagnostics.
   // Can be a string, or a mapping of string->string for severity-based styling.
   // Valid string values are "box", "underline", "stippled", "squiggly" or "".
@@ -103,56 +122,13 @@
 
   // Gutter marker for code diagnostics.
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
-  "diagnostics_gutter_marker": "dot",
-
-  // Highlight style of links to internal or external resources, like another text document
-  // or a web site. Link navigation is implemented via the popup on mouse hover.
-  // Valid values are:
-  // "underline"
-  // "none" - disables special highlighting, but still allows to navigate links in the hover popup
-  // "disabled" - disables highlighting and the hover popup for links
-  // Note that depending on the syntax and color scheme, some internet URLs may still be
-  // underlined via regular syntax highlighting.
-  "link_highlight_style": "underline",
-
-  // Enable semantic highlighting in addition to standard syntax highlighting (experimental!).
-  // Note: Must be supported by the language server and also requires a special rule in the
-  // color scheme to work. If you use none of the built-in color schemes from Sublime Text,
-  // please see the documentation under
-  //   https://lsp.sublimetext.io/customization/#semantic-highlighting
-  // for a description about how to configure your color scheme for semantic highlighting.
-  "semantic_highlighting": false,
-
-  // Show code actions:
-  // "annotation" - show an annotation on the right when code actions are available.
-  // "bulb" - show a bulb in the gutter when code actions are available.
-  // "" - don't show code actions.
-  "show_code_actions": "annotation",
-
-  // Show code lens:
-  // "annotation" - show an annotation on the right when code actions are available
-  // "phantom" - show a phantom on the top when code actions are available
-  "show_code_lens": "annotation",
-
-  // Show code actions in hover popup if available
-  "show_code_actions_in_hover": true,
+  "diagnostics_gutter_marker": "sign",
 
   // Show diagnostics spanning multiple lines in the view (as outlines).
   // See also: "diagnostics_highlight_style".
   "show_multiline_diagnostics_highlights": true,
 
-  // Show symbol action links in hover popup if available
-  "show_symbol_action_links": true,
-
-  // Disable Sublime Text's snippet completions.
-  "inhibit_snippet_completions": false,
-
-  // Disable Sublime Text's word completions. When set to `true`, this also disables Sublime Text's internal completion
-  // sorting algorithm and instead uses the sorting defined by the relevant language server.
-  "inhibit_word_completions": true,
-
-  // Show symbol references in Sublime's quick panel instead of the bottom panel.
-  "show_references_in_quick_panel": false,
+  // --- Hover popup --------------------------------------------------------------------
 
   // The maximum number of characters (approximately) before wrapping in the popup.
   "popup_max_characters_width": 120,
@@ -160,12 +136,101 @@
   // The maximum number of characters (approximately) before a scrollbar appears.
   "popup_max_characters_height": 1000,
 
+  // Show code actions in hover popup if available
+  "show_code_actions_in_hover": true,
+
+  // Show symbol action links in hover popup if available
+  "show_symbol_action_links": true,
+
+  // --- Completions --------------------------------------------------------------------
+
+  // Disable Sublime Text's snippet completions.
+  "inhibit_snippet_completions": false,
+
+  // Disable Sublime Text's word completions. When set to `true`, this also disables
+  // Sublime Text's internal completion sorting algorithm and instead uses the sorting
+  // defined by the relevant language server.
+  "inhibit_word_completions": true,
+
+  // The mode used for inserting completions:
+  // - `insert` would insert the completion text in a middle of the word
+  // - `replace` would replace the existing word with a new completion text
+  // An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`
+  // can be used to insert completion using the opposite mode to the one selected here.
+  // Note: Must be supported by the language server.
+  "completion_insert_mode": "insert",
+
+  // --- Other --------------------------------------------------------------------------
+
+  // Show symbol references in Sublime's quick panel instead of the output panel.
+  "show_references_in_quick_panel": true,
+
+  // Show code lens:
+  // "annotation" - show an annotation on the right when code actions are available
+  // "phantom" - show a phantom on the top when code actions are available
+  "show_code_lens": "annotation",
+
+   // Show inlay hints in the editor. Inlay hints are short annotations within the code,
+   // which show variable types or parameter names.
+   // This is the default value used for new windows but can be overriden per-window
+   // using the `LSP: Toggle Inlay Hints` command from the Command Palette, Main Menu
+   // or a custom keybinding.
+  "show_inlay_hints": false,
+
+  // Highlighting style of "highlights": accentuating nearby text entities that
+  // are related to the one under your cursor.
+  // Valid values are "background", "underline", "stippled", "outline", or "".
+  // When set to the empty string (""), no document highlighting is requested.
+  // See https://lsp.sublimetext.io/customization/#document-highlights for how to
+  // customize the color.
+  "document_highlight_style": "underline",
+
+  // Show document highlights spanning multiple lines in the view (as outlines).
+  // See also: "document_highlight_style".
+  "show_multiline_document_highlights": true,
+
+  // Highlight style of the word or range for which a hover popup is shown.
+  // Valid values are "background", "underline", "stippled", "outline", or "".
+  // When set to the empty string (""), no highlighting is applied.
+  // See https://lsp.sublimetext.io/customization/#hover-highlights for how to
+  // customize the color.
+  "hover_highlight_style": "",
+
+  // Highlight style of links to internal or external resources, like another text
+  // document or a web site. Link navigation is implemented via the popup on mouse hover.
+  // Valid values are:
+  // "underline"
+  // "none" - disables special highlighting, but still allows to navigate links in the
+  //          hover popup
+  // "disabled" - disables highlighting and the hover popup for links
+  // Note that depending on the syntax and color scheme, some internet URLs may still be
+  // underlined via regular syntax highlighting.
+  "link_highlight_style": "underline",
+
+  // Enable semantic highlighting in addition to standard syntax highlighting.
+  // Note: Must be supported by the language server and also requires a special rule in
+  // the color scheme to work. If you use none of the built-in color schemes from Sublime
+  // Text then see the documentation at
+  // https://lsp.sublimetext.io/customization/#semantic-highlighting for a description
+  // about how to configure your color scheme for semantic highlighting.
+  "semantic_highlighting": false,
+
+  // Determines ranges which initially should be folded when a document is opened,
+  // provided that the language server has support for this.
+  "initially_folded": [
+    // "comment",
+    // "imports",
+    // "region",
+  ],
+
+  // --- Debugging ----------------------------------------------------------------------
+
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
   // Log communication from and to language servers.
   // Set to an array of values:
-  // - "panel" - log to the LSP Language Servers output panel
+  // - "panel" - log to the LSP Log Panel
   // - "remote" - start a local websocket server on port 9981. Can be connected to with
   //              a websocket client to receive the log messages in real time.
   // For backward-compatibility, when set to "true", enables the "panel" logger and when
@@ -173,7 +238,7 @@
   // This output panel can be toggled from the command palette with the
   // command "LSP: Toggle Log Panel".
   "log_server": [
-    // "panel",
+    "panel",
     // "remote",
   ],
 
@@ -182,6 +247,13 @@
   // the panel instead. If you don't want a limit, set this to zero.
   "log_max_size": 8192,
 
+  // --- Server Configurations ----------------------------------------------------------
+
+  // NOTE: Instead of manually configuring the servers, consider using one of the
+  // existing helper packages for the language of your choice. The full list of
+  // those is available at https://lsp.sublimetext.io/language_servers/
+  //
+  //
   // User server configurations can be used to:
   // - partially override a configuration in the "default_clients", or
   // - create new configurations.
@@ -246,6 +318,17 @@
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },
+  //
+  //     // Sets the diagnostics mode:
+  //     // "open_files" - All diagnostics reported from the server are shown.
+  //     //     If the server supports `diagnosticProvider`, diagnostics are
+  //     //     requested only for files which are opened in the editor and they
+  //     //     are cleared when the file gets closed.
+  //     // "workspace" - If there are project folders (folders in the side bar),
+  //     //     diagnostics for files not within those folders are ignored.
+  //     //     If the server supports `diagnosticProvider.workspaceDiagnostics`,
+  //     //     diagnostics are requested for all files in the project folders.
+  //     "diagnostics_mode": "open_files",
   //   }
   // }
   "clients": {},
@@ -254,19 +337,6 @@
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
   "default_clients": {
-    "rust-analyzer": {
-      "command": [
-        "rust-analyzer"
-      ],
-      "selector": "source.rust",
-    },
-    "clangd": {
-      "command": [
-        "clangd"
-      ],
-      "selector": "source.c | source.c++ | source.objc | source.objc++",
-      "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)",
-    },
     "erlang-ls": {
       "command": [
         "erlang_ls",
@@ -281,12 +351,6 @@
         "--stdio"
       ],
       "selector": "source.reason | source.ocaml",
-    },
-    "gopls": {
-      "command": [
-        "gopls"
-      ],
-      "selector": "source.go",
     },
     "polymer-ide": {
       "command": [

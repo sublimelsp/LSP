@@ -1,3 +1,4 @@
+from __future__ import annotations
 from LSP.plugin.core.protocol import SignatureHelp
 from LSP.plugin.core.signature_help import SigHelp
 import sublime
@@ -202,7 +203,7 @@ class SignatureHelpTest(unittest.TestCase):
             r'''
             <p>
             <div style="font-size: 0\.9rem">
-            <b>2</b> of <b>2</b> overloads \(use ↑ ↓ to navigate, press Esc to hide\):
+            <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\):
             </div>
             </p>
             <div class="highlight"><pre><span style="color: #\w{6}">f\(</span>

@@ -1,27 +1,32 @@
-from .core.protocol import Range
+from __future__ import annotations
 from .core.protocol import Request
+from .core.protocol import SelectionRange
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.sessions import method_to_capability
-from .core.typing import Any, Dict, Optional, List, Tuple
 from .core.views import range_to_region
 from .core.views import selection_range_params
+from typing import Any, List, Optional, Tuple
 import sublime
 
 
 class LspExpandSelectionCommand(LspTextCommand):
-    method = 'textDocument/selectionRange'
-    capability = method_to_capability(method)[0]
+
+    capability = 'selectionRangeProvider'
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._regions = []  # type: List[sublime.Region]
+        self._regions: List[sublime.Region] = []
         self._change_count = 0
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
+        return fallback or super().is_enabled(event, point)
+
+    def is_visible(self, event: Optional[dict] = None, point: Optional[int] = None, fallback: bool = False) -> bool:
+        if self.applies_to_context_menu(event):
+            return self.is_enabled(event, point, fallback)
         return True
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None, fallback: bool = False) -> None:
         position = get_position(self.view, event)
         if position is None:
             return
@@ -30,11 +35,11 @@ class LspExpandSelectionCommand(LspTextCommand):
             params = selection_range_params(self.view)
             self._regions.extend(self.view.sel())
             self._change_count = self.view.change_count()
-            session.send_request(Request(self.method, params), self.on_result, self.on_error)
-        else:
+            session.send_request(Request.selectionRange(params), self.on_result, self.on_error)
+        elif fallback:
             self._run_builtin_expand_selection("No {} found".format(self.capability))
 
-    def on_result(self, params: Any) -> None:
+    def on_result(self, params: Optional[List[SelectionRange]]) -> None:
         if self._change_count != self.view.change_count():
             return
         if params:
@@ -57,8 +62,8 @@ class LspExpandSelectionCommand(LspTextCommand):
         self._status_message("{}, reverting to built-in Expand Selection".format(fallback_reason))
         self.view.run_command("expand_selection", {"to": "smart"})
 
-    def _smallest_containing(self, region: sublime.Region, param: Dict[str, Any]) -> Tuple[int, int]:
-        r = range_to_region(Range.from_lsp(param["range"]), self.view)
+    def _smallest_containing(self, region: sublime.Region, param: SelectionRange) -> Tuple[int, int]:
+        r = range_to_region(param["range"], self.view)
         # Test for *strict* containment
         if r.contains(region) and (r.a < region.a or r.b > region.b):
             return r.a, r.b

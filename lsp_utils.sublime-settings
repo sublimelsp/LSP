@@ -1,0 +1,14 @@
+{
+    // Specifies the type and priority of the Node.js installation that should be used for Node.js-based servers.
+    // The allowed values are:
+    //  - 'system' - a Node.js runtime found on the PATH
+    //  - 'local' - a Node.js runtime managed by LSP that doesn't affect the system
+    // The order in which the values are specified determines which one is tried first,
+    // with the later one being used as a fallback.
+    // You can also specify just a single value to disable the fallback.
+    "nodejs_runtime": ["system", "local"],
+    // Uses Node.js runtime from the Electron package rather than the official distribution. This has the benefit of
+    // lower memory usage due to it having the pointer compression (https://v8.dev/blog/pointer-compression) enabled.
+    // Only relevant when using `local` variant of `nodejs_runtime`.
+    "local_use_electron": false,
+}

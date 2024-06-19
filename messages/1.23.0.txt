@@ -1,0 +1,40 @@
+=> 1.23.0
+
+--- WARNING ---
+To ensure that everything works properly after LSP package is updated, it's strongly recommended to restart
+Sublime Text once it finishes updating all packages.
+--- WARNING ---
+
+# Breaking changes
+
+- removed bundled `rust-analyzer` client config - install https://packagecontrol.io/packages/LSP-rust-analyzer instead
+- removed bundled `clangd` client config - install https://packagecontrol.io/packages/LSP-clangd instead
+- removed bundled `gopls` client config - install https://packagecontrol.io/packages/LSP-gopls instead
+
+If you had one of those configs enabled in your LSP Settings then it will no longer do anything. You can
+restore the removed config from https://github.com/sublimelsp/LSP/pull/2206 into your LSP Settings but we
+instead recommend installing the relevant helper package which takes care of managing the server dependency
+and includes all necessary settings that the server can use.
+
+# Features
+
+- (inlay hints) toggle inlay hints command/menu item (#2023) (Предраг Николић)
+- (completions) add support for CompletionList.itemDefaults (#2194) (Предраг Николић)
+
+# Fixes and Improvements
+
+- (settings) better grouping of default settings (#2206) (Rafał Chłodnicki)
+- (general) don't initialize TextChange listeners for widgets (#2213) (Rafał Chłodnicki)
+- (general) protect again invalid `auto_complete_triggers` values (#2209) (Rafał Chłodnicki)
+- (general) tell if any selection changed in addition to just the first region (#2204) (Rafał Chłodnicki)
+- (general) Don't run non-essential requests during save (#2203) (Rafał Chłodnicki)
+- (general) add language ID mapping for TailwindCSS syntax (#2198) (Предраг Николић)
+- (general) fix hidden code action menu entries sometimes being visible (#2187) (jwortmann)
+- (completions) optimize performance of handling huge completion payloads (#2190) (Rafał Chłodnicki)
+- (completions) tweak formatting with labelDetails (#2207) (jwortmann)
+- (diagnostics) do not wrongly ignore diagnostics when symlinks are involved (#2210) (Rafał Chłodnicki)
+- (diagnostics) notify opened files immediately if there are pending diagnostics (#2211) (Rafał Chłodnicki)
+- (call hierarchy) highlight call location for incoming calls (#2208) (jwortmann)
+- (code actions) check capabilities against buffer when requesting code actions (#2202) (Rafał Chłodnicki)
+- (docs) add Digestif server configuration (#2205) (jwortmann)
+- (logging) fix log panel not scrolling on initial open (#2188) (Rafał Chłodnicki)

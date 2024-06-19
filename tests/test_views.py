@@ -1,7 +1,9 @@
+from __future__ import annotations
 from copy import deepcopy
+from LSP.plugin.core.protocol import CodeActionKind
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.protocol import Range
+from LSP.plugin.core.protocol import DiagnosticSeverity
 from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
@@ -331,7 +333,7 @@ class ViewsTest(DeferrableTestCase):
         ]
         phantom = lsp_color_to_phantom(self.view, response[0])
         self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
-        self.assertEqual(phantom.region, range_to_region(Range.from_lsp(response[0]["range"]), self.view))
+        self.assertEqual(phantom.region, range_to_region(response[0]["range"], self.view))
 
     def test_document_color_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
@@ -341,9 +343,9 @@ class ViewsTest(DeferrableTestCase):
 
     def test_text_document_code_action_params(self) -> None:
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
-        diagnostic = {
+        diagnostic: Diagnostic = {
             "message": "oops",
-            "severity": 1,
+            "severity": DiagnosticSeverity.Error,
             "range": {
                 "start": {
                     "character": 0,
@@ -354,20 +356,20 @@ class ViewsTest(DeferrableTestCase):
                     "line": 0
                 }
             }
-        }  # type: Diagnostic
+        }
         self.view.run_command("append", {"characters": "a b c\n"})
         params = text_document_code_action_params(
             view=self.view,
             region=sublime.Region(0, 1),
             diagnostics=[diagnostic],
-            on_save_actions=["refactor"]
+            only_kinds=[CodeActionKind.Refactor]
         )
         self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
     def test_format_diagnostic_for_html(self) -> None:
-        diagnostic1 = {
+        diagnostic1: Diagnostic = {
             "message": "oops",
-            "severity": 1,
+            "severity": DiagnosticSeverity.Error,
             # The relatedInformation is present here, but it's an empty list.
             # This should have the same behavior as having no relatedInformation present.
             "relatedInformation": [],
@@ -381,7 +383,7 @@ class ViewsTest(DeferrableTestCase):
                     "line": 0
                 }
             }
-        }  # type: Diagnostic
+        }
         # Make the same diagnostic but without the relatedInformation
         diagnostic2 = deepcopy(diagnostic1)
         diagnostic2.pop("relatedInformation")
@@ -390,12 +392,18 @@ class ViewsTest(DeferrableTestCase):
         client_config = make_stdio_test_config()
         # They should result in the same minihtml.
         self.assertEqual(
-            format_diagnostic_for_html(self.view, client_config, diagnostic1, "/foo/bar"),
-            format_diagnostic_for_html(self.view, client_config, diagnostic2, "/foo/bar")
+            format_diagnostic_for_html(client_config, diagnostic1, "/foo/bar"),
+            format_diagnostic_for_html(client_config, diagnostic2, "/foo/bar")
         )
 
     def test_escaped_newline_in_markdown(self) -> None:
         self.assertEqual(
             minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
-            "<p>hello<br />\nworld</p>"
+            "<p>hello\\\nworld</p>"
+        )
+
+    def test_single_backslash_in_markdown(self) -> None:
+        self.assertEqual(
+            minihtml(self.view, {"kind": "markdown", "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
+            "<p>A\\B</p>"
         )

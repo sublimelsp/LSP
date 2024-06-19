@@ -26,6 +26,14 @@
         }
     },
     {
+        "caption": "Preferences: LSP Utils Settings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/lsp_utils.sublime-settings",
+            "default": "// Settings in here override those in \"LSP/lsp_utils.sublime-settings\"\n{\n\t$0\n}\n"
+        }
+    },
+    {
         "caption": "LSP Development: Parse VSCode Package JSON From Clipboard",
         "command": "lsp_parse_vscode_package_json"
     },
@@ -58,6 +66,11 @@
         "command": "lsp_format_document",
     },
     {
+        "caption": "LSP: Format File With",
+        "command": "lsp_format_document",
+        "args": {"select": true}
+    },
+    {
         "caption": "LSP: Format Selection",
         "command": "lsp_format_document_range",
     },
@@ -74,21 +87,57 @@
         "command": "lsp_document_symbols",
     },
     {
-        "caption": "LSP: Goto Implementation",
-        "command": "lsp_symbol_implementation",
+        "caption": "LSP: Goto Symbol in Project",
+        "command": "lsp_workspace_symbols"
+    },
+    {
+        "caption": "LSP: Goto Definition",
+        "command": "lsp_symbol_definition"
+    },
+    {
+        "caption": "LSP: Goto Type Definition",
+        "command": "lsp_symbol_type_definition"
     },
     {
         "caption": "LSP: Goto Declaration",
         "command": "lsp_symbol_declaration",
     },
     {
+        "caption": "LSP: Goto Implementation",
+        "command": "lsp_symbol_implementation",
+    },
+    {
         "caption": "LSP: Goto Diagnostic",
         "command": "lsp_goto_diagnostic",
-        "args": {"uri": "$view_uri"}
+        "args": {
+            "uri": "$view_uri"
+        }
     },
     {
         "caption": "LSP: Goto Diagnostic in Project",
         "command": "lsp_goto_diagnostic"
+    },
+    {
+        "caption": "LSP: Find References",
+        "command": "lsp_symbol_references"
+    },
+    {
+        "caption": "LSP: Find References (Output Panel)",
+        "command": "lsp_symbol_references",
+        "args": {
+            "output_mode": "output_panel"
+        },
+    },
+    {
+        "caption": "LSP: Find References (Quick Panel)",
+        "command": "lsp_symbol_references",
+        "args": {
+            "output_mode": "quick_panel"
+        },
+    },
+    {
+        "caption": "LSP: Follow Link",
+        "command": "lsp_open_link"
     },
     {
         "caption": "LSP: Toggle Log Panel",
@@ -99,19 +148,24 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
-        "caption": "LSP: Goto Symbol In Project",
-        "command": "lsp_workspace_symbols"
-    },
-    {
         "caption": "LSP: Rename",
         "command": "lsp_symbol_rename"
     },
     {
-        "caption": "LSP: Run Code Action",
+        "caption": "LSP: Code Action",
         "command": "lsp_code_actions"
     },
     {
-        "caption": "LSP: Run Source Action",
+        "caption": "LSP: Refactor",
+        "command": "lsp_code_actions",
+        "args": {
+            "only_kinds": [
+                "refactor"
+            ]
+        },
+    },
+    {
+        "caption": "LSP: Source Action",
         "command": "lsp_code_actions",
         "args": {
             "only_kinds": [
@@ -124,7 +178,24 @@
         "command": "lsp_code_lens"
     },
     {
-        "caption": "LSP: Find References",
-        "command": "lsp_symbol_references"
-    }
+        "caption": "LSP: Show Call Hierarchy",
+        "command": "lsp_call_hierarchy"
+    },
+    {
+        "caption": "LSP: Show Type Hierarchy",
+        "command": "lsp_type_hierarchy"
+    },
+    {
+        "caption": "LSP: Toggle Code Lenses",
+        "command": "lsp_toggle_code_lenses",
+    },
+    {
+        "caption": "LSP: Toggle Inlay Hints",
+        "command": "lsp_toggle_inlay_hints",
+    },
+    // {
+    //     "caption": "LSP: Fold All Comment Blocks",
+    //     "command": "lsp_fold_all",
+    //     "args": {"kind": "comment"}
+    // },
 ]

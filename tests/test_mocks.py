@@ -1,9 +1,10 @@
+from __future__ import annotations
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.protocol import Response
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import List, Any, Callable
+from typing import Any, Callable, List
 
 
 TEST_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None)
@@ -43,7 +44,7 @@ basic_responses = {
 class MockSession(object):
     def __init__(self, async_response=None) -> None:
         self.responses = basic_responses
-        self._notifications = []  # type: List[Notification]
+        self._notifications: List[Notification] = []
         self._async_response_callback = async_response
 
     def send_request(self, request: Request, on_success: Callable, on_error: Callable = None) -> None:

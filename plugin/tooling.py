@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -7,7 +8,6 @@ from .core.transports import Transport
 from .core.transports import TransportCallbacks
 from .core.types import Capabilities
 from .core.types import ClientConfig
-from .core.typing import Any, Callable, cast, Dict, List, Optional, Tuple
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
@@ -17,6 +17,8 @@ from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
+from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import cast
 import json
 import mdpopups
 import os
@@ -67,7 +69,7 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
         if not isinstance(enums, list):
             enums = v.get("markdownEnumDescriptions")
         if isinstance(enums, list):
-            new_enums = []  # type: List[str]
+            new_enums: List[str] = []
             for descr in enums:
                 descr, _ = _translate_description(translations, descr)
                 new_enums.append(descr)
@@ -90,6 +92,12 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
             _preprocess_properties(translations, child_properties)
 
 
+def _enum_to_str(value: Any) -> str:
+    if isinstance(value, str):
+        return '"{}"'.format(value)
+    return str(value)
+
+
 class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
 
     def initial_text(self) -> str:
@@ -102,7 +110,7 @@ class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
 class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
 
     def __init__(self) -> None:
-        self.view = None  # type: Optional[sublime.View]
+        self.view: Optional[sublime.View] = None
 
     def writeline(self, contents: str, indent: int = 0) -> None:
         if self.view is not None:
@@ -185,7 +193,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             has_default = "default" in v
             default = v.get("default")
             if isinstance(enum, list):
-                self.writeline4('// possible values: {}'.format(", ".join(enum)))
+                self.writeline4('// possible values: {}'.format(", ".join(map(_enum_to_str, enum))))
             if has_default:
                 value = default
             else:
@@ -287,20 +295,22 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         view.set_read_only(True)
 
 
-class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallbacks):
+class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:
-        window = self.window
-        view = window.active_view()
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
+        view = wm.window.active_view()
         if not view:
             sublime.message_dialog('Troubleshooting must be run with a file opened')
             return
         active_view = view
-        configs = windows.lookup(window).get_config_manager().get_configs()
+        configs = wm.get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:
-            window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
-                                    placeholder='Select server to troubleshoot')
+            wm.window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
+                                       placeholder='Select server to troubleshoot')
 
     def on_selected(self, selected_index: int, configs: List[ClientConfig], active_view: sublime.View) -> None:
         if selected_index == -1:
@@ -318,7 +328,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             lambda resolved_command, output, exit_code: self.update_sheet(
                 config, active_view, output_sheet, resolved_command, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
-        self.test_runner = server  # type: Optional[ServerTestRunner]
+        self.test_runner: Optional[ServerTestRunner] = server
 
     def update_sheet(self, config: ClientConfig, active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet,
                      resolved_command: List[str], server_output: str, exit_code: int) -> None:
@@ -421,12 +431,15 @@ class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
     """
 
     def run(self) -> None:
+        wm = windows.lookup(self.window)
+        if not wm:
+            return
         view = self.window.new_file()
         view.set_scratch(True)
         view.set_name("Window {} configs".format(self.window.id()))
         view.settings().set("word_wrap", False)
         view.set_syntax_file("Packages/Python/Python.sublime-syntax")
-        for config in windows.lookup(self.window).get_config_manager().get_configs():
+        for config in wm.get_config_manager().get_configs():
             view.run_command("append", {"characters": str(config) + "\n"})
 
 
@@ -436,18 +449,17 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
     """
 
     def run(self, edit: sublime.Edit) -> None:
-        window = self.view.window()
-        if not window:
+        wm = windows.lookup(self.view.window())
+        if not wm:
             return
         file_name = self.view.file_name()
         if not file_name:
             return
-        manager = windows.lookup(window)
-        listener = manager.listener_for_view(self.view)
+        listener = wm.listener_for_view(self.view)
         if not listener or not any(listener.session_views_async()):
             sublime.error_message("There is no language server running for this view.")
             return
-        v = window.new_file()
+        v = wm.window.new_file()
         v.set_scratch(True)
         v.assign_syntax("Packages/Markdown/Markdown.sublime-settings")
         v.set_name("{} (capabilities)".format(os.path.basename(file_name)))
@@ -483,9 +495,9 @@ class ServerTestRunner(TransportCallbacks):
         on_close: Callable[[List[str], str, int], None]
     ) -> None:
         self._on_close = on_close
-        self._transport = None  # type: Optional[Transport]
-        self._resolved_command = []  # type: List[str]
-        self._stderr_lines = []  # type: List[str]
+        self._transport: Optional[Transport] = None
+        self._resolved_command: List[str] = []
+        self._stderr_lines: List[str] = []
         try:
             variables = extract_variables(window)
             plugin_class = get_plugin(config.name)
@@ -525,3 +537,26 @@ class ServerTestRunner(TransportCallbacks):
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
         sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))
+
+
+class LspOnDoubleClickCommand(sublime_plugin.TextCommand):
+    click_count = 0
+    prev_command: Optional[str] = None
+    prev_args: Optional[Dict[Any, Any]] = None
+
+    def run(self, edit: sublime.Edit, command: str, args: Dict[Any, Any]) -> None:
+        if self.prev_command != command or self.prev_args != args:
+            self.click_count = 0
+            self.prev_command = command
+            self.prev_args = args
+        self.click_count += 1
+        if self.click_count == 2:
+            self.view.run_command(command, args)
+            self.reset()
+            return
+        sublime.set_timeout(self.reset, 500)
+
+    def reset(self) -> None:
+        self.click_count = 0
+        self.prev_command = None
+        self.prev_args = None

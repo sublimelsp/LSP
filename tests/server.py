@@ -20,6 +20,7 @@ resumes (since response to request will arrive after requested notification).
 
 TODO: Untested on Windows.
 """
+from __future__ import annotations
 from argparse import ArgumentParser
 from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable, Awaitable
@@ -75,7 +76,7 @@ class Error(Exception):
         return {"code": self.code, "message": super().__str__()}
 
     @classmethod
-    def from_lsp(cls, d: StringDict) -> 'Error':
+    def from_lsp(cls, d: StringDict) -> Error:
         return Error(d["code"], d["message"])
 
     def __str__(self) -> str:
@@ -145,8 +146,8 @@ class SimpleRequest(Request):
 
     def __init__(self) -> None:
         self.cv = asyncio.Condition()
-        self.result = None  # type: PayloadLike
-        self.error = None  # type: Optional[Error]
+        self.result: PayloadLike = None
+        self.error: Optional[Error] = None
 
     async def on_result(self, params: PayloadLike) -> None:
         self.result = params

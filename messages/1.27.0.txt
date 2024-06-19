@@ -1,0 +1,33 @@
+=> 1.27.0
+
+⚠️⚠️⚠️
+To ensure that everything works properly after LSP package is updated,
+it's strongly recommended to restart Sublime Text once it finishes updating all packages.
+⚠️⚠️⚠️
+
+# Breaking changes
+
+- The default value of `show_references_in_quick_panel` has changed from `false` to `true`.
+
+# New features
+
+- Support all arguments of native save in lsp_save command (#2382) (jwortmann)
+- Add `only_files` argument for `lsp_save_all` command (#2376) (jwortmann)
+- Show diagnostics popup when hovering over gutter icons (#2349) (jwortmann)
+- Add menu item to toggle code lenses (#2351) (Rafał Chłodnicki)
+- Add menu item to disable/enable hover popups (#2316) (jwortmann)
+
+# Improvements
+
+- Workspace Symbols overhaul (#2333) (jwortmann)
+- Add NO_UNDO flags to all regions (less memory usage) (#2370) (Rafał Chłodnicki)
+- Try to match at least 2 components of base scope with the map (#2361) (Rafał Chłodnicki)
+- Small visual tweak for signature help popup (#2358) (jwortmann)
+- Prefer active view instead of leftmost one for Goto commands (#2356) (jwortmann)
+
+# Fixes
+
+- Empty `command` handling with `tcp_port` (#2378) (Alexey Bondarenko)
+- Document state getting out of sync in rare cases (#2375) (Rafał Chłodnicki)
+- Use simple error for code lenses that failed to resolve (Rafal Chlodnicki)
+- Fix performance regression in Goto Symbol overlay (#2348) (jwortmann)

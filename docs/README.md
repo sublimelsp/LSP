@@ -1,18 +1,18 @@
 # Welcome to MkDocs
 
-Install MkDocs - https://www.mkdocs.org/#installing-mkdocs
+Install:
+ - MkDocs - https://www.mkdocs.org/#installing-mkdocs
+ - Material Theme - https://squidfunk.github.io/mkdocs-material/getting-started/#installation
+ - mkdocs-redirects - https://github.com/mkdocs/mkdocs-redirects
 
-Install Material Theme - https://squidfunk.github.io/mkdocs-material/getting-started/#installation
-
-```
-pip install mkdocs mkdocs-material
+```sh
+pip install mkdocs mkdocs-material mkdocs-redirects
 ```
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
 ## Commands
 
-* `mkdocs new [dir-name]` - Create a new project.
 * `mkdocs serve` - Start the live-reloading docs server.
 * `mkdocs build` - Build the documentation site.
 * `mkdocs -h` - Print help message and exit.

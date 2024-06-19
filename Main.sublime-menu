@@ -3,20 +3,136 @@
     "id": "edit",
     "children": [
       {
+        "id": "fold",
+        "children": [
+          {
+            "id": "lsp",
+            "caption": "-"
+          },
+          {
+            "command": "lsp_fold",
+            "args": {"prefetch": true}
+          }
+        ]
+      },
+      {
         "id": "lsp",
         "caption": "-"
       },
       {
-        "caption": "LSP: Rename…",
-        "command": "lsp_symbol_rename"
+        "command": "lsp_fold",
+        "args": {"prefetch": true, "hidden": true}
       },
       {
-        "caption": "LSP: Format File",
-        "command": "lsp_format_document"
+        "command": "lsp_source_action",
+        "args": {"index": -1}
       },
       {
-        "caption": "LSP: Format Selection",
-        "command": "lsp_format_document_range"
+        "caption": "LSP: Source Action",
+        "children": [
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 0}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 1}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 2}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 3}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 4}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 5}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 6}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 7}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 8}
+          },
+          {
+            "command": "lsp_source_action",
+            "args": {"index": 9}
+          }
+        ]
+      },
+      {
+        "caption": "LSP: Refactor",
+        "children": [
+          {
+            "caption": "Rename…",
+            "command": "lsp_symbol_rename"
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 0}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 1}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 2}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 3}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 4}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 5}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 6}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 7}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 8}
+          },
+          {
+            "command": "lsp_refactor",
+            "args": {"index": 9}
+          }
+        ]
+      },
+      {
+        "caption": "LSP: Format",
+        "children": [
+          {
+            "caption": "Format File",
+            "command": "lsp_format_document"
+          },
+          {
+            "caption": "Format Selection",
+            "command": "lsp_format_document_range"
+          }
+        ]
       }
     ]
   },
@@ -34,6 +150,30 @@
     ]
   },
   {
+    "id": "view",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Show Code Lenses",
+        "command": "lsp_toggle_code_lenses",
+        "checkbox": true
+      },
+      {
+        "caption": "LSP: Show Inlay Hints",
+        "command": "lsp_toggle_inlay_hints",
+        "checkbox": true
+      },
+      {
+        "caption": "LSP: Show Hover Popups",
+        "command": "lsp_toggle_hover_popups",
+        "checkbox": true
+      }
+    ]
+  },
+  {
     "id": "goto",
     "children": [
       {
@@ -43,6 +183,10 @@
       {
         "caption": "LSP: Goto Symbol…",
         "command": "lsp_document_symbols"
+      },
+      {
+        "caption": "LSP: Goto Symbol In Project…",
+        "command": "lsp_workspace_symbols"
       },
       {
         "caption": "LSP: Goto Definition…",
@@ -111,20 +255,20 @@
             "caption": "-"
           },
           {
-              "caption": "Enable Language Server Globally…",
-              "command": "lsp_enable_language_server_globally",
+            "caption": "Enable Language Server Globally…",
+            "command": "lsp_enable_language_server_globally",
           },
           {
-              "caption": "Disable Language Server Globally…",
-              "command": "lsp_disable_language_server_globally",
+            "caption": "Disable Language Server Globally…",
+            "command": "lsp_disable_language_server_globally",
           },
           {
-              "caption": "Enable Language Server in Project…",
-              "command": "lsp_enable_language_server_in_project",
+            "caption": "Enable Language Server in Project…",
+            "command": "lsp_enable_language_server_in_project",
           },
           {
-              "caption": "Disable Language Server in Project…",
-              "command": "lsp_disable_language_server_in_project",
+            "caption": "Disable Language Server in Project…",
+            "command": "lsp_disable_language_server_in_project",
           },
           {
             "caption": "Troubleshoot Server Configuration…",

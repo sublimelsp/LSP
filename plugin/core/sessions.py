@@ -1047,7 +1047,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_server_notification_async(self, method: str, notification: Notification) -> None:
+    def on_server_notification_async(self, notification: Notification) -> None:
         """
         Notifies about a notification message that has been received from the language server.
 
@@ -2387,7 +2387,7 @@ class Session(TransportCallbacks):
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
                 if self._plugin:
-                    self._plugin.on_server_notification_async(method, Notification(method, result))
+                    self._plugin.on_server_notification_async(Notification(method, result))
                 return res
         elif "id" in payload:
             if payload["id"] is None:

@@ -1051,7 +1051,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         Notifies about a notification message that has been received from the language server.
 
-        :param    method:    The method of the notification.
         :param    notification:  The notification object.
         """
         pass

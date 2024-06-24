@@ -27,18 +27,16 @@ from typing import (  # noqa: F401
     cast,
     final,
 )
+from typing_extensions import (  # noqa: F401
+    NotRequired,
+    ParamSpec,
+    Required,
+    TypeGuard,
+)
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum  # noqa: F401
-    from typing import (  # noqa: F401
-        NotRequired,
-        ParamSpec,
-        Required,
-        TypeGuard,
-    )
 else:
-    _T = TypeVar("_T")
-
     class StrEnum(str, Enum):
         """
         Naive polyfill for Python 3.11's StrEnum.
@@ -48,19 +46,3 @@ else:
 
         __format__ = str.__format__
         __str__ = str.__str__
-
-    class NotRequired(Type, Generic[_T]):  # type: ignore
-        pass
-
-    class ParamSpec(Type):  # type: ignore
-        args = ...
-        kwargs = ...
-
-        def __init__(*args, **kwargs) -> None:  # type: ignore
-            pass
-
-    class Required(Type, Generic[_T]):  # type: ignore
-        pass
-
-    class TypeGuard(Type, Generic[_T]):  # type: ignore
-        pass

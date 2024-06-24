@@ -111,7 +111,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
-        self.assertEquals("BBB", text)
+        self.assertEqual("BBB", text)
         yield from self.await_clear_view_and_save()
 
     def test_hover_info(self) -> Generator:
@@ -201,9 +201,9 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
     def __run_formatting_test(
         self,
-        original: 'Iterable[str]',
-        expected: 'Iterable[str]',
-        file_changes: 'List[Tuple[Tuple[int, int], Tuple[int, int], str]]'
+        original: Iterable[str],
+        expected: Iterable[str],
+        file_changes: list[tuple[tuple[int, int], tuple[int, int], str]]
     ) -> Generator:
         assert self.view
         original_change_count = self.insert_characters(''.join(original))
@@ -217,7 +217,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message('textDocument/formatting')
         yield from self.await_view_change(original_change_count + len(file_changes))
         edited_content = self.view.substr(sublime.Region(0, self.view.size()))
-        self.assertEquals(edited_content, ''.join(expected))
+        self.assertEqual(edited_content, ''.join(expected))
 
     def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> Generator:
         assert self.view
@@ -225,9 +225,9 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(0, 0))
-        method = 'textDocument/{}'.format(text_document_request)
+        method = f'textDocument/{text_document_request}'
         self.set_response(method, response)
-        self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
+        self.view.run_command(f'lsp_symbol_{subl_command_suffix}')
         yield from self.await_message(method)
 
         def condition() -> bool:
@@ -420,5 +420,5 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
-        self.assertEquals("BBB", text)
+        self.assertEqual("BBB", text)
         yield from self.await_clear_view_and_save()

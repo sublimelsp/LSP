@@ -5,7 +5,7 @@ from .core.protocol import TextEdit
 from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
 from contextlib import contextmanager
-from typing import Any, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Generator, Iterable, Tuple
 import operator
 import re
 import sublime
@@ -30,12 +30,12 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
-    def run(self, session_name: str, edit: WorkspaceEdit) -> None:
+    def run(self, session_name: str, edit: WorkspaceEdit, is_refactoring: bool = False) -> None:
         session = self.session_by_name(session_name)
         if not session:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
             return
-        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit))
+        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, is_refactoring))
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
@@ -44,8 +44,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(
         self,
         edit: sublime.Edit,
-        changes: List[TextEdit],
-        required_view_version: Optional[int] = None,
+        changes: list[TextEdit],
+        required_view_version: int | None = None,
         process_placeholders: bool = False,
     ) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
@@ -61,7 +61,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
             for start, end, replacement in reversed(_sort_by_application_order(edits)):
-                placeholder_region: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
+                placeholder_region: tuple[tuple[int, int], tuple[int, int]] | None = None
                 if process_placeholders and replacement:
                     parsed = self.parse_snippet(replacement)
                     if parsed:
@@ -108,7 +108,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             else:
                 self.view.erase(edit, region)
 
-    def parse_snippet(self, replacement: str) -> Optional[Tuple[str, Tuple[int, int]]]:
+    def parse_snippet(self, replacement: str) -> tuple[str, tuple[int, int]] | None:
         match = re.search(self.re_placeholder, replacement)
         if not match:
             return
@@ -127,7 +127,7 @@ def _parse_text_edit(text_edit: TextEdit) -> TextEditTuple:
     )
 
 
-def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> List[TextEditTuple]:
+def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> list[TextEditTuple]:
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
     # > inserts, or any number of inserts followed by a single remove or replace edit. If

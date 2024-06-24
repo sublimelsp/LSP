@@ -15,7 +15,9 @@ else:
     from socketserver import ThreadingMixIn, TCPServer, StreamRequestHandler
 
 logger = logging.getLogger(__name__)
-logging.basicConfig()
+# This line installed a root logger, which results in duplicate log entries.
+# For more details, see: https://github.com/sublimelsp/LSP/issues/2477
+# logging.basicConfig()
 
 '''
 +-+-+-+-+-------+-+-------------+-------------------------------+

@@ -41,7 +41,7 @@ from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Tuple
 from typing import cast
 import html
 import itertools
@@ -58,7 +58,7 @@ MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 _baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
 _multilineflags = sublime.DRAW_NO_FILL | sublime.NO_UNDO
 
-DIAGNOSTIC_SEVERITY: List[Tuple[str, str, str, str, int, int]] = [
+DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, int, int]] = [
     # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
     ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
     ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
@@ -72,9 +72,9 @@ class DiagnosticSeverityData:
     __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
 
     def __init__(self, severity: int) -> None:
-        self.regions: List[sublime.Region] = []
-        self.regions_with_tag: Dict[int, List[sublime.Region]] = {}
-        self.annotations: List[str] = []
+        self.regions: list[sublime.Region] = []
+        self.regions_with_tag: dict[int, list[sublime.Region]] = {}
+        self.annotations: list[str] = []
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
@@ -85,7 +85,7 @@ class InvalidUriSchemeException(Exception):
         self.uri = uri
 
     def __str__(self) -> str:
-        return "invalid URI scheme: {}".format(self.uri)
+        return f"invalid URI scheme: {self.uri}"
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
@@ -117,7 +117,7 @@ def get_storage_path() -> str:
     return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
 
 
-def extract_variables(window: sublime.Window) -> Dict[str, str]:
+def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables = window.extract_variables()
     variables["storage_path"] = get_storage_path()
     variables["cache_path"] = sublime.cache_path()
@@ -171,7 +171,7 @@ def to_encoded_filename(path: str, position: Position) -> str:
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
 
 
-def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Range]:
+def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
     if "targetUri" in location:
         location = cast(LocationLink, location)
         uri = location["targetUri"]
@@ -183,7 +183,7 @@ def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> 
     return uri, r
 
 
-def get_uri_and_position_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Position]:
+def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
     if "targetUri" in location:
         location = cast(LocationLink, location)
         uri = location["targetUri"]
@@ -195,7 +195,7 @@ def get_uri_and_position_from_location(location: Union[Location, LocationLink]) 
     return uri, position
 
 
-def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
+def location_to_encoded_filename(location: Location | LocationLink) -> str:
     """
     DEPRECATED
     """
@@ -209,7 +209,7 @@ def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str
 class MissingUriError(Exception):
 
     def __init__(self, view_id: int) -> None:
-        super().__init__("View {} has no URI".format(view_id))
+        super().__init__(f"View {view_id} has no URI")
         self.view_id = view_id
 
 
@@ -220,7 +220,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
     raise MissingUriError(view.id())
 
 
-def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> TextDocumentIdentifier:
+def text_document_identifier(view_or_uri: DocumentUri | sublime.View) -> TextDocumentIdentifier:
     if isinstance(view_or_uri, DocumentUri):
         uri = view_or_uri
     else:
@@ -228,7 +228,7 @@ def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> T
     return {"uri": uri}
 
 
-def first_selection_region(view: sublime.View) -> Optional[sublime.Region]:
+def first_selection_region(view: sublime.View) -> sublime.Region | None:
     try:
         return view.sel()[0]
     except IndexError:
@@ -285,9 +285,9 @@ def render_text_change(change: sublime.TextChange) -> TextDocumentContentChangeE
 
 
 def did_change_text_document_params(
-    view: sublime.View, version: int, changes: Optional[Iterable[sublime.TextChange]] = None
+    view: sublime.View, version: int, changes: Iterable[sublime.TextChange] | None = None
 ) -> DidChangeTextDocumentParams:
-    content_changes: List[TextDocumentContentChangeEvent] = []
+    content_changes: list[TextDocumentContentChangeEvent] = []
     result: DidChangeTextDocumentParams = {
         "textDocument": versioned_text_document_identifier(view, version),
         "contentChanges": content_changes
@@ -303,13 +303,13 @@ def did_change_text_document_params(
 
 
 def will_save_text_document_params(
-    view_or_uri: Union[DocumentUri, sublime.View], reason: TextDocumentSaveReason
+    view_or_uri: DocumentUri | sublime.View, reason: TextDocumentSaveReason
 ) -> WillSaveTextDocumentParams:
     return {"textDocument": text_document_identifier(view_or_uri), "reason": reason}
 
 
 def did_save_text_document_params(
-    view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
+    view: sublime.View, include_text: bool, uri: DocumentUri | None = None
 ) -> DidSaveTextDocumentParams:
     result: DidSaveTextDocumentParams = {
         "textDocument": text_document_identifier(uri if uri is not None else view)
@@ -328,7 +328,7 @@ def did_open(view: sublime.View, language_id: str) -> Notification:
 
 
 def did_change(view: sublime.View, version: int,
-               changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:
+               changes: Iterable[sublime.TextChange] | None = None) -> Notification:
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 
@@ -340,7 +340,7 @@ def will_save_wait_until(view: sublime.View, reason: TextDocumentSaveReason) -> 
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
-def did_save(view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None) -> Notification:
+def did_save(view: sublime.View, include_text: bool, uri: DocumentUri | None = None) -> Notification:
     return Notification.didSave(did_save_text_document_params(view, include_text, uri))
 
 
@@ -348,7 +348,7 @@ def did_close(uri: DocumentUri) -> Notification:
     return Notification.didClose(did_close_text_document_params(uri))
 
 
-def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
+def formatting_options(settings: sublime.Settings) -> dict[str, Any]:
     # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
     # backwards-compatible way.
     trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, None, "none")
@@ -399,13 +399,14 @@ def selection_range_params(view: sublime.View) -> SelectionRangeParams:
 def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
-    diagnostics: List[Diagnostic],
-    only_kinds: Optional[List[CodeActionKind]] = None,
+    diagnostics: list[Diagnostic],
+    only_kinds: list[CodeActionKind] | None = None,
     manual: bool = False
 ) -> CodeActionParams:
+    trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds
@@ -427,16 +428,16 @@ def show_lsp_popup(
     location: int = -1,
     md: bool = False,
     flags: int = 0,
-    css: Optional[str] = None,
-    wrapper_class: Optional[str] = None,
-    body_id: Optional[str] = None,
-    on_navigate: Optional[Callable[..., None]] = None,
-    on_hide: Optional[Callable[..., None]] = None
+    css: str | None = None,
+    wrapper_class: str | None = None,
+    body_id: str | None = None,
+    on_navigate: Callable[..., None] | None = None,
+    on_hide: Callable[..., None] | None = None
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
-    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
+    body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
         body_wrapper.format(contents),
@@ -456,14 +457,14 @@ def update_lsp_popup(
     contents: str,
     *,
     md: bool = False,
-    css: Optional[str] = None,
-    wrapper_class: Optional[str] = None,
-    body_id: Optional[str] = None
+    css: str | None = None,
+    wrapper_class: str | None = None,
+    body_id: str | None = None
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
-    body_wrapper = '<body id="{}">{{}}</body>'.format(body_id) if body_id else '<body>{}</body>'
+    body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
 
@@ -474,9 +475,9 @@ FORMAT_MARKUP_CONTENT = 0x4
 
 def minihtml(
     view: sublime.View,
-    content: Union[MarkedString, MarkupContent, List[MarkedString]],
+    content: MarkedString | MarkupContent | list[MarkedString],
     allowed_formats: int,
-    language_id_map: Optional[MarkdownLangMap] = None
+    language_id_map: MarkdownLangMap | None = None
 ) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
@@ -523,7 +524,7 @@ def minihtml(
                 language = item.get("language")
 
             if language:
-                formatted.append("```{}\n{}\n```\n".format(language, value))
+                formatted.append(f"```{language}\n{value}\n```\n")
             else:
                 formatted.append(value)
 
@@ -541,9 +542,9 @@ def minihtml(
         if parse_marked_string and language:
             # MarkedString (dict)
             is_plain_text = False
-            result = "```{}\n{}\n```\n".format(language, value)
+            result = f"```{language}\n{value}\n```\n"
     if is_plain_text:
-        return "<p>{}</p>".format(text2html(result)) if result else ''
+        return f"<p>{text2html(result)}</p>" if result else ''
     else:
         frontmatter = {
             "allow_code_wrap": True,
@@ -592,7 +593,7 @@ def _replace_match(match: Any) -> str:
         return REPLACEMENT_MAP[special_match]
     url = match.group('url')
     if url:
-        return "<a href='{}'>{}</a>".format(url, url)
+        return f"<a href='{url}'>{url}</a>"
     return len(match.group('multispace')) * '&nbsp;'
 
 
@@ -600,28 +601,28 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: Any, class_name: Optional[str] = None, tooltip: Optional[str] = None) -> str:
-    link = "<a href='{}'".format(href)
+def make_link(href: str, text: Any, class_name: str | None = None, tooltip: str | None = None) -> str:
+    link = f"<a href='{href}'"
     if class_name:
-        link += " class='{}'".format(class_name)
+        link += f" class='{class_name}'"
     if tooltip:
-        link += " title='{}'".format(html.escape(tooltip))
+        link += f" title='{html.escape(tooltip)}'"
     text = text2html(str(text)).replace(' ', '&nbsp;')
-    link += ">{}</a>".format(text)
+    link += f">{text}</a>"
     return link
 
 
 def make_command_link(
     command: str,
     text: str,
-    command_args: Optional[Dict[str, Any]] = None,
-    class_name: Optional[str] = None,
-    tooltip: Optional[str] = None,
-    view_id: Optional[int] = None
+    command_args: dict[str, Any] | None = None,
+    class_name: str | None = None,
+    tooltip: str | None = None,
+    view_id: int | None = None
 ) -> str:
     if view_id is not None:
         cmd = "lsp_run_text_command_helper"
-        args: Optional[Dict[str, Any]] = {"view_id": view_id, "command": command, "args": command_args}
+        args: dict[str, Any] | None = {"view_id": view_id, "command": command, "args": command_args}
     else:
         cmd = command
         args = command_args
@@ -629,7 +630,7 @@ def make_command_link(
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
-    def run(self, view_id: int, command: str, args: Optional[Dict[str, Any]] = None) -> None:
+    def run(self, view_id: int, command: str, args: dict[str, Any] | None = None) -> None:
         view = sublime.View(view_id)
         if view.is_valid():
             view.run_command(command, args)
@@ -662,8 +663,8 @@ def color_to_hex(color: Color) -> str:
     blue = round(color['blue'] * 255)
     alpha_dec = color['alpha']
     if alpha_dec < 1:
-        return "#{:02x}{:02x}{:02x}{:02x}".format(red, green, blue, round(alpha_dec * 255))
-    return "#{:02x}{:02x}{:02x}".format(red, green, blue)
+        return f"#{red:02x}{green:02x}{blue:02x}{round(alpha_dec * 255):02x}"
+    return f"#{red:02x}{green:02x}{blue:02x}"
 
 
 def lsp_color_to_html(color_info: ColorInformation) -> str:
@@ -691,8 +692,8 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
 
 
 def format_diagnostics_for_annotation(
-    diagnostics: List[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
-) -> Tuple[List[str], str]:
+    diagnostics: list[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
+) -> tuple[list[str], str]:
     css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
     scope = DIAGNOSTIC_SEVERITY[severity - 1][2]
     color = view.style_for_scope(scope).get('foreground') or 'red'
@@ -700,14 +701,14 @@ def format_diagnostics_for_annotation(
     for diagnostic in diagnostics:
         message = text2html(diagnostic.get('message') or '')
         source = diagnostic.get('source')
-        line = "[{}] {}".format(text2html(source), message) if source else message
-        content = '<body id="annotation" class="{1}"><style>{0}</style><div class="{2}">{3}</div></body>'.format(
-            lsp_css().annotations, lsp_css().annotations_classname, css_class, line)
+        line = f"[{text2html(source)}] {message}" if source else message
+        content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
+            lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
         annotations.append(content)
     return (annotations, color)
 
 
-def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
+def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None, str | None, str | None]:
     """
     Turn an LSP diagnostic into a string suitable for an output panel.
 
@@ -727,7 +728,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     )
     if formatted != "" or code is not None:
         # \u200B is the zero-width space
-        result += " \u200B{}".format(formatted)
+        result += f" \u200B{formatted}"
     offset = len(result) if href else None
     for line in itertools.islice(lines, 1, None):
         result += "\n" + 18 * " " + line
@@ -738,10 +739,10 @@ def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
     formatted, code, href = diagnostic_source_and_code(diagnostic)
     if href is None or code is None:
         return formatted
-    return formatted + "({})".format(code)
+    return formatted + f"({code})"
 
 
-def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[str], Optional[str]]:
+def diagnostic_source_and_code(diagnostic: Diagnostic) -> tuple[str, str | None, str | None]:
     formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
@@ -751,14 +752,14 @@ def diagnostic_source_and_code(diagnostic: Diagnostic) -> Tuple[str, Optional[st
         if code_description:
             href = code_description["href"]
         else:
-            formatted += "({})".format(code)
+            formatted += f"({code})"
     return formatted, code, href
 
 
 def location_to_human_readable(
     config: ClientConfig,
-    base_dir: Optional[str],
-    location: Union[Location, LocationLink]
+    base_dir: str | None,
+    location: Location | LocationLink
 ) -> str:
     """
     Format an LSP Location (or LocationLink) into a string suitable for a human to read
@@ -780,7 +781,7 @@ def location_to_human_readable(
     return fmt.format(pathname, position["line"] + 1)
 
 
-def location_to_href(config: ClientConfig, location: Union[Location, LocationLink]) -> str:
+def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
     """
     Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml
     """
@@ -788,7 +789,7 @@ def location_to_href(config: ClientConfig, location: Union[Location, LocationLin
     return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
 
 
-def unpack_href_location(href: str) -> Tuple[str, str, int, int]:
+def unpack_href_location(href: str) -> tuple[str, str, int, int]:
     """
     Return the session name, URI, row, and col_utf16 from an encoded href.
     """
@@ -808,7 +809,7 @@ def is_location_href(href: str) -> bool:
 def _format_diagnostic_related_info(
     config: ClientConfig,
     info: DiagnosticRelatedInformation,
-    base_dir: Optional[str] = None
+    base_dir: str | None = None
 ) -> str:
     location = info["location"]
     return '<a href="{}">{}</a>: {}'.format(
@@ -818,15 +819,15 @@ def _format_diagnostic_related_info(
     )
 
 
-def _html_element(name: str, text: str, class_name: Optional[str] = None, escape: bool = True) -> str:
+def _html_element(name: str, text: str, class_name: str | None = None, escape: bool = True) -> str:
     return '<{0}{2}>{1}</{0}>'.format(
         name,
         text2html(text) if escape else text,
-        ' class="{}"'.format(text2html(class_name)) if class_name else ''
+        f' class="{text2html(class_name)}"' if class_name else ''
     )
 
 
-def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     html = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
     source = diagnostic.get("source")
@@ -848,9 +849,9 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 
 
 def format_code_actions_for_quick_panel(
-    session_actions: Iterable[Tuple[str, Union[CodeAction, Command]]]
-) -> Tuple[List[sublime.QuickPanelItem], int]:
-    items: List[sublime.QuickPanelItem] = []
+    session_actions: Iterable[tuple[str, CodeAction | Command]]
+) -> tuple[list[sublime.QuickPanelItem], int]:
+    items: list[sublime.QuickPanelItem] = []
     selected_index = -1
     for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")

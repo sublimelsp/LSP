@@ -11,7 +11,7 @@ from LSP.plugin.core.types import sublime_pattern_to_glob
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
-from typing import Generator, List, Optional
+from typing import Generator
 import sublime
 import unittest
 
@@ -33,15 +33,15 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers: List[TestFileWatcher] = []
+    _active_watchers: list[TestFileWatcher] = []
 
     @classmethod
     def create(
         cls,
         root_path: str,
-        patterns: List[str],
-        events: List[FileWatcherEventType],
-        ignores: List[str],
+        patterns: list[str],
+        events: list[FileWatcherEventType],
+        ignores: list[str],
         handler: FileWatcherProtocol
     ) -> TestFileWatcher:
         watcher = TestFileWatcher(root_path, patterns, events, ignores, handler)
@@ -51,9 +51,9 @@ class TestFileWatcher(FileWatcher):
     def __init__(
         self,
         root_path: str,
-        patterns: List[str],
-        events: List[FileWatcherEventType],
-        ignores: List[str],
+        patterns: list[str],
+        events: list[FileWatcherEventType],
+        ignores: list[str],
         handler: FileWatcherProtocol
     ) -> None:
         self.root_path = root_path
@@ -66,7 +66,7 @@ class TestFileWatcher(FileWatcher):
         self.handler = None
         self._active_watchers.remove(self)
 
-    def trigger_event(self, events: List[FileWatcherEvent]) -> None:
+    def trigger_event(self, events: list[FileWatcherEvent]) -> None:
 
         def trigger_async():
             if self.handler:
@@ -250,10 +250,10 @@ class PatternToGlobTests(unittest.TestCase):
 
     def _verify_patterns(
         self,
-        patterns: List[str],
-        expected: List[str],
+        patterns: list[str],
+        expected: list[str],
         is_directory_pattern: bool,
-        root_path: Optional[str] = None
+        root_path: str | None = None
     ) -> None:
         glob_patterns = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=is_directory_pattern, root_path=root_path)

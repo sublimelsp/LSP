@@ -11,7 +11,7 @@ from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
 from test_mocks import TEST_CONFIG
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Generator
 import sublime
 import unittest
 import unittest.mock
@@ -26,19 +26,19 @@ class MockManager(Manager):
     def window(self) -> sublime.Window:
         return self._window
 
-    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         pass
 
-    def get_project_path(self, file_name: str) -> Optional[str]:
+    def get_project_path(self, file_name: str) -> str | None:
         return None
 
-    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> Optional[str]:
+    def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
         return None
 
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
         pass
 
-    def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+    def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         pass
 
     def on_diagnostics_updated(self) -> None:
@@ -62,7 +62,7 @@ class MockLogger(Logger):
     def outgoing_notification(self, method: str, params: Any) -> None:
         pass
 
-    def incoming_response(self, request_id: Optional[int], params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: int | None, params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
@@ -80,10 +80,10 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
-    def get_uri(self) -> Optional[DocumentUri]:
+    def get_uri(self) -> DocumentUri | None:
         return self.mock_uri
 
-    def get_language_id(self) -> Optional[str]:
+    def get_language_id(self) -> str | None:
         return self.mock_language_id
 
     def register_capability_async(
@@ -91,7 +91,7 @@ class MockSessionBuffer:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: Dict[str, Any]
+        options: dict[str, Any]
     ) -> None:
         pass
 
@@ -103,7 +103,7 @@ class MockSessionBuffer:
     ) -> None:
         pass
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int | None) -> None:
         pass
 
 

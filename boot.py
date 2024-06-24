@@ -17,11 +17,9 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-from .plugin.core.collections import DottedDict
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
-from .plugin.core.protocol import Error
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
@@ -86,10 +84,86 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
+
+__all__ = (
+    "DocumentSyncListener",
+    "Listener",
+    "LspApplyDocumentEditCommand",
+    "LspApplyWorkspaceEditCommand",
+    "LspCallHierarchyCommand",
+    "LspClearLogPanelCommand",
+    "LspClearPanelCommand",
+    "LspCodeActionsCommand",
+    "LspCodeLensCommand",
+    "LspCollapseTreeItemCommand",
+    "LspColorPresentationCommand",
+    "LspCommitCompletionWithOppositeInsertMode",
+    "LspCopyToClipboardFromBase64Command",
+    "LspDisableLanguageServerGloballyCommand",
+    "LspDisableLanguageServerInProjectCommand",
+    "LspDocumentSymbolsCommand",
+    "LspDumpBufferCapabilities",
+    "LspDumpWindowConfigs",
+    "LspEnableLanguageServerGloballyCommand",
+    "LspEnableLanguageServerInProjectCommand",
+    "LspExecuteCommand",
+    "LspExpandSelectionCommand",
+    "LspExpandTreeItemCommand",
+    "LspFoldAllCommand",
+    "LspFoldCommand",
+    "LspFormatCommand",
+    "LspFormatDocumentCommand",
+    "LspFormatDocumentRangeCommand",
+    "LspGotoDiagnosticCommand",
+    "LspHideRenameButtonsCommand",
+    "LspHierarchyToggleCommand",
+    "LspHoverCommand",
+    "LspInlayHintClickCommand",
+    "LspNextDiagnosticCommand",
+    "LspOnDoubleClickCommand",
+    "LspOpenLinkCommand",
+    "LspOpenLocationCommand",
+    "LspParseVscodePackageJson",
+    "LspPrevDiagnosticCommand",
+    "LspRefactorCommand",
+    "LspResolveDocsCommand",
+    "LspRestartServerCommand",
+    "LspRunTextCommandHelperCommand",
+    "LspSaveAllCommand",
+    "LspSaveCommand",
+    "LspSelectCompletionCommand",
+    "LspSelectionAddCommand",
+    "LspSelectionClearCommand",
+    "LspSelectionSetCommand",
+    "LspShowDiagnosticsPanelCommand",
+    "LspShowScopeNameCommand",
+    "LspSignatureHelpNavigateCommand",
+    "LspSignatureHelpShowCommand",
+    "LspSourceActionCommand",
+    "LspSymbolDeclarationCommand",
+    "LspSymbolDefinitionCommand",
+    "LspSymbolImplementationCommand",
+    "LspSymbolReferencesCommand",
+    "LspSymbolRenameCommand",
+    "LspSymbolTypeDefinitionCommand",
+    "LspToggleCodeLensesCommand",
+    "LspToggleHoverPopupsCommand",
+    "LspToggleInlayHintsCommand",
+    "LspToggleLogPanelLinesLimitCommand",
+    "LspToggleServerPanelCommand",
+    "LspTroubleshootServerCommand",
+    "LspTypeHierarchyCommand",
+    "LspUpdateLogPanelCommand",
+    "LspUpdatePanelCommand",
+    "LspWorkspaceSymbolsCommand",
+    "TextChangeListener",
+    "plugin_loaded",
+    "plugin_unloaded",
+)
 
 
-def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
+def _get_final_subclasses(derived: list[type], results: list[type]) -> None:
     for d in derived:
         d_subclasses = d.__subclasses__()
         if len(d_subclasses) > 0:
@@ -99,7 +173,7 @@ def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes: List[Type[AbstractPlugin]] = []
+    plugin_classes: list[type[AbstractPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:
@@ -112,6 +186,7 @@ def _register_all_plugins() -> None:
 
 def _unregister_all_plugins() -> None:
     from LSP.plugin.core.sessions import _plugins
+
     _plugins.clear()
     client_configs.external.clear()
     client_configs.all.clear()
@@ -132,7 +207,6 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
-
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
@@ -187,7 +261,7 @@ class Listener(sublime_plugin.EventListener):
                     tup[1](None)
                     break
 
-    def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+    def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":
             wm = windows.lookup(window)
             if not wm:

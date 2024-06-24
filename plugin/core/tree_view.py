@@ -8,7 +8,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
-from typing import Dict, List, Optional, TypeVar
+from typing import TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
@@ -49,7 +49,7 @@ class TreeItem:
         self.id = str(uuid.uuid4())
 
     def html(self, sheet_name: str, indent_level: int) -> str:
-        indent_html = '<span style="padding-left: {}rem;">&nbsp;</span>'.format(indent_level)
+        indent_html = f'<span style="padding-left: {indent_level}rem;">&nbsp;</span>'
         if self.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
             disclosure_button_html = '<a class="disclosure-button" href="{}">▶</a>'.format(
                 sublime.command_url('lsp_expand_tree_item', {'name': sheet_name, 'id': self.id}))
@@ -64,13 +64,12 @@ class TreeItem:
             label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
                 self.command_url, html.escape(self.tooltip), html.escape(self.label))
         elif self.command_url:
-            label_html = '<a class="label" href="{}">{}</a>'.format(self.command_url, html.escape(self.label))
+            label_html = f'<a class="label" href="{self.command_url}">{html.escape(self.label)}</a>'
         elif self.tooltip:
-            label_html = '<span class="label" title="{}">{}</span>'.format(
-                html.escape(self.tooltip), html.escape(self.label))
+            label_html = f'<span class="label" title="{html.escape(self.tooltip)}">{html.escape(self.label)}</span>'
         else:
-            label_html = '<span class="label">{}</span>'.format(html.escape(self.label))
-        description_html = '<span class="description">{}</span>'.format(html.escape(self.description)) if \
+            label_html = f'<span class="label">{html.escape(self.label)}</span>'
+        description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
         return '<div class="tree-view-row">{}</div>'.format(
             indent_html + disclosure_button_html + icon_html + label_html + description_html)
@@ -104,14 +103,14 @@ class Node:
         self.element = element
         self.tree_item = tree_item
         self.indent_level = indent_level
-        self.child_ids: List[str] = []
+        self.child_ids: list[str] = []
         self.is_resolved = False
 
 
 class TreeDataProvider(metaclass=ABCMeta):
 
     @abstractmethod
-    def get_children(self, element: Optional[T]) -> Promise[List[T]]:
+    def get_children(self, element: T | None) -> Promise[list[T]]:
         """ Implement this to return the children for the given element or root (if no element is passed). """
         raise NotImplementedError()
 
@@ -127,8 +126,8 @@ class TreeViewSheet(sublime.HtmlSheet):
 
     def __init__(self, id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
         super().__init__(id)
-        self.nodes: Dict[str, Node] = {}
-        self.root_nodes: List[str] = []
+        self.nodes: dict[str, Node] = {}
+        self.root_nodes: list[str] = []
         self.name = name
         self.data_provider = data_provider
         self.header = header
@@ -146,8 +145,8 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.header = header
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
-    def _set_root_nodes(self, elements: List[T]) -> None:
-        promises: List[Promise[None]] = []
+    def _set_root_nodes(self, elements: list[T]) -> None:
+        promises: list[Promise[None]] = []
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
@@ -156,7 +155,7 @@ class TreeViewSheet(sublime.HtmlSheet):
             promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
         Promise.all(promises).then(lambda _: self._update_contents())
 
-    def _add_children(self, id: str, elements: List[T]) -> None:
+    def _add_children(self, id: str, elements: list[T]) -> None:
         assert id in self.nodes
         node = self.nodes[id]
         for element in elements:
@@ -284,7 +283,7 @@ def new_tree_view_sheet(
     header: str = "",
     flags: int = 0,
     group: int = -1
-) -> Optional[TreeViewSheet]:
+) -> TreeViewSheet | None:
     """
     Use this function to create a new TreeView in form of a special HtmlSheet (TreeViewSheet). Only one TreeViewSheet
     with the given name is allowed per window. If there already exists a TreeViewSheet with the same name, its content

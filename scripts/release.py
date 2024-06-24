@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 from typing import Generator, List, Optional, Tuple
 import argparse
@@ -14,7 +13,7 @@ PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
 
-with open(os.path.join(PACKAGE_PATH, '.release.json'), 'r') as f:
+with open(os.path.join(PACKAGE_PATH, '.release.json')) as f:
     CONFIGURATION = json.load(f)
 
 # Project configuration
@@ -25,12 +24,12 @@ GITHUB_REPO = CONFIGURATION['publish_repo']
 # The prefix to use for release version number. For example with prefix "4000" the version will be "4000-x.y.z".
 RELEASE_VERSION_PREFIX = CONFIGURATION['publish_version_prefix'] or ''
 # The name of the settings file to get the release token from ("github_token" setting)
-SETTINGS = '{}.sublime-settings'.format(__package__)
+SETTINGS = f'{__package__}.sublime-settings'
 PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
 
 
 def get_message(fname: str) -> str:
-    with open(fname, 'r', encoding='utf-8') as file:
+    with open(fname, encoding='utf-8') as file:
         message = file.read()
     return message
 
@@ -66,14 +65,15 @@ def parse_version(version: str) -> Tuple[int, int, int]:
     match = re.match(
         r'(?:(?P<prefix>[^.-]+)\-)?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-.+)?', version)
     if match:
-        prefix, major, minor, patch = match.groups()
+        _prefix, major, minor, patch = match.groups()
         return int(major), int(minor), int(patch)
     else:
         return 0, 0, 0
 
+
 def get_version_with_prefix(version: str) -> str:
     if RELEASE_VERSION_PREFIX:
-        return '{}-{}'.format(RELEASE_VERSION_PREFIX, version)
+        return f'{RELEASE_VERSION_PREFIX}-{version}'
     return version
 
 
@@ -106,7 +106,7 @@ def build_release(args: argparse.Namespace) -> None:
     put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
     if PYTHON_VERSION_PATH:
         version_tuple = parse_version(version)
-        put_message(PYTHON_VERSION_PATH, '__version__ = {}\n'.format(version_tuple))
+        put_message(PYTHON_VERSION_PATH, f'__version__ = {version_tuple}\n')
     build_messages_json(history)
     commit_release(version)
     print("Release %s created!" % version)
@@ -121,16 +121,16 @@ def publish_release(args: argparse.Namespace) -> None:
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
     version_with_prefix = get_version_with_prefix(version)
 
-    repo_url = 'git@github.com:{}'.format(GITHUB_REPO)
+    repo_url = f'git@github.com:{GITHUB_REPO}'
     # push release branch to server
     git('push', repo_url, RELEASE_BRANCH)
     # push tags to server
     git('push', repo_url, 'tag', version_with_prefix)
 
     # publish the release
-    post_url = '/repos/{}/releases'.format(GITHUB_REPO)
+    post_url = f'/repos/{GITHUB_REPO}/releases'
     headers = {
-        'Authorization': 'token {}'.format(args.token),
+        'Authorization': f'token {args.token}',
         'User-Agent': 'Sublime Text',
         'Content-type': 'application/json',
     }
@@ -166,7 +166,7 @@ Command Line Interface
 """
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Buils and Publishes {} Releases'.format(__package__))
+        description=f'Buils and Publishes {__package__} Releases')
     subparsers = parser.add_subparsers(help='Available commands')
     build_parser = subparsers.add_parser('build', help='Build a release')
     build_parser.set_defaults(func=build_release)

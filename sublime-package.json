@@ -629,6 +629,11 @@
               "default": "annotation",
               "markdownDescription": "Where to show `\"code lens\"`."
             },
+            "show_diagnostics_in_hover": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show diagnostics in hover popup if available."
+            },
             "show_code_actions_in_hover": {
               "type": "boolean",
               "default": true,
@@ -765,6 +770,23 @@
               },
               "uniqueItems": true,
               "markdownDescription": "Determines ranges which initially should be folded when a document is opened, provided that the language server has support for this."
+            },
+            "refactoring_auto_save": {
+              "type": "string",
+              "enum": [
+                "always",
+                "preserve",
+                "preserve_opened",
+                "never"
+              ],
+              "markdownEnumDescriptions": [
+                "Save all affected files",
+                "Only save files that didn't have unsaved changes beforehand",
+                "Only save opened files that didn't have unsaved changes beforehand and open other files that were affected by the refactoring",
+                "Never save files automatically"
+              ],
+              "default": "never",
+              "markdownDescription": "Controls if files that were part of a refactoring (e.g. rename) are saved automatically."
             }
           },
           "additionalProperties": false

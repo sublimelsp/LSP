@@ -5,7 +5,7 @@ from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 import os
 import sublime
 
@@ -13,11 +13,11 @@ import sublime
 class ClientConfigs:
 
     def __init__(self) -> None:
-        self.all: Dict[str, ClientConfig] = {}
-        self.external: Dict[str, ClientConfig] = {}
-        self._listener: Optional[Callable[[Optional[str]], None]] = None
+        self.all: dict[str, ClientConfig] = {}
+        self.external: dict[str, ClientConfig] = {}
+        self._listener: Callable[[str | None], None] | None = None
 
-    def _notify_listener(self, config_name: Optional[str] = None) -> None:
+    def _notify_listener(self, config_name: str | None = None) -> None:
         if callable(self._listener):
             self._listener(config_name)
 
@@ -60,7 +60,7 @@ class ClientConfigs:
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
         try:
             config = ClientConfig.from_sublime_settings(name, s, file)
-        except IOError:
+        except OSError:
             # The plugin is about to be disabled (for example by Package Control for an upgrade), let unregister_plugin
             # handle this
             return
@@ -104,14 +104,14 @@ class ClientConfigs:
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listener(self, recipient: Callable[[Optional[str]], None]) -> None:
+    def set_listener(self, recipient: Callable[[str | None], None]) -> None:
         self._listener = recipient
 
 
-_settings_obj: Optional[sublime.Settings] = None
-_settings: Optional[Settings] = None
-_settings_registration: Optional[SettingsRegistration] = None
-_global_settings: Optional[sublime.Settings] = None
+_settings_obj: sublime.Settings | None = None
+_settings: Settings | None = None
+_settings_registration: SettingsRegistration | None = None
+_global_settings: sublime.Settings | None = None
 client_configs = ClientConfigs()
 
 
@@ -153,9 +153,9 @@ def globalprefs() -> sublime.Settings:
     return _global_settings  # type: ignore
 
 
-def read_client_config(name: str, d: Dict[str, Any]) -> ClientConfig:
+def read_client_config(name: str, d: dict[str, Any]) -> ClientConfig:
     return ClientConfig.from_dict(name, d)
 
 
-def update_client_config(external_config: ClientConfig, user_override_config: Dict[str, Any]) -> ClientConfig:
+def update_client_config(external_config: ClientConfig, user_override_config: dict[str, Any]) -> ClientConfig:
     return ClientConfig.from_config(external_config, user_override_config)

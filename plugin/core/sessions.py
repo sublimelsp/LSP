@@ -1047,6 +1047,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_server_notification_async(self, notification: Notification) -> None:
+        """
+        Notifies about a notification message that has been received from the language server.
+
+        :param    notification:  The notification object.
+        """
+        pass
+
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
@@ -2377,6 +2385,8 @@ class Session(TransportCallbacks):
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
+                if self._plugin:
+                    self._plugin.on_server_notification_async(Notification(method, result))
                 return res
         elif "id" in payload:
             if payload["id"] is None:

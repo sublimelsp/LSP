@@ -95,6 +95,9 @@ class LspRenameFileCommand(LspWindowCommand):
             old_regions = [region for region in view.sel()]
             view.close()  # LSP spec - send didClose for the old file
         # actally rename the file, this will create a new file
+        new_dir = Path(new_path).parent
+        if not os.path.exists(new_dir):
+            os.makedirs(new_dir)
         os.rename(old_path, new_path)
         if os.path.isfile(new_path):
             def restore_regions(v: sublime.View | None) -> None:

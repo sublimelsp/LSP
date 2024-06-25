@@ -66,7 +66,10 @@ class LspRenameFileCommand(LspWindowCommand):
             self.notify_did_rename(rename_file_params)
             return
         request = Request.willRenameFiles(rename_file_params)
-        session.send_request(request, lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params))
+        session.send_request(
+            request,
+            lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params
+        ))
 
     def get_old_path(self, paths: list[str] | None, view: sublime.View | None) -> str:
         if paths:
@@ -75,7 +78,8 @@ class LspRenameFileCommand(LspWindowCommand):
             return view.file_name() or ""
         return ""
 
-    def handle(self, res: WorkspaceEdit | None, session_name: str, old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
+    def handle(self, res: WorkspaceEdit | None, session_name: str,
+               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
         session = self.session_by_name(session_name)
         if session:
             # LSP spec - Apply WorkspaceEdit before the files are renamed
@@ -89,18 +93,20 @@ class LspRenameFileCommand(LspWindowCommand):
         view = self.window.find_open_file(old_path)
         if view:
             old_regions = [region for region in view.sel()]
-            view.close() # LSP spec - send didClose for old file
+            view.close() # LSP spec - send didClose for the old file
         # actally rename the file, this will create a new file
-        os.rename(
-            old_path,
-            new_path
-        )
+        os.rename(old_path, new_path)
         if os.path.isfile(new_path):
+            def restore_regions(v: sublime.View | None) -> None:
+                if not v:
+                    return
+                v.sel().clear()
+                v.sel().add_all(old_regions)
+
             # LSP spec - send didOpen for the new file
-            open_file_uri(self.window, new_path) \
-                .then(lambda v: v and old_regions and v.sel().add_all(old_regions))
+            open_file_uri(self.window, new_path).then(restore_regions)
 
     def notify_did_rename(self, rename_file_params: RenameFilesParams):
         sessions = [s for s in self.sessions() if s.has_capability('workspace.fileOperations.didRename')]
-        for session in sessions:
-            session.send_notification(Notification.didRenameFiles(rename_file_params))
+        for s in sessions:
+            s.send_notification(Notification.didRenameFiles(rename_file_params))

@@ -582,6 +582,9 @@ class SessionViewProtocol(Protocol):
     ) -> None:
         ...
 
+    def redraw_diagnostics_async(self) -> None:
+        ...
+
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         ...
 
@@ -664,6 +667,9 @@ class SessionBufferProtocol(Protocol):
     def update_document_link(self, new_link: DocumentLink) -> None:
         ...
 
+    def redraw_document_links_async(self) -> None:
+        ...
+
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
         ...
 
@@ -671,6 +677,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def get_semantic_tokens(self) -> list[Any]:
+        ...
+
+    def clear_semantic_tokens_async(self) -> None:
         ...
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
@@ -1344,8 +1353,11 @@ class Session(TransportCallbacks):
         :param message: The message
         """
         self.config_status_message = message.strip()
+        self.redraw_config_status_async()
+
+    def redraw_config_status_async(self) -> None:
         for sv in self.session_views_async():
-            self.config.set_view_status(sv.view, message)
+            self.config.set_view_status(sv.view, self.config_status_message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message

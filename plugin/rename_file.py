@@ -46,14 +46,14 @@ class LspRenameFileCommand(LspWindowCommand):
 
     def run(
         self,
-        new_name: str, # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
-        paths: list[str] | None = None, # exist when invoked from the sidebar with "LSP: Rename"
+        new_name: str,  # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
+        paths: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename"
     ) -> None:
         session = self.session()
         old_path = self.get_old_path(paths, self.window.active_view())
         new_path = os.path.normpath(Path(old_path).parent / new_name)
         if os.path.exists(new_path):
-            self.window.status_message(f'Unable to Rename. Already exists')
+            self.window.status_message('Unable to Rename. Already exists')
             return
         rename_file_params: RenameFilesParams = {
             "files": [{
@@ -68,8 +68,8 @@ class LspRenameFileCommand(LspWindowCommand):
         request = Request.willRenameFiles(rename_file_params)
         session.send_request(
             request,
-            lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params
-        ))
+            lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params)
+        )
 
     def get_old_path(self, paths: list[str] | None, view: sublime.View | None) -> str:
         if paths:
@@ -93,7 +93,7 @@ class LspRenameFileCommand(LspWindowCommand):
         view = self.window.find_open_file(old_path)
         if view:
             old_regions = [region for region in view.sel()]
-            view.close() # LSP spec - send didClose for the old file
+            view.close()  # LSP spec - send didClose for the old file
         # actally rename the file, this will create a new file
         os.rename(old_path, new_path)
         if os.path.isfile(new_path):

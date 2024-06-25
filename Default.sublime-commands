@@ -152,6 +152,10 @@
         "command": "lsp_symbol_rename"
     },
     {
+        "caption": "LSP: Rename File",
+        "command": "lsp_rename_file"
+    },
+    {
         "caption": "LSP: Code Action",
         "command": "lsp_code_actions"
     },

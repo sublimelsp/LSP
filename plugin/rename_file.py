@@ -34,6 +34,9 @@ class RenameFileInputHandler(sublime_plugin.TextInputHandler):
 class LspRenameFileCommand(LspTextCommand):
     capability = 'workspace.fileOperations.willRename'
 
+    def is_enabled(self):
+        return True
+
     def want_event(self) -> bool:
         return False
 
@@ -46,7 +49,10 @@ class LspRenameFileCommand(LspTextCommand):
         self,
         _edit: sublime.Edit,
         new_name: str = "", # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
+        paths: str | None = None
     ) -> None:
+        print('paths', paths)
+        print('new_name', new_name)
         session = self.best_session("workspace.fileOperations.willRename")
         if not session:
             return

@@ -50,10 +50,14 @@ class LspRenameFileCommand(LspWindowCommand):
         paths: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename"
     ) -> None:
         session = self.session()
-        old_path = self.get_old_path(paths, self.window.active_view())
+        view = self.window.active_view()
+        old_path = self.get_old_path(paths, view)
         new_path = os.path.normpath(Path(old_path).parent / new_name)
         if os.path.exists(new_path):
             self.window.status_message('Unable to Rename. Already exists')
+            return
+        if old_path == '' and view: # handle renaming buffers
+            view.set_name(Path(new_path).name)
             return
         rename_file_params: RenameFilesParams = {
             "files": [{

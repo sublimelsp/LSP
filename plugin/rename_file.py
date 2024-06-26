@@ -25,6 +25,10 @@ class RenameFileInputHandler(sublime_plugin.TextInputHandler):
     def initial_text(self) -> str:
         return self.placeholder()
 
+    def initial_selection(self) -> list[tuple[int, int]]:
+        end_point = self.file_name.rfind('.')
+        return [(0, end_point)]
+
     def validate(self, name: str) -> bool:
         return len(name) > 0
 

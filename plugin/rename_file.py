@@ -13,24 +13,26 @@ class RenameFileInputHandler(sublime_plugin.TextInputHandler):
     def want_event(self) -> bool:
         return False
 
-    def __init__(self, file_name: str) -> None:
-        self.file_name = file_name
+    def __init__(self, path: str) -> None:
+        self.path = path
 
     def name(self) -> str:
         return "new_name"
 
     def placeholder(self) -> str:
-        return self.file_name
+        return self.path
 
     def initial_text(self) -> str:
         return self.placeholder()
 
     def initial_selection(self) -> list[tuple[int, int]]:
-        end_point = self.file_name.rfind('.')
+        end_point = self.path.rfind('.')
+        if end_point == -1:
+            end_point = len(self.path)
         return [(0, end_point)]
 
-    def validate(self, name: str) -> bool:
-        return len(name) > 0
+    def validate(self, path: str) -> bool:
+        return len(path) > 0
 
 
 class LspRenameFileCommand(LspWindowCommand):

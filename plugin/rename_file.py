@@ -119,7 +119,15 @@ class LspRenameFileCommand(LspWindowCommand):
         new_dir = Path(new_path).parent
         if not os.path.exists(new_dir):
             os.makedirs(new_dir)
+        isdir = os.path.isdir(old_path)
         os.rename(old_path, new_path)
+        if isdir:
+            for v in self.window.views():
+                file_name = v.file_name()
+                if not file_name:
+                    continue
+                if file_name.startswith(old_path):
+                    v.retarget(file_name.replace(old_path, new_path))
         if os.path.isfile(new_path):
             def restore_regions(v: sublime.View | None) -> None:
                 if not v:

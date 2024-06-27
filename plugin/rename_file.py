@@ -64,7 +64,8 @@ class LspRenameFileCommand(LspWindowCommand):
         view = self.window.active_view()
         old_path = self.get_old_path(dirs, files, view)
         if old_path is None:  # handle renaming buffers
-            if view: view.set_name(new_name)
+            if view:
+                view.set_name(new_name)
             return
         new_path = os.path.normpath(Path(old_path).parent / new_name)
         if os.path.exists(new_path):
@@ -87,9 +88,12 @@ class LspRenameFileCommand(LspWindowCommand):
         )
 
     def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str | None:
-        if dirs: return dirs[0]
-        if files: return files[0]
-        if view: return view.file_name()
+        if dirs:
+            return dirs[0]
+        if files:
+            return files[0]
+        if view:
+            return view.file_name()
 
     def handle(self, res: WorkspaceEdit | None, session_name: str,
                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:

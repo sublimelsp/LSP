@@ -10,9 +10,6 @@ import sublime_plugin
 
 
 class RenameFileInputHandler(sublime_plugin.TextInputHandler):
-    def want_event(self) -> bool:
-        return False
-
     def __init__(self, path: str) -> None:
         self.path = path
 
@@ -26,10 +23,8 @@ class RenameFileInputHandler(sublime_plugin.TextInputHandler):
         return self.placeholder()
 
     def initial_selection(self) -> list[tuple[int, int]]:
-        end_point = self.path.rfind('.')
-        if end_point == -1:
-            end_point = len(self.path)
-        return [(0, end_point)]
+        name, _ext = os.path.splitext(self.path)
+        return [(0, len(name))]
 
     def validate(self, path: str) -> bool:
         return len(path) > 0

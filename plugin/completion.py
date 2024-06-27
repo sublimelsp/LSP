@@ -3,7 +3,7 @@ from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import CompletionEditRange
+from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemDefaults
 from .core.protocol import CompletionItemKind
@@ -127,7 +127,7 @@ def is_range(val: Any) -> TypeGuard[Range]:
     return isinstance(val, dict) and 'start' in val and 'end' in val
 
 
-def is_edit_range(val: Any) -> TypeGuard[CompletionEditRange]:
+def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
     return isinstance(val, dict) and 'insert' in val and 'replace' in val
 
 

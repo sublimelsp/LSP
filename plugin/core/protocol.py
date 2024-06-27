@@ -6281,7 +6281,5 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
     'session_name': str
 })
 
-CompletionEditRange = EditRangeWithInsertReplace
-
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range

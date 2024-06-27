@@ -1,8 +1,14 @@
 [
     {
-        "caption": "Lsp: Rename",
+        "caption": "Lsp: Rename File",
         "mnemonic": "l",
         "command": "lsp_rename_file",
-        "args": {"paths": []}
-    }
+        "args": {"files": []}
+    },
+    {
+        "caption": "Lsp: Rename Folder",
+        "mnemonic": "l",
+        "command": "lsp_rename_file",
+        "args": {"dirs": []}
+    },
 ]

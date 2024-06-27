@@ -52,7 +52,7 @@ class LspRenameFileCommand(LspWindowCommand):
         if "new_name" in args:
             return None
         old_path = self.get_old_path(args.get('dirs'), args.get('files'), self.window.active_view())
-        return RenameFileInputHandler(Path(old_path).name)
+        return RenameFileInputHandler(Path(old_path or "").name)
 
     def run(
         self,
@@ -63,12 +63,12 @@ class LspRenameFileCommand(LspWindowCommand):
         session = self.session()
         view = self.window.active_view()
         old_path = self.get_old_path(dirs, files, view)
+        if old_path is None:  # handle renaming buffers
+            if view: view.set_name(new_name)
+            return
         new_path = os.path.normpath(Path(old_path).parent / new_name)
         if os.path.exists(new_path):
             self.window.status_message('Unable to Rename. Already exists')
-            return
-        if old_path == '' and view:  # handle renaming buffers
-            view.set_name(Path(new_path).name)
             return
         rename_file_params: RenameFilesParams = {
             "files": [{
@@ -86,19 +86,14 @@ class LspRenameFileCommand(LspWindowCommand):
             lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params)
         )
 
-    def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str:
-        if dirs:
-            return dirs[0]
-        if files:
-            return files[0]
-        if view:
-            return view.file_name() or ""
-        return ""
+    def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str | None:
+        if dirs: return dirs[0]
+        if files: return files[0]
+        if view: return view.file_name()
 
     def handle(self, res: WorkspaceEdit | None, session_name: str,
                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
-        session = self.session_by_name(session_name)
-        if session:
+        if session := self.session_by_name(session_name):
             # LSP spec - Apply WorkspaceEdit before the files are renamed
             if res:
                 session.apply_workspace_edit_async(res, is_refactoring=True)
@@ -107,8 +102,7 @@ class LspRenameFileCommand(LspWindowCommand):
 
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []
-        view = self.window.find_open_file(old_path)
-        if view:
+        if view := self.window.find_open_file(old_path):
             old_regions = [region for region in view.sel()]
             view.close()  # LSP spec - send didClose for the old file
         new_dir = Path(new_path).parent

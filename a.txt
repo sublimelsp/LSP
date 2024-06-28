@@ -1,1 +1,0 @@
-<div class="highlight"><pre><span style="color: #\\w{6}">f\\(</span><span style="color: #\\w{6}; font-weight: bold; text-decoration: underline">x</span><span style="color: #\\w{6}">\\)</span></pre></div><p>must be in the <strong>frobnicate</strong> range</p><hr/><div style="font-size: 0\\.9rem"><p>f does <em>interesting</em> things</p></div>

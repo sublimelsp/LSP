@@ -27,7 +27,7 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
             changes.setdefault(uri, ([], version))[0].extend(
                 # currently LSP code supprots only `TextEdit`s
                 # TODO: Extend WorkspaceEdit to support `AnnotatedTextEdit` and `SnippetTextEdit`
-                [edit for edit in  edits if is_text_edit(edit)]
+                [edit for edit in edits if is_text_edit(edit)]
             )
     else:
         raw_changes = workspace_edit.get('changes')

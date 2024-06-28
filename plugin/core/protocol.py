@@ -6283,5 +6283,6 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range
 
+
 def is_text_edit(value: Any) -> TypeGuard[TextEdit]:
     return isinstance(value, dict) and bool(value.get('range')) and bool(value.get('newText'))

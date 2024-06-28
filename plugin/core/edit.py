@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .logging import debug
-from .protocol import Position
+from .protocol import Position, is_text_edit
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
@@ -24,7 +24,11 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
             uri = text_document['uri']
             version = text_document.get('version')
             edits = document_change.get('edits')
-            changes.setdefault(uri, ([], version))[0].extend(edits)
+            changes.setdefault(uri, ([], version))[0].extend(
+                # currently LSP code supprots only `TextEdit`s
+                # TODO: Extend WorkspaceEdit to support `AnnotatedTextEdit` and `SnippetTextEdit`
+                [edit for edit in  edits if is_text_edit(edit)]
+            )
     else:
         raw_changes = workspace_edit.get('changes')
         if isinstance(raw_changes, dict):

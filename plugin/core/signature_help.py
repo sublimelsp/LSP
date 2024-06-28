@@ -168,7 +168,12 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            parameter = parameters[signature.get("activeParameter", self._active_parameter_index)]
+            active_parameter = signature.get("activeParameter")
+            # @since 3.18 active_parameter can be null
+            # in which case the client should not higlight parameters
+            if active_parameter is None:
+                return
+            parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None
         documentation = parameter.get("documentation")

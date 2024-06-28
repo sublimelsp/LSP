@@ -330,6 +330,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "contextSupport": True,
             "signatureInformation": {
                 "activeParameterSupport": True,
+                "noActiveParameterSupport": True,
                 "documentationFormat": supported_markup_kinds,
                 "parameterInformation": {
                     "labelOffsetSupport": True

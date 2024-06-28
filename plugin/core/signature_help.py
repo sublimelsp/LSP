@@ -169,7 +169,7 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            active_parameter = cast(Uint,signature.get("activeParameter"))
+            active_parameter = cast(Uint, signature.get("activeParameter"))
             parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None

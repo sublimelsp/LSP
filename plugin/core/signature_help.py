@@ -1,6 +1,7 @@
 from __future__ import annotations
+from typing import cast
 from .logging import debug
-from .protocol import SignatureHelp
+from .protocol import SignatureHelp, Uint
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
@@ -168,11 +169,7 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            active_parameter = signature.get("activeParameter")
-            # @since 3.18 active_parameter can be null
-            # in which case the client should not higlight parameters
-            if active_parameter is None:
-                return
+            active_parameter = cast(Uint,signature.get("activeParameter"))
             parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None

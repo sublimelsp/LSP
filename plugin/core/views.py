@@ -3,7 +3,7 @@ from .constants import CODE_ACTION_KINDS
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
-from .protocol import CodeAction
+from .protocol import CodeAction, LanguageKind
 from .protocol import CodeActionKind
 from .protocol import CodeActionContext
 from .protocol import CodeActionParams
@@ -253,6 +253,7 @@ def entire_content_range(view: sublime.View) -> Range:
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
+    language_id = cast(LanguageKind, language_id)
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,

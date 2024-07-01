@@ -693,8 +693,6 @@ def _start_subprocess(
     pass_fds: Sequence[int],
 ) -> subprocess.Popen:
     debug(f"starting {args} in {cwd if cwd else os.getcwd()}")
-    if pass_fds:
-        debug(f"inheriting file descriptors: {pass_fds}")
     process = subprocess.Popen(
         args=args,
         stdin=stdin,
@@ -705,7 +703,6 @@ def _start_subprocess(
         cwd=cwd,
         pass_fds=pass_fds,
     )
-    debug("hello world")
     _subprocesses.add(process)
     return process
 

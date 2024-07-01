@@ -1,0 +1,18 @@
+=> 2.2.0
+
+# Features
+
+- feat: Add `"show_diagnostics_in_hover"` setting (#2489) (@HJX-001)
+
+# Fixes
+
+* fix: Unexpected keyword argument 'event' when using mouse keys (2492) (@deathaxe)
+- fix: Enum issues (#2484, #2487) (Janos Wortmann)
+- fix: Remove logging.basicConfig() and avoid polluting other packages (#2478) (Предраг Николић)
+
+# Documentation
+
+- docs: Add racket-langserver (#2481) (omentic)
+
+# API changes
+- Allow plugins to listen for server notification messages (#2496) (Предраг Николић)

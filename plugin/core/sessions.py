@@ -86,6 +86,7 @@ from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
+from .transports import Json
 from .transports import TransportWrapper
 from .transports import TransportCallbacks
 from .types import Capabilities
@@ -1259,11 +1260,11 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-class Session(TransportCallbacks):
+class Session(TransportCallbacks[Json]):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
-        self.transport: TransportWrapper | None = None
+        self.transport: TransportWrapper[Json] | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1519,7 +1520,7 @@ class Session(TransportCallbacks):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: TransportWrapper,
+        transport: TransportWrapper[Json],
         init_callback: InitCallback
     ) -> None:
         self.transport = transport

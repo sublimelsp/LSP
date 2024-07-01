@@ -4,7 +4,7 @@ from abc import abstractmethod
 from contextlib import closing
 from functools import partial
 from queue import Queue
-from typing import Any, Callable, Generic, IO, Protocol, Sequence, TypeVar
+from typing import Any, Callable, Dict, Generic, IO, Protocol, Sequence, TypeVar
 import http.client
 import http
 import io
@@ -24,6 +24,7 @@ import ssl
 TCP_CONNECT_TIMEOUT = 5  # seconds
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
+Json = Dict[str, Any]
 
 
 def _set_inheritable(inherit_file_descriptors: Sequence[int] | None, value: bool) -> None:
@@ -240,7 +241,7 @@ class TransportWrapper(Generic[T]):
         self._end(exception)
 
 
-def encode_json(data: dict[str, Any]) -> bytes:
+def encode_json(data: Json) -> bytes:
     return json.dumps(
         data,
         ensure_ascii=False,
@@ -250,7 +251,7 @@ def encode_json(data: dict[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def decode_json(message: bytes) -> dict[str, Any]:
+def decode_json(message: bytes) -> Json:
     return json.loads(message.decode("utf-8"))
 
 
@@ -388,8 +389,8 @@ class TransportConfig:
         env: dict[str, str | list[str]] | None,
         cwd: str | None,
         variables: dict[str, str],
-        callbacks: TransportCallbacks[dict[str, Any]],
-    ) -> TransportWrapper[dict[str, Any]]:
+        callbacks: TransportCallbacks[Json],
+    ) -> TransportWrapper[Json]:
         raise NotImplementedError()
 
 
@@ -411,7 +412,7 @@ class StdioTransportConfig(TransportConfig):
         env: dict[str, str | list[str]] | None,
         cwd: str | None,
         variables: dict[str, str],
-        callbacks: TransportCallbacks[dict[str, Any]],
+        callbacks: TransportCallbacks[Json],
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
@@ -466,7 +467,7 @@ class TcpClientTransportConfig(TransportConfig):
         env: dict[str, str | list[str]] | None,
         cwd: str | None,
         variables: dict[str, str],
-        callbacks: TransportCallbacks[dict[str, Any]],
+        callbacks: TransportCallbacks[Json],
     ) -> TransportWrapper:
         port = _add_and_resolve_port_variable(variables, self._port)
         if command:
@@ -508,7 +509,7 @@ class TcpServerTransportConfig(TransportConfig):
         env: dict[str, str | list[str]] | None,
         cwd: str | None,
         variables: dict[str, str],
-        callbacks: TransportCallbacks[dict[str, Any]],
+        callbacks: TransportCallbacks[Json],
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
@@ -615,7 +616,7 @@ class DuplexPipeTransportConfig(TransportConfig):
         env: dict[str, str | list[str]] | None,
         cwd: str | None,
         variables: dict[str, str],
-        callbacks: TransportCallbacks[dict[str, Any]],
+        callbacks: TransportCallbacks[Json],
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')

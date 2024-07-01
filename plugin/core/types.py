@@ -3,6 +3,13 @@ from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKind
+from .transports import DuplexPipeTransportConfig
+from .transports import StdioTransportConfig
+from .transports import TcpClientTransportConfig
+from .transports import TcpServerTransportConfig
+from .transports import TlsClientTransportConfig
+from .transports import TransportConfig
+from .transports import WebSocketClientTransportConfig
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -12,15 +19,11 @@ from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
 import fnmatch
-import multiprocessing
-import os
 import posixpath
-import socket
 import sublime
 import time
 
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
 WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 
@@ -642,35 +645,6 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-class NodeIpcPipe:
-    def __init__(self) -> None:
-        parent_connection, child_connection = multiprocessing.Pipe()
-        self.parent_connection = parent_connection
-        self.child_connection = child_connection
-
-
-class TransportConfig:
-    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket", "node_ipc")
-
-    def __init__(
-        self,
-        name: str,
-        command: list[str],
-        tcp_port: int | None,
-        env: dict[str, str],
-        listener_socket: socket.socket | None,
-        node_ipc: NodeIpcPipe | None
-    ) -> None:
-        if not command and not tcp_port:
-            raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
-        self.name = name
-        self.command = command
-        self.tcp_port = tcp_port
-        self.env = env
-        self.listener_socket = listener_socket
-        self.node_ipc = node_ipc
-
-
 class ClientConfig:
     def __init__(self,
                  name: str,
@@ -678,9 +652,14 @@ class ClientConfig:
                  priority_selector: str | None = None,
                  schemes: list[str] | None = None,
                  command: list[str] | None = None,
-                 use_node_ipc: bool = False,
                  binary_args: list[str] | None = None,  # DEPRECATED
+                 hostname: str | None = None,
                  tcp_port: int | None = None,
+                 use_tls: bool | None = None,
+                 websocket: bool | None = None,
+                 http_headers: bool = True,
+                 pipe_fileno_env_key: str | None = None,
+                 use_node_ipc: bool = False,
                  auto_complete_selector: str | None = None,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
@@ -704,8 +683,18 @@ class ClientConfig:
         else:
             assert isinstance(binary_args, list)
             self.command = binary_args
-        self.use_node_ipc = use_node_ipc
+        self.hostname = hostname
         self.tcp_port = tcp_port
+        self.use_tls = use_tls
+        self.websocket = websocket
+        # "use_node_ipc" is a convenience bool setting that modifies the http_header and pipe_fileno_env_key settings.
+        self.use_node_ipc = use_node_ipc
+        if self.use_node_ipc:
+            self.http_headers = False
+            self.pipe_fileno_env_key = "NODE_CHANNEL_FD"
+        else:
+            self.http_headers = http_headers
+            self.pipe_fileno_env_key = pipe_fileno_env_key
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled
         self.init_options = init_options
@@ -739,8 +728,13 @@ class ClientConfig:
             priority_selector=_read_priority_selector(s),
             schemes=s.get("schemes"),
             command=read_list_setting(s, "command", []),
-            use_node_ipc=bool(s.get("use_node_ipc", False)),
+            hostname=s.get("hostname"),
             tcp_port=s.get("tcp_port"),
+            use_tls=bool(s.get("use_tls", False)),
+            websocket=bool(s.get("websocket", False)),
+            http_headers=bool(s.get("http_headers", True)),
+            pipe_fileno_env_key=s.get("pipe_fileno_env_key", None),
+            use_node_ipc=bool(s.get("use_node_ipc", False)),
             auto_complete_selector=s.get("auto_complete_selector"),
             # Default to True, because an LSP plugin is enabled if it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
@@ -771,8 +765,13 @@ class ClientConfig:
             priority_selector=_read_priority_selector(d),
             schemes=schemes,
             command=d.get("command", []),
-            use_node_ipc=d.get("use_node_ipc", False),
+            hostname=d.get("hostname"),
             tcp_port=d.get("tcp_port"),
+            use_tls=bool(d.get("use_tls", False)),
+            websocket=bool(d.get("websocket", False)),
+            http_headers=bool(d.get("http_headers", True)),
+            pipe_fileno_env_key=d.get("pipe_fileno_env_key", False),
+            use_node_ipc=bool(d.get("use_node_ipc", False)),
             auto_complete_selector=d.get("auto_complete_selector"),
             enabled=d.get("enabled", False),
             init_options=DottedDict(d.get("initializationOptions")),
@@ -800,8 +799,12 @@ class ClientConfig:
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
             schemes=override.get("schemes", src_config.schemes),
             command=override.get("command", src_config.command),
-            use_node_ipc=override.get("use_node_ipc", src_config.use_node_ipc),
+            hostname=override.get("hostname", src_config.hostname),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
+            use_tls=override.get("use_tls", src_config.use_tls),
+            websocket=override.get("use_tls", src_config.use_tls),
+            http_headers=override.get("http_headers", src_config.http_headers),
+            use_node_ipc=override.get("use_node_ipc", src_config.use_node_ipc),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             enabled=override.get("enabled", src_config.enabled),
             init_options=DottedDict.from_base_and_override(
@@ -817,40 +820,33 @@ class ClientConfig:
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
-    def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
-        tcp_port: int | None = None
-        listener_socket: socket.socket | None = None
+    def create_transport_config(self) -> TransportConfig:
+        """
+        Create a (subclass of) TransportConfig that is able to start a TransportWrapper.
+        """
         if self.tcp_port is not None:
-            # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
-                # -1 means pick any free port
-                if self.tcp_port < -1:
-                    tcp_port = -self.tcp_port
-                # Create a listener socket for incoming connections
-                listener_socket = _start_tcp_listener(tcp_port)
-                tcp_port = int(listener_socket.getsockname()[1])
+                return TcpServerTransportConfig(self.http_headers, None if self.tcp_port == -1 else -self.tcp_port)
+            elif self.use_tls:
+                return TlsClientTransportConfig(
+                    self.http_headers,
+                    self.hostname,
+                    None if self.tcp_port == 0 else self.tcp_port,
+                )
             else:
-                tcp_port = _find_free_port() if self.tcp_port == 0 else self.tcp_port
-        if tcp_port is not None:
-            variables["port"] = str(tcp_port)
-        command = sublime.expand_variables(self.command, variables)
-        command = [os.path.expanduser(arg) for arg in command]
-        if tcp_port is not None:
-            # DEPRECATED -- replace {port} with $port or ${port} in your client config
-            command = [a.replace('{port}', str(tcp_port)) for a in command]
-        env = os.environ.copy()
-        for key, value in self.env.items():
-            if isinstance(value, list):
-                value = os.path.pathsep.join(value)
-            if key == 'PATH':
-                env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
-            else:
-                env[key] = sublime.expand_variables(value, variables)
-        node_ipc = None
-        if self.use_node_ipc:
-            node_ipc = NodeIpcPipe()
-            env["NODE_CHANNEL_FD"] = str(node_ipc.child_connection.fileno())
-        return TransportConfig(self.name, command, tcp_port, env, listener_socket, node_ipc)
+                return TcpClientTransportConfig(
+                    self.http_headers,
+                    self.hostname,
+                    None if self.tcp_port == 0 else self.tcp_port,
+                )
+        elif self.pipe_fileno_env_key:
+            return DuplexPipeTransportConfig(self.http_headers, self.pipe_fileno_env_key)
+        elif self.websocket:
+            return WebSocketClientTransportConfig(
+                self.http_headers, self.hostname, self.tcp_port, bool(self.use_tls)
+            )
+        else:
+            return StdioTransportConfig(self.http_headers)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
@@ -1022,18 +1018,3 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if language_id:
         return f"source.{language_id}"
     return ""
-
-
-def _find_free_port() -> int:
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-def _start_tcp_listener(tcp_port: int | None) -> socket.socket:
-    sock = socket.socket()
-    sock.bind(('localhost', tcp_port or 0))
-    sock.settimeout(TCP_CONNECT_TIMEOUT)
-    sock.listen(1)
-    return sock

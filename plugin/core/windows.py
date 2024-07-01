@@ -24,7 +24,6 @@ from .sessions import Manager
 from .sessions import Session
 from .settings import client_configs
 from .settings import userprefs
-from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
@@ -276,8 +275,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 transport_cwd: str | None = cwd
             else:
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
-            transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, transport_cwd, session)
+            transport = config.create_transport_config().start(
+                config.command, config.env, transport_cwd, variables, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
@@ -294,7 +293,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n--- Error: ---\n{1}"
             )).format(config.name, str(e))
-            exception_log(f"Unable to start subprocess for {config.name}", e)
+            exception_log(f"Unable to initialize language server for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)

@@ -3,9 +3,8 @@ from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
 from .core.sessions import get_plugin
-from .core.transports import create_transport
-from .core.transports import Transport
 from .core.transports import TransportCallbacks
+from .core.transports import TransportWrapper
 from .core.types import Capabilities
 from .core.types import ClientConfig
 from .core.version import __version__
@@ -495,7 +494,7 @@ class ServerTestRunner(TransportCallbacks):
         on_close: Callable[[list[str], str, int], None]
     ) -> None:
         self._on_close = on_close
-        self._transport: Transport | None = None
+        self._transport: TransportWrapper | None = None
         self._resolved_command: list[str] = []
         self._stderr_lines: list[str] = []
         try:
@@ -516,9 +515,9 @@ class ServerTestRunner(TransportCallbacks):
                 cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
             if not cwd and workspace_folders:
                 cwd = workspace_folders[0].path
-            transport_config = config.resolve_transport_config(variables)
-            self._resolved_command = transport_config.command
-            self._transport = create_transport(transport_config, cwd, self)
+            transport_config = config.create_transport_config()
+            self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
+            self._resolved_command = self._transport.process_args
             sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
         except Exception as ex:
             self.on_transport_close(-1, ex)

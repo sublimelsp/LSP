@@ -1,0 +1,4 @@
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py38"

@@ -86,7 +86,7 @@ from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
-from .transports import Transport
+from .transports import TransportWrapper
 from .transports import TransportCallbacks
 from .types import Capabilities
 from .types import ClientConfig
@@ -1255,7 +1255,7 @@ class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
-        self.transport: Transport | None = None
+        self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -1511,7 +1511,7 @@ class Session(TransportCallbacks):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: Transport,
+        transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
         self.transport = transport

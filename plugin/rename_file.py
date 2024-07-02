@@ -38,25 +38,23 @@ class LspRenameFileCommand(LspWindowCommand):
     def is_enabled(self):
         return True
 
-
     def want_event(self) -> bool:
         return False
 
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             return None
-        old_path = self.get_old_path(args.get('dirs'), args.get('files'), self.window.active_view())
+        old_path = self.get_old_path(args.get('paths'), self.window.active_view())
         return RenameFileInputHandler(Path(old_path or "").name)
 
     def run(
         self,
         new_name: str,  # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
-        dirs: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename Folder"
-        files: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename File"
+        paths: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename..."
     ) -> None:
         session = self.session()
         view = self.window.active_view()
-        old_path = self.get_old_path(dirs, files, view)
+        old_path = self.get_old_path(paths, view)
         if old_path is None:  # handle renaming buffers
             if view:
                 view.set_name(new_name)
@@ -86,11 +84,9 @@ class LspRenameFileCommand(LspWindowCommand):
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params, new_path, view)
 
-    def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str | None:
-        if dirs:
-            return dirs[0]
-        if files:
-            return files[0]
+    def get_old_path(self, paths: list[str] | None, view: sublime.View | None) -> str | None:
+        if paths:
+            return paths[0]
         if view:
             return view.file_name()
 

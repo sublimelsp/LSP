@@ -905,11 +905,6 @@ class ClientConfig:
         return True
 
 
-def syntax2scope(syntax_path: str) -> str | None:
-    syntax = sublime.syntax_from_path(syntax_path)
-    return syntax.scope if syntax else None
-
-
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
     # Best base scenario,
     selector = config.get("selector")

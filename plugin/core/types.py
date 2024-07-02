@@ -910,13 +910,6 @@ def syntax2scope(syntax_path: str) -> str | None:
     return syntax.scope if syntax else None
 
 
-def view2scope(view: sublime.View) -> str:
-    try:
-        return view.scope_name(0).split()[0]
-    except IndexError:
-        return ''
-
-
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
     # Best base scenario,
     selector = config.get("selector")

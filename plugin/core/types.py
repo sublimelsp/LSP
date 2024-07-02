@@ -2,7 +2,10 @@ from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import FileOperationFilter, FileOperationPattern, FileOperationPatternKind, FileOperationRegistrationOptions, TextDocumentSyncKind
+from .protocol import FileOperationFilter
+from .protocol import FileOperationPatternKind
+from .protocol import FileOperationRegistrationOptions
+from .protocol import TextDocumentSyncKind
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -440,7 +443,10 @@ class DocumentSelector:
         """Does this selector match the view? A selector with no filters matches all views."""
         return any(f(view) for f in self.filters) if self.filters else True
 
-def match_file_operation_filters(file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None) -> bool:
+
+def match_file_operation_filters(
+    file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None
+) -> bool:
     def matches(file_operation_filter: FileOperationFilter) -> bool:
         pattern = file_operation_filter.get('pattern')
         scheme = file_operation_filter.get('scheme')

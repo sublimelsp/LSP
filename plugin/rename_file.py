@@ -83,16 +83,16 @@ class LspRenameFileCommand(LspWindowCommand):
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params, new_path, view)
             return
-        capability = session.get_capability('workspace.fileOperations.willRename')
-        if not capability:
-            return
-        filters = FileOperationFilterMatcher(capability.get('filters'))
-        if filters.matches(old_path, view):
+        filters = (session.get_capability('workspace.fileOperations.willRename') or {}).get('filters')
+        if filters and FileOperationFilterMatcher(filters).matches(old_path, view):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
                 lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params, view)
             )
+        else:
+            self.rename_path(old_path, new_path)
+            self.notify_did_rename(rename_file_params, new_path, view)
 
     def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str | None:
         if dirs:
@@ -138,10 +138,9 @@ class LspRenameFileCommand(LspWindowCommand):
 
     def notify_did_rename(self, rename_file_params: RenameFilesParams, path: str, view: sublime.View | None):
         for s in self.sessions():
-            capability = s.get_capability('workspace.fileOperations.didRename')
-            if not capability:
+            filters = (s.get_capability('workspace.fileOperations.didRename') or {}).get('filters')
+            if not filters:
                 continue
-            filters = FileOperationFilterMatcher(capability.get('filters'))
-            if filters.matches(path, view):
+            if FileOperationFilterMatcher(filters).matches(path, view):
                 s.send_notification(Notification.didRenameFiles(rename_file_params))
 

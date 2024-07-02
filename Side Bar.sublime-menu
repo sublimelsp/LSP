@@ -2,7 +2,7 @@
     {
         "caption": "LSP: Rename...",
         "mnemonic": "l",
-        "command": "lsp_rename_path",
+        "command": "lsp_rename_path_sidebar",
         "args": {"paths": []}
     }
 ]

@@ -9,9 +9,32 @@ from urllib.parse import urljoin
 import os
 import sublime
 import sublime_plugin
+import functools
 
 
-class RenameFileInputHandler(sublime_plugin.TextInputHandler):
+class LspRenamePathSidebarCommand(LspWindowCommand):
+    def run(self, paths: list[str] | None = None) -> None:
+        old_path = paths[0] if paths else None
+        path_name = Path(old_path or "").name
+        v = self.window.show_input_panel(
+            "(LSP) New Name:",
+            path_name,
+            functools.partial(self.on_done, old_path),
+            None,
+            None)
+        v.sel().clear()
+        name, _ext = os.path.splitext(path_name)
+        v.sel().add(sublime.Region(0, len(name)))
+
+    def on_done(self, old_path: str | None, new_name: str) -> None:
+        if new_name:
+            self.window.run_command('lsp_rename_path', {
+                "new_name": new_name,
+                "old_path": old_path
+            })
+
+
+class RenamePathInputHandler(sublime_plugin.TextInputHandler):
     def __init__(self, path: str) -> None:
         self.path = path
 
@@ -44,17 +67,18 @@ class LspRenamePathCommand(LspWindowCommand):
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             return None
-        old_path = self.get_old_path(args.get('paths'), self.window.active_view())
-        return RenameFileInputHandler(Path(old_path or "").name)
+        view = self.window.active_view()
+        old_path = view.file_name() if view else None
+        return RenamePathInputHandler(Path(old_path or "").name)
 
     def run(
         self,
         new_name: str,  # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
-        paths: list[str] | None = None,  # exist when invoked from the sidebar with "LSP: Rename..."
+        old_path: str | None = None,
     ) -> None:
         session = self.session()
         view = self.window.active_view()
-        old_path = self.get_old_path(paths, view)
+        old_path = old_path or view.file_name() if view else None
         if old_path is None:  # handle renaming buffers
             if view:
                 view.set_name(new_name)
@@ -69,12 +93,8 @@ class LspRenamePathCommand(LspWindowCommand):
                 "oldUri": urljoin("file:", old_path),
             }]
         }
-        if not session:
-            self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params, new_path, view)
-            return
-        file_operation_options = session.get_capability('workspace.fileOperations.willRename')
-        if file_operation_options and match_file_operation_filters(file_operation_options, old_path, view):
+        file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
+        if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path, view):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
@@ -83,12 +103,6 @@ class LspRenamePathCommand(LspWindowCommand):
         else:
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params, new_path, view)
-
-    def get_old_path(self, paths: list[str] | None, view: sublime.View | None) -> str | None:
-        if paths:
-            return paths[0]
-        if view:
-            return view.file_name()
 
     def handle(self, res: WorkspaceEdit | None, session_name: str,
                old_path: str, new_path: str, rename_file_params: RenameFilesParams, view: sublime.View | None) -> None:

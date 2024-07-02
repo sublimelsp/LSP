@@ -70,6 +70,7 @@ from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspHideRenameButtonsCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.rename_file import LspRenamePathCommand
+from .plugin.rename_file import LspRenamePathSidebarCommand
 from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
@@ -148,6 +149,7 @@ __all__ = (
     "LspSymbolReferencesCommand",
     "LspSymbolRenameCommand",
     "LspRenamePathCommand",
+    "LspRenamePathSidebarCommand",
     "LspSymbolTypeDefinitionCommand",
     "LspToggleCodeLensesCommand",
     "LspToggleHoverPopupsCommand",

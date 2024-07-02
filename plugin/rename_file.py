@@ -143,4 +143,3 @@ class LspRenameFileCommand(LspWindowCommand):
                 continue
             if FileOperationFilterMatcher(filters).matches(path, view):
                 s.send_notification(Notification.didRenameFiles(rename_file_params))
-

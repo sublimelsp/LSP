@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from .core.types import FileOperationFilterMatcher
 from .core.open import open_file_uri
 from .core.protocol import Notification, RenameFilesParams, Request, WorkspaceEdit
 from .core.registry import LspWindowCommand
@@ -79,13 +81,18 @@ class LspRenameFileCommand(LspWindowCommand):
         }
         if not session:
             self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params)
+            self.notify_did_rename(rename_file_params, new_path, view)
             return
-        request = Request.willRenameFiles(rename_file_params)
-        session.send_request(
-            request,
-            lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params)
-        )
+        capability = session.get_capability('workspace.fileOperations.willRename')
+        if not capability:
+            return
+        filters = FileOperationFilterMatcher(capability.get('filters'))
+        if filters.matches(old_path, view):
+            request = Request.willRenameFiles(rename_file_params)
+            session.send_request(
+                request,
+                lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params, view)
+            )
 
     def get_old_path(self, dirs: list[str] | None, files: list[str] | None, view: sublime.View | None) -> str | None:
         if dirs:
@@ -96,13 +103,13 @@ class LspRenameFileCommand(LspWindowCommand):
             return view.file_name()
 
     def handle(self, res: WorkspaceEdit | None, session_name: str,
-               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
+               old_path: str, new_path: str, rename_file_params: RenameFilesParams, view: sublime.View | None) -> None:
         if session := self.session_by_name(session_name):
             # LSP spec - Apply WorkspaceEdit before the files are renamed
             if res:
                 session.apply_workspace_edit_async(res, is_refactoring=True)
             self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params)
+            self.notify_did_rename(rename_file_params, new_path, view)
 
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []
@@ -129,7 +136,12 @@ class LspRenameFileCommand(LspWindowCommand):
             # LSP spec - send didOpen for the new file
             open_file_uri(self.window, new_path).then(restore_regions)
 
-    def notify_did_rename(self, rename_file_params: RenameFilesParams):
-        sessions = [s for s in self.sessions() if s.has_capability('workspace.fileOperations.didRename')]
-        for s in sessions:
-            s.send_notification(Notification.didRenameFiles(rename_file_params))
+    def notify_did_rename(self, rename_file_params: RenameFilesParams, path: str, view: sublime.View | None):
+        for s in self.sessions():
+            capability = s.get_capability('workspace.fileOperations.didRename')
+            if not capability:
+                continue
+            filters = FileOperationFilterMatcher(capability.get('filters'))
+            if filters.matches(path, view):
+                s.send_notification(Notification.didRenameFiles(rename_file_params))
+

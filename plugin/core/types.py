@@ -723,8 +723,8 @@ class ClientConfig:
             disabled_capabilities = DottedDict()
         return ClientConfig(
             name=name,
-            selector=_read_selector(s),
-            priority_selector=_read_priority_selector(s),
+            selector=s.get("selector"),
+            priority_selector=s.get("priority_selector"),
             schemes=s.get("schemes"),
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
@@ -754,8 +754,8 @@ class ClientConfig:
             schemes = ["file"]
         return ClientConfig(
             name=name,
-            selector=_read_selector(d),
-            priority_selector=_read_priority_selector(d),
+            selector=d.get("selector") or "",
+            priority_selector=d.get("priority_selector"),
             schemes=schemes,
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
@@ -782,8 +782,8 @@ class ClientConfig:
             disabled_capabilities = src_config.disabled_capabilities
         return ClientConfig(
             name=src_config.name,
-            selector=_read_selector(override) or src_config.selector,
-            priority_selector=_read_priority_selector(override) or src_config.priority_selector,
+            selector=override.get("selector") or src_config.selector,
+            priority_selector=override.get("priority_selector") or src_config.priority_selector,
             schemes=override.get("schemes", src_config.schemes),
             command=override.get("command", src_config.command),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
@@ -903,94 +903,6 @@ class ClientConfig:
             if not k.startswith("_") and v != getattr(other, k):
                 return False
         return True
-
-
-def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
-    # Best base scenario,
-    selector = config.get("selector")
-    if isinstance(selector, str):
-        return selector
-    # Otherwise, look for "languages": [...]
-    languages = config.get("languages")
-    if isinstance(languages, list):
-        selectors = []
-        for language in languages:
-            # First priority is document_selector,
-            document_selector = language.get("document_selector")
-            if isinstance(document_selector, str):
-                selectors.append(document_selector)
-                continue
-            # After that syntaxes has priority,
-            syntaxes = language.get("syntaxes")
-            if isinstance(syntaxes, list):
-                for path in syntaxes:
-                    syntax = sublime.syntax_from_path(path)
-                    if syntax:
-                        selectors.append(syntax.scope)
-                continue
-            # No syntaxes and no document_selector... then there must exist a languageId.
-            language_id = language.get("languageId")
-            if isinstance(language_id, str):
-                selectors.append(f"source.{language_id}")
-        return "|".join(map("({})".format, selectors))
-    # Otherwise, look for "document_selector"
-    document_selector = config.get("document_selector")
-    if isinstance(document_selector, str):
-        return document_selector
-    # Otherwise, look for "syntaxes": [...]
-    syntaxes = config.get("syntaxes")
-    if isinstance(syntaxes, list):
-        selectors = []
-        for path in syntaxes:
-            syntax = sublime.syntax_from_path(path)
-            if syntax:
-                selectors.append(syntax.scope)
-        return "|".join(selectors)
-    # No syntaxes and no document_selector... then there must exist a languageId.
-    language_id = config.get("languageId")
-    if language_id:
-        return f"source.{language_id}"
-    return ""
-
-
-def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
-    # Best case scenario
-    selector = config.get("priority_selector")
-    if isinstance(selector, str):
-        return selector
-    # Otherwise, look for "languages": [...]
-    languages = config.get("languages")
-    if isinstance(languages, list):
-        selectors = []
-        for language in languages:
-            # First priority is feature_selector.
-            feature_selector = language.get("feature_selector")
-            if isinstance(feature_selector, str):
-                selectors.append(feature_selector)
-                continue
-            # After that scopes has priority.
-            scopes = language.get("scopes")
-            if isinstance(scopes, list):
-                selectors.extend(scopes)
-                continue
-            # No scopes and no feature_selector. So there must be a languageId
-            language_id = language.get("languageId")
-            if isinstance(language_id, str):
-                selectors.append(f"source.{language_id}")
-        return "|".join(map("({})".format, selectors))
-    # Otherwise, look for "feature_selector"
-    feature_selector = config.get("feature_selector")
-    if isinstance(feature_selector, str):
-        return feature_selector
-    # Otherwise, look for "scopes": [...]
-    scopes = config.get("scopes")
-    if isinstance(scopes, list):
-        return "|".join(map("({})".format, scopes))
-    # No scopes and no feature_selector... then there must exist a languageId
-    language_id = config.get("languageId")
-    if language_id:
-        return f"source.{language_id}"
-    return ""
 
 
 def _find_free_port() -> int:

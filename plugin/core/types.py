@@ -2,7 +2,7 @@ from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import FileOperationFilter, FileOperationPattern, FileOperationPatternKind, TextDocumentSyncKind
+from .protocol import FileOperationFilter, FileOperationPattern, FileOperationPatternKind, FileOperationRegistrationOptions, TextDocumentSyncKind
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -440,69 +440,31 @@ class DocumentSelector:
         """Does this selector match the view? A selector with no filters matches all views."""
         return any(f(view) for f in self.filters) if self.filters else True
 
-
-class FileOperationFilterChecker:
-    """
-    A file operation filter denotes a view or path through properties like  scheme or pattern. An example is a filter
-    that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
-    package.json:
-    {
-        "scheme": "file",
-        "pattern": {
-            "glob": "**/*.{ts,js,jsx,tsx,mjs,mts,cjs,cts}",
-            "matches": "file"
-        }
-    }
-    """
-
-    __slots__ = ("scheme", "pattern")
-
-    def __init__(
-        self,
-        scheme: str | None = None,
-        pattern: FileOperationPattern | None = None
-    ) -> None:
-        self.scheme = scheme
-        self.pattern = pattern
-
-    def __call__(self, path: str, view: sublime.View | None) -> bool:
-        if self.scheme and view:
+def match_file_operation_filters(file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None) -> bool:
+    def matches(file_operation_filter: FileOperationFilter) -> bool:
+        pattern = file_operation_filter.get('pattern')
+        scheme = file_operation_filter.get('scheme')
+        if scheme and view:
             uri = view.settings().get("lsp_uri")
-            if isinstance(uri, str) and parse_uri(uri)[0] != self.scheme:
+            if isinstance(uri, str) and parse_uri(uri)[0] != scheme:
                 return False
-        if self.pattern:
-            matches = self.pattern.get('matches')
+        if pattern:
+            matches = pattern.get('matches')
             if matches:
                 if matches == FileOperationPatternKind.File and os.path.isdir(path):
                     return False
                 if matches == FileOperationPatternKind.Folder and os.path.isfile(path):
                     return False
-            options = self.pattern.get('options', {})
+            options = pattern.get('options', {})
             flags = GLOBSTAR | BRACE
             if options.get('ignoreCase', False):
                 flags |= IGNORECASE
-            if not globmatch(path, self.pattern['glob'], flags=flags):
+            if not globmatch(path, pattern['glob'], flags=flags):
                 return False
         return True
 
-
-class FileOperationFilterMatcher:
-    """
-    A FileOperationFilterMatcher is a list of FileOperationFilterChecker.
-    Provides logic to see if a path/view matches the specified FileOperationFilter's.
-    """
-
-    __slots__ = ("filters",)
-
-    def __init__(self, file_filters: list[FileOperationFilter]) -> None:
-        self.filters = [FileOperationFilterChecker(**file_filter) for file_filter in file_filters]
-
-    def __bool__(self) -> bool:
-        return bool(self.filters)
-
-    def matches(self, new_path: str, view: sublime.View | None) -> bool:
-        """Does this selector match the view? A selector with no filters matches all views."""
-        return any(f(new_path, view) for f in self.filters) if self.filters else True
+    filters = [matches(file_operation_filter) for file_operation_filter in file_operation_options.get('filters')]
+    return any(filters) if filters else True
 
 
 # method -> (capability dotted path, optional registration dotted path)

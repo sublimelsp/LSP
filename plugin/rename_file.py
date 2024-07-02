@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .core.types import FileOperationFilterMatcher
+from .core.types import match_file_operation_filters
 from .core.open import open_file_uri
 from .core.protocol import Notification, RenameFilesParams, Request, WorkspaceEdit
 from .core.registry import LspWindowCommand
@@ -73,8 +73,8 @@ class LspRenamePathCommand(LspWindowCommand):
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params, new_path, view)
             return
-        filters = (session.get_capability('workspace.fileOperations.willRename') or {}).get('filters')
-        if filters and FileOperationFilterMatcher(filters).matches(old_path, view):
+        file_operation_options = session.get_capability('workspace.fileOperations.willRename')
+        if file_operation_options and match_file_operation_filters(file_operation_options, old_path, view):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
@@ -126,8 +126,6 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def notify_did_rename(self, rename_file_params: RenameFilesParams, path: str, view: sublime.View | None):
         for s in self.sessions():
-            filters = (s.get_capability('workspace.fileOperations.didRename') or {}).get('filters')
-            if not filters:
-                continue
-            if FileOperationFilterMatcher(filters).matches(path, view):
+            file_operation_options = s.get_capability('workspace.fileOperations.didRename')
+            if file_operation_options and match_file_operation_filters(file_operation_options, path, view):
                 s.send_notification(Notification.didRenameFiles(rename_file_params))

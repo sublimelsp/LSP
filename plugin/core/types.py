@@ -2,6 +2,9 @@ from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
+from .protocol import FileOperationFilter
+from .protocol import FileOperationPatternKind
+from .protocol import FileOperationRegistrationOptions
 from .protocol import TextDocumentSyncKind
 from .url import filename_to_uri
 from .url import parse_uri
@@ -10,6 +13,7 @@ from typing import cast
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
+from wcmatch.glob import IGNORECASE
 import contextlib
 import fnmatch
 import os
@@ -438,6 +442,35 @@ class DocumentSelector:
     def matches(self, view: sublime.View) -> bool:
         """Does this selector match the view? A selector with no filters matches all views."""
         return any(f(view) for f in self.filters) if self.filters else True
+
+
+def match_file_operation_filters(
+    file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None
+) -> bool:
+    def matches(file_operation_filter: FileOperationFilter) -> bool:
+        pattern = file_operation_filter.get('pattern')
+        scheme = file_operation_filter.get('scheme')
+        if scheme and view:
+            uri = view.settings().get("lsp_uri")
+            if isinstance(uri, str) and parse_uri(uri)[0] != scheme:
+                return False
+        if pattern:
+            matches = pattern.get('matches')
+            if matches:
+                if matches == FileOperationPatternKind.File and os.path.isdir(path):
+                    return False
+                if matches == FileOperationPatternKind.Folder and os.path.isfile(path):
+                    return False
+            options = pattern.get('options', {})
+            flags = GLOBSTAR | BRACE
+            if options.get('ignoreCase', False):
+                flags |= IGNORECASE
+            if not globmatch(path, pattern['glob'], flags=flags):
+                return False
+        return True
+
+    filters = [matches(file_operation_filter) for file_operation_filter in file_operation_options.get('filters')]
+    return any(filters) if filters else True
 
 
 # method -> (capability dotted path, optional registration dotted path)

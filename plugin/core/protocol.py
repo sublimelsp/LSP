@@ -6065,6 +6065,10 @@ class Request(Generic[R]):
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
+    def willRenameFiles(cls, params: RenameFilesParams) -> Request:
+        return Request("workspace/willRenameFiles", params)
+
+    @classmethod
     def documentSymbols(cls, params: DocumentSymbolParams, view: sublime.View) -> Request:
         return Request("textDocument/documentSymbol", params, view, progress=True)
 
@@ -6255,6 +6259,10 @@ class Notification:
     @classmethod
     def didClose(cls, params: DidCloseTextDocumentParams) -> Notification:
         return Notification("textDocument/didClose", params)
+
+    @classmethod
+    def didRenameFiles(cls, params: RenameFilesParams) -> Notification:
+        return Notification("workspace/didRenameFiles", params)
 
     @classmethod
     def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> Notification:

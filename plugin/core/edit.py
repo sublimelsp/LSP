@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .logging import debug
-from .protocol import Position, is_text_edit
+from .protocol import is_text_edit
+from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit

@@ -3,9 +3,9 @@ from .constants import CODE_ACTION_KINDS
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
-from .protocol import CodeAction, LanguageKind
-from .protocol import CodeActionKind
+from .protocol import CodeAction
 from .protocol import CodeActionContext
+from .protocol import CodeActionKind
 from .protocol import CodeActionParams
 from .protocol import CodeActionTriggerKind
 from .protocol import Color
@@ -20,6 +20,7 @@ from .protocol import DidOpenTextDocumentParams
 from .protocol import DidSaveTextDocumentParams
 from .protocol import DocumentColorParams
 from .protocol import DocumentUri
+from .protocol import LanguageKind
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString

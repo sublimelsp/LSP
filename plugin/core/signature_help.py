@@ -1,13 +1,14 @@
 from __future__ import annotations
-from typing import cast
 from .logging import debug
-from .protocol import SignatureHelp, Uint
+from .protocol import SignatureHelp
 from .protocol import SignatureInformation
+from .protocol import Uint
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
+from typing import cast
 import functools
 import html
 import re

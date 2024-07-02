@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .typing import StrEnum
-from enum import Enum, IntEnum, IntFlag
+from enum import IntEnum, IntFlag
 from functools import total_ordering
 from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, TypedDict, TypeVar, Union
 import sublime

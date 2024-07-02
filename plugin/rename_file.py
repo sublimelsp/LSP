@@ -32,7 +32,7 @@ class RenameFileInputHandler(sublime_plugin.TextInputHandler):
         return len(path) > 0
 
 
-class LspRenameFileCommand(LspWindowCommand):
+class LspRenamePathCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
 
     def is_enabled(self):

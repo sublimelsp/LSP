@@ -38,14 +38,6 @@ class LspRenameFileCommand(LspWindowCommand):
     def is_enabled(self):
         return True
 
-    def is_visible(self, dirs=None, files=None):
-        if dirs is None and files is None:
-            return True  # show 'LSP: Rename File' in command palette
-        if dirs:
-            return len(dirs) == 1  # show 'LSP: Rename Folder' in sidebar
-        if files:
-            return len(files) == 1  # show 'LSP: Rename File' in sidebar
-        return False
 
     def want_event(self) -> bool:
         return False

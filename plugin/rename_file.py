@@ -125,7 +125,10 @@ class LspRenameFileCommand(LspWindowCommand):
         if not os.path.exists(new_dir):
             os.makedirs(new_dir)
         isdir = os.path.isdir(old_path)
-        os.rename(old_path, new_path)
+        try:
+            os.rename(old_path, new_path)
+        except:
+            sublime.status_message("Unable to rename")
         if isdir:
             for v in self.window.views():
                 file_name = v.file_name()

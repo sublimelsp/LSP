@@ -456,11 +456,10 @@ def match_file_operation_filters(
                 return False
         if pattern:
             matches = pattern.get('matches')
-            if matches:
-                if matches == FileOperationPatternKind.File and os.path.isdir(path):
-                    return False
-                if matches == FileOperationPatternKind.Folder and os.path.isfile(path):
-                    return False
+            if matches == FileOperationPatternKind.File and os.path.isdir(path):
+                return False
+            if matches == FileOperationPatternKind.Folder and os.path.isfile(path):
+                return False
             options = pattern.get('options', {})
             flags = GLOBSTAR | BRACE
             if options.get('ignoreCase', False):

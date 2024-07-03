@@ -12,7 +12,7 @@ import sublime_plugin
 import functools
 
 
-class LspRenamePathSidebarCommand(LspWindowCommand):
+class LspRenamePathCommand(LspWindowCommand):
     def run(self, paths: list[str] | None = None) -> None:
         old_path = paths[0] if paths else None
         path_name = Path(old_path or "").name
@@ -28,7 +28,7 @@ class LspRenamePathSidebarCommand(LspWindowCommand):
 
     def on_done(self, old_path: str | None, new_name: str) -> None:
         if new_name:
-            self.window.run_command('lsp_rename_path', {
+            self.window.run_command('lsp_rename_file', {
                 "new_name": new_name,
                 "old_path": old_path
             })
@@ -55,7 +55,7 @@ class RenamePathInputHandler(sublime_plugin.TextInputHandler):
         return len(path) > 0
 
 
-class LspRenamePathCommand(LspWindowCommand):
+class LspRenameFileCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
 
     def is_enabled(self):

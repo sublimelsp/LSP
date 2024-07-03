@@ -153,7 +153,7 @@
     },
     {
         "caption": "LSP: Rename File",
-        "command": "lsp_rename_path"
+        "command": "lsp_rename_file"
     },
     {
         "caption": "LSP: Code Action",

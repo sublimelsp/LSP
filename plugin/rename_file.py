@@ -13,6 +13,9 @@ import functools
 
 
 class LspRenamePathCommand(LspWindowCommand):
+    def is_enabled(self):
+        return True
+
     def run(self, paths: list[str] | None = None) -> None:
         old_path = paths[0] if paths else None
         path_name = Path(old_path or "").name

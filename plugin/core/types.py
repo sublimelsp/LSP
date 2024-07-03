@@ -469,8 +469,8 @@ def match_file_operation_filters(
                 return False
         return True
 
-    filters = [matches(file_operation_filter) for file_operation_filter in file_operation_options.get('filters')]
-    return any(filters) if filters else True
+    filters = file_operation_options.get('filters')
+    return any(matches(_filter) for _filter in filters) if filters else True
 
 
 # method -> (capability dotted path, optional registration dotted path)

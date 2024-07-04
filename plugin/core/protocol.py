@@ -3,8 +3,8 @@ from .typing import StrEnum
 from enum import IntEnum, IntFlag
 from functools import total_ordering
 from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, TypedDict, TypeVar, Union
-import sublime
 from typing_extensions import NotRequired, TypeGuard
+import sublime
 
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX

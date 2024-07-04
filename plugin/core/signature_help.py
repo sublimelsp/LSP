@@ -8,7 +8,6 @@ from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
-from typing import cast
 import functools
 import html
 import re
@@ -170,7 +169,7 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            active_parameter = cast(Uint, signature.get("activeParameter"))
+            active_parameter = signature.get("activeParameter")
             parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None

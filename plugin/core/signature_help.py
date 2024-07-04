@@ -2,7 +2,6 @@ from __future__ import annotations
 from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
-from .protocol import Uint
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING

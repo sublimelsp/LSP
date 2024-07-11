@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .logging import exception_log, debug
+from .logging import exception_log, debug, trace
 from abc import abstractmethod
 from contextlib import closing
 from functools import partial
@@ -10,6 +10,8 @@ import http
 import io
 import json
 import os
+import multiprocessing
+import multiprocessing.connection
 import shutil
 import socket
 import sublime
@@ -50,9 +52,20 @@ class LaunchConfig:
     ) -> subprocess.Popen:
         startupinfo = _fixup_startup_args(self.command, inherit_file_descriptors)
         _set_inheritable(inherit_file_descriptors, True)
-        pass_fds = inherit_file_descriptors if inherit_file_descriptors and sublime.platform() != "windows" else tuple()
+        if inherit_file_descriptors:
+            if sublime.platform() == "windows":
+                # On Windows, the `pass_fds` argument is not supported. Instead, we inherit all file descriptors.
+                pass_fds = tuple()
+                close_fds = False
+            else:
+                # On Linux/macOS we can be more selective which open file descriptors of the parent process to inherit.
+                pass_fds = inherit_file_descriptors
+                close_fds = True
+        else:
+            pass_fds = tuple()
+            close_fds = True
         try:
-            return _start_subprocess(self.command, stdout, stdin, stderr, startupinfo, self.env, cwd, pass_fds)
+            return _start_subprocess(self.command, stdout, stdin, stderr, startupinfo, self.env, cwd, pass_fds, close_fds)
         finally:
             _set_inheritable(inherit_file_descriptors, False)
 
@@ -330,21 +343,62 @@ class WebSocketTransport(Transport[T]):
         raise NotImplementedError()
 
 
-class DuplexPipeTransport(SocketTransport[T]):
-    def __init__(
-        self,
-        encoder: Callable[[T], bytes],
-        decoder: Callable[[bytes], T],
-        http_headers: bool,
-        sock1: socket.socket,
-        sock2: socket.socket,
-    ) -> None:
-        super().__init__(encoder, decoder, http_headers, sock2)
-        self._sock1 = sock1
+if sublime.platform() == "windows":
+    class DuplexPipeTransport(Transport[T]):
+        def __init__(
+            self,
+            encoder: Callable[[T], bytes],
+            decoder: Callable[[bytes], T],
+            http_headers: bool,
+            parent_conn: multiprocessing.connection.PipeConnection,
+            child_conn: multiprocessing.connection.PipeConnection,
+            fd: int
+        ) -> None:
+            super().__init__(encoder, decoder, http_headers)
+            self._parent_conn = parent_conn
+            self._child_conn = child_conn
+            self._fd = fd
 
-    def close(self) -> None:
-        super().close()
-        self._sock1.close()
+        def read(self) -> T:
+            trace()
+            return self._decoder(str(self._child_conn._recv_bytes(), "utf-8").strip())
+            trace()
+
+        def write(self, payload: T) -> None:
+            trace()
+            body = self._encoder(payload)
+            trace()
+            if self._http_headers:
+                trace()
+                self._child_conn._send_bytes(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body)
+                trace()
+            else:
+                trace()
+                self._child_conn._send_bytes( body + b"\n")
+                trace()
+
+        def close(self) -> None:
+            os.close(self._fd)
+            self._child_conn.close()
+
+
+else:
+
+    class DuplexPipeTransport(SocketTransport[T]):
+        def __init__(
+            self,
+            encoder: Callable[[T], bytes],
+            decoder: Callable[[bytes], T],
+            http_headers: bool,
+            sock1: socket.socket,
+            sock2: socket.socket,
+        ) -> None:
+            super().__init__(encoder, decoder, http_headers, sock2)
+            self._sock1 = sock1
+
+        def close(self) -> None:
+            super().close()
+            self._sock1.close()
 
 
 class TransportConfig:
@@ -600,8 +654,9 @@ class DuplexPipeTransportConfig(TransportConfig):
     On Linux and macOS, this is implemented using AF_UNIX socketpairs:
     https://www.man7.org/linux/man-pages/man7/unix.7.html
 
-    !!! TODO !!!
     On Windows, this is implemented using NamedPipes: https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipes
+    The _winapi module is used. This is a CPython implementation detail that is not documented. It is used in the
+    multiprocessing.connection module of the standard library.
     """
 
     __slots__ = ("_child_fileno_env_key",)
@@ -622,24 +677,48 @@ class DuplexPipeTransportConfig(TransportConfig):
             raise RuntimeError('missing "command" to start a child process for running the language server')
         if env is None:
             env = {}
-        # !!! TODO !!! windows named pipes
-        sock1, sock2 = socket.socketpair()
-        sock1.set_inheritable(True)
-        env[self._child_fileno_env_key] = str(sock1.fileno())
-        process = self._resolve_launch_config(command, env, variables).start(
-            cwd,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-            inherit_file_descriptors=(sock1.fileno(),),
-        )
-        error_reader = ErrorReader(callbacks, process.stdout)  # type: ignore
-        return TransportWrapper(
-            callback_object=callbacks,
-            transport=DuplexPipeTransport(encode_json, decode_json, self.http_headers, sock1, sock2),
-            process=process,
-            error_reader=error_reader,
-        )
+
+        if sublime.platform() == "windows":
+            parent_conn, child_conn = multiprocessing.Pipe()
+            import msvcrt
+            os.set_handle_inheritable(parent_conn.fileno(), True)
+            fd: int = msvcrt.open_osfhandle(parent_conn.fileno(), 0)
+            os.set_inheritable(fd, True)
+            env[self._child_fileno_env_key] = str(fd)
+            process = self._resolve_launch_config(command, env, variables).start(
+                cwd,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                inherit_file_descriptors=(fd,),
+            )
+            trace()
+            error_reader = ErrorReader(callbacks, process.stdout)  # type: ignore
+            trace()
+            return TransportWrapper(
+                callback_object=callbacks,
+                transport=DuplexPipeTransport(encode_json, decode_json, self.http_headers, parent_conn, child_conn, fd),
+                process=process,
+                error_reader=error_reader,
+            )
+        else:
+            sock1, sock2 = socket.socketpair()
+            sock1.set_inheritable(True)
+            env[self._child_fileno_env_key] = str(sock1.fileno())
+            process = self._resolve_launch_config(command, env, variables).start(
+                cwd,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                inherit_file_descriptors=(sock1.fileno(),),
+            )
+            error_reader = ErrorReader(callbacks, process.stdout)  # type: ignore
+            return TransportWrapper(
+                callback_object=callbacks,
+                transport=DuplexPipeTransport(encode_json, decode_json, self.http_headers, sock1, sock2),
+                process=process,
+                error_reader=error_reader,
+            )
 
 
 _subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
@@ -691,6 +770,7 @@ def _start_subprocess(
     env: dict[str, str],
     cwd: str | None,
     pass_fds: Sequence[int],
+    close_fds: bool,
 ) -> subprocess.Popen:
     debug(f"starting {args} in {cwd if cwd else os.getcwd()}")
     process = subprocess.Popen(
@@ -702,6 +782,7 @@ def _start_subprocess(
         env=env,
         cwd=cwd,
         pass_fds=pass_fds,
+        close_fds=close_fds,
     )
     _subprocesses.add(process)
     return process

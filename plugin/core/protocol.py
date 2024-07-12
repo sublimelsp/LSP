@@ -6285,4 +6285,4 @@ RangeLsp = Range
 
 
 def is_text_edit(value: Any) -> TypeGuard[TextEdit]:
-    return isinstance(value, dict) and bool(value.get('range')) and bool(value.get('newText'))
+    return isinstance(value, dict) and 'range' in value and 'newText' in value

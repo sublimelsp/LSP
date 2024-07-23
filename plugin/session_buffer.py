@@ -428,14 +428,20 @@ class SessionBuffer:
 
     def _on_document_link_async(self, view: sublime.View, response: list[DocumentLink] | None) -> None:
         self._document_links = response or []
+        self.redraw_document_links_async()
+
+    def redraw_document_links_async(self) -> None:
         if self._document_links and userprefs().link_highlight_style == "underline":
-            view.add_regions(
-                "lsp_document_link",
-                [range_to_region(link["range"], view) for link in self._document_links],
-                scope="markup.underline.link.lsp",
-                flags=DOCUMENT_LINK_FLAGS)
+            view = self.some_view()
+            if not view:
+                return
+            regions = [range_to_region(link["range"], view) for link in self._document_links]
+            for sv in self.session_views:
+                sv.view.add_regions(
+                    "lsp_document_link", regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
         else:
-            view.erase_regions("lsp_document_link")
+            for sv in self.session_views:
+                sv.view.erase_regions("lsp_document_link")
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
@@ -703,6 +709,10 @@ class SessionBuffer:
 
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
+
+    def clear_semantic_tokens_async(self) -> None:
+        for sv in self.session_views:
+            self._clear_semantic_token_regions(sv.view)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 

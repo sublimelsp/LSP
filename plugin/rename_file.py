@@ -12,13 +12,20 @@ import sublime_plugin
 import functools
 
 
-class LspRenamePathCommand(LspWindowCommand):
+# It is bad that this command is named RenameFileCommand, same as the command in Default/rename.py
+# ST has a bug that prevents the RenameFileCommand to be override in on_window_command:
+# https://github.com/sublimehq/sublime_text/issues/2234
+# So naming this command "RenameFileCommand" is one BAD way to override the rename behavior.
+class RenameFileCommand(LspWindowCommand):
     def is_enabled(self):
         return True
 
     def run(self, paths: list[str] | None = None) -> None:
         old_path = paths[0] if paths else None
         path_name = Path(old_path or "").name
+        view = self.window.active_view()
+        if path_name == "" and view:
+            path_name = Path(view.file_name() or "").name
         v = self.window.show_input_panel(
             "(LSP) New Name:",
             path_name,
@@ -37,27 +44,6 @@ class LspRenamePathCommand(LspWindowCommand):
             })
 
 
-class RenamePathInputHandler(sublime_plugin.TextInputHandler):
-    def __init__(self, path: str) -> None:
-        self.path = path
-
-    def name(self) -> str:
-        return "new_name"
-
-    def placeholder(self) -> str:
-        return self.path
-
-    def initial_text(self) -> str:
-        return self.placeholder()
-
-    def initial_selection(self) -> list[tuple[int, int]]:
-        name, _ext = os.path.splitext(self.path)
-        return [(0, len(name))]
-
-    def validate(self, path: str) -> bool:
-        return len(path) > 0
-
-
 class LspRenameFileCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
 
@@ -66,13 +52,6 @@ class LspRenameFileCommand(LspWindowCommand):
 
     def want_event(self) -> bool:
         return False
-
-    def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
-        if "new_name" in args:
-            return None
-        view = self.window.active_view()
-        old_path = view.file_name() if view else None
-        return RenamePathInputHandler(Path(old_path or "").name)
 
     def run(
         self,

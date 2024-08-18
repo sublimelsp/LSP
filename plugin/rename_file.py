@@ -8,7 +8,6 @@ from pathlib import Path
 from urllib.parse import urljoin
 import os
 import sublime
-import sublime_plugin
 import functools
 
 

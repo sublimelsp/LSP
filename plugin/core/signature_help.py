@@ -168,7 +168,8 @@ class SigHelp:
         if not parameters:
             return None
         try:
-            parameter = parameters[signature.get("activeParameter", self._active_parameter_index)]
+            active_parameter = signature.get("activeParameter")
+            parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None
         documentation = parameter.get("documentation")

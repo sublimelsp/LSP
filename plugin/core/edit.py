@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .logging import debug
+from .protocol import AnnotatedTextEdit
 from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
@@ -8,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[TextEdit], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[TextEdit | AnnotatedTextEdit], Optional[int]]]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
@@ -25,8 +26,8 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
             version = text_document.get('version')
             edits = document_change.get('edits')
             for edit in edits:
-                if 'annotationId' in edit or 'snippet' in edit:
-                    debug('Ignoring unsupported edit type')
+                if 'snippet' in edit:
+                    debug('Ignoring unsupported SnippetTextEdit')
                     continue
                 changes.setdefault(uri, ([], version))[0].append(edit)
     else:

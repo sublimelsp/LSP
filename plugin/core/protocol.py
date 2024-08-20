@@ -3,7 +3,7 @@ from .typing import StrEnum
 from enum import IntEnum, IntFlag
 from functools import total_ordering
 from typing import Any, Dict, Generic, Iterable, List, Literal, Mapping, TypedDict, TypeVar, Union
-from typing_extensions import NotRequired, TypeGuard
+from typing_extensions import NotRequired
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -6282,7 +6282,3 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range
-
-
-def is_text_edit(value: Any) -> TypeGuard[TextEdit]:
-    return isinstance(value, dict) and 'range' in value and 'newText' in value

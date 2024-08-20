@@ -5,11 +5,11 @@ from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[TextEdit | AnnotatedTextEdit], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[int]]]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:

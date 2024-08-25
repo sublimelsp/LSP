@@ -7,7 +7,6 @@ from functools import partial
 from queue import Queue
 from typing import Any, Callable, Dict, Generic, IO, Protocol, TypeVar
 import http
-import json
 import os
 import shutil
 import socket
@@ -17,6 +16,11 @@ import threading
 import time
 import weakref
 
+try:
+    import orjson
+except ImportError:
+    import json
+    orjson = None
 
 T = TypeVar('T')
 T_contra = TypeVar('T_contra', contravariant=True)
@@ -91,6 +95,17 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
     @staticmethod
     def _decode(message: bytes) -> dict[str, Any]:
         return json.loads(message.decode('utf-8'))
+
+
+class OrjsonRpcProcessor(JsonRpcProcessor):
+
+    @staticmethod
+    def _encode(data: dict[str, Any]) -> bytes:
+        return orjson.dumps(data)
+
+    @staticmethod
+    def _decode(message: bytes) -> dict[str, Any]:
+        return orjson.loads(message)
 
 
 class ProcessTransport(Transport[T]):
@@ -231,7 +246,10 @@ class ProcessTransport(Transport[T]):
 
 
 # Can be a singleton since it doesn't hold any state.
-json_rpc_processor = JsonRpcProcessor()
+if orjson:
+    json_rpc_processor = OrjsonRpcProcessor()
+else:
+    json_rpc_processor = JsonRpcProcessor()
 
 
 def create_transport(config: TransportConfig, cwd: str | None,

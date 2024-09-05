@@ -448,7 +448,8 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
             "phpactor": {
                 "enabled": true,
                 "command": ["PATH/TO/phpactor", "language-server"],
-                "selector": "source.php"
+                "selector": "embedding.php",
+                "priority_selector": "source.php",
             }
         }
     }

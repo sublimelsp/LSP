@@ -97,7 +97,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
+    label = format_inlay_hint_label(inlay_hint, session, phantom_uuid, view.settings().get("inlay_truncate_limit", userprefs().inlay_truncate_limit))
     font = view.settings().get('font_face') or "monospace"
     html = f"""
     <body id="lsp-inlay-hint">
@@ -123,7 +123,7 @@ def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
     return ""
 
 
-def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
+def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str, truncate_limit: int) -> str:
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
@@ -142,12 +142,15 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             result += f'<a href="{inlay_hint_click_command}">'
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
-        result += f'<span title="{(tooltip + instruction_text).strip()}">{html.escape(label)}</span>'
+        truncated_label = label[:truncate_limit] + '...' if len(label) > truncate_limit else label
+        result += f'<span title="{(tooltip + instruction_text).strip()}">{html.escape(truncated_label)}</span>'
         if is_clickable:
             result += "</a>"
         return result
 
     for label_part in label:
+        if truncate_limit <= 0:
+            break
         value = ""
         tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
         has_command = bool(label_part.get('command'))
@@ -162,7 +165,10 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 }
             })
             value += f'<a href="{inlay_hint_click_command}">'
-        value += html.escape(label_part['value'])
+        raw_label = label_part['value']
+        truncated_label = raw_label[:truncate_limit] + '...' if len(raw_label) > truncate_limit else raw_label
+        truncate_limit -= len(raw_label)
+        value += html.escape(truncated_label)
         if has_command:
             value += "</a>"
         # InlayHintLabelPart.location is not supported

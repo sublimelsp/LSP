@@ -143,7 +143,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             result += f'<a href="{inlay_hint_click_command}">'
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
-        truncated_label = label[:truncate_limit] + '...' if len(label) > truncate_limit else label
+        truncated_label = label[:truncate_limit] + '...' if len(label) >= truncate_limit else label
         result += f'<span title="{(tooltip + instruction_text).strip()}">{html.escape(truncated_label)}</span>'
         if is_clickable:
             result += "</a>"
@@ -167,7 +167,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             value += f'<a href="{inlay_hint_click_command}">'
         raw_label = label_part['value']
-        truncated_label = raw_label[:truncate_limit] + '...' if len(raw_label) > truncate_limit else raw_label
+        truncated_label = raw_label[:truncate_limit] + '...' if len(raw_label) >= truncate_limit else raw_label
         truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)
         if has_command:

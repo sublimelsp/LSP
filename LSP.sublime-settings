@@ -180,6 +180,9 @@
    // or a custom keybinding.
   "show_inlay_hints": false,
 
+  // Truncate limit for inlay hints. Truncates and adds an ellipsis at the end.
+  "inlay_truncate_limit": 1000,
+
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
   // Valid values are "background", "underline", "stippled", "outline", or "".

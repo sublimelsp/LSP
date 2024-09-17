@@ -149,8 +149,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             result += "</a>"
         return result
 
+    remaining_truncate_limit = truncate_limit
     for label_part in label:
-        if truncate_limit <= 0:
+        if remaining_truncate_limit <= 0:
             break
         value = ""
         tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
@@ -167,8 +168,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             value += f'<a href="{inlay_hint_click_command}">'
         raw_label = label_part['value']
-        truncated_label = raw_label[:truncate_limit] + '...' if len(raw_label) >= truncate_limit else raw_label
-        truncate_limit -= len(raw_label)
+        truncated_label = raw_label[:remaining_truncate_limit] + '...' if len(raw_label) >= remaining_truncate_limit else raw_label
+        remaining_truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)
         if has_command:
             value += "</a>"

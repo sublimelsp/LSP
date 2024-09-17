@@ -97,7 +97,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    truncate_limit = view.settings().get("inlay_truncate_limit", userprefs().inlay_truncate_limit)
+    truncate_limit = view.settings().get("inlay_hints_truncate_limit", userprefs().inlay_hints_truncate_limit)
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid, truncate_limit)
     font = view.settings().get('font_face') or "monospace"
     html = f"""

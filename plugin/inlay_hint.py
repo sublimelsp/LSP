@@ -168,15 +168,19 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             value += f'<a href="{inlay_hint_click_command}">'
         raw_label = label_part['value']
-        if len(raw_label) > remaining_truncate_limit:
+        truncated = len(raw_label) > remaining_truncate_limit
+        if truncated:
             truncated_label = raw_label[:remaining_truncate_limit] + '…'
         else:
             truncated_label = raw_label
+
         remaining_truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)
         if has_command:
             value += "</a>"
         # InlayHintLabelPart.location is not supported
         instruction_text = '\nDouble-click to execute' if has_command else ""
-        result += f"<span title=\"{(tooltip + instruction_text).strip()}\">{value}</span>"
+        tooltip_label = "".join(label_part['value'] for label_part in label)
+        truncation_tooltip = html.escape('\n' + tooltip_label) if truncated else ""
+        result += f"<span title=\"{(tooltip + instruction_text + truncation_tooltip).strip()}\">{value}</span>"
     return result

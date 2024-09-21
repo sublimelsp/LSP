@@ -34,6 +34,8 @@ from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import deque
 from collections import OrderedDict
 from datetime import datetime
@@ -70,11 +72,29 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
         pass
 
 
+class GlobalLspListener(metaclass=ABCMeta):
+
+    @abstractmethod
+    def on_session_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_session_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+        raise NotImplementedError()
+
+
 class WindowManager(Manager, WindowConfigChangeListener):
 
-    def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
+    def __init__(
+        self,
+        window: sublime.Window,
+        workspace: ProjectFolders,
+        config_manager: WindowConfigManager,
+        global_listener: GlobalLspListener,
+    ) -> None:
         self._window = window
         self._config_manager = config_manager
+        self._global_listener = global_listener
         self._sessions: set[Session] = set()
         self._workspace = workspace
         self._pending_listeners: deque[AbstractViewListener] = deque()
@@ -198,6 +218,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 except Exception as ex:
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
+                    return
+                self._global_listener.on_session_initialized_async(listener, session)
 
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         inside_workspace = self._workspace.contains(view)
@@ -387,6 +409,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
+            self._global_listener.on_session_shutdown_async(listener, session)
         if exit_code != 0 or exception:
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
@@ -518,11 +541,18 @@ class WindowManager(Manager, WindowConfigChangeListener):
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
 
 
-class WindowRegistry:
+class WindowRegistry(GlobalLspListener):
     def __init__(self) -> None:
         self._enabled = False
         self._windows: dict[int, WindowManager] = {}
+        self._global_listeners: set[GlobalLspListener] = set()
         client_configs.set_listener(self._on_client_config_updated)
+
+    def add_global_listener(self, listener: GlobalLspListener) -> None:
+        self._global_listeners.add(listener)
+
+    def remove_global_listener(self, listener: GlobalLspListener) -> None:
+        self._global_listeners.discard(listener)
 
     def _on_client_config_updated(self, config_name: str | None = None) -> None:
         for wm in self._windows.values():
@@ -551,7 +581,7 @@ class WindowRegistry:
             return wm
         workspace = ProjectFolders(window)
         window_config_manager = WindowConfigManager(window, client_configs.all)
-        manager = WindowManager(window, workspace, window_config_manager)
+        manager = WindowManager(window, workspace, window_config_manager, self)
         self._windows[window.id()] = manager
         return manager
 
@@ -566,6 +596,15 @@ class WindowRegistry:
         if wm:
             sublime.set_timeout_async(wm.destroy)
 
+    # --- Implements GlobalLspListener ---------------------------------------------------------------------------------
+
+    def on_session_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+        for listener in self._global_listeners:
+            listener.on_session_initialized_async(view_listener, session)
+
+    def on_session_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+        for listener in self._global_listeners:
+            listener.on_session_shutdown_async(view_listener, session)
 
 class RequestTimeTracker:
     def __init__(self) -> None:

@@ -9,8 +9,10 @@ from .core.file_watcher import register_file_watcher_implementation
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.registry import AbstractViewListener
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
+from .core.registry import windows
 from .core.sessions import AbstractPlugin
 from .core.sessions import register_plugin
 from .core.sessions import Session
@@ -24,12 +26,14 @@ from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
+from .core.windows import GlobalLspListener
 from .core.workspace import WorkspaceFolder
 
 # This is the public API for LSP-* packages
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'AbstractViewListener',
     'apply_text_edits',
     'ClientConfig',
     'css',
@@ -39,6 +43,7 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'GlobalLspListener',
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',
@@ -54,5 +59,6 @@ __all__ = [
     'unregister_plugin',
     'uri_from_view',
     'uri_to_filename',  # deprecated
+    'windows',
     'WorkspaceFolder',
 ]

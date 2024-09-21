@@ -687,7 +687,8 @@ class SessionBuffer:
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions(f"lsp_semantic_{session_name}_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
+                sv.view.add_regions(
+                    f"lsp_semantic_{session_name}_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:

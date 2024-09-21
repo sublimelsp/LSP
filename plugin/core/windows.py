@@ -75,7 +75,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
-        self._sessions: WeakSet[Session] = WeakSet()
+        self._sessions: set[Session] = set()
         self._workspace = workspace
         self._pending_listeners: deque[AbstractViewListener] = deque()
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()
@@ -341,6 +341,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
     def restart_sessions_async(self, config_name: str | None = None) -> None:
+        print('[WindowManager] restart_sessions_async')
         self._end_sessions_async(config_name)
         listeners = list(self._listeners)
         self._listeners.clear()
@@ -348,6 +349,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.register_listener_async(listener)
 
     def _end_sessions_async(self, config_name: str | None = None) -> None:
+        print('[WindowManager] end_session', config_name)
         sessions = list(self._sessions)
         for session in sessions:
             if config_name is None or config_name == session.config.name:
@@ -384,6 +386,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
+        print('[WindowManager] on_post_exit_async', session.config.name)
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)

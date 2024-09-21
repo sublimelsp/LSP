@@ -188,6 +188,7 @@ class ProcessTransport(Transport[T]):
 
         def invoke() -> None:
             callback_object = self._callback_object()
+            print('[ProcessTransport] end Transport', callback_object)
             if callback_object:
                 callback_object.on_transport_close(exit_code, exception)
 

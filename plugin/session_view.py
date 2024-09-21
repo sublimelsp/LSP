@@ -141,7 +141,7 @@ class SessionView:
         line_modes = ["m", "s"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
         for key in range(1, 100):
-            keys.append(f"lsp_semantic_{key}")
+            keys.append(f"lsp_semantic_{self.session.config.name}_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:

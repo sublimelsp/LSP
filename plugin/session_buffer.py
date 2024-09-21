@@ -681,12 +681,12 @@ class SessionBuffer:
             if region_key not in scope_regions.keys():
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
-                    sv.view.erase_regions(f"lsp_semantic_{region_key}")
+                    sv.view.erase_regions(f"lsp_semantic_{self.session.config.name}_{region_key}")
         for region_key, (scope, regions) in scope_regions.items():
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions(f"lsp_semantic_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
+                sv.view.add_regions(f"lsp_semantic_{self.session.config.name}_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:
@@ -696,7 +696,7 @@ class SessionBuffer:
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
         for region_key in self.semantic_tokens.active_region_keys:
-            view.erase_regions(f"lsp_semantic_{region_key}")
+            view.erase_regions(f"lsp_semantic_{self.session.config.name}_{region_key}")
 
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh

@@ -70,7 +70,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     def list_items(self) -> ListItemsReturn:
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
-            return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
+            return [self._initial_value], 0  # pyright: ignore[reportReturnType]
         else:
             return self.get_list_items()
 
@@ -123,7 +123,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             raise RuntimeError('Could not find the Command Palette input field view')
         self.listener = InputListener(self)
         self.listener.attach(buffer)
-        if ST_VERSION < 4161:
+        if ST_VERSION < 4161 and self.input_view:
             # Workaround for initial_selection not working; see https://github.com/sublimehq/sublime_text/issues/6175
             selection = self.input_view.sel()
             selection.clear()

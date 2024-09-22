@@ -98,6 +98,7 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
+from .typing import StrEnum
 from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
@@ -248,29 +249,29 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-def _enum_to_list(e: type[IntEnum]) -> list[int]:
+def _int_enum_to_list(e: type[IntEnum]) -> list[int]:
     return [v.value for v in e]
 
 
-def _enum_like_class_to_list(c: type[object]) -> list[int | str]:
-    return [v for k, v in c.__dict__.items() if not k.startswith('_')]
+def _str_enum_to_list(e: type[StrEnum]) -> list[str]:
+    return [v.value for v in e]
 
 
 def get_initialize_params(variables: dict[str, str], workspace_folders: list[WorkspaceFolder],
                           config: ClientConfig) -> InitializeParams:
-    completion_kinds = cast(List[CompletionItemKind], _enum_to_list(CompletionItemKind))
-    symbol_kinds = cast(List[SymbolKind], _enum_to_list(SymbolKind))
-    diagnostic_tag_value_set = cast(List[DiagnosticTag], _enum_to_list(DiagnosticTag))
-    completion_tag_value_set = cast(List[CompletionItemTag], _enum_to_list(CompletionItemTag))
-    symbol_tag_value_set = cast(List[SymbolTag], _enum_to_list(SymbolTag))
-    semantic_token_types = cast(List[str], _enum_like_class_to_list(SemanticTokenTypes))
+    completion_kinds = cast(List[CompletionItemKind], _int_enum_to_list(CompletionItemKind))
+    symbol_kinds = cast(List[SymbolKind], _int_enum_to_list(SymbolKind))
+    diagnostic_tag_value_set = cast(List[DiagnosticTag], _int_enum_to_list(DiagnosticTag))
+    completion_tag_value_set = cast(List[CompletionItemTag], _int_enum_to_list(CompletionItemTag))
+    symbol_tag_value_set = cast(List[SymbolTag], _int_enum_to_list(SymbolTag))
+    semantic_token_types = cast(List[str], _str_enum_to_list(SemanticTokenTypes))
     if config.semantic_tokens is not None:
         for token_type in config.semantic_tokens.keys():
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-    semantic_token_modifiers = cast(List[str], _enum_like_class_to_list(SemanticTokenModifiers))
-    supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
-    folding_range_kind_value_set = cast(List[FoldingRangeKind], _enum_like_class_to_list(FoldingRangeKind))
+    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
+    supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
+    folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities: GeneralClientCapabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -382,15 +383,15 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "dynamicRegistration": True,
             "codeActionLiteralSupport": {
                 "codeActionKind": {
-                    "valueSet": [
-                        CodeActionKind.QuickFix,
-                        CodeActionKind.Refactor,
-                        CodeActionKind.RefactorExtract,
-                        CodeActionKind.RefactorInline,
-                        CodeActionKind.RefactorRewrite,
-                        CodeActionKind.SourceFixAll,
-                        CodeActionKind.SourceOrganizeImports,
-                    ]
+                    "valueSet": cast(List[CodeActionKind], [
+                        CodeActionKind.QuickFix.value,
+                        CodeActionKind.Refactor.value,
+                        CodeActionKind.RefactorExtract.value,
+                        CodeActionKind.RefactorInline.value,
+                        CodeActionKind.RefactorRewrite.value,
+                        CodeActionKind.SourceFixAll.value,
+                        CodeActionKind.SourceOrganizeImports.value,
+                    ])
                 }
             },
             "dataSupport": True,
@@ -451,9 +452,9 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             },
             "tokenTypes": semantic_token_types,
             "tokenModifiers": semantic_token_modifiers,
-            "formats": [
-                TokenFormat.Relative
-            ],
+            "formats": cast(List[TokenFormat], [
+                TokenFormat.Relative.value
+            ]),
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
@@ -473,7 +474,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "executeCommand": {},
         "workspaceEdit": {
             "documentChanges": True,
-            "failureHandling": FailureHandlingKind.Abort,
+            "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
         },
         "workspaceFolders": True,
         "symbol": {
@@ -1052,6 +1053,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param    method:    The method of the request.
         :param    response:  The response object to the request. The response.result field can be modified by the
                              plugin, before it gets further handled by the LSP package.
+        """
+        pass
+
+    def on_server_notification_async(self, notification: Notification) -> None:
+        """
+        Notifies about a notification message that has been received from the language server.
+
+        :param    notification:  The notification object.
         """
         pass
 
@@ -2388,6 +2397,8 @@ class Session(TransportCallbacks):
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
+                if self._plugin:
+                    self._plugin.on_server_notification_async(Notification(method, result))
                 return res
         elif "id" in payload:
             if payload["id"] is None:

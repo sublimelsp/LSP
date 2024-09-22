@@ -1,14 +1,15 @@
 from __future__ import annotations
 from .logging import debug
+from .protocol import AnnotatedTextEdit
 from .protocol import Position
 from .protocol import TextEdit
 from .protocol import UINT_MAX
 from .protocol import WorkspaceEdit
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[TextEdit], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[int]]]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
@@ -24,7 +25,11 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
             uri = text_document['uri']
             version = text_document.get('version')
             edits = document_change.get('edits')
-            changes.setdefault(uri, ([], version))[0].extend(edits)
+            for edit in edits:
+                if 'snippet' in edit:
+                    debug('Ignoring unsupported SnippetTextEdit')
+                    continue
+                changes.setdefault(uri, ([], version))[0].append(edit)
     else:
         raw_changes = workspace_edit.get('changes')
         if isinstance(raw_changes, dict):

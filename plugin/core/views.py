@@ -4,8 +4,8 @@ from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
 from .protocol import CodeAction
-from .protocol import CodeActionKind
 from .protocol import CodeActionContext
+from .protocol import CodeActionKind
 from .protocol import CodeActionParams
 from .protocol import CodeActionTriggerKind
 from .protocol import Color
@@ -20,6 +20,7 @@ from .protocol import DidOpenTextDocumentParams
 from .protocol import DidSaveTextDocumentParams
 from .protocol import DocumentColorParams
 from .protocol import DocumentUri
+from .protocol import LanguageKind
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import MarkedString
@@ -253,6 +254,7 @@ def entire_content_range(view: sublime.View) -> Range:
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
+    language_id = cast(LanguageKind, language_id)
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -403,9 +405,10 @@ def text_document_code_action_params(
     only_kinds: list[CodeActionKind] | None = None,
     manual: bool = False
 ) -> CodeActionParams:
+    trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": CodeActionTriggerKind.Invoked if manual else CodeActionTriggerKind.Automatic,
+        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds

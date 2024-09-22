@@ -49,6 +49,7 @@ from functools import partial
 from typing import Any, Callable, Iterable, List, Protocol
 from typing import cast
 from typing_extensions import TypeGuard
+from typing_extensions import deprecated
 from weakref import WeakSet
 import sublime
 import time
@@ -192,6 +193,7 @@ class SessionBuffer:
         return next(iter(self.session_views)).view
 
     @property
+    @deprecated("Use get_language_id() instead")
     def language_id(self) -> str:
         """
         Deprecated: use get_language_id
@@ -681,16 +683,18 @@ class SessionBuffer:
         # don't update regions if there were additional changes to the buffer in the meantime
         if self.semantic_tokens.view_change_count != view.change_count():
             return
+        session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys.copy():
             if region_key not in scope_regions.keys():
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
-                    sv.view.erase_regions(f"lsp_semantic_{region_key}")
+                    sv.view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
         for region_key, (scope, regions) in scope_regions.items():
             if region_key not in self.semantic_tokens.active_region_keys:
                 self.semantic_tokens.active_region_keys.add(region_key)
             for sv in self.session_views:
-                sv.view.add_regions(f"lsp_semantic_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
+                sv.view.add_regions(
+                    f"lsp_semantic_{session_name}_{region_key}", regions, scope, flags=SEMANTIC_TOKEN_FLAGS)
 
     def _get_semantic_region_key_for_scope(self, scope: str) -> int:
         if scope not in self._semantic_region_keys:
@@ -699,8 +703,9 @@ class SessionBuffer:
         return self._semantic_region_keys[scope]
 
     def _clear_semantic_token_regions(self, view: sublime.View) -> None:
+        session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys:
-            view.erase_regions(f"lsp_semantic_{region_key}")
+            view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
 
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.semantic_tokens.needs_refresh = needs_refresh

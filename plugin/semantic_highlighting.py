@@ -30,6 +30,9 @@ class LspShowScopeNameCommand(LspTextCommand):
 
     capability = 'semanticTokensProvider'
 
+    def want_event(self) -> bool:
+        return False
+
     def run(self, _: sublime.Edit) -> None:
         point = self.view.sel()[-1].b
         scope = self.view.scope_name(point).rstrip()

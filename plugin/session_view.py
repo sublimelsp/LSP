@@ -18,7 +18,6 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import DIAGNOSTIC_SEVERITY
-from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer

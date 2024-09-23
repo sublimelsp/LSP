@@ -103,7 +103,6 @@ from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
-from .views import DiagnosticSeverityData
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location

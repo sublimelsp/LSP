@@ -562,7 +562,7 @@ class Capabilities(DottedDict):
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(cast(dict[str, Any], d))
+        super().assign(cast(dict, d))
         if textsync:
             self.update(textsync)
 

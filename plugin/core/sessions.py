@@ -577,9 +577,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
-    ) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
     def redraw_diagnostics_async(self) -> None:

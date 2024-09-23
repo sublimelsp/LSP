@@ -118,6 +118,7 @@ class SessionBuffer:
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
         self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
@@ -545,13 +546,14 @@ class SessionBuffer:
             else:
                 data.regions.append(region)
             diagnostics.append((diagnostic, region))
+        self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
             self.diagnostics_version = diagnostics_version
             self.diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
-                sv.present_diagnostics_async(sv in visible_session_views, data_per_severity)
+                sv.present_diagnostics_async(sv in visible_session_views)
 
         self._diagnostics_debouncer_async.cancel_pending()
         if self._diagnostics_are_visible:

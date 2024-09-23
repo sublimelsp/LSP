@@ -56,7 +56,6 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self._view = listener.view
         self._session = session
-        self._diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostic_annotations = DiagnosticsAnnotationsView(self._view, session.config.name)
         self._initialize_region_keys()
         self._active_requests: dict[int, ActiveRequest] = {}
@@ -300,10 +299,7 @@ class SessionView:
                 return f'markup.{k.lower()}.lsp'
         return None
 
-    def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
-    ) -> None:
-        self._diagnostics_data_per_severity = data_per_severity
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self.redraw_diagnostics_async()
         listener = self.listener()
         if listener:
@@ -328,7 +324,7 @@ class SessionView:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_VALUES}
-        data = self._diagnostics_data_per_severity.get((severity, multiline))
+        data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():

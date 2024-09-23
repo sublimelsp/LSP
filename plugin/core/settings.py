@@ -20,7 +20,7 @@ class ClientConfigs:
         self._userprefs_listener: Callable[[], None] | None = None
         self._clients_hash: int | None = None
 
-    def _notify_listener(self, config_name: str | None = None) -> None:
+    def _notify_clients_listener(self, config_name: str | None = None) -> None:
         if callable(self._clients_listener):
             self._clients_listener(config_name)
 
@@ -31,11 +31,11 @@ class ClientConfigs:
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
         self.all[config.name] = config
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def remove_for_testing(self, config: ClientConfig) -> None:
         self.all.pop(config.name)
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str, notify_listener: bool) -> bool:
         if name in self.external:
@@ -56,13 +56,13 @@ class ClientConfigs:
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
             # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
             # all plugins have done their `register_plugin` call.
-            debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
+            debounced(lambda: self._notify_clients_listener(name), 200, lambda: len(self.external) == size)
         return True
 
     def remove_external_config(self, name: str) -> None:
         self.external.pop(name, None)
         if self.all.pop(name, None):
-            self._notify_listener()
+            self._notify_clients_listener()
 
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
         try:
@@ -73,7 +73,7 @@ class ClientConfigs:
             return
         self.external[name] = config
         self.all[name] = config
-        self._notify_listener(name)
+        self._notify_clients_listener(name)
 
     def update_configs(self) -> None:
         global _settings_obj
@@ -92,7 +92,7 @@ class ClientConfigs:
         self.all.update(self.external)
         debug("enabled configs:", ", ".join(sorted(c.name for c in self.all.values() if c.enabled)))
         debug("disabled configs:", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from .sessions import get_plugin

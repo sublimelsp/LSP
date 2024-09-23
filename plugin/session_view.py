@@ -300,12 +300,12 @@ class SessionView:
         return None
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
-        self.redraw_diagnostics_async()
+        self._redraw_diagnostics_async()
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async(is_view_visible)
 
-    def redraw_diagnostics_async(self) -> None:
+    def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
@@ -375,6 +375,9 @@ class SessionView:
 
     def on_post_save_async(self, new_uri: DocumentUri) -> None:
         self.session_buffer.on_post_save_async(self.view, new_uri)
+
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_diagnostics_async()
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

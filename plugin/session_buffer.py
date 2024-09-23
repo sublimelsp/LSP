@@ -380,6 +380,13 @@ class SessionBuffer:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
 
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_document_links_async()
+        if not userprefs().semantic_highlighting:
+            self._clear_semantic_tokens_async()
+        for sv in self.session_views:
+            sv.on_userprefs_changed_async()
+
     def some_view(self) -> sublime.View | None:
         if not self.session_views:
             return None
@@ -429,9 +436,9 @@ class SessionBuffer:
 
     def _on_document_link_async(self, view: sublime.View, response: list[DocumentLink] | None) -> None:
         self._document_links = response or []
-        self.redraw_document_links_async()
+        self._redraw_document_links_async()
 
-    def redraw_document_links_async(self) -> None:
+    def _redraw_document_links_async(self) -> None:
         if self._document_links and userprefs().link_highlight_style == "underline":
             view = self.some_view()
             if not view:
@@ -715,7 +722,7 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
-    def clear_semantic_tokens_async(self) -> None:
+    def _clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
 

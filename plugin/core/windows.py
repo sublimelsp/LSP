@@ -535,13 +535,7 @@ class WindowRegistry:
         for wm in self._windows.values():
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
-                session.redraw_config_status_async()
-                for sb in session.session_buffers_async():
-                    sb.redraw_document_links_async()
-                    if not userprefs().semantic_highlighting:
-                        sb.clear_semantic_tokens_async()
-                for sv in session.session_views_async():
-                    sv.redraw_diagnostics_async()
+                session.on_userprefs_changed_async()
 
     def enable(self) -> None:
         self._enabled = True

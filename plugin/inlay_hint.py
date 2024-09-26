@@ -171,10 +171,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             value += f'<a href="{inlay_hint_click_command}">'
         raw_label = label_part['value']
         truncated = len(raw_label) > remaining_truncate_limit
-        if truncated:
-            truncated_label = raw_label[:remaining_truncate_limit] + '…'
-        else:
-            truncated_label = raw_label
+        truncated_label = raw_label[:remaining_truncate_limit] + '…' if truncated else raw_label
 
         remaining_truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)

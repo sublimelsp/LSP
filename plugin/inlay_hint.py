@@ -173,7 +173,6 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         raw_label = label_part['value']
         truncated = len(raw_label) > remaining_truncate_limit
         truncated_label = raw_label[:remaining_truncate_limit] + '…' if truncated else raw_label
-
         remaining_truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)
         if has_command:

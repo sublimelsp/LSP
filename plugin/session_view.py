@@ -140,8 +140,9 @@ class SessionView:
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
+        session_name = self.session.config.name
         for key in range(1, 100):
-            keys.append(f"lsp_semantic_{key}")
+            keys.append(f"lsp_semantic_{session_name}_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
@@ -151,14 +152,14 @@ class SessionView:
         for severity in range(1, 5):
             for mode in line_modes:
                 for tag in range(1, 3):
-                    keys.append(f"lsp{self.session.config.name}d{mode}{severity}_tags_{tag}")
+                    keys.append(f"lsp{session_name}d{mode}{severity}_tags_{tag}")
         keys.append("lsp_document_link")
         for severity in range(1, 5):
             for mode in line_modes:
-                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_icon")
+                keys.append(f"lsp{session_name}d{mode}{severity}_icon")
         for severity in range(4, 0, -1):
             for mode in line_modes:
-                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_underline")
+                keys.append(f"lsp{session_name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:

@@ -97,8 +97,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 
 
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    truncate_limit = userprefs().inlay_hints_truncate_limit
-    label = format_inlay_hint_label(inlay_hint, session, phantom_uuid, truncate_limit)
+    label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
     html = f"""
     <body id="lsp-inlay-hint">
@@ -124,7 +123,8 @@ def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
     return ""
 
 
-def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str, truncate_limit: int) -> str:
+def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
+    truncate_limit = userprefs().inlay_hints_truncate_limit
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')

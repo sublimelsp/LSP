@@ -145,8 +145,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncated = len(label) > truncate_limit
         truncated_label = label[:truncate_limit] + '…' if truncated else label
-        tooltip_label = "".join(label_part['value'] for label_part in label)
-        truncation_tooltip = html.escape('\n' + tooltip_label) if truncated else ""
+        truncation_tooltip = html.escape('\n' + label) if truncated else ""
         result += f'<span title="{(tooltip + instruction_text + truncation_tooltip).strip()}">{html.escape(truncated_label)}</span>'
         if is_clickable:
             result += "</a>"

@@ -125,6 +125,8 @@ def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
 
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     truncate_limit = userprefs().inlay_hints_truncate_limit
+    truncated = False
+
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
@@ -145,11 +147,13 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncated = len(label) > truncate_limit
         truncated_label = label[:truncate_limit] + '…' if truncated else label
-        truncation_tooltip = html.escape('\n' + label) if truncated else ""
-        result_tooltip = (tooltip + instruction_text + truncation_tooltip).strip()
+        result_tooltip = (tooltip + instruction_text).strip()
         result += f'<span title="{result_tooltip}">{html.escape(truncated_label)}</span>'
         if is_clickable:
             result += "</a>"
+        if truncated:
+            truncation_tooltip = html.escape('\n' + label)
+            result = f"<span title=\"{truncation_tooltip}\">{result}</span>"
         return result
 
     remaining_truncate_limit = truncate_limit
@@ -179,7 +183,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             value += "</a>"
         # InlayHintLabelPart.location is not supported
         instruction_text = '\nDouble-click to execute' if has_command else ""
+        result += f"<span title=\"{(tooltip + instruction_text).strip()}\">{value}</span>"
+    if truncated:
         tooltip_label = "".join(label_part['value'] for label_part in label)
-        truncation_tooltip = html.escape('\n' + tooltip_label) if truncated else ""
-        result += f"<span title=\"{(tooltip + instruction_text + truncation_tooltip).strip()}\">{value}</span>"
+        truncation_tooltip = html.escape('\n' + tooltip_label)
+        result = f"<span title=\"{truncation_tooltip}\">{result}</span>"
     return result

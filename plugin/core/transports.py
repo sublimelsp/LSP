@@ -7,6 +7,7 @@ from functools import partial
 from queue import Queue
 from typing import Any, Callable, Dict, Generic, IO, Protocol, TypeVar
 import http
+import json
 import os
 import shutil
 import socket
@@ -19,7 +20,6 @@ import weakref
 try:
     import orjson
 except ImportError:
-    import json
     orjson = None
 
 T = TypeVar('T')

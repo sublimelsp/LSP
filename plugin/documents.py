@@ -241,7 +241,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
-        print('[DocumentListener] on_session_shutdown_async', removed_session)
         if removed_session:
             removed_session.on_before_remove()
             if not self._session_views:
@@ -1007,7 +1006,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout(run_sync)
 
     def _clear_session_views_async(self) -> None:
-        print('[DocumentListener] _clear_session_views_async')
         session_views = self._session_views
 
         def clear_async() -> None:

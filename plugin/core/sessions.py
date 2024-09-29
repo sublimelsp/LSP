@@ -1304,9 +1304,6 @@ class Session(TransportCallbacks):
                 return attr
         raise AttributeError(name)
 
-    def __del__(self) -> None:
-        print('[Session] __del__', self.config.name)
-
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
@@ -2248,7 +2245,6 @@ class Session(TransportCallbacks):
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
     def end_async(self) -> None:
-        print('[Session] end_async', self.exiting)
         # TODO: Ensure this function is called only from the async thread
         if self.exiting:
             return
@@ -2270,14 +2266,12 @@ class Session(TransportCallbacks):
                 watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
-        print('[Session] Sending shutdown')
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def _handle_shutdown_result(self, _: Any) -> None:
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
-        print('[Session] on_transport-close')
         self.exiting = True
         self.state = ClientStates.STOPPING
         self.transport = None
@@ -2362,7 +2356,6 @@ class Session(TransportCallbacks):
     def exit(self) -> None:
         self.send_notification(Notification.exit())
         try:
-            print('[Session] Closing transport')
             self.transport.close()  # type: ignore
         except AttributeError:
             pass

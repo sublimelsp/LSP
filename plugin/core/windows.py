@@ -606,6 +606,7 @@ class WindowRegistry(GlobalLspListener):
         for listener in self._global_listeners:
             listener.on_session_shutdown_async(view_listener, session)
 
+
 class RequestTimeTracker:
     def __init__(self) -> None:
         self._start_times: dict[int, float] = {}

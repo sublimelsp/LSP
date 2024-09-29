@@ -84,6 +84,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
     @staticmethod
     def _encode(data: dict[str, Any]) -> bytes:
+        if orjson:
+            return orjson.dumps(data)
         return json.dumps(
             data,
             ensure_ascii=False,
@@ -94,18 +96,9 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
     @staticmethod
     def _decode(message: bytes) -> dict[str, Any]:
+        if orjson:
+            return orjson.loads(message)
         return json.loads(message.decode('utf-8'))
-
-
-class OrjsonRpcProcessor(JsonRpcProcessor):
-
-    @staticmethod
-    def _encode(data: dict[str, Any]) -> bytes:
-        return orjson.dumps(data)
-
-    @staticmethod
-    def _decode(message: bytes) -> dict[str, Any]:
-        return orjson.loads(message)
 
 
 class ProcessTransport(Transport[T]):
@@ -246,10 +239,7 @@ class ProcessTransport(Transport[T]):
 
 
 # Can be a singleton since it doesn't hold any state.
-if orjson:
-    json_rpc_processor = OrjsonRpcProcessor()
-else:
-    json_rpc_processor = JsonRpcProcessor()
+json_rpc_processor = JsonRpcProcessor()
 
 
 def create_transport(config: TransportConfig, cwd: str | None,

@@ -8,6 +8,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import uri_from_view
+from .core.views import versioned_text_document_identifier
 from typing import Any
 import sublime
 
@@ -65,6 +66,8 @@ class LspExecuteCommand(LspTextCommand):
         for i, arg in enumerate(command_args):
             if arg in ["$document_id", "${document_id}"]:
                 command_args[i] = text_document_identifier(view)
+            elif arg in ["$versioned_document_id", "${versioned_document_id}"]:
+                command_args[i] = versioned_text_document_identifier(view, view.change_count())
             elif arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(view)
             elif region is not None:

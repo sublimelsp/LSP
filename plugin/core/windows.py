@@ -75,7 +75,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
-        self._sessions: WeakSet[Session] = WeakSet()
+        self._sessions: set[Session] = set()
         self._workspace = workspace
         self._pending_listeners: deque[AbstractViewListener] = deque()
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()

@@ -23,6 +23,7 @@ from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .settings import client_configs
+from .settings import LspSettingsChangeListener
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
@@ -518,17 +519,17 @@ class WindowManager(Manager, WindowConfigChangeListener):
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
 
 
-class WindowRegistry:
+class WindowRegistry(LspSettingsChangeListener):
     def __init__(self) -> None:
         self._enabled = False
         self._windows: dict[int, WindowManager] = {}
-        client_configs.set_listeners(self._on_client_config_updated, self._on_userprefs_updated)
+        client_configs.set_listener(self)
 
-    def _on_client_config_updated(self, config_name: str | None = None) -> None:
+    def on_client_config_updated(self, config_name: str | None = None) -> None:
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
 
-    def _on_userprefs_updated(self) -> None:
+    def on_userprefs_updated(self) -> None:
         sublime.set_timeout_async(self._on_userprefs_updated_async)
 
     def _on_userprefs_updated_async(self) -> None:

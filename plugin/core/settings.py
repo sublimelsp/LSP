@@ -5,10 +5,23 @@ from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from typing import Any, Callable
+from abc import ABCMeta
+from abc import abstractmethod
+from typing import Any
 import json
 import os
 import sublime
+
+
+class LspSettingsChangeListener(metaclass=ABCMeta):
+
+    @abstractmethod
+    def on_client_config_updated(self, config_name: str | None = None) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_userprefs_updated(self) -> None:
+        raise NotImplementedError()
 
 
 class ClientConfigs:
@@ -16,17 +29,16 @@ class ClientConfigs:
     def __init__(self) -> None:
         self.all: dict[str, ClientConfig] = {}
         self.external: dict[str, ClientConfig] = {}
-        self._clients_listener: Callable[[str | None], None] | None = None
-        self._userprefs_listener: Callable[[], None] | None = None
+        self._listener: LspSettingsChangeListener | None = None
         self._clients_hash: int | None = None
 
     def _notify_clients_listener(self, config_name: str | None = None) -> None:
-        if callable(self._clients_listener):
-            self._clients_listener(config_name)
+        if self._listener:
+            self._listener.on_client_config_updated(config_name)
 
     def _notify_userprefs_listener(self) -> None:
-        if callable(self._userprefs_listener):
-            self._userprefs_listener()
+        if self._listener:
+            self._listener.on_userprefs_updated()
 
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
@@ -117,13 +129,8 @@ class ClientConfigs:
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listeners(
-        self,
-        clients_listener: Callable[[str | None], None],
-        userprefs_listener: Callable[[], None]
-    ) -> None:
-        self._clients_listener = clients_listener
-        self._userprefs_listener = userprefs_listener
+    def set_listener(self, listener: LspSettingsChangeListener) -> None:
+        self._listener = listener
 
 
 _settings_obj: sublime.Settings | None = None

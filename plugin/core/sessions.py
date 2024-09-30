@@ -701,15 +701,15 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability: str | None = None) -> Generator[Session, None, None]:
+    def sessions_async(self, capability: str | None = None) -> list[Session]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_buffers_async(self, capability: str | None = None) -> Generator[SessionBufferProtocol, None, None]:
+    def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
+    def session_views_async(self) -> list[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod

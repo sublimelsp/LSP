@@ -731,7 +731,10 @@ class SessionBuffer:
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         if not self.has_capability("inlayHintProvider"):
             return
-        if not LspToggleInlayHintsCommand.are_enabled(view.window()):
+        window = view.window()
+        if not window:
+            return
+        if not window.settings().get('lsp_show_inlay_hints'):
             self.remove_all_inlay_hints()
             return
         params: InlayHintParams = {

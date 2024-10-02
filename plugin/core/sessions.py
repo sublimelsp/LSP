@@ -103,7 +103,6 @@ from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
-from .views import DiagnosticSeverityData
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
@@ -577,9 +576,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
-    ) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -604,6 +601,9 @@ class SessionViewProtocol(Protocol):
         ...
 
     def reset_show_definitions(self) -> None:
+        ...
+
+    def on_userprefs_changed_async(self) -> None:
         ...
 
 
@@ -651,6 +651,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def has_capability(self, capability_path: str) -> bool:
+        ...
+
+    def on_userprefs_changed_async(self) -> None:
         ...
 
     def on_diagnostics_async(
@@ -1344,8 +1347,11 @@ class Session(TransportCallbacks):
         :param message: The message
         """
         self.config_status_message = message.strip()
+        self._redraw_config_status_async()
+
+    def _redraw_config_status_async(self) -> None:
         for sv in self.session_views_async():
-            self.config.set_view_status(sv.view, message)
+            self.config.set_view_status(sv.view, self.config_status_message)
 
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
@@ -1479,6 +1485,11 @@ class Session(TransportCallbacks):
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
     # --- misc methods -------------------------------------------------------------------------------------------------
+
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_config_status_async()
+        for sb in self.session_buffers_async():
+            sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
         return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None

@@ -5,9 +5,23 @@ from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from typing import Any, Callable
+from abc import ABCMeta
+from abc import abstractmethod
+from typing import Any
+import json
 import os
 import sublime
+
+
+class LspSettingsChangeListener(metaclass=ABCMeta):
+
+    @abstractmethod
+    def on_client_config_updated(self, config_name: str | None = None) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_userprefs_updated(self) -> None:
+        raise NotImplementedError()
 
 
 class ClientConfigs:
@@ -15,20 +29,25 @@ class ClientConfigs:
     def __init__(self) -> None:
         self.all: dict[str, ClientConfig] = {}
         self.external: dict[str, ClientConfig] = {}
-        self._listener: Callable[[str | None], None] | None = None
+        self._listener: LspSettingsChangeListener | None = None
+        self._clients_hash: int | None = None
 
-    def _notify_listener(self, config_name: str | None = None) -> None:
-        if callable(self._listener):
-            self._listener(config_name)
+    def _notify_clients_listener(self, config_name: str | None = None) -> None:
+        if self._listener:
+            self._listener.on_client_config_updated(config_name)
+
+    def _notify_userprefs_listener(self) -> None:
+        if self._listener:
+            self._listener.on_userprefs_updated()
 
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
         self.all[config.name] = config
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def remove_for_testing(self, config: ClientConfig) -> None:
         self.all.pop(config.name)
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str, notify_listener: bool) -> bool:
         if name in self.external:
@@ -49,13 +68,13 @@ class ClientConfigs:
             # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
             # operation. To ensure that this dance is done only once, we delay notifying the WindowConfigManager until
             # all plugins have done their `register_plugin` call.
-            debounced(lambda: self._notify_listener(name), 200, lambda: len(self.external) == size)
+            debounced(lambda: self._notify_clients_listener(name), 200, lambda: len(self.external) == size)
         return True
 
     def remove_external_config(self, name: str) -> None:
         self.external.pop(name, None)
         if self.all.pop(name, None):
-            self._notify_listener()
+            self._notify_clients_listener()
 
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
         try:
@@ -66,20 +85,26 @@ class ClientConfigs:
             return
         self.external[name] = config
         self.all[name] = config
-        self._notify_listener(name)
+        self._notify_clients_listener(name)
 
     def update_configs(self) -> None:
         global _settings_obj
         if _settings_obj is None:
             return
+        clients_dict = read_dict_setting(_settings_obj, "clients", {})
+        _clients_hash = hash(json.dumps(clients_dict, sort_keys=True))
+        if _clients_hash == self._clients_hash:
+            self._notify_userprefs_listener()
+            return
+        self._clients_hash = _clients_hash
         clients = DottedDict(read_dict_setting(_settings_obj, "default_clients", {}))
-        clients.update(read_dict_setting(_settings_obj, "clients", {}))
+        clients.update(clients_dict)
         self.all.clear()
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)
         debug("enabled configs:", ", ".join(sorted(c.name for c in self.all.values() if c.enabled)))
         debug("disabled configs:", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
-        self._notify_listener()
+        self._notify_clients_listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from .sessions import get_plugin
@@ -104,8 +129,8 @@ class ClientConfigs:
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listener(self, recipient: Callable[[str | None], None]) -> None:
-        self._listener = recipient
+    def set_listener(self, listener: LspSettingsChangeListener) -> None:
+        self._listener = listener
 
 
 _settings_obj: sublime.Settings | None = None

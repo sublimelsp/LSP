@@ -152,7 +152,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         if is_clickable:
             result += "</a>"
         if truncated:
-            truncation_tooltip = html.escape('\n' + label)
+            truncation_tooltip = html.escape(label)
             result = f"<span title=\"{truncation_tooltip}\">{result}</span>"
         return result
 
@@ -186,6 +186,6 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         result += f"<span title=\"{(tooltip + instruction_text).strip()}\">{value}</span>"
     if truncated:
         tooltip_label = "".join(label_part['value'] for label_part in label)
-        truncation_tooltip = html.escape('\n' + tooltip_label)
+        truncation_tooltip = html.escape(tooltip_label)
         result = f"<span title=\"{truncation_tooltip}\">{result}</span>"
     return result

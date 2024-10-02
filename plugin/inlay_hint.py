@@ -19,10 +19,15 @@ import uuid
 class LspToggleInlayHintsCommand(LspWindowCommand):
     capability = 'inlayHintProvider'
 
+    def __init__(self, window: sublime.Window) -> None:
+        super().__init__(window)
+        window.settings().set('lsp_show_inlay_hints', userprefs().show_inlay_hints)
+
     def run(self, enable: bool | None = None) -> None:
+        window_settings = self.window.settings()
         if not isinstance(enable, bool):
-            enable = not self.are_enabled(self.window)
-        self.window.settings().set('lsp_show_inlay_hints', enable)
+            enable = not bool(window_settings.get('lsp_show_inlay_hints'))
+        window_settings.set('lsp_show_inlay_hints', enable)
         status = 'on' if enable else 'off'
         sublime.status_message(f'Inlay Hints are {status}')
         for session in self.sessions():
@@ -30,13 +35,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
                 sv.session_buffer.do_inlay_hints_async(sv.view)
 
     def is_checked(self) -> bool:
-        return self.are_enabled(self.window)
-
-    @classmethod
-    def are_enabled(cls, window: sublime.Window | None) -> bool:
-        if not window:
-            return userprefs().show_inlay_hints
-        return bool(window.settings().get('lsp_show_inlay_hints', userprefs().show_inlay_hints))
+        return bool(self.window.settings().get('lsp_show_inlay_hints'))
 
 
 class LspInlayHintClickCommand(LspTextCommand):

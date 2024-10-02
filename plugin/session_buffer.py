@@ -43,7 +43,6 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
-from .inlay_hint import LspToggleInlayHintsCommand
 from .semantic_highlighting import SemanticToken
 from functools import partial
 from typing import Any, Callable, Iterable, List, Protocol
@@ -118,6 +117,7 @@ class SessionBuffer:
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
         self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
@@ -379,6 +379,15 @@ class SessionBuffer:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
 
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_document_links_async()
+        if userprefs().semantic_highlighting:
+            self.semantic_tokens.needs_refresh = True
+        else:
+            self._clear_semantic_tokens_async()
+        for sv in self.session_views:
+            sv.on_userprefs_changed_async()
+
     def some_view(self) -> sublime.View | None:
         if not self.session_views:
             return None
@@ -428,14 +437,20 @@ class SessionBuffer:
 
     def _on_document_link_async(self, view: sublime.View, response: list[DocumentLink] | None) -> None:
         self._document_links = response or []
+        self._redraw_document_links_async()
+
+    def _redraw_document_links_async(self) -> None:
         if self._document_links and userprefs().link_highlight_style == "underline":
-            view.add_regions(
-                "lsp_document_link",
-                [range_to_region(link["range"], view) for link in self._document_links],
-                scope="markup.underline.link.lsp",
-                flags=DOCUMENT_LINK_FLAGS)
+            view = self.some_view()
+            if not view:
+                return
+            regions = [range_to_region(link["range"], view) for link in self._document_links]
+            for sv in self.session_views:
+                sv.view.add_regions(
+                    "lsp_document_link", regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
         else:
-            view.erase_regions("lsp_document_link")
+            for sv in self.session_views:
+                sv.view.erase_regions("lsp_document_link")
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:
@@ -539,13 +554,14 @@ class SessionBuffer:
             else:
                 data.regions.append(region)
             diagnostics.append((diagnostic, region))
+        self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
             self.diagnostics_version = diagnostics_version
             self.diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
-                sv.present_diagnostics_async(sv in visible_session_views, data_per_severity)
+                sv.present_diagnostics_async(sv in visible_session_views)
 
         self._diagnostics_debouncer_async.cancel_pending()
         if self._diagnostics_are_visible:
@@ -707,12 +723,19 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
+    def _clear_semantic_tokens_async(self) -> None:
+        for sv in self.session_views:
+            self._clear_semantic_token_regions(sv.view)
+
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         if not self.has_capability("inlayHintProvider"):
             return
-        if not LspToggleInlayHintsCommand.are_enabled(view.window()):
+        window = view.window()
+        if not window:
+            return
+        if not window.settings().get('lsp_show_inlay_hints'):
             self.remove_all_inlay_hints()
             return
         params: InlayHintParams = {

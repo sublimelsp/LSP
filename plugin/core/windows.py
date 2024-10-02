@@ -23,6 +23,7 @@ from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .settings import client_configs
+from .settings import LspSettingsChangeListener
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
@@ -541,22 +542,18 @@ class WindowManager(Manager, WindowConfigChangeListener):
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
 
 
-class WindowRegistry(GlobalLspListener):
+class WindowRegistry(LspSettingsChangeListener, GlobalLspListener):
     def __init__(self) -> None:
         self._enabled = False
         self._windows: dict[int, WindowManager] = {}
         self._global_listeners: set[GlobalLspListener] = set()
-        client_configs.set_listener(self._on_client_config_updated)
+        client_configs.set_listener(self)
 
     def add_global_listener(self, listener: GlobalLspListener) -> None:
         self._global_listeners.add(listener)
 
     def remove_global_listener(self, listener: GlobalLspListener) -> None:
         self._global_listeners.discard(listener)
-
-    def _on_client_config_updated(self, config_name: str | None = None) -> None:
-        for wm in self._windows.values():
-            wm.get_config_manager().update(config_name)
 
     def enable(self) -> None:
         self._enabled = True
@@ -595,6 +592,21 @@ class WindowRegistry(GlobalLspListener):
         wm = self._windows.pop(window.id(), None)
         if wm:
             sublime.set_timeout_async(wm.destroy)
+
+    def _on_userprefs_updated_async(self) -> None:
+        for wm in self._windows.values():
+            wm.on_diagnostics_updated()
+            for session in wm.get_sessions():
+                session.on_userprefs_changed_async()
+
+    # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
+
+    def on_client_config_updated(self, config_name: str | None = None) -> None:
+        for wm in self._windows.values():
+            wm.get_config_manager().update(config_name)
+
+    def on_userprefs_updated(self) -> None:
+        sublime.set_timeout_async(self._on_userprefs_updated_async)
 
     # --- Implements GlobalLspListener ---------------------------------------------------------------------------------
 

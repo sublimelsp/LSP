@@ -19,6 +19,7 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
+from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
 from .core.url import filename_to_uri
 from .core.url import parse_uri
@@ -37,6 +38,7 @@ __all__ = [
     'apply_text_edits',
     'ClientConfig',
     'css',
+    'DebouncerNonThreadSafe',
     'DottedDict',
     'filename_to_uri',
     'FileWatcher',

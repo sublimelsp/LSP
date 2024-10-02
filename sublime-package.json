@@ -741,7 +741,7 @@
             },
             "inlay_hints_truncate_limit": {
               "type": "integer",
-              "default": 1000,
+              "default": 100,
               "minimum": 0,
               "markdownDescription": "Truncate limit for inlay hints. Truncates and adds an ellipsis at the end."
             },

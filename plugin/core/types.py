@@ -273,7 +273,7 @@ class Settings:
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
         r("show_inlay_hints", False)
-        r("inlay_hints_truncate_limit", 1000)
+        r("inlay_hints_truncate_limit", 100)
         r("show_diagnostics_in_hover", True)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_annotations_severity_level", 0)

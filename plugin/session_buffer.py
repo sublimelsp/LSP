@@ -381,7 +381,9 @@ class SessionBuffer:
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_document_links_async()
-        if not userprefs().semantic_highlighting:
+        if userprefs().semantic_highlighting:
+            self.semantic_tokens.needs_refresh = True
+        else:
             self._clear_semantic_tokens_async()
         for sv in self.session_views:
             sv.on_userprefs_changed_async()

@@ -2,7 +2,7 @@ from __future__ import annotations
 from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import TextDocumentSyncKind
+from .protocol import ServerCapabilities, TextDocumentSyncKind, TextDocumentSyncOptions
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -480,13 +480,13 @@ def method_to_capability(method: str) -> tuple[str, str]:
     return capability_path, registration_path
 
 
-def normalize_text_sync(textsync: None | int | dict[str, Any]) -> dict[str, Any]:
+def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind | None) -> dict[str, Any]:
     """
     Brings legacy text sync capabilities to the most modern format
     """
     result: dict[str, Any] = {}
     if isinstance(textsync, int):
-        change: dict[str, Any] | None = {"syncKind": textsync}
+        change = {"syncKind": textsync}
         result["textDocumentSync"] = {"didOpen": {}, "save": {}, "didClose": {}, "change": change}
     elif isinstance(textsync, dict):
         new = {}
@@ -562,9 +562,9 @@ class Capabilities(DottedDict):
             self.remove(registration_path)
             return discarded
 
-    def assign(self, d: dict[str, Any]) -> None:
+    def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(d)
+        super().assign(cast(dict, d))
         if textsync:
             self.update(textsync)
 
@@ -839,6 +839,8 @@ class ClientConfig:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
             status = f"{self.name} ({message})" if message else self.name
             view.set_status(self.status_key, status)
+        else:
+            self.erase_view_status(view)
 
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)

@@ -28,7 +28,7 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: int | N
         except IndexError:
             return None
     try:
-        return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))  # type: ignore
+        return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))
     except ValueError:
         return None
 

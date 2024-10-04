@@ -123,7 +123,7 @@ def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
 
 
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
-    truncate_limit = userprefs().inlay_hints_truncate_limit
+    truncate_limit = userprefs().inlay_hints_max_length
     truncated = False
 
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))

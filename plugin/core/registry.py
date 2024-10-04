@@ -12,7 +12,7 @@ from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
-from typing import Any, Generator
+from typing import Any, Generator, Iterable
 import operator
 import sublime
 import sublime_plugin
@@ -21,7 +21,7 @@ import sublime_plugin
 windows = WindowRegistry()
 
 
-def best_session(view: sublime.View, sessions: list[Session], point: int | None = None) -> Session | None:
+def best_session(view: sublime.View, sessions: Iterable[Session], point: int | None = None) -> Session | None:
     if point is None:
         try:
             point = view.sel()[0].b

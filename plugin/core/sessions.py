@@ -1702,7 +1702,8 @@ class Session(TransportCallbacks):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
-        return None
+        # Server didn't provide a URI scheme, let's try to open the file, it should be a path anyways
+        return self._open_file_uri_async(uri, r, flags, group)
 
     def open_uri_async(
         self,

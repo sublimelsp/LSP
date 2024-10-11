@@ -30,7 +30,10 @@ def open_location_async(
 
     def check_success_async(view: sublime.View | None) -> None:
         if not view:
-            sublime.error_message("Unable to open URI")
+            uri = get_uri_and_position_from_location(location)[0]
+            msg = f"Unable to open URI {uri}"
+            debug(msg)
+            session.window.status_message(msg)
 
     session.open_location_async(location, flags, group).then(check_success_async)
 

@@ -139,6 +139,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
+    debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
@@ -389,7 +390,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_code_actions_annotation()
         if userprefs().document_highlight_style or userprefs().show_code_actions:
             self._when_selection_remains_stable_async(
-                self._on_selection_modified_debounced_async, first_region, after_ms=FEATURES_TIMEOUT)
+                self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
         self._resolve_visible_code_lenses_async()
 
@@ -953,7 +954,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
-                self._do_highlights_async, first_region, after_ms=FEATURES_TIMEOUT)
+                self._do_highlights_async, first_region, after_ms=self.debounce_time)
         self.do_signature_help_async(manual=False)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:

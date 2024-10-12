@@ -269,11 +269,11 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 class CodeActionsListenerTestCase(TextDocumentTestCase):
     def setUp(self) -> Generator:
         yield from super().setUp()
-        self.original_debounce_time = DocumentSyncListener.code_actions_debounce_time
-        DocumentSyncListener.code_actions_debounce_time = 0
+        self.original_debounce_time = DocumentSyncListener.debounce_time
+        DocumentSyncListener.debounce_time = 0
 
     def tearDown(self) -> None:
-        DocumentSyncListener.code_actions_debounce_time = self.original_debounce_time
+        DocumentSyncListener.debounce_time = self.original_debounce_time
         super().tearDown()
 
     @classmethod

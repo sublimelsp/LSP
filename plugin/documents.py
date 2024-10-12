@@ -139,9 +139,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
-    code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
-    highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
@@ -388,15 +386,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
-        if userprefs().document_highlight_style:
-            self._when_selection_remains_stable_async(self._do_highlights_async, first_region,
-                                                      after_ms=self.highlights_debounce_time)
         self._clear_code_actions_annotation()
-        if userprefs().show_code_actions:
-            self._when_selection_remains_stable_async(self._do_code_actions_async, first_region,
-                                                      after_ms=self.code_actions_debounce_time)
+        if userprefs().document_highlight_style or userprefs().show_code_actions:
+            self._when_selection_remains_stable_async(
+                self._on_selection_modified_debounced_async, first_region, after_ms=FEATURES_TIMEOUT)
         self._update_diagnostic_in_status_bar_async()
         self._resolve_visible_code_lenses_async()
+
+    def _on_selection_modified_debounced_async(self) -> None:
+        if userprefs().document_highlight_style:
+            self._do_highlights_async()
+        if userprefs().show_code_actions:
+            self._do_code_actions_async()
 
     def on_post_save_async(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
@@ -952,7 +953,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_highlight_regions()
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
-                self._do_highlights_async, first_region, after_ms=self.highlights_debounce_time)
+                self._do_highlights_async, first_region, after_ms=FEATURES_TIMEOUT)
         self.do_signature_help_async(manual=False)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:

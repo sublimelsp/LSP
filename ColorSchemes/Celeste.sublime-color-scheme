@@ -11,6 +11,11 @@
         {
             "scope": "meta.semantic-token",
             "background": "#00000001"
-        }
+        },
+        {
+            "scope": "meta.inline-completion",
+            "foreground": "color(var(black) alpha(0.6))",
+            "font_style": "italic"
+        },
     ]
 }

@@ -170,6 +170,12 @@ Inlay hints are disabled by default and can be enabled with the `"show_inlay_hin
 
 !!! info "Some servers require additional settings to be enabled in order to show inlay hints."
 
+## Inline Completions
+
+Inline completions are typically provided by an AI code assistant.
+They can span multiple lines and are rendered directly in the source code as grayed out text ("ghost text").
+Currently inline completions are only requested when you manually trigger auto-completions (<kbd>Ctrl</kbd> + <kbd>Space</kbd>).
+
 ## Server Commands
 
 In Sublime Text you can bind any runnable command to a key or add it to various UI elements. Commands in Sublime Text are normally supplied by plugins or packages written in Python. A language server may provide a runnable command as well. These kinds of commands are wrapped in an `lsp_execute` Sublime command that you can bind to a key.

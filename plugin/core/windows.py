@@ -76,11 +76,11 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
 class GlobalLspListener(metaclass=ABCMeta):
 
     @abstractmethod
-    def on_session_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+    def on_session_view_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def on_session_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+    def on_session_view_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
         raise NotImplementedError()
 
 
@@ -220,7 +220,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
                     return
-                self._global_listener.on_session_initialized_async(listener, session)
+                self._global_listener.on_session_view_initialized_async(listener, session)
 
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         inside_workspace = self._workspace.contains(view)
@@ -410,7 +410,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
-            self._global_listener.on_session_shutdown_async(listener, session)
+            self._global_listener.on_session_view_shutdown_async(listener, session)
         if exit_code != 0 or exception:
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
@@ -610,13 +610,13 @@ class WindowRegistry(LspSettingsChangeListener, GlobalLspListener):
 
     # --- Implements GlobalLspListener ---------------------------------------------------------------------------------
 
-    def on_session_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+    def on_session_view_initialized_async(self, view_listener: AbstractViewListener, session: Session) -> None:
         for listener in self._global_listeners:
-            listener.on_session_initialized_async(view_listener, session)
+            listener.on_session_view_initialized_async(view_listener, session)
 
-    def on_session_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
+    def on_session_view_shutdown_async(self, view_listener: AbstractViewListener, session: Session) -> None:
         for listener in self._global_listeners:
-            listener.on_session_shutdown_async(view_listener, session)
+            listener.on_session_view_shutdown_async(view_listener, session)
 
 
 class RequestTimeTracker:

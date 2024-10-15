@@ -55,6 +55,7 @@ from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
+from os.path import basename
 from typing import Any, Callable, Generator, Iterable
 from typing import cast
 from weakref import WeakSet
@@ -75,6 +76,10 @@ def is_regular_view(v: sublime.View) -> bool:
         return False
     if v.settings().get('is_widget'):
         return False
+    # Not a syntax test file.
+    if (filename := v.file_name()) and basename(filename).startswith('syntax_test_'):
+        return False
+    # Not a transient sheet (preview).
     sheet = v.sheet()
     if not sheet:
         return False

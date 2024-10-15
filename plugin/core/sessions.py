@@ -1702,6 +1702,7 @@ class Session(TransportCallbacks):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+        print(f"LSP: can't open the uri at location: '{uri}', perhaps the scheme is missing?")
         return None
 
     def open_uri_async(

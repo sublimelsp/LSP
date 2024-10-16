@@ -328,10 +328,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return list(self._session_views.values())
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
-        if not self.sessions_async():
+        session_views = self.session_views_async()
+        if not session_views:
             return
         if self.view.is_primary():
-            for sv in self.session_views_async():
+            for sv in session_views:
                 sv.on_text_changed_async(change_count, changes)
         self._on_view_updated_async()
 
@@ -366,11 +367,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if not self._registered:
             self._register_async()
-        if not self.sessions_async():
+        session_views = self.session_views_async()
+        if not session_views:
             return
         if userprefs().show_code_actions:
             self._do_code_actions_async()
-        for sv in self.session_views_async():
+        for sv in session_views:
             if sv.code_lenses_needs_refresh:
                 sv.set_code_lenses_pending_refresh(needs_refresh=False)
                 sv.start_code_lenses_async()
@@ -386,7 +388,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_inlay_hints_async(self.view)
 
     def on_selection_modified_async(self) -> None:
-        if not self.sessions_async():
+        if not self.session_views_async():
             return
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
@@ -489,7 +491,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_hover(self, point: int, hover_zone: int) -> None:
-        if not self.sessions_async():
+        if not self.session_views_async():
             return
         if self.view.is_popup_visible():
             return
@@ -533,7 +535,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 on_navigate=lambda href: self._on_navigate(href, point))
 
     def on_text_command(self, command_name: str, args: dict | None) -> tuple[str, dict] | None:
-        if not self.sessions_async():
+        if not self.session_views_async():
             return None
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
@@ -550,7 +552,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return None
 
     def on_post_text_command(self, command_name: str, args: dict[str, Any] | None) -> None:
-        if not self.sessions_async():
+        if not self.session_views_async():
             return
         if command_name == 'paste':
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
@@ -565,7 +567,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: list[int]) -> sublime.CompletionList | None:
-        if not self.sessions_async():
+        if not self.session_views_async():
             return None
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually

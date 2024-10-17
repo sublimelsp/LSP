@@ -58,7 +58,7 @@ from functools import partial
 from functools import wraps
 from typing import Any, Callable, Generator, Iterable, TypeVar
 from typing import cast
-from typing_extensions import ParamSpec
+from typing_extensions import Concatenate, ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -74,7 +74,9 @@ P = ParamSpec('P')
 R = TypeVar('R')
 
 
-def requires_session(func: Callable[P, R]) -> Callable[P, R | None]:
+def requires_session(
+    func: Callable[Concatenate[DocumentSyncListener, P], R]
+) -> Callable[Concatenate[DocumentSyncListener, P], R | None]:
     """
     A decorator for the `DocumentSyncListener` event handlers, which immediately returns `None` if there are no
     `SessionView`s.
@@ -83,8 +85,8 @@ def requires_session(func: Callable[P, R]) -> Callable[P, R | None]:
     def wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> R | None:
         if not self.session_views_async():
             return None
-        return func(self, *args, **kwargs)  # pyright: ignore[reportCallIssue]
-    return wrapper  # pyright: ignore[reportReturnType]
+        return func(self, *args, **kwargs)
+    return wrapper
 
 
 def is_regular_view(v: sublime.View) -> bool:

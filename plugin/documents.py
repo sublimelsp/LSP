@@ -55,8 +55,10 @@ from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
-from typing import Any, Callable, Generator, Iterable
+from functools import wraps
+from typing import Any, Callable, Generator, Iterable, TypeVar
 from typing import cast
+from typing_extensions import Concatenate, ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -67,6 +69,24 @@ import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
+
+P = ParamSpec('P')
+R = TypeVar('R')
+
+
+def requires_session(
+    func: Callable[Concatenate[DocumentSyncListener, P], R]
+) -> Callable[Concatenate[DocumentSyncListener, P], R | None]:
+    """
+    A decorator for the `DocumentSyncListener` event handlers, which immediately returns `None` if there are no
+    `SessionView`s.
+    """
+    @wraps(func)
+    def wrapper(self: DocumentSyncListener, *args: P.args, **kwargs: P.kwargs) -> R | None:
+        if not self.session_views_async():
+            return None
+        return func(self, *args, **kwargs)
+    return wrapper
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -327,6 +347,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def session_views_async(self) -> list[SessionView]:
         return list(self._session_views.values())
 
+    @requires_session
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
@@ -364,9 +385,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if not self._registered:
             self._register_async()
+        session_views = self.session_views_async()
+        if not session_views:
+            return
         if userprefs().show_code_actions:
             self._do_code_actions_async()
-        for sv in self.session_views_async():
+        for sv in session_views:
             if sv.code_lenses_needs_refresh:
                 sv.set_code_lenses_pending_refresh(needs_refresh=False)
                 sv.start_code_lenses_async()
@@ -381,6 +405,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.set_inlay_hints_pending_refresh(needs_refresh=False)
                 sb.do_inlay_hints_async(self.view)
 
+    @requires_session
     def on_selection_modified_async(self) -> None:
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
@@ -482,6 +507,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
+    @requires_session
     def on_hover(self, point: int, hover_zone: int) -> None:
         if self.view.is_popup_visible():
             return
@@ -524,6 +550,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 location=point,
                 on_navigate=lambda href: self._on_navigate(href, point))
 
+    @requires_session
     def on_text_command(self, command_name: str, args: dict | None) -> tuple[str, dict] | None:
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
@@ -539,6 +566,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 return ('paste', {})
         return None
 
+    @requires_session
     def on_post_text_command(self, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == 'paste':
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
@@ -552,6 +580,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # hide the popup when `esc` or arrows are pressed pressed
             self.view.hide_popup()
 
+    @requires_session
     def on_query_completions(self, prefix: str, locations: list[int]) -> sublime.CompletionList | None:
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually

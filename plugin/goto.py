@@ -53,8 +53,8 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1
     ) -> None:
-        session = self.best_session(self.capability)
         position = get_position(self.view, event, point)
+        session = self.best_session(self.capability, position)
         if session and position is not None:
             params = text_document_position_params(self.view, position)
             request = Request(self.method, params, self.view, progress=True)

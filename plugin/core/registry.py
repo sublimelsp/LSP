@@ -174,7 +174,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         self,
         location: Location | LocationLink,
         session_name: str | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
         event: dict | None = None
     ) -> None:
@@ -191,7 +191,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         return True
 
     def _run_async(
-        self, location: Location | LocationLink, session_name: str | None, flags: int, group: int
+        self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
     ) -> None:
         session = self.session_by_name(session_name) if session_name else self.session()
         if session:

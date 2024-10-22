@@ -1686,7 +1686,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None] | None:
         if uri.startswith("file:"):
@@ -1708,7 +1708,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None]:
         promise = self.try_open_uri_async(uri, r, flags, group)
@@ -1718,7 +1718,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None]:
         result: PackagedTask[sublime.View | None] = Promise.packaged_task()
@@ -1736,7 +1736,7 @@ class Session(TransportCallbacks):
         plugin: AbstractPlugin,
         uri: DocumentUri,
         r: Range | None,
-        flags: int,
+        flags: sublime.NewFileFlags,
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
@@ -1765,8 +1765,12 @@ class Session(TransportCallbacks):
             return result[0]
         return None
 
-    def open_location_async(self, location: Location | LocationLink, flags: int = 0,
-                            group: int = -1) -> Promise[sublime.View | None]:
+    def open_location_async(
+        self,
+        location: Location | LocationLink,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
         uri, r = get_uri_and_range_from_location(location)
         return self.open_uri_async(uri, r, flags, group)
 

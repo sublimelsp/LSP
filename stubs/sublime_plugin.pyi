@@ -1,9 +1,9 @@
-# Stubs for sublime_plugin.py (Python 3.3 API Environment)
+# Stubs for sublime_plugin.py
 from sublime import Buffer, CompletionItem, CompletionList, Edit, Html, ListInputItem, Settings, TextChange, View, Window
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 
-view_event_listeners: Dict[int, List[ViewEventListener]]  # undocumented
+view_event_listeners: dict[int, list[ViewEventListener]]  # undocumented
 
 
 class CommandInputHandler:
@@ -27,7 +27,7 @@ class CommandInputHandler:
         """
         ...
 
-    def initial_selection(self) -> List[Tuple[int, int]]:
+    def initial_selection(self) -> list[tuple[int, int]]:
         """
         A list of 2-element tuples, defining the initially selected parts of the initial text.
         """
@@ -103,8 +103,8 @@ class ListInputHandler(CommandInputHandler):
     For an input handler to be shown to the user, the command returning the input handler MUST be made available in the
     Command Palette by adding the command to a `Default.sublime-commands` file.
     """
-    def list_items(self) -> List[str] | Tuple[List[str], int] | List[Tuple[str, Any]] | \
-            Tuple[List[Tuple[str, Any]], int] | List[ListInputItem] | Tuple[List[ListInputItem], int]:
+    def list_items(self) -> list[str] | tuple[list[str], int] | list[tuple[str, Any]] | \
+            tuple[list[tuple[str, Any]], int] | list[ListInputItem] | tuple[list[ListInputItem], int]:
         """
         This method should return the items to show in the list.
 
@@ -135,28 +135,28 @@ class Command:
         """
         ...
 
-    def is_enabled(self, **kwargs: Dict[str, Any]) -> bool:
+    def is_enabled(self, **kwargs: dict[str, Any]) -> bool:
         """
         Return whether the command is able to be run at this time. Command arguments are passed as keyword arguments.
         The default implementation simply always returns `True`.
         """
         ...
 
-    def is_visible(self, **kwargs: Dict[str, Any]) -> bool:
+    def is_visible(self, **kwargs: dict[str, Any]) -> bool:
         """
         Return whether the command should be shown in the menu at this time. Command arguments are passed as keyword
         arguments. The default implementation always returns `True`.
         """
         ...
 
-    def is_checked(self, **kwargs: Dict[str, Any]) -> bool:
+    def is_checked(self, **kwargs: dict[str, Any]) -> bool:
         """
         Return whether a checkbox should be shown next to the menu item. Command arguments are passed as keyword
         arguments. The `.sublime-menu` file must have the `"checkbox"` key set to `true` for this to be used.
         """
         ...
 
-    def description(self, **kwargs: Dict[str, Any]) -> str:
+    def description(self, **kwargs: dict[str, Any]) -> str | None:
         """
         Return a description of the command with the given arguments. Command arguments are passed as keyword arguments.
         Used in the menu, if no caption is provided. Return `None` to get the default description.
@@ -171,7 +171,7 @@ class Command:
         """
         ...
 
-    def input(self, args: Dict[str, Any]) -> CommandInputHandler | None:
+    def input(self, args: dict[str, Any]) -> CommandInputHandler | None:
         """
         If this returns something other than `None`, the user will be prompted for an input before the command is run in
         the Command Palette.
@@ -185,7 +185,7 @@ class Command:
         """
         ...
 
-    def run(self, **kwargs: Dict[str, Any]) -> None:
+    def run(self, **kwargs: dict[str, Any]) -> None:
         """
         Called when the command is run. Command arguments are passed as keyword arguments.
         """
@@ -221,7 +221,7 @@ class TextCommand(Command):
     def __init__(self, view: View) -> None:
         ...
 
-    def run(self, edit: Edit, **kwargs: Dict[str, Any]) -> None:  # type: ignore[override]
+    def run(self, edit: Edit, **kwargs: dict[str, Any]) -> None:  # type: ignore[override]
         """
         Called when the command is run. Command arguments are passed as keyword arguments.
         """
@@ -230,7 +230,7 @@ class TextCommand(Command):
 
 class EventListener:
 
-    def on_init(self, views: List[View]) -> None:
+    def on_init(self, views: list[View]) -> None:
         """
         Called once with a list of views that were loaded before the EventListener was instantiated.
         """
@@ -448,9 +448,9 @@ class EventListener:
         self,
         view: View,
         prefix: str,
-        locations: List[int]
-    ) -> List[str] | Tuple[List[str], int] | List[Tuple[str, str]] | Tuple[List[Tuple[str, str]], int] | \
-            List[CompletionItem] | Tuple[List[CompletionItem], int] | CompletionList | None:
+        locations: list[int]
+    ) -> list[str] | tuple[list[str], int] | list[tuple[str, str]] | tuple[list[tuple[str, str]], int] | \
+            list[CompletionItem] | tuple[list[CompletionItem], int] | CompletionList | None:
         """
         Called whenever completions are to be presented to the user.
 
@@ -463,7 +463,7 @@ class EventListener:
         """
         ...
 
-    def on_text_command(self, view: View, command_name: str, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]] | None:
+    def on_text_command(self, view: View, command_name: str, args: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
         """
         Called when a text command is issued. The listener may return a (command, arguments) tuple to rewrite the
         command, or `None` to run the command unmodified.
@@ -474,21 +474,21 @@ class EventListener:
         self,
         window: Window,
         command_name: str,
-        args: Dict[str, Any]
-    ) -> Tuple[str, Dict[str, Any]] | None:
+        args: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]] | None:
         """
         Called when a window command is issued. The listener may return a (command, arguments) tuple to rewrite the
         command, or `None` to run the command unmodified.
         """
         ...
 
-    def on_post_text_command(self, view: View, command_name: str, args: Dict[str, Any]) -> None:
+    def on_post_text_command(self, view: View, command_name: str, args: dict[str, Any]) -> None:
         """
         Called after a text command has been executed.
         """
         ...
 
-    def on_post_window_command(self, window: Window, command_name: str, args: Dict[str, Any]) -> None:
+    def on_post_window_command(self, window: Window, command_name: str, args: dict[str, Any]) -> None:
         """
         Called after a window command has been executed.
         """
@@ -754,9 +754,9 @@ class ViewEventListener:
     def on_query_completions(
         self,
         prefix: str,
-        locations: List[int]
-    ) -> List[str] | Tuple[List[str], int] | List[Tuple[str, str]] | Tuple[List[Tuple[str, str]], int] | \
-            List[CompletionItem] | Tuple[List[CompletionItem], int] | CompletionList | None:
+        locations: list[int]
+    ) -> list[str] | tuple[list[str], int] | list[tuple[str, str]] | tuple[list[tuple[str, str]], int] | \
+            list[CompletionItem] | tuple[list[CompletionItem], int] | CompletionList | None:
         """
         Called whenever completions are to be presented to the user.
 
@@ -769,14 +769,14 @@ class ViewEventListener:
         """
         ...
 
-    def on_text_command(self, command_name: str, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]] | None:
+    def on_text_command(self, command_name: str, args: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
         """
         Called when a text command is issued. The listener may return a `(command, arguments)` tuple to rewrite the
         command, or `None` to run the command unmodified.
         """
         ...
 
-    def on_post_text_command(self, command_name: str, args: Dict[str, Any]) -> None:
+    def on_post_text_command(self, command_name: str, args: dict[str, Any]) -> None:
         """
         Called after a text command has been executed.
         """
@@ -824,13 +824,13 @@ class TextChangeListener:
         """
         ...
 
-    def on_text_changed(self, changes: List[TextChange]) -> None:
+    def on_text_changed(self, changes: list[TextChange]) -> None:
         """
         Called once after changes has been made to a buffer, with detailed information about what has changed.
         """
         ...
 
-    def on_text_changed_async(self, changes: List[TextChange]) -> None:
+    def on_text_changed_async(self, changes: list[TextChange]) -> None:
         """
         Same as `on_text_changed` but runs in a separate thread, not blocking the application.
         """

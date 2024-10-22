@@ -45,7 +45,7 @@ def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
 
 
 def open_file_uri(
-    window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
+    window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> Promise[sublime.View | None]:
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
@@ -84,7 +84,7 @@ def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> subl
 
 
 def open_file(
-    window: sublime.Window, uri: DocumentUri, flags: int = 0, group: int = -1
+    window: sublime.Window, uri: DocumentUri, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> Promise[sublime.View | None]:
     """
     Open a file asynchronously.

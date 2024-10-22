@@ -317,7 +317,7 @@ class SessionView:
         self,
         severity: int,
         max_severity_level: int,
-        flags: int,
+        flags: sublime.RegionFlags,
         multiline: bool
     ) -> None:
         ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO

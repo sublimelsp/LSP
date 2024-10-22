@@ -106,7 +106,7 @@ def is_regular_view(v: sublime.View) -> bool:
 def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
     prev = view.substr(pt - 1)
     if prev.isspace():
-        return view.substr(view.find_by_class(pt, False, ~0) - 1)
+        return view.substr(view.find_by_class(pt, False, ~0) - 1)  # type: ignore
     return prev
 
 
@@ -606,7 +606,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._completions_task.query_completions_async(sessions)
 
     def _on_query_completions_resolved_async(
-        self, clist: sublime.CompletionList, completions: list[sublime.CompletionItem], flags: int = 0
+        self,
+        clist: sublime.CompletionList,
+        completions: list[sublime.CompletionItem],
+        flags: sublime.AutoCompleteFlags = sublime.AutoCompleteFlags.NONE
     ) -> None:
         self._completions_task = None
         # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).

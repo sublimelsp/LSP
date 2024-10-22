@@ -178,7 +178,7 @@ class QueryCompletionsTask:
         view: sublime.View,
         location: int,
         triggered_manually: bool,
-        on_done_async: Callable[[list[sublime.CompletionItem], int], None]
+        on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
     ) -> None:
         self._view = view
         self._location = location
@@ -212,7 +212,7 @@ class QueryCompletionsTask:
         items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
         errors: list[Error] = []
-        flags = 0
+        flags = sublime.AutoCompleteFlags.NONE
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
@@ -263,7 +263,11 @@ class QueryCompletionsTask:
                 session.cancel_request(request_id, False)
         self._pending_completion_requests.clear()
 
-    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: int = 0) -> None:
+    def _resolve_task_async(
+        self,
+        completions: list[sublime.CompletionItem],
+        flags: sublime.AutoCompleteFlags = sublime.AutoCompleteFlags.NONE
+    ) -> None:
         if not self._resolved:
             self._resolved = True
             self._on_done_async(completions, flags)

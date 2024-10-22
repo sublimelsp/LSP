@@ -261,7 +261,9 @@ def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Locati
     }
 
 
-def open_location(session: Session, location: Location, flags: int = 0, group: int = -1) -> sublime.View:
+def open_location(
+    session: Session, location: Location, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
+) -> sublime.View:
     uri, position = get_uri_and_position_from_location(location)
     file_name = to_encoded_filename(session.config.map_server_uri_to_client_path(uri), position)
     return session.window.open_file(file_name, flags=flags | sublime.ENCODED_POSITION, group=group)

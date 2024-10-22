@@ -96,7 +96,10 @@ class FormattingTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
-        base_scope = self._task_runner.view.syntax().scope
+        syntax = self._task_runner.view.syntax()
+        if not syntax:
+            return
+        base_scope = syntax.scope
         formatter = get_formatter(self._task_runner.view.window(), base_scope)
         format_document(self._task_runner, formatter).then(self._on_response)
 
@@ -121,7 +124,10 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: dict | None = None, select: bool = False) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
-        base_scope = self.view.syntax().scope
+        syntax = self.view.syntax()
+        if not syntax:
+            return
+        base_scope = syntax.scope
         if select:
             self.select_formatter(base_scope, session_names)
         elif len(session_names) > 1:

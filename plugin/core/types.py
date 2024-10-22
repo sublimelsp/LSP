@@ -328,7 +328,7 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def highlight_style_region_flags(self, style_str: str) -> tuple[int, int]:
+    def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
         default = sublime.NO_UNDO
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
             style = default | sublime.DRAW_NO_OUTLINE
@@ -341,7 +341,7 @@ class Settings:
         return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
-    def _style_str_to_flag(style_str: str) -> int | None:
+    def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
         default = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.NO_UNDO
         # This method could be a dict or lru_cache
         if style_str == "":
@@ -357,13 +357,13 @@ class Settings:
         # default style (includes NO_UNDO)
         return None
 
-    def diagnostics_highlight_style_flags(self) -> list[int | None]:
+    def diagnostics_highlight_style_flags(self) -> list[sublime.RegionFlags | None]:
         """Returns flags for highlighting diagnostics on single lines per severity"""
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
         elif isinstance(self.diagnostics_highlight_style, dict):
-            flags: list[int | None] = []
+            flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style

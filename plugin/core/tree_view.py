@@ -281,7 +281,7 @@ def new_tree_view_sheet(
     name: str,
     data_provider: TreeDataProvider,
     header: str = "",
-    flags: int = 0,
+    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
     group: int = -1
 ) -> TreeViewSheet | None:
     """

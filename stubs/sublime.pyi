@@ -3032,7 +3032,7 @@ class Phantom:
     """The `Region` associated with the phantom. The phantom is displayed at the start of the `Region`."""
     content: str
     """The HTML content of the phantom."""
-    layout: int
+    layout: PhantomLayout
     """How the phantom should be placed relative to the `region`."""
     on_navigate: Callable[[str], None] | None
     """Called when a link in the HTML is clicked. The value of the `href` attribute is passed."""
@@ -3041,7 +3041,7 @@ class Phantom:
         self,
         region: Region,
         content: str,
-        layout: int,
+        layout: PhantomLayout,
         on_navigate: Callable[[str], None] | None = ...
     ) -> None:
         ...

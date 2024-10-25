@@ -194,11 +194,11 @@ class CodeLensView:
                 phantom_region = self._get_phantom_region(region)
                 html = '<body id="lsp-code-lens">{}</body>'.format(
                     '\n<small style="font-family: system">|</small>\n'.join(lens.small_html for lens in group))
-                phantoms.append(sublime.Phantom(phantom_region, html, sublime.LAYOUT_BELOW))
+                phantoms.append(sublime.Phantom(phantom_region, html, sublime.PhantomLayout.BELOW))
             self._phantom.update(phantoms)
         else:  # 'annotation'
             self._clear_annotations()
-            flags = sublime.NO_UNDO
+            flags = sublime.RegionFlags.NO_UNDO
             accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
             for index, lens in enumerate(self._flat_iteration()):
                 self.view.add_regions(

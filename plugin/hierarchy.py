@@ -72,7 +72,7 @@ class HierarchyDataProvider(TreeDataProvider):
                 'targetSelectionRange': selectionRange
             },
             'session_name': self.session_name,
-            'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
         })
         path = simple_path(self.weaksession(), item['uri'])
         return TreeItem(
@@ -214,7 +214,7 @@ def open_first(window: sublime.Window, session_name: str, items: list[HierarchyI
                 'targetSelectionRange': item['selectionRange']
             },
             'session_name': session_name,
-            'flags': sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+            'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
         })
 
 

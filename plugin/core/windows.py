@@ -510,7 +510,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         for row, col, code, href in prephantoms:
             point = panel.text_point(row, col)
             region = sublime.Region(point, point)
-            phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.LAYOUT_INLINE))
+            phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.PhantomLayout.INLINE))
         self._panel_code_phantoms.update(phantoms)
 
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------

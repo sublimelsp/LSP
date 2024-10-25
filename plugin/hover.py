@@ -313,7 +313,7 @@ class LspHoverCommand(LspTextCommand):
                 show_lsp_popup(
                     self.view,
                     contents,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,
                     on_navigate=lambda href: self._on_navigate(href, point),
                     on_hide=lambda: self.view.erase_regions(HOVER_HIGHLIGHT_KEY))

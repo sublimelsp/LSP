@@ -111,7 +111,6 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
-from abc import abstractproperty
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
@@ -194,7 +193,8 @@ class Manager(metaclass=ABCMeta):
 
     # Observers
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def window(self) -> sublime.Window:
         """
         Get the window associated with this manager.

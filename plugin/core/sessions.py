@@ -127,8 +127,9 @@ T = TypeVar('T')
 
 
 class ViewStateActions(IntFlag):
-    Close = 2
-    Save = 1
+    NONE = 0
+    SAVE = 1
+    CLOSE = 2
 
 
 def is_workspace_full_document_diagnostic_report(
@@ -1847,17 +1848,17 @@ class Session(TransportCallbacks):
         apply_text_edits(view, edits, required_view_version=view_version)
         return view
 
-    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> int:
+    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
         Determine the required actions for a view after applying a WorkspaceEdit, depending on the
         "refactoring_auto_save" user setting. Returns a bitwise combination of ViewStateActions.Save and
         ViewStateActions.Close, or 0 if no action is necessary.
         """
         if auto_save == 'never':
-            return 0  # Never save or close automatically
+            return ViewStateActions.NONE  # Never save or close automatically
         scheme, filepath = parse_uri(uri)
         if scheme != 'file':
-            return 0  # Can't save or close unsafed buffers (and other schemes) without user dialog
+            return ViewStateActions.NONE  # Can't save or close unsafed buffers (and other schemes) without user dialog
         view = self.window.find_open_file(filepath)
         if view:
             is_opened = True
@@ -1865,27 +1866,27 @@ class Session(TransportCallbacks):
         else:
             is_opened = False
             is_dirty = False
-        actions = 0
+        actions = ViewStateActions.NONE
         if auto_save == 'always':
-            actions |= ViewStateActions.Save  # Always save
+            actions |= ViewStateActions.SAVE  # Always save
             if not is_opened:
-                actions |= ViewStateActions.Close  # Close if file was previously closed
+                actions |= ViewStateActions.CLOSE  # Close if file was previously closed
         elif auto_save == 'preserve':
             if not is_dirty:
-                actions |= ViewStateActions.Save  # Only save if file didn't have unsaved changes
+                actions |= ViewStateActions.SAVE  # Only save if file didn't have unsaved changes
             if not is_opened:
-                actions |= ViewStateActions.Close  # Close if file was previously closed
+                actions |= ViewStateActions.CLOSE  # Close if file was previously closed
         elif auto_save == 'preserve_opened':
             if is_opened and not is_dirty:
                 # Only save if file was already open and didn't have unsaved changes, but never close
-                actions |= ViewStateActions.Save
+                actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: int, view: sublime.View | None) -> None:
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> None:
         if not view:
             return
-        should_save = bool(actions & ViewStateActions.Save)
-        should_close = bool(actions & ViewStateActions.Close)
+        should_save = bool(actions & ViewStateActions.SAVE)
+        should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})

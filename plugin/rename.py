@@ -133,19 +133,19 @@ class LspSymbolRenameCommand(LspTextCommand):
         if "new_name" in args:
             # Defer to "run" and trigger rename.
             return None
-        prepare_provider_session = self.best_session("renameProvider.prepareProvider")
+        point = args.get("point")
+        if not isinstance(point, int):
+            region = first_selection_region(self.view)
+            if region is None:
+                return None
+            point = region.b
+        prepare_provider_session = self.best_session("renameProvider.prepareProvider", point)
         if prepare_provider_session and "placeholder" not in args:
             # Defer to "run" and trigger "prepare" request.
             return None
         placeholder = args.get("placeholder", "")
         if not placeholder:
-            point = args.get("point")
             # guess the symbol name
-            if not isinstance(point, int):
-                region = first_selection_region(self.view)
-                if region is None:
-                    return None
-                point = region.b
             placeholder = self.view.substr(self.view.word(point))
         return RenameSymbolInputHandler(self.view, placeholder)
 
@@ -161,7 +161,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if listener:
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
-        prepare_provider_session = self.best_session("renameProvider.prepareProvider")
+        prepare_provider_session = self.best_session("renameProvider.prepareProvider", point)
         if new_name or placeholder or not prepare_provider_session:
             if location is not None and new_name:
                 self._do_rename(location, new_name)
@@ -176,7 +176,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             request, partial(self._on_prepare_result, location), self._on_prepare_error)
 
     def _do_rename(self, position: int, new_name: str) -> None:
-        session = self.best_session(self.capability)
+        session = self.best_session(self.capability, position)
         if not session:
             return
         position_params = text_document_position_params(self.view, position)

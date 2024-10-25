@@ -124,7 +124,6 @@ def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
 
 def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     truncate_limit = userprefs().inlay_hints_max_length
-
     tooltip = format_inlay_hint_tooltip(inlay_hint.get("tooltip"))
     result = ""
     can_resolve_inlay_hint = session.has_capability('inlayHintProvider.resolveProvider')
@@ -144,7 +143,6 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             result += f'<a href="{inlay_hint_click_command}">'
         truncated = len(label) >= truncate_limit and truncate_limit > 0
         truncated_label = label[:truncate_limit] + '…' if truncated else label
-
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncation_tooltip = f'\n{html.escape(label)}' if truncated else ""
         result_tooltip = (tooltip + instruction_text + truncation_tooltip).strip()
@@ -152,7 +150,6 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         if is_clickable:
             result += "</a>"
         return result
-
     remaining_truncate_limit = truncate_limit
     full_label = "".join(label_part['value'] for label_part in label)
     full_label_truncated = len(full_label) >= truncate_limit and truncate_limit > 0

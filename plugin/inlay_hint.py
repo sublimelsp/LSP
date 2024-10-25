@@ -141,8 +141,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 }
             })
             result += f'<a href="{inlay_hint_click_command}">'
-        truncated = len(label) >= truncate_limit and truncate_limit > 0
-        truncated_label = label[:truncate_limit] + '…' if truncated else label
+        truncated = len(label) > truncate_limit and truncate_limit > 0
+        truncated_label = label[:truncate_limit - 1] + '…' if truncated else label
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncation_tooltip = f'\n{html.escape(label)}' if truncated else ""
         result_tooltip = (tooltip + instruction_text + truncation_tooltip).strip()
@@ -154,7 +154,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
     full_label = "".join(label_part['value'] for label_part in label)
     full_label_truncated = len(full_label) >= truncate_limit and truncate_limit > 0
     for label_part in label:
-        if remaining_truncate_limit <= 0 and truncate_limit > 0:
+        if remaining_truncate_limit < 0 and truncate_limit > 0:
             break
         value = ""
         tooltip = format_inlay_hint_tooltip(label_part.get("tooltip"))
@@ -171,8 +171,8 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
             })
             value += f'<a href="{inlay_hint_click_command}">'
         raw_label = label_part['value']
-        truncated = len(raw_label) >= remaining_truncate_limit and truncate_limit > 0
-        truncated_label = raw_label[:remaining_truncate_limit] + '…' if truncated else raw_label
+        truncated = len(raw_label) > remaining_truncate_limit and truncate_limit > 0
+        truncated_label = raw_label[:remaining_truncate_limit - 1] + '…' if truncated else raw_label
         remaining_truncate_limit -= len(raw_label)
         value += html.escape(truncated_label)
         if has_command:

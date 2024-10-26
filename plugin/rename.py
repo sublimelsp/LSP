@@ -140,7 +140,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if prepare_provider_session and "placeholder" not in args:
             # Defer to "run" and trigger "prepare" request.
             return
-        placeholder = args.get("placeholder", "")
+        placeholder = args.get("placeholder")
         if not placeholder:
             if point is None:
                 return

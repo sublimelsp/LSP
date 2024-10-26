@@ -136,7 +136,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             # Defer to "run" and trigger rename.
             return
         point = get_position(self.view, point=args.get('point'))
-        prepare_provider_session = self.best_session("renameProvider.prepareProvider", point)
+        prepare_provider_session = self._get_prepare_rename_session(point, args.get('session_name'))
         if prepare_provider_session and "placeholder" not in args:
             # Defer to "run" and trigger "prepare" request.
             return
@@ -161,10 +161,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if listener:
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
-        prepare_provider_session = \
-            self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \
-            else self.best_session(PREPARE_RENAME_CAPABILITY, point)
-        prepare_provider_session = self.best_session(PREPARE_RENAME_CAPABILITY, point)
+        prepare_provider_session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not prepare_provider_session:
             if location is not None and new_name:
                 self._do_rename(location, new_name, prepare_provider_session)
@@ -178,6 +175,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         prepare_provider_session_name = prepare_provider_session.config.name
         prepare_provider_session.send_request(
             request, partial(self._on_prepare_result, location, prepare_provider_session_name), self._on_prepare_error)
+
+    def _get_prepare_rename_session(self, point: int | None, session_name: str | None) -> Session | None:
+        return self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \
+            else self.best_session(PREPARE_RENAME_CAPABILITY, point)
 
     def _do_rename(self, position: int, new_name: str, preferred_session: Session | None) -> None:
         session = preferred_session or self.best_session(self.capability, position)

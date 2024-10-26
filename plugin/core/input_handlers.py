@@ -111,7 +111,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self.listener: sublime_plugin.TextChangeListener | None = None
         self.input_view: sublime.View | None = None
 
-    def attach_listener(self) -> None:
+    def _attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore
             view = buffer.primary_view()
             # This condition to find the input field view might not be sufficient if there is another command palette
@@ -128,6 +128,10 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             selection = self.input_view.sel()
             selection.clear()
             selection.add(len(self.text))
+
+    def _detach_listener(self) -> None:
+        if self.listener and self.listener.is_attached():
+            self.listener.detach()
 
     @final
     def list_items(self) -> list[sublime.ListInputItem]:
@@ -149,7 +153,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
 
     def initial_text(self) -> str:
         setattr(self.command, '_text', '')
-        sublime.set_timeout(self.attach_listener)
+        sublime.set_timeout(self._attach_listener)
         return self.text
 
     def initial_selection(self) -> list[tuple[int, int]]:
@@ -160,12 +164,10 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         return bool(text)
 
     def cancel(self) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
+        self._detach_listener()
 
     def confirm(self, text: str) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
+        self._detach_listener()
 
     def on_modified(self, text: str) -> None:
         """ Called after changes have been made to the input, with the text of the input field passed as argument. """

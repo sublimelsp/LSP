@@ -56,15 +56,15 @@ import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
-_baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
-_multilineflags = sublime.DRAW_NO_FILL | sublime.NO_UNDO
+_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+_multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
 DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, sublime.RegionFlags, sublime.RegionFlags]] = [
     # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
-    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
 ]
 
 
@@ -676,7 +676,7 @@ def lsp_color_to_html(color_info: ColorInformation) -> str:
 
 def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
     region = range_to_region(color_info['range'], view)
-    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
+    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.PhantomLayout.INLINE)
 
 
 def document_color_params(view: sublime.View) -> DocumentColorParams:

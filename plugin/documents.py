@@ -56,6 +56,7 @@ from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
 from functools import wraps
+from os.path import basename
 from typing import Any, Callable, Generator, Iterable, TypeVar
 from typing import cast
 from typing_extensions import Concatenate, ParamSpec
@@ -95,6 +96,10 @@ def is_regular_view(v: sublime.View) -> bool:
         return False
     if v.settings().get('is_widget'):
         return False
+    # Not a syntax test file.
+    if (filename := v.file_name()) and basename(filename).startswith('syntax_test_'):
+        return False
+    # Not a transient sheet (preview).
     sheet = v.sheet()
     if not sheet:
         return False
@@ -474,27 +479,28 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool | None:
         # You can filter key bindings by the precense of a provider,
-        if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
+        if key == "lsp.session_with_capability" and operator == sublime.QueryOperator.EQUAL and \
+                isinstance(operand, str):
             capabilities = [s.strip() for s in operand.split("|")]
             for capability in capabilities:
                 if any(self.sessions_async(capability)):
                     return True
             return False
         # You can filter key bindings by the precense of a specific name of a configuration.
-        elif key == "lsp.session_with_name" and operator == sublime.OP_EQUAL and isinstance(operand, str):
+        elif key == "lsp.session_with_name" and operator == sublime.QueryOperator.EQUAL and isinstance(operand, str):
             return bool(self.session_by_name(operand))
         # You can check if there is at least one session attached to this view.
         elif key in ("lsp.sessions", "setting.lsp_active"):
             return bool(self._session_views)
         # Signature Help handling
-        elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.OP_EQUAL:
+        elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(
                 self._sighelp and self._sighelp.has_multiple_signatures() and
                 self.view.is_popup_visible() and not self.view.is_auto_complete_visible()
             )
-        elif key == "lsp.signature_help_available" and operator == sublime.OP_EQUAL:
+        elif key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
-        elif key == "lsp.link_available" and operator == sublime.OP_EQUAL:
+        elif key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
             position = get_position(self.view)
             if position is None:
                 return not operand
@@ -512,9 +518,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_popup_visible():
             return
         window = self.view.window()
-        if hover_zone == sublime.HOVER_TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
+        if hover_zone == sublime.HoverZone.TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
             self.view.run_command("lsp_hover", {"point": point})
-        elif hover_zone == sublime.HOVER_GUTTER:
+        elif hover_zone == sublime.HoverZone.GUTTER:
             sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
@@ -546,7 +552,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             show_lsp_popup(
                 self.view,
                 content,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
                 location=point,
                 on_navigate=lambda href: self._on_navigate(href, point))
 
@@ -696,7 +702,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         show_lsp_popup(
             self.view,
             content,
-            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
             location=point,
             body_id='lsp-signature-help',
             on_hide=self._on_sighelp_hide,
@@ -743,7 +749,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         regions = [sublime.Region(region.b, region.a)]
         scope = ""
         icon = ""
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
+        flags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
         annotations = []
         annotation_color = ""
         if userprefs().show_code_actions == 'bulb':
@@ -1023,12 +1029,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for index, region in enumerate(sel):
             if multi_cursor_paste:
                 pasted_text = split_clipboard_text[index]
-            pasted_region = self.view.find(pasted_text, region.end(), sublime.REVERSE | sublime.LITERAL)
+            pasted_region = self.view.find(
+                pasted_text, region.end(), sublime.FindFlags.REVERSE | sublime.FindFlags.LITERAL)
             if pasted_region:
                 # Including whitespace may help servers format a range better
                 # More info at https://github.com/sublimelsp/LSP/pull/2311#issuecomment-1688593038
-                a = self.view.find_by_class(pasted_region.a, False,
-                                            sublime.CLASS_WORD_END | sublime.CLASS_PUNCTUATION_END)
+                a = self.view.find_by_class(
+                    pasted_region.a,
+                    False,
+                    sublime.PointClassification.WORD_END | sublime.PointClassification.PUNCTUATION_END
+                )
                 formatting_region = sublime.Region(a, pasted_region.b)
                 regions_to_format.append(formatting_region)
         self.purge_changes_async()

@@ -66,6 +66,8 @@ DISCARD_COMMAND_URL = sublime.command_url('chain', {
     ]
 })
 
+PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
+
 
 def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
     return 'start' in result
@@ -122,6 +124,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         new_name: str = "",
         placeholder: str = "",
+        session_name: str | None = None,
         event: dict | None = None,
         point: int | None = None
     ) -> bool:
@@ -132,19 +135,16 @@ class LspSymbolRenameCommand(LspTextCommand):
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             # Defer to "run" and trigger rename.
-            return None
-        point = args.get("point")
-        if not isinstance(point, int):
-            region = first_selection_region(self.view)
-            if region is None:
-                return None
-            point = region.b
+            return
+        point = get_position(self.view, point=args.get('point'))
         prepare_provider_session = self.best_session("renameProvider.prepareProvider", point)
         if prepare_provider_session and "placeholder" not in args:
             # Defer to "run" and trigger "prepare" request.
-            return None
+            return
         placeholder = args.get("placeholder", "")
         if not placeholder:
+            if point is None:
+                return
             # guess the symbol name
             placeholder = self.view.substr(self.view.word(point))
         return RenameSymbolInputHandler(self.view, placeholder)
@@ -154,6 +154,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         edit: sublime.Edit,
         new_name: str = "",
         placeholder: str = "",
+        session_name: str | None = None,
         event: dict | None = None,
         point: int | None = None
     ) -> None:
@@ -161,10 +162,13 @@ class LspSymbolRenameCommand(LspTextCommand):
         if listener:
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
-        prepare_provider_session = self.best_session("renameProvider.prepareProvider", point)
+        prepare_provider_session = \
+            self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \
+            else self.best_session(PREPARE_RENAME_CAPABILITY, point)
+        prepare_provider_session = self.best_session(PREPARE_RENAME_CAPABILITY, point)
         if new_name or placeholder or not prepare_provider_session:
             if location is not None and new_name:
-                self._do_rename(location, new_name)
+                self._do_rename(location, new_name, prepare_provider_session)
                 return
             # Trigger InputHandler manually.
             raise TypeError("required positional argument")
@@ -172,11 +176,12 @@ class LspSymbolRenameCommand(LspTextCommand):
             return
         params = cast(PrepareRenameParams, text_document_position_params(self.view, location))
         request = Request.prepareRename(params, self.view, progress=True)
+        prepare_provider_session_name = prepare_provider_session.config.name
         prepare_provider_session.send_request(
-            request, partial(self._on_prepare_result, location), self._on_prepare_error)
+            request, partial(self._on_prepare_result, location, prepare_provider_session_name), self._on_prepare_error)
 
-    def _do_rename(self, position: int, new_name: str) -> None:
-        session = self.best_session(self.capability, position)
+    def _do_rename(self, position: int, new_name: str, preferred_session: Session | None) -> None:
+        session = preferred_session or self.best_session(self.capability, position)
         if not session:
             return
         position_params = text_document_position_params(self.view, position)
@@ -204,7 +209,9 @@ class LspSymbolRenameCommand(LspTextCommand):
         elif choice == sublime.DIALOG_NO:
             self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
-    def _on_prepare_result(self, pos: int, response: PrepareRenameResult | None) -> None:
+    def _on_prepare_result(
+        self, pos: int, preferred_session_name: str | None, response: PrepareRenameResult | None
+    ) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -217,7 +224,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             pos = range_to_region(response["range"], self.view).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
-        args = {"placeholder": placeholder, "point": pos}
+        args = {"placeholder": placeholder, "point": pos, "session_name": preferred_session_name}
         self.view.run_command("lsp_symbol_rename", args)
 
     def _on_prepare_error(self, error: Any) -> None:

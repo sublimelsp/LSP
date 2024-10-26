@@ -42,7 +42,7 @@ def open_basic_file(
     session: Session,
     uri: str,
     position: Position,
-    flags: int = 0,
+    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
     group: int | None = None
 ) -> sublime.View | None:
     if group is None:

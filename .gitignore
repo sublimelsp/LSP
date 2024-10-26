@@ -1,5 +1,6 @@
 LSP.sublime-workspace
 LSP.sublime-project
+.DS_Store
 .mypy_cache
 .pytest_cache
 .tox

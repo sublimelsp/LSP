@@ -209,9 +209,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         elif choice == sublime.DIALOG_NO:
             self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
 
-    def _on_prepare_result(
-        self, pos: int, preferred_session_name: str | None, response: PrepareRenameResult | None
-    ) -> None:
+    def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -224,7 +222,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             pos = range_to_region(response["range"], self.view).a  # type: ignore
         else:
             placeholder = self.view.substr(self.view.word(pos))
-        args = {"placeholder": placeholder, "point": pos, "session_name": preferred_session_name}
+        args = {"placeholder": placeholder, "point": pos, "session_name": session_name}
         self.view.run_command("lsp_symbol_rename", args)
 
     def _on_prepare_error(self, error: Any) -> None:

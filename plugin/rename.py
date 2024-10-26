@@ -13,7 +13,6 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
 from .core.url import parse_uri
-from .core.views import first_selection_region
 from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params

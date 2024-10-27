@@ -134,16 +134,19 @@ class LspSymbolRenameCommand(LspTextCommand):
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             # Defer to "run" and trigger rename.
-            return
+            return None
         point = get_position(self.view, point=args.get('point'))
-        prepare_provider_session = self._get_prepare_rename_session(point, args.get('session_name'))
-        if prepare_provider_session and "placeholder" not in args:
+        if point is None:
+            # Defer to "run" and trigger rename.
+            return None
+        session = self._get_prepare_rename_session(point, args.get('session_name'))
+        if session and "placeholder" not in args:
             # Defer to "run" and trigger "prepare" request.
-            return
+            return None
         placeholder = args.get("placeholder", "")
         if not placeholder:
             if point is None:
-                return
+                return None
             # guess the symbol name
             placeholder = self.view.substr(self.view.word(point))
         return RenameSymbolInputHandler(self.view, placeholder)
@@ -161,10 +164,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         if listener:
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
-        prepare_provider_session = self._get_prepare_rename_session(point, session_name)
-        if new_name or placeholder or not prepare_provider_session:
+        session = self._get_prepare_rename_session(point, session_name)
+        if new_name or placeholder or not session:
             if location is not None and new_name:
-                self._do_rename(location, new_name, prepare_provider_session)
+                self._do_rename(location, new_name, session)
                 return
             # Trigger InputHandler manually.
             raise TypeError("required positional argument")
@@ -172,9 +175,8 @@ class LspSymbolRenameCommand(LspTextCommand):
             return
         params = cast(PrepareRenameParams, text_document_position_params(self.view, location))
         request = Request.prepareRename(params, self.view, progress=True)
-        prepare_provider_session_name = prepare_provider_session.config.name
-        prepare_provider_session.send_request(
-            request, partial(self._on_prepare_result, location, prepare_provider_session_name), self._on_prepare_error)
+        session.send_request(
+            request, partial(self._on_prepare_result, location, session.config.name), self._on_prepare_error)
 
     def _get_prepare_rename_session(self, point: int | None, session_name: str | None) -> Session | None:
         return self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \

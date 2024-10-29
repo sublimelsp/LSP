@@ -633,6 +633,10 @@ There are multiple options:
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
+## Sass
+
+Follow installation instructions on [LSP-some-sass](https://github.com/sublimelsp/LSP-some-sass).
+
 ## Scala
 
 Follow installation instructions on [LSP-metals](https://github.com/scalameta/metals-sublime).

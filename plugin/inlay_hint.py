@@ -90,7 +90,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
     region = sublime.Region(position_to_offset(position, view))
     phantom_uuid = str(uuid.uuid4())
     content = get_inlay_hint_html(view, inlay_hint, session, phantom_uuid)
-    p = sublime.Phantom(region, content, sublime.LAYOUT_INLINE)
+    p = sublime.Phantom(region, content, sublime.PhantomLayout.INLINE)
     setattr(p, 'lsp_uuid', phantom_uuid)
     return p
 

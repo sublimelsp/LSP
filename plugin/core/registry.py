@@ -182,9 +182,9 @@ class LspOpenLocationCommand(LspWindowCommand):
             modifier_keys = event.get('modifier_keys')
             if modifier_keys:
                 if 'primary' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
 
     def want_event(self) -> bool:

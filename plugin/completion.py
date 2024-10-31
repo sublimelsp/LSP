@@ -103,7 +103,7 @@ def format_completion(
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
         f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
-        sublime.COMPLETION_FORMAT_COMMAND,
+        sublime.CompletionFormat.COMMAND,
         kind,
         details=" | ".join(details)
     )
@@ -215,9 +215,9 @@ class QueryCompletionsTask:
         flags = sublime.AutoCompleteFlags.NONE
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            flags |= sublime.AutoCompleteFlags.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+            flags |= sublime.AutoCompleteFlags.INHIBIT_WORD_COMPLETIONS
         view_settings = self._view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
             (self._triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
@@ -233,7 +233,7 @@ class QueryCompletionsTask:
                 response_items = response["items"] or []
                 item_defaults = response.get('itemDefaults') or {}
                 if response.get("isIncomplete", False):
-                    flags |= sublime.DYNAMIC_COMPLETIONS
+                    flags |= sublime.AutoCompleteFlags.DYNAMIC_COMPLETIONS
             elif isinstance(response, list):
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
@@ -246,7 +246,7 @@ class QueryCompletionsTask:
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
-            flags |= sublime.INHIBIT_REORDER
+            flags |= sublime.AutoCompleteFlags.INHIBIT_REORDER
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
             sublime.status_message(f'Completion error: {error_messages}')
@@ -316,7 +316,7 @@ class LspResolveDocsCommand(LspTextCommand):
                 show_lsp_popup(
                     self.view,
                     minihtml_content,
-                    flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+                    flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
                     md=False,
                     on_navigate=self._on_navigate)
 

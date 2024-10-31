@@ -67,11 +67,11 @@ def _select_and_center(view: sublime.View | None, r: Range) -> sublime.View | No
 def _return_existing_view(flags: int, existing_view_group: int, active_group: int, specified_group: int) -> bool:
     if specified_group > -1:
         return existing_view_group == specified_group
-    if bool(flags & (sublime.ADD_TO_SELECTION | sublime.REPLACE_MRU)):
+    if bool(flags & (sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.REPLACE_MRU)):
         return False
     if existing_view_group == active_group:
         return True
-    return not bool(flags & sublime.FORCE_GROUP)
+    return not bool(flags & sublime.NewFileFlags.FORCE_GROUP)
 
 
 def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> sublime.View | None:
@@ -101,7 +101,7 @@ def open_file(
     was_already_open = view is not None
     view = window.open_file(file, flags, group)
     if not view.is_loading():
-        if was_already_open and (flags & sublime.SEMI_TRANSIENT):
+        if was_already_open and (flags & sublime.NewFileFlags.SEMI_TRANSIENT):
             # workaround bug https://github.com/sublimehq/sublime_text/issues/2411 where transient view might not get
             # its view listeners initialized.
             sublime_plugin.check_view_event_listeners(view)  # type: ignore

@@ -130,8 +130,6 @@ class CodeActionsManager:
                 if diag_sb == sb:
                     diagnostics = diags
                     break
-            # Pull for diagnostics to ensure that server computes them before receiving code action request.
-            sb.do_document_diagnostic_async(view)
             params = text_document_code_action_params(view, region, diagnostics, matching_kinds, manual=False)
             return Request.codeAction(params, view)
 
@@ -165,6 +163,8 @@ class CodeActionsManager:
             session = sb.session
             request = request_factory(sb)
             if request:
+                # Pull for diagnostics to ensure that server computes them before receiving code action request.
+                sb.do_document_diagnostic_async(listener.view)
                 response_handler = partial(on_response, sb)
                 task: Promise[list[CodeActionOrCommand] | None] = session.send_request_task(request)
                 tasks.append(task.then(response_handler))

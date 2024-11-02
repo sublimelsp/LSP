@@ -311,8 +311,17 @@ class SessionBuffer:
                 self._pending_changes.update(change_count, changes)
                 purge = True
             if purge:
+                self._cancel_pending_requests_async()
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
+
+    def _cancel_pending_requests_async(self) -> None:
+        if self._document_diagnostic_pending_request:
+            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self._document_diagnostic_pending_request = None
+        if self.semantic_tokens.pending_response:
+            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.semantic_tokens.pending_response = None
 
     def on_revert_async(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes

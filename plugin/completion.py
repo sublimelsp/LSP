@@ -212,12 +212,7 @@ class QueryCompletionsTask:
         items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
         errors: list[Error] = []
-        flags = sublime.AutoCompleteFlags.NONE
-        prefs = userprefs()
-        if prefs.inhibit_snippet_completions:
-            flags |= sublime.AutoCompleteFlags.INHIBIT_EXPLICIT_COMPLETIONS
-        if prefs.inhibit_word_completions:
-            flags |= sublime.AutoCompleteFlags.INHIBIT_WORD_COMPLETIONS
+        flags = self._get_userpref_flags()
         view_settings = self._view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
             (self._triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
@@ -253,7 +248,7 @@ class QueryCompletionsTask:
         self._resolve_task_async(items, flags)
 
     def cancel_async(self) -> None:
-        self._resolve_task_async([])
+        self._resolve_task_async([], self._get_userpref_flags())
         self._cancel_pending_requests_async()
 
     def _cancel_pending_requests_async(self) -> None:
@@ -263,14 +258,19 @@ class QueryCompletionsTask:
                 session.cancel_request(request_id, False)
         self._pending_completion_requests.clear()
 
-    def _resolve_task_async(
-        self,
-        completions: list[sublime.CompletionItem],
-        flags: sublime.AutoCompleteFlags = sublime.AutoCompleteFlags.NONE
-    ) -> None:
+    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: sublime.AutoCompleteFlags) -> None:
         if not self._resolved:
             self._resolved = True
             self._on_done_async(completions, flags)
+
+    def _get_userpref_flags(self) -> sublime.AutoCompleteFlags:
+        prefs = userprefs()
+        flags = sublime.AutoCompleteFlags.NONE
+        if prefs.inhibit_snippet_completions:
+            flags |= sublime.AutoCompleteFlags.INHIBIT_EXPLICIT_COMPLETIONS
+        if prefs.inhibit_word_completions:
+            flags |= sublime.AutoCompleteFlags.INHIBIT_WORD_COMPLETIONS
+        return flags
 
 
 class LspResolveDocsCommand(LspTextCommand):

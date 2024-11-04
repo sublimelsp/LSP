@@ -152,7 +152,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         return result
     remaining_truncate_limit = truncate_limit
     full_label = "".join(label_part['value'] for label_part in label)
-    full_label_truncated = len(full_label) >= truncate_limit and truncate_limit > 0
+    full_label_truncated = len(full_label) > truncate_limit and truncate_limit > 0
     for label_part in label:
         if remaining_truncate_limit < 0 and truncate_limit > 0:
             break

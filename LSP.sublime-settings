@@ -181,7 +181,7 @@
   "show_inlay_hints": false,
 
   // Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis.
-  "inlay_hints_max_length": 100,
+  "inlay_hints_max_length": 30,
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.

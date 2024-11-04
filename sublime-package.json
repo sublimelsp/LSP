@@ -741,7 +741,7 @@
             },
             "inlay_hints_max_length": {
               "type": "integer",
-              "default": 100,
+              "default": 30,
               "minimum": 0,
               "markdownDescription": "Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis."
             },

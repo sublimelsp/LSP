@@ -687,7 +687,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = ..., *, ignore_pending: bool = ...
+        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
     ) -> None:
         ...
 
@@ -2072,7 +2072,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view, ignore_pending=True)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 

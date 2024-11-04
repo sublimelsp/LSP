@@ -488,7 +488,7 @@ class SessionBuffer:
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
     def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = None, ignore_pending: bool = False
+        self, view: sublime.View, version: int | None = None, forced_update: bool = False
     ) -> None:
         mgr = self.session.manager()
         if not mgr or not self.has_capability("diagnosticProvider"):
@@ -498,7 +498,7 @@ class SessionBuffer:
         if version is None:
             version = view.change_count()
         if self._document_diagnostic_pending_request:
-            if self._document_diagnostic_pending_request.version == version and not ignore_pending:
+            if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
             self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}

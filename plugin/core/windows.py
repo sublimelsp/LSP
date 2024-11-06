@@ -7,6 +7,7 @@ from .configurations import WindowConfigManager
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
+from .logging import notify
 from .message_request_handler import MessageRequestHandler
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF
@@ -295,12 +296,13 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n--- Error: ---\n{1}"
             )).format(config.name, str(e))
+            console = f"⚠️LSP: Failed to start {config.name}…"
             exception_log(f"Unable to start subprocess for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
-            sublime.message_dialog(message)
+            notify(message, console)
             # Continue with handling pending listeners
             self._new_session = None
             sublime.set_timeout_async(self._dequeue_listener_async)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .core.css import css
 from .core.logging import debug
+from .core.logging import notify
 from .core.registry import windows
 from .core.sessions import get_plugin
 from .core.transports import create_transport
@@ -303,7 +304,8 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
             return
         view = wm.window.active_view()
         if not view:
-            sublime.message_dialog('Troubleshooting must be run with a file opened')
+            msg = 'Troubleshooting must be run with a file opened'
+            notify(msg, msg)
             return
         active_view = view
         configs = wm.get_config_manager().get_configs()

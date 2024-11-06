@@ -148,7 +148,7 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
         window.set_project_data(project_data)
     else:
         msg = f"Can't enable {config_name} in the current workspace. Ensure that the project is saved first."
-        status = f"⚠️LSP: Can't enable {config_name} in this workspace…"
+        status = f"⚠️LSP: Can't enable {config_name} in this workspace… See console"
         notify(msg, status)
 
 
@@ -162,5 +162,5 @@ def disable_in_project(window: sublime.Window, config_name: str) -> None:
         window.set_project_data(project_data)
     else:
         msg = f"Can't disable {config_name} in the current workspace. Ensure that the project is saved first."
-        status = f"⚠️LSP: Can't enable {config_name} in this workspace…"
+        status = f"⚠️LSP: Can't enable {config_name} in this workspace… See console"
         notify(msg, status)

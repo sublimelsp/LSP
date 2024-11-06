@@ -302,7 +302,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
-            notify(message, status)
+            notify(self._window, message, status)
             # Continue with handling pending listeners
             self._new_session = None
             sublime.set_timeout_async(self._dequeue_listener_async)

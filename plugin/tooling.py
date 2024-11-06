@@ -313,7 +313,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         view = wm.window.active_view()
         if not view:
             msg = 'Troubleshooting must be run with a file opened'
-            notify(msg, msg)
+            notify(self.window, msg, msg)
             return
         active_view = view
         configs = wm.get_config_manager().get_configs()

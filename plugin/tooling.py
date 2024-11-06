@@ -134,17 +134,17 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         except Exception:
             msg = "The clipboard content must be a URL to a package.json file."
             status = "Clipboard must be a URL to package.json"
-            notify_err(msg, status)
+            notify_err(sublime.active_window(), msg, status)
             return
         if not base_url.endswith("package.json"):
             msg = "URL must end with 'package.json'"
-            notify_err(msg, msg)
+            notify_err(sublime.active_window(), msg, msg)
             return
         try:
             package = json.loads(urllib.request.urlopen(base_url).read().decode("utf-8"))
         except Exception as ex:
             msg = f'Unable to load "{base_url}": {ex}'
-            notify_err(msg, msg)
+            notify_err(sublime.active_window(), msg, msg)
             return
 
         # There might be a translations file as well.
@@ -157,12 +157,12 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         contributes = package.get("contributes")
         if not isinstance(contributes, dict):
             msg = 'No "contributes" key found!'
-            notify_err(msg, msg)
+            notify_err(sublime.active_window(), msg, msg)
             return
         configuration = contributes.get("configuration")
         if not isinstance(configuration, dict) and not isinstance(configuration, list):
             msg = 'No "contributes.configuration" key found!'
-            notify_err(msg, msg)
+            notify_err(sublime.active_window(), msg, msg)
             return
         if isinstance(configuration, dict):
             properties = configuration.get("properties")
@@ -172,7 +172,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 properties.update(configuration_item.get("properties"))
         if not isinstance(properties, dict):
             msg = 'No "contributes.configuration.properties" key found!'
-            notify_err(msg, msg)
+            notify_err(sublime.active_window(), msg, msg)
             return
 
         # Process each key-value pair of the server settings.
@@ -469,7 +469,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
         if not listener or not any(listener.session_views_async()):
             msg = "There is no language server running for this view."
             status = "No language server for this view"
-            notify_err(msg, status)
+            notify_err(wm.window, msg, status)
             return
         v = wm.window.new_file()
         v.set_scratch(True)

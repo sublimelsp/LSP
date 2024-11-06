@@ -51,3 +51,15 @@ def notify(msg: str, status: str = '⚠️LSP: see console log…') -> None:
     else:
         sublime.status_message(status)
         print(msg)
+
+
+def notify_err(msg: str, status: str = '❗LSP: see console log…') -> None:
+    """Pick either of the 2 ways to show a message:
+      - via a blocking modal dialog
+      - via a detailed console message and a short status message"""
+    from .settings import userprefs
+    if userprefs().show_ui_blocking_err_message:
+        sublime.message_dialog(msg)
+    else:
+        sublime.error_message(status)
+        print(msg)

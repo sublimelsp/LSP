@@ -291,14 +291,19 @@ class LspCodeActionsCommand(LspTextCommand):
         edit: sublime.Edit,
         event: dict | None = None,
         only_kinds: list[CodeActionKind] | None = None,
-        code_actions_by_config: list[CodeActionsByConfigName] | None = None
+        code_actions_by_config: list[CodeActionsByConfigName] | None = None,
+        fallback_kinds: list[CodeActionKind] | None = None
     ) -> None:
         if code_actions_by_config:
             self._handle_code_actions(code_actions_by_config, run_first=True)
             return
-        self._run_async(only_kinds)
+        self._run_async(only_kinds, fallback_kinds)
 
-    def _run_async(self, only_kinds: list[CodeActionKind] | None = None) -> None:
+    def _run_async(
+        self,
+        only_kinds: list[CodeActionKind] | None = None,
+        fallback_kinds: list[CodeActionKind] | None = None
+    ) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:
@@ -309,9 +314,16 @@ class LspCodeActionsCommand(LspTextCommand):
         session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
         actions_manager \
             .request_for_region_async(view, covering, session_buffer_diagnostics, only_kinds, manual=True) \
-            .then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))
+            .then(lambda actions: sublime.set_timeout(
+                lambda: self._handle_code_actions(actions, run_first=False, fallback_kinds=fallback_kinds))
+            )
 
-    def _handle_code_actions(self, response: list[CodeActionsByConfigName], run_first: bool = False) -> None:
+    def _handle_code_actions(
+        self,
+        response: list[CodeActionsByConfigName],
+        run_first: bool = False,
+        fallback_kinds: list[CodeActionKind] | None = None,
+    ) -> None:
         # Flatten response to a list of (config_name, code_action) tuples.
         actions: list[tuple[ConfigName, CodeActionOrCommand]] = []
         for config_name, session_actions in response:
@@ -321,6 +333,8 @@ class LspCodeActionsCommand(LspTextCommand):
                 self._handle_select(0, actions)
             else:
                 self._show_code_actions(actions)
+        elif fallback_kinds:
+            self._run_async(fallback_kinds)
         else:
             window = self.view.window()
             if window:

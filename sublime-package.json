@@ -449,6 +449,11 @@
               "default": false,
               "markdownDescription": "Show errors and warnings count in the status bar."
             },
+            "show_ui_blocking_message": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show UI blocking modals or the full console message and short status notification."
+            },
             "lsp_format_on_paste": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },

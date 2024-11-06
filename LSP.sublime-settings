@@ -49,6 +49,8 @@
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 
+  "show_ui_blocking_message": true, // Show UI blocking modals or the full console message and short status notification
+
   // Show the diagnostics description of the code
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Optional
 import traceback
 import inspect
 import sublime
@@ -41,25 +41,33 @@ def printf(*args: Any, prefix: str = 'LSP') -> None:
     print(prefix + ":", *args)
 
 
-def notify(window: sublime.Window, message: str, status: str = 'LSP: see console log…') -> None:
-    """Pick either of the 2 ways to show a message:
-      - via a blocking modal dialog
-      - via a detailed console message and a short status message"""
+def notify(window: Optional[sublime.Window], message: str,
+           status: str = 'LSP: see console log…') -> None:
+    """Pick either of the 2 ways to show a user notification message:
+      - via a detailed console message and a short status message
+      - via a blocking modal dialog"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
-        window.status_message(status)
-        print(message)
+        if window:
+            window.status_message(status) # print short message to statusbar
+        else:
+            sublime.status_message(status)
+        print(message) # print full message to console log
     else:
-        window.message_dialog(message)
+        sublime.message_dialog(message)
 
 
-def notify_error(window: sublime.Window, message: str, status: str = '❗LSP: see console log…') -> None:
-    """Pick either of the 2 ways to show a message:
-      - via a blocking modal dialog
-      - via a detailed console message and a short status message"""
+def notify_error(window: Optional[sublime.Window], message: str,
+                 status: str = '❗LSP: see console log…') -> None:
+    """Pick either of the 2 ways to show a user error notification message:
+      - via a detailed console message and a short status message
+      - via a blocking error modal dialog"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
-        window.status_message(status)
-        print(message)
+        if window:
+            window.status_message(status) # print short message to statusbar
+        else:
+            sublime.status_message(status)
+        print(message) # print full message to console log
     else:
         sublime.error_message(message)

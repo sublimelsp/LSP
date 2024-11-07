@@ -41,7 +41,7 @@ def printf(*args: Any, prefix: str = 'LSP') -> None:
     print(prefix + ":", *args)
 
 
-def notify(win: sublime.Window, msg: str, status: str = '⚠️LSP: see console log…') -> None:
+def notify(win: sublime.Window, msg: str, status: str = 'LSP: see console log…') -> None:
     """Pick either of the 2 ways to show a message:
       - via a blocking modal dialog
       - via a detailed console message and a short status message"""

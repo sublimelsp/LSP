@@ -296,7 +296,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n--- Error: ---\n{1}"
             )).format(config.name, str(e))
-            status = f"⚠️LSP: Failed to start {config.name}… See console"
+            status = f"LSP: Failed to start {config.name}… See console"
             exception_log(f"Unable to start subprocess for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))

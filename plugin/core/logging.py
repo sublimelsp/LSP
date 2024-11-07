@@ -41,33 +41,31 @@ def printf(*args: Any, prefix: str = 'LSP') -> None:
     print(prefix + ":", *args)
 
 
-def notify(window: Optional[sublime.Window], message: str,
-           status: str = 'LSP: see console log…') -> None:
+def notify(window: Optional[sublime.Window], message: str, status: str = 'LSP: see console log…') -> None:
     """Pick either of the 2 ways to show a user notification message:
       - via a detailed console message and a short status message
       - via a blocking modal dialog"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
         if window:
-            window.status_message(status) # print short message to statusbar
+            window.status_message(status)  # print short message to statusbar
         else:
             sublime.status_message(status)
-        print(message) # print full message to console log
+        print(message)  # print full message to console log
     else:
         sublime.message_dialog(message)
 
 
-def notify_error(window: Optional[sublime.Window], message: str,
-                 status: str = '❗LSP: see console log…') -> None:
+def notify_error(window: Optional[sublime.Window], message: str, status: str = '❗LSP: see console log…') -> None:
     """Pick either of the 2 ways to show a user error notification message:
       - via a detailed console message and a short status message
       - via a blocking error modal dialog"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
         if window:
-            window.status_message(status) # print short message to statusbar
+            window.status_message(status)  # print short message to statusbar
         else:
             sublime.status_message(status)
-        print(message) # print full message to console log
+        print(message)  # print full message to console log
     else:
         sublime.error_message(message)

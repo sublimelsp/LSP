@@ -213,7 +213,7 @@ class LspSymbolRenameCommand(LspTextCommand):
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
             message = "The current selection cannot be renamed"
-            notify_error(message, message)
+            notify_error(self.view.window(), message, message)
             return
         if is_range_response(response):
             r = range_to_region(response, self.view)
@@ -229,7 +229,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _on_prepare_error(self, error: Any) -> None:
         message = "Rename error: {}".format(error["message"])
-        notify_error(message, message)
+        notify_error(self.view.window(), message, message)
 
     def _get_relative_path(self, file_path: str) -> str:
         wm = windows.lookup(self.view.window())

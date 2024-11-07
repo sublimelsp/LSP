@@ -47,10 +47,10 @@ def notify(win: sublime.Window, msg: str, status: str = 'LSP: see console log…
       - via a detailed console message and a short status message"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
-        win.message_dialog(msg)
-    else:
         win.status_message(status)
         print(msg)
+    else:
+        win.message_dialog(msg)
 
 
 def notify_err(win: sublime.Window, msg: str, status: str = '❗LSP: see console log…') -> None:
@@ -59,7 +59,7 @@ def notify_err(win: sublime.Window, msg: str, status: str = '❗LSP: see console
       - via a detailed console message and a short status message"""
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
-        sublime.error_message(msg)
-    else:
         win.status_message(status)
         print(msg)
+    else:
+        sublime.error_message(msg)

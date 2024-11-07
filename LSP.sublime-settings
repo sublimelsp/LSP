@@ -49,8 +49,6 @@
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 
-  "suppress_error_dialogs": true, // Replace UI blocking modals with the full console message and a short status notification
-
   // Show the diagnostics description of the code
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
@@ -164,6 +162,9 @@
   "completion_insert_mode": "insert",
 
   // --- Other --------------------------------------------------------------------------
+
+  // Replace UI blocking modals with the full console message and a short status notification
+  "suppress_error_dialogs": true,
 
   // Show symbol references in Sublime's quick panel instead of the output panel.
   "show_references_in_quick_panel": true,

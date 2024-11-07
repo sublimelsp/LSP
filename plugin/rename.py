@@ -2,7 +2,7 @@ from __future__ import annotations
 from .core.edit import parse_range
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
-from .core.logging import notify_err
+from .core.logging import notify_error
 from .core.protocol import PrepareRenameParams
 from .core.protocol import PrepareRenameResult
 from .core.protocol import Range
@@ -212,8 +212,8 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
-            msg = "The current selection cannot be renamed"
-            notify_err(msg, msg)
+            message = "The current selection cannot be renamed"
+            notify_error(message, message)
             return
         if is_range_response(response):
             r = range_to_region(response, self.view)
@@ -228,8 +228,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         self.view.run_command("lsp_symbol_rename", args)
 
     def _on_prepare_error(self, error: Any) -> None:
-        msg = "Rename error: {}".format(error["message"])
-        notify_err(msg, msg)
+        message = "Rename error: {}".format(error["message"])
+        notify_error(message, message)
 
     def _get_relative_path(self, file_path: str) -> str:
         wm = windows.lookup(self.view.window())

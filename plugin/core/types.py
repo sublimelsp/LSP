@@ -279,7 +279,7 @@ class Settings:
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_annotations_severity_level", 0)
         r("show_diagnostics_count_in_view_status", False)
-        r("suppress_error_dialogs", False)
+        r("suppress_error_dialogs", True)
         r("show_diagnostics_in_view_status", True)
         r("show_multiline_diagnostics_highlights", True)
         r("show_multiline_document_highlights", True)

@@ -899,7 +899,7 @@ There are multiple options:
 
 ### Vue Language Server
 
-Recommended, actively maintained package based on https://github.com/vuejs/language-tools.
+Recommended, actively maintained package based on [vuejs/language-tools](https://github.com/vuejs/language-tools).
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 

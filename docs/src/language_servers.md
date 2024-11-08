@@ -897,13 +897,23 @@ This server has more features, like go to definition, rename, etc.
 
 There are multiple options:
 
-### Vetur
+### Vue Language Server
+
+Recommended, actively maintained package based on https://github.com/vuejs/language-tools.
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 
 ### Volar
 
+Based on 1.x version of Volar (later renamed to Vue Language Server). Not recommended.
+
 Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
+
+### Vetur
+
+No longer maintained, not compatible with TypeScript 5+ or new Vue versions.
+
+Follow installation instructions on [LSP-vetur](https://github.com/sublimelsp/LSP-vetur).
 
 ## Vala
 

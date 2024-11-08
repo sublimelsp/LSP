@@ -671,7 +671,7 @@ class SessionBufferProtocol(Protocol):
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
         ...
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
     def get_semantic_tokens(self) -> list[Any]:
@@ -680,16 +680,18 @@ class SessionBufferProtocol(Protocol):
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         ...
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int | None = None) -> None:
+    def do_document_diagnostic_async(
+        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
+    ) -> None:
         ...
 
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
 
@@ -2070,7 +2072,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 

@@ -311,8 +311,17 @@ class SessionBuffer:
                 self._pending_changes.update(change_count, changes)
                 purge = True
             if purge:
+                self._cancel_pending_requests_async()
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
+
+    def _cancel_pending_requests_async(self) -> None:
+        if self._document_diagnostic_pending_request:
+            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self._document_diagnostic_pending_request = None
+        if self.semantic_tokens.pending_response:
+            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.semantic_tokens.pending_response = None
 
     def on_revert_async(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes
@@ -478,7 +487,9 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int | None = None) -> None:
+    def do_document_diagnostic_async(
+        self, view: sublime.View, version: int | None = None, forced_update: bool = False
+    ) -> None:
         mgr = self.session.manager()
         if not mgr or not self.has_capability("diagnosticProvider"):
             return
@@ -487,7 +498,7 @@ class SessionBuffer:
         if version is None:
             version = view.change_count()
         if self._document_diagnostic_pending_request:
-            if self._document_diagnostic_pending_request.version == version:
+            if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
             self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}

@@ -180,7 +180,8 @@
    // or a custom keybinding.
   "show_inlay_hints": false,
 
-  // Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis. Zero or less means no truncation.
+  // Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis.
+  // Set to 0 for unlimited length.
   "inlay_hints_max_length": 30,
 
   // Highlighting style of "highlights": accentuating nearby text entities that

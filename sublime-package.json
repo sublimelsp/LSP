@@ -743,7 +743,7 @@
               "type": "integer",
               "default": 30,
               "minimum": 0,
-              "markdownDescription": "Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis. Zero or less means no truncation."
+              "markdownDescription": "Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis. Set to 0 for unlimited length."
             },
             "initially_folded": {
               "type": "array",

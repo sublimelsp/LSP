@@ -6,6 +6,7 @@ from .completion import QueryCompletionsTask
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import RegionKey
 from .core.logging import debug
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -762,7 +763,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             annotations = [f"<div class=\"actions\" style=\"font-family:system\">{code_actions_link}</div>"]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(
-            SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color,
+            RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,
             on_navigate=self._on_code_actions_annotation_click
         )
 
@@ -771,7 +772,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._code_actions_for_selection})
 
     def _clear_code_actions_annotation(self) -> None:
-        self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
+        self.view.erase_regions(RegionKey.CODE_ACTION)
         self._lightbulb_line = None
 
     def _on_navigate(self, href: str, point: int) -> None:

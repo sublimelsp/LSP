@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .core.constants import DOCUMENT_LINK_FLAGS
+from .core.constants import RegionKey
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.protocol import ColorInformation
 from .core.protocol import Diagnostic
@@ -465,10 +466,10 @@ class SessionBuffer:
             regions = [range_to_region(link["range"], view) for link in self._document_links]
             for sv in self.session_views:
                 sv.view.add_regions(
-                    "lsp_document_link", regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
+                    RegionKey.DOCUMENT_LINK, regions, scope="markup.underline.link.lsp", flags=DOCUMENT_LINK_FLAGS)
         else:
             for sv in self.session_views:
-                sv.view.erase_regions("lsp_document_link")
+                sv.view.erase_regions(RegionKey.DOCUMENT_LINK)
 
     def get_document_link_at_point(self, view: sublime.View, point: int) -> DocumentLink | None:
         for link in self._document_links:

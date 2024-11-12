@@ -4,6 +4,7 @@ from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentHighlightKind
 from .protocol import SymbolKind
+from .typing import StrEnum
 from typing import Tuple
 import sublime
 
@@ -13,8 +14,14 @@ SublimeKind = Tuple[int, str, str]
 
 ST_VERSION = int(sublime.version())
 
-# Keys for View.add_regions
-HOVER_HIGHLIGHT_KEY = 'lsp_hover_highlight'
+
+class RegionKey(StrEnum):
+    """ Key names for use with the `View.add_regions` method. """
+    CODE_ACTION = 'lsp_code_action'
+    DOCUMENT_LINK = 'lsp_document_link'
+    HOVER_HIGHLIGHT = 'lsp_hover_highlight'
+    REFERENCE_HIGHLIGHT = 'lsp_reference_highlight'
+
 
 # Setting keys
 CODE_LENS_ENABLED_KEY = 'lsp_show_code_lens'

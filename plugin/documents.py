@@ -70,8 +70,6 @@ import weakref
 import webbrowser
 
 
-SUBLIME_WORD_MASK = 515
-
 P = ParamSpec('P')
 R = TypeVar('R')
 

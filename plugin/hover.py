@@ -47,7 +47,6 @@ import sublime
 import sublime_plugin
 
 
-SUBLIME_WORD_MASK = 515
 SessionName = str
 ResolvedHover = Union[Hover, Error]
 

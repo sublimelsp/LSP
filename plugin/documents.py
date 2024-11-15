@@ -983,7 +983,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
-            self._format_on_paste_async()
+            sublime.get_clipboard_async(self._format_on_paste_async)
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
@@ -1017,8 +1017,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = selection
         return changed_first_region, True
 
-    def _format_on_paste_async(self) -> None:
-        clipboard_text = sublime.get_clipboard()
+    def _format_on_paste_async(self, clipboard_text: str) -> None:
         sel = self.view.sel()
         split_clipboard_text = clipboard_text.split('\n')
         multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1

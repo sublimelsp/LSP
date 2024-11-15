@@ -61,6 +61,7 @@ from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
 from .plugin.inline_completion import LspCommitInlineCompletionCommand
 from .plugin.inline_completion import LspInlineCompletionCommand
+from .plugin.inline_completion import LspNextInlineCompletionCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand

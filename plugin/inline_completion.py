@@ -11,6 +11,7 @@ from .core.registry import LspTextCommand
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from functools import partial
+from typing import Optional
 import html
 import sublime
 
@@ -52,21 +53,21 @@ class InlineCompletionData:
 
     def __init__(self, view: sublime.View, key: str) -> None:
         self.visible = False
-        self.region = sublime.Region(0, 0)
-        self.text = ''
-        self.command: Command | None = None
-        self.session_name = ''
+        self.index = 0
+        self.position = 0
+        self.items: list[tuple[str, sublime.Region, str, Optional[Command]]] = []
         self._view = view
         self._phantom_set = sublime.PhantomSet(view, key)
 
-    def render_async(self, location: int, text: str) -> None:
+    def render_async(self, index: int) -> None:
         style = self._view.style_for_scope('comment meta.inline-completion.lsp')
         color = style['foreground']
         font_style = 'italic' if style['italic'] else 'normal'
         font_weight = 'bold' if style['bold'] else 'normal'
-        region = sublime.Region(location)
-        is_at_eol = self._view.line(location).b == location
-        first_line, *more_lines = text.splitlines()
+        region = sublime.Region(self.position)
+        is_at_eol = self._view.line(self.position).b == self.position
+        item = self.items[index]
+        first_line, *more_lines = item[2][len(item[1]):].splitlines()
         suffix = '<div class="key-hint"><kbd>Alt</kbd> + <kbd>Enter</kbd> to complete</div>' if is_at_eol or \
             more_lines else ''
         phantoms = [sublime.Phantom(
@@ -94,10 +95,11 @@ class InlineCompletionData:
                     sublime.PhantomLayout.BLOCK
                 )
             )
-        sublime.set_timeout(lambda: self._render(phantoms))
+        sublime.set_timeout(lambda: self._render(phantoms, index))
         self.visible = True
 
-    def _render(self, phantoms: list[sublime.Phantom]) -> None:
+    def _render(self, phantoms: list[sublime.Phantom], index: int) -> None:
+        self.index = index
         self._phantom_set.update(phantoms)
 
     def clear_async(self) -> None:
@@ -153,33 +155,54 @@ class LspInlineCompletionCommand(LspTextCommand):
         items = response['items'] if isinstance(response, dict) else response
         if not items:
             return
-        item = items[0]
-        insert_text = item['insertText']
-        if not insert_text:
-            return
-        if isinstance(insert_text, dict):  # StringValue
-            debug('Snippet completions from the 3.18 specs not yet supported')
-            return
         if view_version != self.view.change_count():
             return
         listener = self.get_listener()
         if not listener:
             return
-        range_ = item.get('range')
-        region = range_to_region(range_, self.view) if range_ else sublime.Region(position)
-        region_length = len(region)
-        if region_length > len(insert_text):
-            return
-        listener.inline_completion.region = region
-        listener.inline_completion.text = insert_text
-        listener.inline_completion.command = item.get('command')
-        listener.inline_completion.session_name = session_name
-        listener.inline_completion.render_async(position, insert_text[region_length:])
-
-        # listener.inline_completion.text = lines[0] + '\n'
-        # listener.inline_completion.render_async(position, lines[0])
+        listener.inline_completion.items.clear()
+        for item in items:
+            insert_text = item['insertText']
+            if not insert_text:
+                continue
+            if isinstance(insert_text, dict):  # StringValue
+                debug('Snippet completions from the 3.18 specs not yet supported')
+                continue
+            range_ = item.get('range')
+            region = range_to_region(range_, self.view) if range_ else sublime.Region(position)
+            region_length = len(region)
+            if region_length > len(insert_text):
+                continue
+            listener.inline_completion.items.append((session_name, region, insert_text, item.get('command')))
+        listener.inline_completion.position = position
+        listener.inline_completion.render_async(0)
 
         # filter_text = item.get('filterText', insert_text)  # ignored for now
+
+
+class LspNextInlineCompletionCommand(LspTextCommand):
+
+    capability = 'inlineCompletionProvider'
+
+    def is_enabled(self, event: dict | None = None, point: int | None = None, **kwargs) -> bool:
+        if not super().is_enabled(event, point):
+            return False
+        listener = self.get_listener()
+        if not listener:
+            return False
+        return listener.inline_completion.visible
+
+    def run(
+        self, edit: sublime.Edit, event: dict | None = None, point: int | None = None, forward: bool = True
+    ) -> None:
+        listener = self.get_listener()
+        if not listener:
+            return
+        item_count = len(listener.inline_completion.items)
+        if item_count < 2:
+            return
+        new_index = (listener.inline_completion.index - 1 + 2 * forward) % item_count
+        listener.inline_completion.render_async(new_index)
 
 
 class LspCommitInlineCompletionCommand(LspTextCommand):
@@ -198,15 +221,15 @@ class LspCommitInlineCompletionCommand(LspTextCommand):
         listener = self.get_listener()
         if not listener:
             return
-        self.view.replace(edit, listener.inline_completion.region, listener.inline_completion.text)
+        session_name, region, text, command = listener.inline_completion.items[listener.inline_completion.index]
+        self.view.replace(edit, region, text)
         selection = self.view.sel()
         pt = selection[0].b
         selection.clear()
         selection.add(pt)
-        command = listener.inline_completion.command
         if command:
             self.view.run_command('lsp_execute', {
                 "command_name": command['command'],
                 "command_args": command.get('arguments'),
-                "session_name": listener.inline_completion.session_name
+                "session_name": session_name
             })

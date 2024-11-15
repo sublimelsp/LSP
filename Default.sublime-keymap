@@ -23,6 +23,12 @@
         "command": "lsp_commit_inline_completion",
         "context": [{"key": "lsp.inline_completion_visible"}]
     },
+    // Show next Inline Completion
+    // {
+    //     "keys": ["UNBOUND"],
+    //     "command": "lsp_next_inline_completion",
+    //     "context": [{"key": "lsp.inline_completion_visible"}]
+    // },
     // Save all open files that have a language server attached with lsp_save
     // {
     //     "keys": ["UNBOUND"],

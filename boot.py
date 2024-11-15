@@ -126,6 +126,7 @@ __all__ = (
     "LspInlayHintClickCommand",
     "LspInlineCompletionCommand",
     "LspNextDiagnosticCommand",
+    "LspNextInlineCompletionCommand",
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",
     "LspOpenLocationCommand",

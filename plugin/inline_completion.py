@@ -28,24 +28,9 @@ PHANTOM_HTML = """
         font-style: {font_style};
         font-weight: {font_weight};
     }}
-    .key-hint {{
-        display: inline;
-        padding-left: 2em;
-        font-size: 0.9rem;
-        color: color(var(--foreground) alpha(0.8));
-    }}
-    kbd {{
-        font-family: monospace;
-        font-size: 0.75rem;
-        color: color(var(--foreground) alpha(0.8));
-        background-color: color(var(--foreground) alpha(0.08));
-        border: 1px solid color(var(--foreground) alpha(0.5));
-        border-radius: 4px;
-        padding: 0px 3px;
-    }}
 </style>
 <body id="lsp-inline-completion">
-    <div class="completion-content">{content}</div>{suffix}
+    <div class="completion-content">{content}</div>
 </body>"""
 
 
@@ -65,19 +50,15 @@ class InlineCompletionData:
         font_style = 'italic' if style['italic'] else 'normal'
         font_weight = 'bold' if style['bold'] else 'normal'
         region = sublime.Region(self.position)
-        is_at_eol = self._view.line(self.position).b == self.position
         item = self.items[index]
         first_line, *more_lines = item[2][len(item[1]):].splitlines()
-        suffix = '<div class="key-hint"><kbd>Alt</kbd> + <kbd>Enter</kbd> to complete</div>' if is_at_eol or \
-            more_lines else ''
         phantoms = [sublime.Phantom(
             region,
             PHANTOM_HTML.format(
                 color=color,
                 font_style=font_style,
                 font_weight=font_weight,
-                content=self._normalize_html(first_line),
-                suffix=suffix
+                content=self._normalize_html(first_line)
             ),
             sublime.PhantomLayout.INLINE
         )]
@@ -89,8 +70,7 @@ class InlineCompletionData:
                         color=color,
                         font_style=font_style,
                         font_weight=font_weight,
-                        content='<br>'.join(self._normalize_html(line) for line in more_lines),
-                        suffix=''
+                        content='<br>'.join(self._normalize_html(line) for line in more_lines)
                     ),
                     sublime.PhantomLayout.BLOCK
                 )

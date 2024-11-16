@@ -26,13 +26,37 @@ The following steps describe a local installation on a Windows PC with compatibl
 
 2. Download and extract a CUDA version of Tabby from the [GitHub releases page](https://github.com/TabbyML/tabby/releases) (click on "Assets"); e.g. `tabby_x86_64-windows-msvc-cuda122.zip`
 
-3. Install the `tabby-agent` language server via npm (requires NodeJS):
+3. On macOS and Linux it might be necessary to change the access permissions of `lama-server` and `tabby` to be executable:
+
+    ```sh
+    $ tabby_aarch64-apple-darwin chmod +x llama-server
+    $ tabby_aarch64-apple-darwin chmod +x tabby
+    ```
+
+    !!! note "On macOS you might get an error that “tabby” cannot be opened because it is from an unidentified developer."
+        After changing the permission to executable, right click on `tabby` and select "Open", that will get rid of the error.
+
+4. Download a completion model (see <https://tabby.tabbyml.com/docs/models/> for available model files and GPU requirements):
+
+    ```sh
+    tabby download --model StarCoder-1B
+    ```
+
+5. If necessary, edit the configuration file under `~/.tabby-client/agent/config.toml`, which is generated automatically on the first start of tabby-agent.
+   For example, to disable anonymous usage tracking add
+
+    ```toml
+    [anonymousUsageTracking]
+    disable = true
+    ```
+
+6. Install the `tabby-agent` language server via npm (requires NodeJS):
 
     ```sh
     npm install -g tabby-agent
     ```
 
-4. Open `Preferences > Package Settings > LSP > Settings` and add the `"tabby"` client configuration to the `"clients"`:
+7. Open `Preferences > Package Settings > LSP > Settings` and add the `"tabby"` client configuration to the `"clients"`:
 
     ```jsonc
     {
@@ -49,21 +73,7 @@ The following steps describe a local installation on a Windows PC with compatibl
     }
     ```
 
-5. Download a completion model (see <https://tabby.tabbyml.com/docs/models/> for available model files and GPU requirements):
-
-    ```sh
-    tabby download --model StarCoder-1B
-    ```
-
-6. If necessary, edit the configuration file under `~/.tabby-client/agent/config.toml`, which is generated automatically on the first start of tabby-agent.
-   For example, to disable anonymous usage tracking add
-
-    ```toml
-    [anonymousUsageTracking]
-    disable = true
-    ```
-
-7. Manually start the Tabby backend:
+8. Manually start the Tabby backend:
 
     ```sh
     tabby serve --model StarCoder-1B --no-webserver
@@ -71,7 +81,7 @@ The following steps describe a local installation on a Windows PC with compatibl
 
     The language server communicates with this backend, i.e. it needs to be running in order for `tabby-agent` to work.
 
-8. Now you can open a file in Sublime Text and start coding.
+9. Now you can open a file in Sublime Text and start coding.
    Inline completions are requested when you manually trigger auto-complete via <kbd>Ctrl</kbd> + <kbd>Space</kbd>.
 
 

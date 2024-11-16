@@ -174,7 +174,10 @@ Inlay hints are disabled by default and can be enabled with the `"show_inlay_hin
 
 Inline completions are typically provided by an AI code assistant.
 They can span multiple lines and are rendered directly in the source code as grayed out text ("ghost text").
-Currently inline completions are only requested when you manually trigger auto-completions (<kbd>Ctrl</kbd> + <kbd>Space</kbd>).
+
+!!! note
+    Currently inline completions are only requested when you manually trigger auto-completions (<kbd>Ctrl</kbd> + <kbd>Space</kbd>).
+    Inline completions are disabled if you have enabled `"mini_auto_complete"`.
 
 ## Server Commands
 

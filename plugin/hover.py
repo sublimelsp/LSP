@@ -3,7 +3,7 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .core.constants import HOVER_ENABLED_KEY
-from .core.constants import HOVER_HIGHLIGHT_KEY
+from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
@@ -47,7 +47,6 @@ import sublime
 import sublime_plugin
 
 
-SUBLIME_WORD_MASK = 515
 SessionName = str
 ResolvedHover = Union[Hover, Error]
 
@@ -303,7 +302,7 @@ class LspHoverCommand(LspTextCommand):
                 if hover_range:
                     _, flags = prefs.highlight_style_region_flags(prefs.hover_highlight_style)
                     self.view.add_regions(
-                        HOVER_HIGHLIGHT_KEY,
+                        RegionKey.HOVER_HIGHLIGHT,
                         regions=[hover_range],
                         scope="region.cyanish markup.highlight.hover.lsp",
                         flags=flags)
@@ -316,7 +315,7 @@ class LspHoverCommand(LspTextCommand):
                     flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,
                     on_navigate=lambda href: self._on_navigate(href, point),
-                    on_hide=lambda: self.view.erase_regions(HOVER_HIGHLIGHT_KEY))
+                    on_hide=lambda: self.view.erase_regions(RegionKey.HOVER_HIGHLIGHT))
             self._image_resolver = mdpopups.resolve_images(
                 contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
 

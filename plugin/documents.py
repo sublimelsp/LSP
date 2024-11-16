@@ -6,6 +6,7 @@ from .completion import QueryCompletionsTask
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import RegionKey
 from .core.logging import debug
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -68,8 +69,6 @@ import sublime_plugin
 import weakref
 import webbrowser
 
-
-SUBLIME_WORD_MASK = 515
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -582,8 +581,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
-        if command_name in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command_name:
-            # hide the popup when `esc` or arrows are pressed pressed
+        if command_name in ("hide_auto_complete", "move", "commit_completion", "delete_word", "delete_to_mark",
+                            "left_delete", "right_delete"):
+            # hide the popup when `esc` or arrows are pressed
             self.view.hide_popup()
 
     @requires_session
@@ -762,7 +762,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             annotations = [f"<div class=\"actions\" style=\"font-family:system\">{code_actions_link}</div>"]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(
-            SessionView.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color,
+            RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,
             on_navigate=self._on_code_actions_annotation_click
         )
 
@@ -771,7 +771,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._code_actions_for_selection})
 
     def _clear_code_actions_annotation(self) -> None:
-        self.view.erase_regions(SessionView.CODE_ACTIONS_KEY)
+        self.view.erase_regions(RegionKey.CODE_ACTION)
         self._lightbulb_line = None
 
     def _on_navigate(self, href: str, point: int) -> None:
@@ -983,7 +983,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_view_updated_async(self) -> None:
         if self._should_format_on_paste:
             self._should_format_on_paste = False
-            self._format_on_paste_async()
+            sublime.get_clipboard_async(self._format_on_paste_async)
         self._code_lenses_debouncer_async.debounce(
             self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
@@ -1017,8 +1017,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = selection
         return changed_first_region, True
 
-    def _format_on_paste_async(self) -> None:
-        clipboard_text = sublime.get_clipboard()
+    def _format_on_paste_async(self, clipboard_text: str) -> None:
         sel = self.view.sel()
         split_clipboard_text = clipboard_text.split('\n')
         multi_cursor_paste = len(split_clipboard_text) == len(sel) and len(sel) > 1

@@ -112,7 +112,6 @@
   // When disabled, gutter markers are still drawn, unless "diagnostics_gutter_marker"
   // is set to "".
   // Diagnostics which span multiple lines are always drawn with the "box" style.
-  // See also: "show_multiline_diagnostics_highlights".
   "diagnostics_highlight_style": {
     "error": "squiggly",
     "warning": "squiggly",
@@ -125,7 +124,6 @@
   "diagnostics_gutter_marker": "sign",
 
   // Show diagnostics spanning multiple lines in the view (as outlines).
-  // See also: "diagnostics_highlight_style".
   "show_multiline_diagnostics_highlights": true,
 
   // --- Hover popup --------------------------------------------------------------------

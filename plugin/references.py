@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.constants import RegionKey
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
@@ -219,7 +220,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # highlight all word occurrences
         regions = panel.find_all(rf"\b{word}\b")
         panel.add_regions(
-            'ReferenceHighlight',
+            RegionKey.REFERENCE_HIGHLIGHT,
             regions,
             'comment',
             flags=sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO

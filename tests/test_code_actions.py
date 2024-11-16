@@ -1,11 +1,11 @@
 from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
+from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
-from LSP.plugin.session_view import SessionView
 from LSP.plugin.core.views import versioned_text_document_identifier
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
@@ -304,7 +304,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 2)
-        annotations_range = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
+        annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(annotations_range), 1)
         self.assertEqual(annotations_range[0].a, 3)
         self.assertEqual(annotations_range[0].b, 0)
@@ -326,7 +326,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 0)
-        annotations_range = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
+        annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(annotations_range), 1)
         self.assertEqual(annotations_range[0].a, 3)
         self.assertEqual(annotations_range[0].b, 0)
@@ -344,7 +344,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a
         yield 100
         yield from self.await_message('textDocument/codeAction')
-        code_action_ranges = self.view.get_regions(SessionView.CODE_ACTIONS_KEY)
+        code_action_ranges = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(code_action_ranges), 0)
 
     def test_extends_range_to_include_diagnostics(self) -> Generator:

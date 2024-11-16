@@ -776,6 +776,10 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
     }
     ```
 
+## Twig
+
+Follow installation instructions on [LSP-twiggy](https://github.com/sublimelsp/LSP-twiggy).
+
 ## TypeScript
 
 See [Javascript/TypeScript](#javascripttypescript).

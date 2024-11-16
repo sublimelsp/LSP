@@ -178,7 +178,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
         index = 0
-        locations.sort(key=lambda l: (l['uri'], Point.from_lsp(l['range']['start'])))
+        locations.sort(key=lambda location: (location['uri'], Point.from_lsp(location['range']['start'])))
         if len(selection):
             pt = selection[0].b
             view_filename = self.view.file_name()

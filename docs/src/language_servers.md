@@ -29,8 +29,8 @@ The following steps describe a local installation on a Windows PC with compatibl
 3. On macOS and Linux it might be necessary to change the access permissions of `lama-server` and `tabby` to be executable:
 
     ```sh
-    $ tabby_aarch64-apple-darwin chmod +x llama-server
-    $ tabby_aarch64-apple-darwin chmod +x tabby
+    $ chmod +x llama-server
+    $ chmod +x tabby
     ```
 
     !!! note "On macOS you might get an error that “tabby” cannot be opened because it is from an unidentified developer."

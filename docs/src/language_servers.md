@@ -42,18 +42,18 @@ The following steps describe a local installation on a Windows PC with compatibl
     tabby download --model StarCoder-1B
     ```
 
-5. If necessary, edit the configuration file under `~/.tabby-client/agent/config.toml`, which is generated automatically on the first start of tabby-agent.
+5. Install the `tabby-agent` language server via npm (requires NodeJS):
+
+    ```sh
+    npm install -g tabby-agent
+    ```
+
+6. If necessary, edit the configuration file under `~/.tabby-client/agent/config.toml`, which is generated automatically on the first start of tabby-agent.
    For example, to disable anonymous usage tracking add
 
     ```toml
     [anonymousUsageTracking]
     disable = true
-    ```
-
-6. Install the `tabby-agent` language server via npm (requires NodeJS):
-
-    ```sh
-    npm install -g tabby-agent
     ```
 
 7. Open `Preferences > Package Settings > LSP > Settings` and add the `"tabby"` client configuration to the `"clients"`:

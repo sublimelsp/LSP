@@ -166,7 +166,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         session, location = self.first_locations[parsed_uri]
         scheme, _ = parsed_uri
         if scheme == "file":
-            self._preview = open_location(session, location, flags=sublime.TRANSIENT)
+            self._preview = open_location(session, location, flags=sublime.NewFileFlags.TRANSIENT)
         return ""
 
     def _simple_project_path(self, parsed_uri: ParsedUri) -> str:
@@ -246,7 +246,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         base_dir = None
         scheme, path = self.parsed_uri
         if scheme == "file":
-            self._preview = open_location(session, self._get_location(diagnostic), flags=sublime.TRANSIENT)
+            self._preview = open_location(session, self._get_location(diagnostic), flags=sublime.NewFileFlags.TRANSIENT)
             base_dir = project_base_dir(map(Path, self.window.folders()), Path(path))
         return diagnostic_html(session.config, truncate_message(diagnostic), base_dir)
 
@@ -261,10 +261,12 @@ def diagnostic_location(parsed_uri: ParsedUri, diagnostic: Diagnostic) -> Locati
     }
 
 
-def open_location(session: Session, location: Location, flags: int = 0, group: int = -1) -> sublime.View:
+def open_location(
+    session: Session, location: Location, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
+) -> sublime.View:
     uri, position = get_uri_and_position_from_location(location)
     file_name = to_encoded_filename(session.config.map_server_uri_to_client_path(uri), position)
-    return session.window.open_file(file_name, flags=flags | sublime.ENCODED_POSITION, group=group)
+    return session.window.open_file(file_name, flags=flags | sublime.NewFileFlags.ENCODED_POSITION, group=group)
 
 
 def diagnostic_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: Path | None) -> sublime.Html:

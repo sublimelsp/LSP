@@ -3,7 +3,7 @@ from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import CompletionEditRange
+from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemDefaults
 from .core.protocol import CompletionItemKind
@@ -103,7 +103,7 @@ def format_completion(
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
         f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
-        sublime.COMPLETION_FORMAT_COMMAND,
+        sublime.CompletionFormat.COMMAND,
         kind,
         details=" | ".join(details)
     )
@@ -127,7 +127,7 @@ def is_range(val: Any) -> TypeGuard[Range]:
     return isinstance(val, dict) and 'start' in val and 'end' in val
 
 
-def is_edit_range(val: Any) -> TypeGuard[CompletionEditRange]:
+def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
     return isinstance(val, dict) and 'insert' in val and 'replace' in val
 
 
@@ -178,7 +178,7 @@ class QueryCompletionsTask:
         view: sublime.View,
         location: int,
         triggered_manually: bool,
-        on_done_async: Callable[[list[sublime.CompletionItem], int], None]
+        on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
     ) -> None:
         self._view = view
         self._location = location
@@ -212,12 +212,7 @@ class QueryCompletionsTask:
         items: list[sublime.CompletionItem] = []
         item_defaults: CompletionItemDefaults = {}
         errors: list[Error] = []
-        flags = 0
-        prefs = userprefs()
-        if prefs.inhibit_snippet_completions:
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-        if prefs.inhibit_word_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+        flags = self._get_userpref_flags()
         view_settings = self._view.settings()
         include_snippets = view_settings.get("auto_complete_include_snippets") and \
             (self._triggered_manually or view_settings.get("auto_complete_include_snippets_when_typing"))
@@ -233,7 +228,7 @@ class QueryCompletionsTask:
                 response_items = response["items"] or []
                 item_defaults = response.get('itemDefaults') or {}
                 if response.get("isIncomplete", False):
-                    flags |= sublime.DYNAMIC_COMPLETIONS
+                    flags |= sublime.AutoCompleteFlags.DYNAMIC_COMPLETIONS
             elif isinstance(response, list):
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
@@ -246,14 +241,14 @@ class QueryCompletionsTask:
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
-            flags |= sublime.INHIBIT_REORDER
+            flags |= sublime.AutoCompleteFlags.INHIBIT_REORDER
         if errors:
             error_messages = ", ".join(str(error) for error in errors)
             sublime.status_message(f'Completion error: {error_messages}')
         self._resolve_task_async(items, flags)
 
     def cancel_async(self) -> None:
-        self._resolve_task_async([])
+        self._resolve_task_async([], self._get_userpref_flags())
         self._cancel_pending_requests_async()
 
     def _cancel_pending_requests_async(self) -> None:
@@ -263,10 +258,19 @@ class QueryCompletionsTask:
                 session.cancel_request(request_id, False)
         self._pending_completion_requests.clear()
 
-    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: int = 0) -> None:
+    def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: sublime.AutoCompleteFlags) -> None:
         if not self._resolved:
             self._resolved = True
             self._on_done_async(completions, flags)
+
+    def _get_userpref_flags(self) -> sublime.AutoCompleteFlags:
+        prefs = userprefs()
+        flags = sublime.AutoCompleteFlags.NONE
+        if prefs.inhibit_snippet_completions:
+            flags |= sublime.AutoCompleteFlags.INHIBIT_EXPLICIT_COMPLETIONS
+        if prefs.inhibit_word_completions:
+            flags |= sublime.AutoCompleteFlags.INHIBIT_WORD_COMPLETIONS
+        return flags
 
 
 class LspResolveDocsCommand(LspTextCommand):
@@ -312,7 +316,7 @@ class LspResolveDocsCommand(LspTextCommand):
                 show_lsp_popup(
                     self.view,
                     minihtml_content,
-                    flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+                    flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
                     md=False,
                     on_navigate=self._on_navigate)
 

@@ -4,7 +4,7 @@ from abc import abstractmethod
 from contextlib import closing
 from functools import partial
 from queue import Queue
-from typing import Any, Callable, Dict, Generic, IO, Protocol, Sequence, TypeVar
+from typing import Any, Callable, Dict, final, Final, Generic, IO, Protocol, Sequence, TypeVar
 import http.client
 import http
 import io
@@ -20,8 +20,12 @@ import time
 import weakref
 import ssl
 
+try:
+    import orjson
+except ImportError:
+    orjson = None
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
+TCP_CONNECT_TIMEOUT: Final[int] = 5  # seconds
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
 Json = Dict[str, Any]
@@ -33,6 +37,7 @@ def _set_inheritable(inherit_file_descriptors: Sequence[int] | None, value: bool
             os.set_handle_inheritable(file_descriptor, value)  # type: ignore
 
 
+@final
 class LaunchConfig:
     __slots__ = ("command", "env")
 
@@ -57,6 +62,7 @@ class LaunchConfig:
             _set_inheritable(inherit_file_descriptors, False)
 
 
+@final
 class StopLoopError(Exception):
     pass
 
@@ -67,12 +73,15 @@ class Transport(Generic[T]):
         self._decoder = decoder
         self._http_headers = http_headers
 
+    @abstractmethod
     def read(self) -> T:
         raise NotImplementedError()
 
+    @abstractmethod
     def write(self, payload: T) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
     def close(self) -> None:
         raise NotImplementedError()
 
@@ -94,6 +103,7 @@ def _join_thread(t: threading.Thread) -> None:
         exception_log(f"failed to join {t.name} thread", ex)
 
 
+@final
 class ErrorReader(Generic[T]):
     """
     Responsible for relaying log messages from a raw stream to a (subclass of) TransportCallbacks. Because the various
@@ -128,6 +138,7 @@ class ErrorReader(Generic[T]):
             exception_log("unexpected exception type in error reader", ex)
 
 
+@final
 class TransportWrapper(Generic[T]):
     """
     Double dispatch-like class that takes a (subclass of) Transport, and provides to a (subclass of) TransportCallbacks
@@ -241,18 +252,20 @@ class TransportWrapper(Generic[T]):
         self._end(exception)
 
 
+_encode_options: Final[dict[str, Any]] = {
+    "ensure_ascii": False,
+    "sort_keys": False,
+    "check_circular": False,
+    "separators": (",", ":"),
+}
+
+
 def encode_json(data: Json) -> bytes:
-    return json.dumps(
-        data,
-        ensure_ascii=False,
-        sort_keys=False,
-        check_circular=False,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    return orjson.dumps(data) if orjson else json.dumps(data, **_encode_options).encode("utf-8")
 
 
 def decode_json(message: bytes) -> Json:
-    return json.loads(message.decode("utf-8"))
+    return (orjson or json).loads(message)
 
 
 class FileObjectTransport(Transport[T]):
@@ -492,7 +505,7 @@ class TcpClientTransportConfig(TransportConfig):
 class TcpServerTransportConfig(TransportConfig):
     """
     Transport for communicating to a language server over TCP. The difference, however, is that this transport will
-    start a TCP listener socket accepting new TCP cliet connections. Once a client connects to this text editor acting
+    start a TCP listener socket accepting new TCP client connections. Once a client connects to this text editor acting
     as the TCP server, we'll assume it's the language server we just launched. As such, this tranport requires a
     "command" for starting the language server subprocess.
     """
@@ -580,9 +593,9 @@ class WebSocketClientTransportConfig(TransportConfig):
         secure: bool = False,
     ) -> None:
         super().__init__(http_headers)
-        self._hostname = hostname
-        self._port = port
-        self._secure = secure
+        self._hostname: Final[str | None] = hostname
+        self._port: Final[int | None] = port
+        self._secure: Final[bool] = secure
 
     @property
     def port(self) -> int:
@@ -608,7 +621,7 @@ class DuplexPipeTransportConfig(TransportConfig):
 
     def __init__(self, http_headers: bool, child_fileno_env_key: str) -> None:
         super().__init__(http_headers)
-        self._child_fileno_env_key = child_fileno_env_key
+        self._child_fileno_env_key: Final[str] = child_fileno_env_key
 
     def start(
         self,
@@ -642,7 +655,7 @@ class DuplexPipeTransportConfig(TransportConfig):
         )
 
 
-_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
+_subprocesses: Final[weakref.WeakSet[subprocess.Popen]] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:

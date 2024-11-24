@@ -340,7 +340,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
         if session:
             location = symbol.get('location')
             if location:
-                session.open_location_async(location, sublime.ENCODED_POSITION)
+                session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
             else:
                 session.send_request(
                     Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
@@ -355,7 +355,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
         location = cast(Location, response['location'])
         session = self.session_by_name(session_name)
         if session:
-            session.open_location_async(location, sublime.ENCODED_POSITION)
+            session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
 
 
 class WorkspaceSymbolsInputHandler(DynamicListInputHandler):

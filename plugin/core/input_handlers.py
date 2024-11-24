@@ -70,7 +70,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
     def list_items(self) -> ListItemsReturn:
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
-            return [self._initial_value], 0  # pyright: ignore[reportGeneralTypeIssues]
+            return [self._initial_value], 0  # pyright: ignore[reportReturnType]
         else:
             return self.get_list_items()
 
@@ -111,7 +111,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         self.listener: sublime_plugin.TextChangeListener | None = None
         self.input_view: sublime.View | None = None
 
-    def attach_listener(self) -> None:
+    def _attach_listener(self) -> None:
         for buffer in sublime._buffers():  # type: ignore
             view = buffer.primary_view()
             # This condition to find the input field view might not be sufficient if there is another command palette
@@ -123,11 +123,15 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
             raise RuntimeError('Could not find the Command Palette input field view')
         self.listener = InputListener(self)
         self.listener.attach(buffer)
-        if ST_VERSION < 4161:
+        if ST_VERSION < 4161 and self.input_view:
             # Workaround for initial_selection not working; see https://github.com/sublimehq/sublime_text/issues/6175
             selection = self.input_view.sel()
             selection.clear()
             selection.add(len(self.text))
+
+    def _detach_listener(self) -> None:
+        if self.listener and self.listener.is_attached():
+            self.listener.detach()
 
     @final
     def list_items(self) -> list[sublime.ListInputItem]:
@@ -149,7 +153,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
 
     def initial_text(self) -> str:
         setattr(self.command, '_text', '')
-        sublime.set_timeout(self.attach_listener)
+        sublime.set_timeout(self._attach_listener)
         return self.text
 
     def initial_selection(self) -> list[tuple[int, int]]:
@@ -160,12 +164,10 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         return bool(text)
 
     def cancel(self) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
+        self._detach_listener()
 
     def confirm(self, text: str) -> None:
-        if self.listener and self.listener.is_attached():
-            self.listener.detach()
+        self._detach_listener()
 
     def on_modified(self, text: str) -> None:
         """ Called after changes have been made to the input, with the text of the input field passed as argument. """

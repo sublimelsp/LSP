@@ -28,7 +28,7 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: int | N
         except IndexError:
             return None
     try:
-        return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))  # type: ignore
+        return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))
     except ValueError:
         return None
 
@@ -174,7 +174,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         self,
         location: Location | LocationLink,
         session_name: str | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1,
         event: dict | None = None
     ) -> None:
@@ -182,16 +182,16 @@ class LspOpenLocationCommand(LspWindowCommand):
             modifier_keys = event.get('modifier_keys')
             if modifier_keys:
                 if 'primary' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT | sublime.CLEAR_TO_RIGHT
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
         sublime.set_timeout_async(lambda: self._run_async(location, session_name, flags, group))
 
     def want_event(self) -> bool:
         return True
 
     def _run_async(
-        self, location: Location | LocationLink, session_name: str | None, flags: int, group: int
+        self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
     ) -> None:
         session = self.session_by_name(session_name) if session_name else self.session()
         if session:

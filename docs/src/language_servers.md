@@ -448,7 +448,8 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
             "phpactor": {
                 "enabled": true,
                 "command": ["PATH/TO/phpactor", "language-server"],
-                "selector": "source.php"
+                "selector": "embedding.php",
+                "priority_selector": "source.php",
             }
         }
     }
@@ -632,6 +633,10 @@ There are multiple options:
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
+## Sass
+
+Follow installation instructions on [LSP-some-sass](https://github.com/sublimelsp/LSP-some-sass).
+
 ## Scala
 
 Follow installation instructions on [LSP-metals](https://github.com/scalameta/metals-sublime).
@@ -771,6 +776,10 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
     }
     ```
 
+## Twig
+
+Follow installation instructions on [LSP-twiggy](https://github.com/sublimelsp/LSP-twiggy).
+
 ## TypeScript
 
 See [Javascript/TypeScript](#javascripttypescript).
@@ -778,22 +787,7 @@ See [Javascript/TypeScript](#javascripttypescript).
 ## Typst
 
 1. Install the [Typst](https://packagecontrol.io/packages/Typst) package from Package Control for syntax highlighting.
-2. Download the [typst-lsp](https://github.com/nvarner/typst-lsp/releases) language server executable for your platform.
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
-
-    ```jsonc
-    {
-        "clients": {
-            "typst-lsp": {
-                "enabled": true,
-                "command": ["C:\\path\\to\\typst-lsp-win32-x64.exe"],  // adjust this path according to your platform/setup
-                "selector": "text.typst"
-            }
-        }
-    }
-    ```
-
-4. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
+2. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
 
     ```jsonc
     {
@@ -806,7 +800,77 @@ See [Javascript/TypeScript](#javascripttypescript).
     }
     ```
 
-5. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
+There are 2 available languages servers.
+
+### Tinymist
+
+This server has more features, like go to definition, rename, etc.
+
+1. Install [tinymist](https://github.com/Myriad-Dreamin/tinymist).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"tinymist"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "tinymist": {
+                "enabled": true,
+                "command": ["path/to/tinymist"],  // adjust this path according to your platform/setup
+                "selector": "text.typst",
+                // you can provide some initialization options:
+                "initializationOptions": {
+                    "exportPdf": "never",
+                    "typstExtraArgs": [],
+                },
+            }
+        }
+    }
+    ```
+
+3. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
+
+    <!-- how to call: see https://github.com/Myriad-Dreamin/tinymist/blob/main/editors/vscode/src/extension.ts -->
+    ```jsonc title="Packages/User/Default.sublime-commands"
+    [
+        // ...
+        {
+            "caption": "tinymist - Pin the main file to the currently opened document",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "tinymist",
+                "command_name": "tinymist.pinMain",
+                "command_args": ["${file}"]
+            }
+        },
+        {
+            "caption": "tinymist - Unpin the main file",
+            "command": "lsp_execute",
+            "args": {
+                "session_name": "tinymist",
+                "command_name": "tinymist.pinMain",
+                "command_args": [null]
+            }
+        },
+    ]
+    ```
+
+### Typst-lsp
+
+1. Install [typst-lsp](https://github.com/nvarner/typst-lsp/releases).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "typst-lsp": {
+                "enabled": true,
+                "command": ["path/to/typst-lsp"],  // adjust this path according to your platform/setup
+                "selector": "text.typst"
+            }
+        }
+    }
+    ```
+
+3. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
 
     <!-- how to call: see https://github.com/nvarner/typst-lsp/blob/master/editors/vscode/src/extension.ts -->
     ```jsonc title="Packages/User/Default.sublime-commands"
@@ -837,13 +901,23 @@ See [Javascript/TypeScript](#javascripttypescript).
 
 There are multiple options:
 
-### Vetur
+### Vue Language Server
+
+Recommended, actively maintained package based on [vuejs/language-tools](https://github.com/vuejs/language-tools).
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 
 ### Volar
 
+Based on 1.x version of Volar (later renamed to Vue Language Server). Not recommended.
+
 Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
+
+### Vetur
+
+No longer maintained, not compatible with TypeScript 5+ or new Vue versions.
+
+Follow installation instructions on [LSP-vetur](https://github.com/sublimelsp/LSP-vetur).
 
 ## Vala
 

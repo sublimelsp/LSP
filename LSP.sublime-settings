@@ -112,7 +112,6 @@
   // When disabled, gutter markers are still drawn, unless "diagnostics_gutter_marker"
   // is set to "".
   // Diagnostics which span multiple lines are always drawn with the "box" style.
-  // See also: "show_multiline_diagnostics_highlights".
   "diagnostics_highlight_style": {
     "error": "squiggly",
     "warning": "squiggly",
@@ -125,7 +124,6 @@
   "diagnostics_gutter_marker": "sign",
 
   // Show diagnostics spanning multiple lines in the view (as outlines).
-  // See also: "diagnostics_highlight_style".
   "show_multiline_diagnostics_highlights": true,
 
   // --- Hover popup --------------------------------------------------------------------
@@ -179,6 +177,10 @@
    // using the `LSP: Toggle Inlay Hints` command from the Command Palette, Main Menu
    // or a custom keybinding.
   "show_inlay_hints": false,
+
+  // Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis.
+  // Set to 0 for unlimited length.
+  "inlay_hints_max_length": 30,
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.

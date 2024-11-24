@@ -4,7 +4,7 @@ from .code_lens import LspToggleCodeLensesCommand
 from .core.active_request import ActiveRequest
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
-from .core.constants import HOVER_HIGHLIGHT_KEY
+from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.promise import Promise
@@ -18,7 +18,6 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import DIAGNOSTIC_SEVERITY
-from .core.views import DiagnosticSeverityData
 from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
@@ -49,7 +48,6 @@ class SessionView:
     AC_TRIGGERS_KEY = "auto_complete_triggers"
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
-    CODE_ACTIONS_KEY = "lsp_code_action"
 
     _session_buffers: WeakValueDictionary[tuple[int, int], SessionBuffer] = WeakValueDictionary()
 
@@ -100,7 +98,7 @@ class SessionView:
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
-        self.view.erase_regions("lsp_document_link")
+        self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
         listener = self.listener()
         if listener:
@@ -139,32 +137,33 @@ class SessionView:
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
-        self.view.add_regions(self.CODE_ACTIONS_KEY, r)  # code actions lightbulb icon should always be on top
+        self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
+        session_name = self.session.config.name
         for key in range(1, 100):
-            keys.append(f"lsp_semantic_{key}")
+            keys.append(f"lsp_semantic_{session_name}_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
                     keys.append(f"lsp_highlight_{kind}{mode}")
         if hover_highlight_style in ("background", "fill"):
-            keys.append(HOVER_HIGHLIGHT_KEY)
+            keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
                 for tag in range(1, 3):
-                    keys.append(f"lsp{self.session.config.name}d{mode}{severity}_tags_{tag}")
-        keys.append("lsp_document_link")
+                    keys.append(f"lsp{session_name}d{mode}{severity}_tags_{tag}")
+        keys.append(RegionKey.DOCUMENT_LINK)
         for severity in range(1, 5):
             for mode in line_modes:
-                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_icon")
+                keys.append(f"lsp{session_name}d{mode}{severity}_icon")
         for severity in range(4, 0, -1):
             for mode in line_modes:
-                keys.append(f"lsp{self.session.config.name}d{mode}{severity}_underline")
+                keys.append(f"lsp{session_name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
             for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
                 for mode in line_modes:
                     keys.append(f"lsp_highlight_{kind}{mode}")
         if hover_highlight_style in ("underline", "stippled"):
-            keys.append(HOVER_HIGHLIGHT_KEY)
+            keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)
         self._diagnostic_annotations.initialize_region_keys()
@@ -298,34 +297,32 @@ class SessionView:
                 return f'markup.{k.lower()}.lsp'
         return None
 
-    def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
-    ) -> None:
-        flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
-        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO  # noqa: E501
-        level = userprefs().show_diagnostics_severity_level
-        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(
-                data_per_severity, sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
-            self._draw_diagnostics(
-                data_per_severity, sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
-        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
+        self._redraw_diagnostics_async()
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async(is_view_visible)
 
+    def _redraw_diagnostics_async(self) -> None:
+        flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
+        multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+        level = userprefs().show_diagnostics_severity_level
+        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
+            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
+
     def _draw_diagnostics(
         self,
-        data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData],
         severity: int,
         max_severity_level: int,
-        flags: int,
+        flags: sublime.RegionFlags,
         multiline: bool
     ) -> None:
-        ICON_FLAGS = sublime.HIDE_ON_MINIMAP | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO
+        ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_VALUES}
-        data = data_per_severity.get((severity, multiline))
+        data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
@@ -344,7 +341,11 @@ class SessionView:
         for data in tags.values():
             if data.regions:
                 self.view.add_regions(
-                    data.key, data.regions, data.scope, flags=sublime.DRAW_NO_OUTLINE | sublime.NO_UNDO)
+                    data.key,
+                    data.regions,
+                    data.scope,
+                    flags=sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
+                )
             else:
                 self.view.erase_regions(data.key)
 
@@ -376,6 +377,9 @@ class SessionView:
 
     def on_post_save_async(self, new_uri: DocumentUri) -> None:
         self.session_buffer.on_post_save_async(self.view, new_uri)
+
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_diagnostics_async()
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

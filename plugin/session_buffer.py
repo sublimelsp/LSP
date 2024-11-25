@@ -271,6 +271,11 @@ class SessionBuffer:
         value = self.capabilities.get(capability_path)
         return value if value is not None else self.session.capabilities.get(capability_path)
 
+    def get_capability_2(self, capability_path: str) -> list[Any]:
+        if self.session.config.is_disabled_capability(capability_path):
+            return []
+        return self.capabilities.get_all(capability_path) + self.session.capabilities.get_all(capability_path)
+
     def has_capability(self, capability_path: str) -> bool:
         value = self.get_capability(capability_path)
         return value is not False and value is not None

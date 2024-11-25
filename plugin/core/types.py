@@ -528,6 +528,13 @@ class Capabilities(DottedDict):
     (from Server -> Client).
     """
 
+    __slots__ = ('_d', '_registrations', '_registration_options')
+
+    def __init__(self, d: dict[str, Any] | None = None) -> None:
+        super().__init__(d)
+        self._registrations: dict[str, set[str]] = {}
+        self._registration_options: dict[str, Any] = {}
+
     def register(
         self,
         registration_id: str,
@@ -535,10 +542,8 @@ class Capabilities(DottedDict):
         registration_path: str,
         options: dict[str, Any]
     ) -> None:
-        stored_registration_id = self.get(registration_path)
-        if isinstance(stored_registration_id, str):
-            msg = "{} is already registered at {} with ID {}, overwriting"
-            debug(msg.format(capability_path, registration_path, stored_registration_id))
+        self._registrations.setdefault(capability_path, set()).add(registration_id)
+        self._registration_options[registration_id] = options
         self.set(capability_path, options)
         self.set(registration_path, registration_id)
 
@@ -548,19 +553,24 @@ class Capabilities(DottedDict):
         capability_path: str,
         registration_path: str
     ) -> dict[str, Any] | None:
+        self._registrations.get(capability_path, set()).discard(registration_id)
+        self._registration_options.pop(registration_id, None)
         stored_registration_id = self.get(registration_path)
         if not isinstance(stored_registration_id, str):
             debug("stored registration ID at", registration_path, "is not a string")
             return None
         elif stored_registration_id != registration_id:
-            msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
-            debug(msg.format(stored_registration_id, registration_id))
+            # msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
+            # debug(msg.format(stored_registration_id, registration_id))
             return None
         else:
             discarded = self.get(capability_path)
             self.remove(capability_path)
             self.remove(registration_path)
             return discarded
+
+    def get_all(self, path: str) -> list[Any]:
+        return [self._registration_options[registration_id] for registration_id in self._registrations.get(path, [])]
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))

@@ -2,6 +2,7 @@ from __future__ import annotations
 import sublime
 from .settings import userprefs
 
+
 def notify_error(window: sublime.Window | None, message: str, status_message: str = 'LSP: see console log…',
                  severe: bool = True) -> None:
     """Pick either of the 2 ways to show a user error notification message:

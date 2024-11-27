@@ -452,7 +452,7 @@
             "suppress_error_dialogs": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "Show UI blocking error modals or the full console message and short status notification."
+              "markdownDescription": "Replace error popup windows with a console message and a short status notification."
             },
             "lsp_format_on_paste": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"

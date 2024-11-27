@@ -163,8 +163,8 @@
 
   // --- Other --------------------------------------------------------------------------
 
-  // Replace UI blocking modals with the full console message and a short status notification
-  "suppress_error_dialogs": true,
+  // Replace error popup windows with a console message and a short status notification.
+  "suppress_error_dialogs": false,
 
   // Show symbol references in Sublime's quick panel instead of the output panel.
   "show_references_in_quick_panel": true,

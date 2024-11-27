@@ -7,7 +7,7 @@ from .configurations import WindowConfigManager
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
-from .logging_notify import notify
+from .logging_notify import notify_error
 from .message_request_handler import MessageRequestHandler
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF
@@ -302,7 +302,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
-            notify(self._window, message, status)
+            notify_error(self._window, message, status)
             # Continue with handling pending listeners
             self._new_session = None
             sublime.set_timeout_async(self._dequeue_listener_async)

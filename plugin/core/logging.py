@@ -46,11 +46,10 @@ def notify(window: sublime.Window | None, message: str, status_message: str = 'L
       - via a detailed console message and a short status message
       - via a blocking modal dialog"""
     from .settings import userprefs
+    if not window:
+        return
     if userprefs().suppress_error_dialogs:
-        if window:
-            window.status_message(status_message)
-        else:
-            sublime.status_message(status_message)
+        window.status_message(status_message)
         print(message)
     else:
         sublime.message_dialog(message)
@@ -61,11 +60,10 @@ def notify_error(window: sublime.Window | None, message: str, status_message: st
       - via a detailed console message and a short status message
       - via a blocking error modal dialog"""
     from .settings import userprefs
+    if not window:
+        return
     if userprefs().suppress_error_dialogs:
-        if window:
-            window.status_message(status_message)
-        else:
-            sublime.status_message(status_message)
+        window.status_message(status_message)
         print(message)
     else:
         sublime.error_message(message)

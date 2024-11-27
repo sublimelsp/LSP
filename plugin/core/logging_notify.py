@@ -12,7 +12,7 @@ def notify_error(window: sublime.Window | None, message: str, status_message: st
         return
     if userprefs().suppress_error_dialogs:
         window.status_message(status_message)
-        print(message)
+        print("LSP: " + message)
     else:
         if severe:
             sublime.error_message(message)

@@ -48,10 +48,10 @@ def notify(window: Optional[sublime.Window], message: str, status: str = 'LSP: s
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
         if window:
-            window.status_message(status)  # print short message to statusbar
+            window.status_message(status)
         else:
             sublime.status_message(status)
-        print(message)  # print full message to console log
+        print(message)
     else:
         sublime.message_dialog(message)
 
@@ -63,9 +63,9 @@ def notify_error(window: Optional[sublime.Window], message: str, status: str = '
     from .settings import userprefs
     if userprefs().suppress_error_dialogs:
         if window:
-            window.status_message(status)  # print short message to statusbar
+            window.status_message(status)
         else:
             sublime.status_message(status)
-        print(message)  # print full message to console log
+        print(message)
     else:
         sublime.error_message(message)

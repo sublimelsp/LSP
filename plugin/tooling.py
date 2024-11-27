@@ -137,13 +137,13 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             return
         if not base_url.endswith("package.json"):
             message = "URL must end with 'package.json'"
-            notify_error(sublime.active_window(), message, message)
+            notify_error(sublime.active_window(), message)
             return
         try:
             package = json.loads(urllib.request.urlopen(base_url).read().decode("utf-8"))
         except Exception as ex:
             message = f'Unable to load "{base_url}": {ex}'
-            notify_error(sublime.active_window(), message, message)
+            notify_error(sublime.active_window(), message)
             return
 
         # There might be a translations file as well.
@@ -156,12 +156,12 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         contributes = package.get("contributes")
         if not isinstance(contributes, dict):
             message = 'No "contributes" key found!'
-            notify_error(sublime.active_window(), message, message)
+            notify_error(sublime.active_window(), message)
             return
         configuration = contributes.get("configuration")
         if not isinstance(configuration, dict) and not isinstance(configuration, list):
             message = 'No "contributes.configuration" key found!'
-            notify_error(sublime.active_window(), message, message)
+            notify_error(sublime.active_window(), message)
             return
         if isinstance(configuration, dict):
             properties = configuration.get("properties")
@@ -171,7 +171,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 properties.update(configuration_item.get("properties"))
         if not isinstance(properties, dict):
             message = 'No "contributes.configuration.properties" key found!'
-            notify_error(sublime.active_window(), message, message)
+            notify_error(sublime.active_window(), message)
             return
 
         # Process each key-value pair of the server settings.
@@ -312,7 +312,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         view = wm.window.active_view()
         if not view:
             message = 'Troubleshooting must be run with a file opened'
-            notify_error(self.window, message, message)
+            notify_error(self.window, message)
             return
         active_view = view
         configs = wm.get_config_manager().get_configs()

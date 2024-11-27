@@ -2,7 +2,7 @@ from __future__ import annotations
 from .core.edit import parse_range
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
-from .core.logging import notify_error
+from .core.logging_notify import notify_error
 from .core.protocol import PrepareRenameParams
 from .core.protocol import PrepareRenameResult
 from .core.protocol import Range

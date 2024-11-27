@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .core.logging import notify
+from .core.logging_notify import notify
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand

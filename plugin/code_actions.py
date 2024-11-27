@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .core.logging import notify_error
+from .core.logging_notify import notify_error
 from .core.promise import Promise
 from .core.protocol import CodeAction
 from .core.protocol import CodeActionKind

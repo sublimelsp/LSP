@@ -7,7 +7,7 @@ from .configurations import WindowConfigManager
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
-from .logging import notify
+from .logging_notify import notify
 from .message_request_handler import MessageRequestHandler
 from .panels import LOG_LINES_LIMIT_SETTING_NAME
 from .panels import MAX_LOG_LINES_LIMIT_OFF

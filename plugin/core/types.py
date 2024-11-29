@@ -532,8 +532,8 @@ class Capabilities(DottedDict):
 
     def __init__(self, d: dict[str, Any] | None = None) -> None:
         super().__init__(d)
-        self._registrations: dict[str, set[str]] = {}
-        self._registration_options: dict[str, Any] = {}
+        self._registrations: dict[str, set[str | None]] = {}
+        self._registration_options: dict[str | None, Any] = {}
 
     def register(
         self,
@@ -577,6 +577,10 @@ class Capabilities(DottedDict):
         super().assign(cast(dict, d))
         if textsync:
             self.update(textsync)
+        diagnostic_provider_options = d.get('diagnosticProvider')
+        if diagnostic_provider_options:
+            self._registrations.setdefault('diagnosticProvider', set()).add(None)
+            self._registration_options[None] = diagnostic_provider_options
 
     def should_notify_did_open(self) -> bool:
         return "textDocumentSync.didOpen" in self

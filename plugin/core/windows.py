@@ -478,8 +478,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
         max_severity = userprefs().diagnostics_panel_include_severity_level
         contributions: OrderedDict[str, list[tuple[str, int | None, str | None, str | None]]] = OrderedDict()
         for session in self._sessions:
-            for (_, path), contribution in session.diagnostics.filter_map_diagnostics_async(
+            for uri, contribution in session.diagnostics.filter_map_diagnostics_async(
                     is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
+                path = parse_uri(uri)[1]
                 seen = path in contributions
                 contributions.setdefault(path, []).extend(contribution)
                 if not seen:

@@ -1,49 +1,71 @@
 from __future__ import annotations
-from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
-from .url import parse_uri
+from .protocol import Diagnostic
+from .protocol import DiagnosticSeverity
+from .protocol import DocumentUri
+from .protocol import Point
+from .url import normalize_uri
 from .views import diagnostic_severity
-from collections import OrderedDict
+from collections.abc import MutableMapping
 from typing import Callable, Iterator, Tuple, TypeVar
+import itertools
 import functools
 
 ParsedUri = Tuple[str, str]
 T = TypeVar('T')
 
 
-# NOTE: OrderedDict can only be properly typed in Python >=3.8.
-class DiagnosticsStorage(OrderedDict):
-    # From the specs:
-    #
-    #   When a file changes it is the server’s responsibility to re-compute
-    #   diagnostics and push them to the client. If the computed set is empty
-    #   it has to push the empty array to clear former diagnostics. Newly
-    #   pushed diagnostics always replace previously pushed diagnostics. There
-    #   is no merging that happens on the client side.
-    #
-    # https://microsoft.github.io/language-server-protocol/specification#textDocument_publishDiagnostics
+class DiagnosticsStorage(MutableMapping):
 
-    def add_diagnostics_async(self, document_uri: DocumentUri, diagnostics: list[Diagnostic]) -> None:
-        """
-        Add `diagnostics` for `document_uri` to the store, replacing previously received `diagnoscis`
-        for this `document_uri`. If `diagnostics` is the empty list, `document_uri` is removed from
-        the store. The item received is moved to the end of the store.
-        """
-        uri = parse_uri(document_uri)
-        if not diagnostics:
-            # received "clear diagnostics" message for this uri
-            self.pop(uri, None)
-            return
-        self[uri] = diagnostics
-        self.move_to_end(uri)  # maintain incoming order
+    def __init__(self) -> None:
+        super().__init__()
+        self._d: dict[tuple[DocumentUri, str], list[Diagnostic]] = dict()
+        self._identifiers = {''}
+        self._uris: set[DocumentUri] = set()
+
+    def __getitem__(self, key: DocumentUri, /) -> list[Diagnostic]:
+        uri = normalize_uri(key)
+        return sorted(
+            itertools.chain.from_iterable(self._d.get((uri, identifier), []) for identifier in self._identifiers),
+            key=lambda diagnostic: Point.from_lsp(diagnostic['range']['start'])
+        )
+
+    def __setitem__(self, key: DocumentUri | tuple[DocumentUri, str], value: list[Diagnostic], /) -> None:
+        uri, identifier = (normalize_uri(key), '') if isinstance(key, DocumentUri) else (normalize_uri(key[0]), key[1])
+        if identifier not in self._identifiers:
+            raise ValueError(f'identifier {identifier} must be registered first')
+        if value:
+            self._uris.add(uri)
+            self._d[(uri, identifier)] = value
+        else:
+            self._uris.discard(uri)
+            self._d.pop((uri, identifier), None)
+
+    def __delitem__(self, key: DocumentUri, /) -> None:
+        uri = normalize_uri(key)
+        self._uris.discard(uri)
+        for identifier in self._identifiers:
+            self._d.pop((uri, identifier), None)
+
+    def __iter__(self) -> Iterator[DocumentUri]:
+        return iter(self._uris)
+
+    def __len__(self) -> int:
+        return len(self._uris)
+
+    def register(self, identifier: str) -> None:
+        self._identifiers.add(identifier)
+
+    def unregister(self, identifier: str) -> None:
+        self._identifiers.discard(identifier)
 
     def filter_map_diagnostics_async(
-        self, pred: Callable[[Diagnostic], bool], f: Callable[[ParsedUri, Diagnostic], T]
-    ) -> Iterator[tuple[ParsedUri, list[T]]]:
+        self, pred: Callable[[Diagnostic], bool], f: Callable[[DocumentUri, Diagnostic], T]
+    ) -> Iterator[tuple[DocumentUri, list[T]]]:
         """
         Yields `(uri, results)` items with `results` being a list of `f(diagnostic)` for each
         diagnostic for this `uri` with `pred(diagnostic) == True`, filtered by `bool(f(diagnostic))`.
         Only `uri`s with non-empty `results` are returned. Each `uri` is guaranteed to be yielded
-        not more than once. Items and results are ordered as they came in from the server.
+        not more than once.
         """
         for uri, diagnostics in self.items():
             results: list[T] = list(filter(None, map(functools.partial(f, uri), filter(pred, diagnostics))))
@@ -51,12 +73,11 @@ class DiagnosticsStorage(OrderedDict):
                 yield uri, results
 
     def filter_map_diagnostics_flat_async(self, pred: Callable[[Diagnostic], bool],
-                                          f: Callable[[ParsedUri, Diagnostic], T]) -> Iterator[tuple[ParsedUri, T]]:
+                                          f: Callable[[DocumentUri, Diagnostic], T]) -> Iterator[tuple[DocumentUri, T]]:
         """
         Flattened variant of `filter_map_diagnostics_async()`. Yields `(uri, result)` items for each
         of the `result`s per `uri` instead. Each `uri` can be yielded more than once. Items are
-        grouped by `uri` and each `uri` group is guaranteed to appear not more than once. Items are
-        ordered as they came in from the server.
+        grouped by `uri` and each `uri` group is guaranteed to appear not more than once.
         """
         for uri, results in self.filter_map_diagnostics_async(pred, f):
             for result in results:
@@ -70,18 +91,6 @@ class DiagnosticsStorage(OrderedDict):
             sum(map(severity_count(DiagnosticSeverity.Error), self.values())),
             sum(map(severity_count(DiagnosticSeverity.Warning), self.values())),
         )
-
-    def diagnostics_by_document_uri(self, document_uri: DocumentUri) -> list[Diagnostic]:
-        """
-        Returns possibly empty list of diagnostic for `document_uri`.
-        """
-        return self.get(parse_uri(document_uri), [])
-
-    def diagnostics_by_parsed_uri(self, uri: ParsedUri) -> list[Diagnostic]:
-        """
-        Returns possibly empty list of diagnostic for `uri`.
-        """
-        return self.get(uri, [])
 
 
 def severity_count(severity: int) -> Callable[[list[Diagnostic]], int]:

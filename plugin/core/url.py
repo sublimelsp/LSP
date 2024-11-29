@@ -1,4 +1,7 @@
 from __future__ import annotations
+from .constants import INSTALLED_PACKAGES_PATH
+from .constants import PACKAGES_PATH
+from .protocol import DocumentUri
 from typing import Any
 from typing_extensions import deprecated
 from urllib.parse import urljoin
@@ -11,14 +14,18 @@ import re
 import sublime
 
 
+def normalize_uri(uri: DocumentUri) -> DocumentUri:
+    return unparse_uri(parse_uri(uri))
+
+
 def filename_to_uri(file_name: str) -> str:
     """
     Convert a file name obtained from view.file_name() into an URI
     """
-    prefix = sublime.installed_packages_path()
+    prefix = INSTALLED_PACKAGES_PATH
     if file_name.startswith(prefix):
         return _to_resource_uri(file_name, prefix)
-    prefix = sublime.packages_path()
+    prefix = PACKAGES_PATH
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
     path = pathname2url(file_name)

@@ -1374,7 +1374,7 @@ class Session(TransportCallbacks):
             data.check_applicable(sb)
         uri = sb.get_uri()
         if uri:
-            diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
+            diagnostics = self.diagnostics[uri]
             if diagnostics:
                 self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
 
@@ -2086,7 +2086,7 @@ class Session(TransportCallbacks):
         if isinstance(reason, str):
             return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
         diagnostics = params["diagnostics"]
-        self.diagnostics.add_diagnostics_async(uri, diagnostics)
+        self.diagnostics[uri] = diagnostics
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:

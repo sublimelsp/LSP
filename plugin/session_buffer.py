@@ -132,7 +132,7 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
-        self._document_diagnostic_pending_request: PendingDocumentDiagnosticRequest | None = None
+        self._document_diagnostic_pending_requests: dict[str, PendingDocumentDiagnosticRequest | None] = {}
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -322,9 +322,10 @@ class SessionBuffer:
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def _cancel_pending_requests_async(self) -> None:
-        if self._document_diagnostic_pending_request:
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
-            self._document_diagnostic_pending_request = None
+        for identifier, pending_request in self._document_diagnostic_pending_requests.items():
+            if pending_request:
+                self.session.cancel_request(pending_request.request_id)
+                self._document_diagnostic_pending_requests[identifier] = None
         if self.semantic_tokens.pending_response:
             self.session.cancel_request(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
@@ -503,50 +504,67 @@ class SessionBuffer:
             return
         if version is None:
             version = view.change_count()
-        if self._document_diagnostic_pending_request:
-            if self._document_diagnostic_pending_request.version == version and not forced_update:
-                return
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
-        params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
-        identifier = self.get_capability("diagnosticProvider.identifier")
-        if identifier:
-            params['identifier'] = identifier
-        result_id = self.session.diagnostics_result_ids.get(self._last_known_uri)
-        if result_id is not None:
-            params['previousResultId'] = result_id
-        request_id = self.session.send_request_async(
-            Request.documentDiagnostic(params, view),
-            partial(self._on_document_diagnostic_async, version),
-            partial(self._on_document_diagnostic_error_async, version)
-        )
-        self._document_diagnostic_pending_request = PendingDocumentDiagnosticRequest(version, request_id)
+        # if self._document_diagnostic_pending_request:
+        #     if self._document_diagnostic_pending_request.version == version and not forced_update:
+        #         return
+        #     self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+        for identifier, pending_request in self._document_diagnostic_pending_requests.items():
+            if pending_request:
+                self.session.cancel_request(pending_request.request_id)
+                self._document_diagnostic_pending_requests[identifier] = None
+        _params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        identifiers = set()
+        for registration in self.get_capability_2('diagnosticProvider'):
+            identifiers.add(registration.get('identifier', ''))
+        for identifier in identifiers:
+            params = _params.copy()
+            if identifier:
+                params['identifier'] = identifier
+            result_id = self.session.diagnostics_result_ids.get(self._last_known_uri)
+            if result_id is not None:
+                params['previousResultId'] = result_id
+            request_id = self.session.send_request_async(
+                Request.documentDiagnostic(params, view),
+                partial(self._on_document_diagnostic_async, identifier, version),
+                partial(self._on_document_diagnostic_error_async, identifier, version)
+            )
+            self._document_diagnostic_pending_requests[identifier] = \
+                PendingDocumentDiagnosticRequest(version, request_id)
 
-    def _on_document_diagnostic_async(self, version: int, response: DocumentDiagnosticReport) -> None:
-        self._document_diagnostic_pending_request = None
-        self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
+    def _on_document_diagnostic_async(self, identifier: str, version: int, response: DocumentDiagnosticReport) -> None:
+        self._document_diagnostic_pending_requests[identifier] = None
+        view = self.some_view()
+        if view and view.change_count() == version:
+            self._apply_document_diagnostic_async(identifier, version, response)
+            mgr = self.session.manager()
+            if mgr:
+                mgr.on_diagnostics_updated()
 
     def _apply_document_diagnostic_async(
-        self, view: sublime.View | None, response: DocumentDiagnosticReport
+        self, identifier: str, version: int, response: DocumentDiagnosticReport
     ) -> None:
         self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
-            self.session.m_textDocument_publishDiagnostics(
-                {'uri': self._last_known_uri, 'diagnostics': response['items']})
+            self.session.diagnostics[(self._last_known_uri, identifier)] = response['items']
+            self.on_diagnostics_async(
+                self.session.diagnostics[self._last_known_uri], version, self.session.session_views_by_visibility()[0])
         for uri, diagnostic_report in response.get('relatedDocuments', {}):
             sb = self.session.get_session_buffer_for_uri_async(uri)
             if sb:
                 cast(SessionBuffer, sb)._apply_document_diagnostic_async(
-                    None, cast(DocumentDiagnosticReport, diagnostic_report))
+                    identifier, version, cast(DocumentDiagnosticReport, diagnostic_report))
 
-    def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
-        self._document_diagnostic_pending_request = None
+    def _on_document_diagnostic_error_async(self, identifier: str, version: int, error: ResponseError) -> None:
+        self._document_diagnostic_pending_requests[identifier] = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                 # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
                 # (in that case the request will be retriggered automatically anyway)
-                sublime.set_timeout_async(
-                    lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
+                pass
+                # TODO retrigger for this identifier
+                # sublime.set_timeout_async(
+                #     lambda: self._if_view_unchanged(self.do_document_diagnostic_async, version)(version), 500)
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.document_diagnostic_needs_refresh = needs_refresh

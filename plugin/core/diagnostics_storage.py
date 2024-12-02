@@ -53,9 +53,11 @@ class DiagnosticsStorage(MutableMapping):
         return len(self._uris)
 
     def register(self, identifier: str) -> None:
+        """ Register an identifier for a diagnostics stream. """
         self._identifiers.add(identifier)
 
     def unregister(self, identifier: str) -> None:
+        """ Unregister an identifier for a diagnostics stream. """
         self._identifiers.discard(identifier)
 
     def filter_map_diagnostics_async(

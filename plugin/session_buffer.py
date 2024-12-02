@@ -520,7 +520,7 @@ class SessionBuffer:
             params = _params.copy()
             if identifier:
                 params['identifier'] = identifier
-            result_id = self.session.diagnostics_result_ids.get(self._last_known_uri)
+            result_id = self.session.diagnostics_result_ids.get((self._last_known_uri, identifier))
             if result_id is not None:
                 params['previousResultId'] = result_id
             request_id = self.session.send_request_async(
@@ -543,7 +543,7 @@ class SessionBuffer:
     def _apply_document_diagnostic_async(
         self, identifier: str, version: int, response: DocumentDiagnosticReport
     ) -> None:
-        self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
+        self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.diagnostics[(self._last_known_uri, identifier)] = response['items']
             self.on_diagnostics_async(

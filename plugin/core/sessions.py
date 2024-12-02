@@ -1281,7 +1281,7 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self.diagnostics_result_ids: dict[DocumentUri, str | None] = {}
+        self.diagnostics_result_ids: dict[tuple[DocumentUri, str], str | None] = {}
         self.workspace_diagnostics_pending_response: int | None = None
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
@@ -1544,7 +1544,11 @@ class Session(TransportCallbacks):
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
     def _handle_initialize_success(self, result: InitializeResult) -> None:
-        self.capabilities.assign(result.get('capabilities', dict()))
+        capabilities = result.get('capabilities', dict())
+        self.capabilities.assign(capabilities)
+        if diagnostic_provider := capabilities.get('diagnosticProvider'):
+            if identifier := diagnostic_provider.get('identifier'):
+                self.diagnostics.register(identifier)
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
@@ -1937,12 +1941,13 @@ class Session(TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
+        # TODO consider separate diagnostic streams (identifiers)
         if self.workspace_diagnostics_pending_response:
             # The server is probably leaving the request open intentionally, in order to continuously stream updates via
             # $/progress notifications.
             return
         previous_result_ids: list[PreviousResultId] = [
-            {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
+            {'uri': uri, 'value': result_id} for (uri, _), result_id in self.diagnostics_result_ids.items()
             if result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
@@ -1951,11 +1956,11 @@ class Session(TransportCallbacks):
             params['identifier'] = identifier
         self.workspace_diagnostics_pending_response = self.send_request_async(
             Request.workspaceDiagnostic(params),
-            self._on_workspace_diagnostics_async,
+            functools.partial(self._on_workspace_diagnostics_async, identifier or ''),
             self._on_workspace_diagnostics_error_async)
 
     def _on_workspace_diagnostics_async(
-        self, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
+        self, identifier: str, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
     ) -> None:
         if reset_pending_response:
             self.workspace_diagnostics_pending_response = None
@@ -1984,7 +1989,7 @@ class Session(TransportCallbacks):
                 sb = self.get_session_buffer_for_uri_async(uri)
                 if sb and sb.version != version:
                     continue
-            self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
+            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
                 self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
 
@@ -2135,6 +2140,9 @@ class Session(TransportCallbacks):
                         watcher = self._watcher_impl.create(folder.path, [pattern], kind, ignores, self)
                         file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
+            elif capability_path == 'diagnosticProvider':
+                if (identifier := options.get('identifier')) is not None:
+                    self.diagnostics.register(identifier)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
@@ -2157,6 +2165,9 @@ class Session(TransportCallbacks):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
+            if capability_path == 'diagnosticProvider':
+                if data and (identifier := data.options.get('identifier')) is not None:
+                    self.diagnostics.unregister(identifier)
         self.send_response(Response(request_id, None))
 
     def m_window_showDocument(self, params: Any, request_id: Any) -> None:
@@ -2210,8 +2221,9 @@ class Session(TransportCallbacks):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
+                # TODO somehow get the identifier (probably needs to be stored based on progress token)
                 self._on_workspace_diagnostics_async(
-                    cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
+                    '', cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress

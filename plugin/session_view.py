@@ -208,7 +208,9 @@ class SessionView:
     ) -> None:
         """This method actually modifies the auto_complete_triggers entries for the view."""
         selector = self.session.config.auto_complete_selector
-        if not selector:
+        if selector:
+            selector = selector + ', ' + str(settings.get("auto_complete_selector"))
+        else:
             # If the user did not set up an auto_complete_selector for this server configuration, fallback to the
             # "global" auto_complete_selector of the view.
             selector = str(settings.get("auto_complete_selector"))

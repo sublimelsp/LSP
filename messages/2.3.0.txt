@@ -14,7 +14,7 @@
 - ensure ending a session triggers listeners (#2518) (Rafał Chłodnicki)
 - use session-unique region keys for semantic tokens (#2517) (Rafał Chłodnicki)
 
-# Echancements
+# Enhancements
 
 - set completions from the async thread (#2563) (jwortmann)
 - cancel pending requests as early as possible (#2543) (Rafał Chłodnicki)

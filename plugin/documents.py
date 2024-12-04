@@ -526,7 +526,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
         if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._code_actions_for_selection)
+            content += code_actions_content(self._code_actions_for_selection, lightbulb=False)
         if userprefs().show_diagnostics_severity_level:
             diagnostics_with_config: list[tuple[ClientConfig, Diagnostic]] = []
             diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []

@@ -68,6 +68,13 @@
     color: var(--foreground);
     padding: 0.5rem;
 }
+.actions .lightbulb {
+    padding-right: 0.3rem;
+}
+.actions .lightbulb img {
+    width: 0.9em;
+    height: 0.9em;
+}
 .actions a.icon {
     text-decoration: none;
 }

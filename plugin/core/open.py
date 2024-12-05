@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
 from .promise import Promise
@@ -133,11 +134,7 @@ def center_selection(v: sublime.View, r: Range) -> sublime.View:
     window = v.window()
     if window:
         window.focus_view(v)
-    if int(sublime.version()) >= 4124:
-        v.show_at_center(selection.begin(), animate=False)
-    else:
-        # TODO: remove later when a stable build lands
-        v.show_at_center(selection.begin())  # type: ignore
+    v.show_at_center(selection.begin(), animate=False)
     return v
 
 
@@ -155,9 +152,9 @@ def open_externally(uri: str, take_focus: bool) -> bool:
     """
     try:
         # TODO: handle take_focus
-        if sublime.platform() == "windows":
+        if ST_PLATFORM == "windows":
             os.startfile(uri)  # type: ignore
-        elif sublime.platform() == "osx":
+        elif ST_PLATFORM == "osx":
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux
             subprocess.check_call(("xdg-open", uri))

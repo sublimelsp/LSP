@@ -1,8 +1,8 @@
 from __future__ import annotations
+from .constants import ST_PACKAGES_PATH
 from typing import Any
 import traceback
 import inspect
-import sublime
 
 
 log_debug = False
@@ -26,7 +26,7 @@ def trace() -> None:
         return
     previous_frame = current_frame.f_back
     file_name, line_number, function_name, _, _ = inspect.getframeinfo(previous_frame)  # type: ignore
-    file_name = file_name[len(sublime.packages_path()) + len("/LSP/"):]
+    file_name = file_name[len(ST_PACKAGES_PATH) + len("/LSP/"):]
     debug(f"TRACE {function_name:<32} {file_name}:{line_number}")
 
 

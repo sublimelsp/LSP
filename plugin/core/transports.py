@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .constants import ST_PLATFORM
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
@@ -310,7 +311,7 @@ def kill_all_subprocesses() -> None:
 
 def _fixup_startup_args(args: list[str]) -> Any:
     startupinfo = None
-    if sublime.platform() == "windows":
+    if ST_PLATFORM == "windows":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
         executable_arg = args[0]

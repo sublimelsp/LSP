@@ -83,12 +83,6 @@ link_kinds = [
 ]
 
 
-LIGHTBULB_ICON_HTML = """
-<span class="lightbulb">
-    <img width="13" height="13" src="res://Packages/LSP/icons/lightbulb_colored.png">
-</span>"""
-
-
 def code_actions_content(actions_by_config: list[CodeActionsByConfigName], lightbulb: bool = True) -> str:
     formatted = []
     for config_name, actions in actions_by_config:
@@ -101,7 +95,8 @@ def code_actions_content(actions_by_config: list[CodeActionsByConfigName], light
             text = actions[0].get('title', 'code action')
         href = "{}:{}".format('code-actions', config_name)
         link = make_link(href, text)
-        lightbulb_html = LIGHTBULB_ICON_HTML if lightbulb else ''
+        lightbulb_html = '<span class="lightbulb"><img src="res://Packages/LSP/icons/lightbulb_colored.png"></span>' \
+            if lightbulb else ''
         formatted.append(
             f'<div class="actions">{lightbulb_html}{link} <span class="color-muted">{config_name}</span></div>')
     return "".join(formatted)

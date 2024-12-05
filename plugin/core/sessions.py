@@ -114,6 +114,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
 from weakref import WeakSet
 import functools
@@ -121,6 +122,11 @@ import mdpopups
 import os
 import sublime
 import weakref
+
+
+if TYPE_CHECKING:
+    from ..inline_completion import InlineCompletionData
+
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
@@ -324,6 +330,9 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "completionList": {
                 "itemDefaults": ["editRange", "insertTextFormat", "data"]
             }
+        },
+        "inlineCompletion": {
+            "dynamicRegistration": True
         },
         "signatureHelp": {
             "dynamicRegistration": True,
@@ -701,6 +710,7 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     view = cast(sublime.View, None)
     hover_provider_count = 0
+    inline_completion = cast('InlineCompletionData', None)
 
     @abstractmethod
     def session_async(self, capability: str, point: int | None = None) -> Session | None:

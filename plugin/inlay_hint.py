@@ -22,8 +22,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
     def __init__(self, window: sublime.Window) -> None:
         super().__init__(window)
         settings = userprefs()
-        default = settings.show_inlay_hints if settings is not None else False
-        window.settings().set('lsp_show_inlay_hints', default)
+        window.settings().set('lsp_show_inlay_hints', settings.show_inlay_hints if settings is not None else False)
 
     def run(self, enable: bool | None = None) -> None:
         window_settings = self.window.settings()

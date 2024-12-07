@@ -54,7 +54,8 @@ def parse_uri(uri: str) -> tuple[str, str]:
         path = url2pathname(parsed.path)
         if os.name == 'nt':
             netloc = url2pathname(parsed.netloc)
-            path = path[1:]
+            if path[0] == '\\':
+                path = path[1:]
             path = re.sub(r"^/([a-zA-Z]:)", r"\1", path)  # remove slash preceding drive letter
             path = re.sub(r"^([a-z]):", _uppercase_driveletter, path)
             if netloc:

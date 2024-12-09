@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.constants import ST_VERSION
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.protocol import InlayHint
@@ -21,7 +22,16 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
 
     def __init__(self, window: sublime.Window) -> None:
         super().__init__(window)
-        window.settings().set('lsp_show_inlay_hints', userprefs().show_inlay_hints)
+        window.settings().setdefault('lsp_show_inlay_hints', self._get_default_value())
+
+    @staticmethod
+    def _get_default_value() -> bool:
+        settings = userprefs()
+        if settings is not None:
+            return settings.show_inlay_hints
+        if ST_VERSION >= 4171:  # All API functions are available at import time
+            return sublime.load_settings('LSP.sublime-settings').get('show_inlay_hints')
+        return False
 
     def run(self, enable: bool | None = None) -> None:
         window_settings = self.window.settings()

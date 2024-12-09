@@ -59,6 +59,9 @@ from .plugin.hover import LspHoverCommand
 from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
 from .plugin.inlay_hint import LspToggleInlayHintsCommand
+from .plugin.inline_completion import LspCommitInlineCompletionCommand
+from .plugin.inline_completion import LspInlineCompletionCommand
+from .plugin.inline_completion import LspNextInlineCompletionCommand
 from .plugin.panels import LspClearLogPanelCommand
 from .plugin.panels import LspClearPanelCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
@@ -99,6 +102,7 @@ __all__ = (
     "LspCollapseTreeItemCommand",
     "LspColorPresentationCommand",
     "LspCommitCompletionWithOppositeInsertMode",
+    "LspCommitInlineCompletionCommand",
     "LspCopyToClipboardFromBase64Command",
     "LspDisableLanguageServerGloballyCommand",
     "LspDisableLanguageServerInProjectCommand",
@@ -120,7 +124,9 @@ __all__ = (
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",
+    "LspInlineCompletionCommand",
     "LspNextDiagnosticCommand",
+    "LspNextInlineCompletionCommand",
     "LspOnDoubleClickCommand",
     "LspOpenLinkCommand",
     "LspOpenLocationCommand",

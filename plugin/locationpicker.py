@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.constants import ST_PACKAGES_PATH
 from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.protocol import DocumentUri
@@ -52,7 +53,7 @@ def open_basic_file(
     else:
         prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)
-        filename = sublime.packages_path() + url2pathname(uri[len(prefix):])
+        filename = ST_PACKAGES_PATH + url2pathname(uri[len(prefix):])
         # Window.open_file can only focus and scroll to a location in a resource file if it is already opened
         if not session.window.find_open_file(filename):
             return None

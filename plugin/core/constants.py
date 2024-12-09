@@ -12,6 +12,10 @@ import sublime
 SublimeKind = Tuple[int, str, str]
 
 
+ST_CACHE_PATH = sublime.cache_path()
+ST_INSTALLED_PACKAGES_PATH = sublime.installed_packages_path()
+ST_PACKAGES_PATH = sublime.packages_path()
+ST_PLATFORM = sublime.platform()
 ST_VERSION = int(sublime.version())
 
 

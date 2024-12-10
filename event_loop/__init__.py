@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 from threading import Thread
-from typing import Any, Awaitable
+from typing import Awaitable
 from ..plugin.core.logging import debug
 
 __loop: asyncio.AbstractEventLoop | None = None

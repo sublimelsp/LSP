@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .core.constants import RegionKey
+from .core.promise import Promise
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
@@ -15,7 +16,8 @@ from .core.views import get_uri_and_position_from_location
 from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
-from typing import Literal
+from functools import partial
+from typing import List, Literal, Union
 import functools
 import linecache
 import os
@@ -23,6 +25,7 @@ import sublime
 
 
 OutputMode = Literal['output_panel', 'quick_panel']
+ReferencesResponse = Union[List[Location], None]
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -76,11 +79,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
         include_declaration: bool = False,
         output_mode: OutputMode | None = None,
     ) -> None:
-        session = self.best_session(self.capability)
+        sessions = list(self.sessions(self.capability))
         file_path = self.view.file_name()
-        pos = get_position(self.view, event, point)
-        if session and file_path and pos is not None:
-            position_params = text_document_position_params(self.view, pos)
+        position = get_position(self.view, event, point)
+        if sessions and position is not None:
+            position_params = text_document_position_params(self.view, position)
             params = {
                 'textDocument': position_params['textDocument'],
                 'position': position_params['position'],
@@ -88,25 +91,51 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     "includeDeclaration": include_declaration,
                 },
             }
-            request = Request("textDocument/references", params, self.view, progress=True)
-            word_range = self.view.word(pos)
-            session.send_request(
-                request,
-                functools.partial(
-                    self._handle_response_async,
-                    self.view.substr(word_range),
-                    session,
+            word_range = self.view.word(position)
+            word = self.view.substr(word_range)
+            word_begin = word_range.begin()
+            requests: list[Promise[ReferencesResponse]] = []
+            last_session = sessions[0]
+            for session in sessions:
+                request = Request("textDocument/references", params, self.view, progress=True)
+                requests.append(session.send_request_task(request))
+            Promise.all(requests).then(
+                partial(
+                    self._handle_responses_async,
+                    word,
+                    last_session,
                     side_by_side,
                     force_group,
                     fallback,
                     group,
                     output_mode,
                     event,
-                    word_range.begin()
-                )
-            )
+                    word_begin,
+                ))
         else:
             self._handle_no_results(fallback, side_by_side)
+
+    def _handle_responses_async(
+        self,
+        word: str,
+        session: Session,
+        side_by_side: bool,
+        force_group: bool,
+        fallback: bool,
+        group: int,
+        output_mode: OutputMode | None,
+        event: dict | None,
+        position: int,
+        responses: list[ReferencesResponse]
+    ) -> None:
+        # Normalize all responses to LocationLink.
+        results: list[Location] = []
+        for response in responses:
+            if not response:
+                continue
+            results.extend(response)
+        self._handle_response_async(
+            word, session, side_by_side, force_group, fallback, group, output_mode, event, position, results)
 
     def _handle_response_async(
         self,
@@ -119,7 +148,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         output_mode: OutputMode | None,
         event: dict | None,
         position: int,
-        response: list[Location] | None
+        response: ReferencesResponse
     ) -> None:
         sublime.set_timeout(lambda: self._handle_response(
             word, session, side_by_side, force_group, fallback, group, output_mode, event, position, response))
@@ -135,7 +164,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         output_mode: OutputMode | None,
         event: dict | None,
         position: int,
-        response: list[Location] | None
+        response: ReferencesResponse
     ) -> None:
         if not response:
             self._handle_no_results(fallback, side_by_side)

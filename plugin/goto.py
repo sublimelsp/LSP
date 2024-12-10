@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.promise import Promise
 from .core.protocol import Location
 from .core.protocol import LocationLink
 from .core.protocol import Request
@@ -10,7 +11,10 @@ from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from .locationpicker import open_location_async
 from functools import partial
+from typing_extensions import List, TypeAlias, Union
 import sublime
+
+GotoResponse: TypeAlias = Union[None, Location, List[Location], List[LocationLink]]
 
 
 class LspGotoCommand(LspTextCommand):
@@ -53,17 +57,49 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool = False,
         group: int = -1
     ) -> None:
+        sessions = list(self.sessions(self.capability))
         position = get_position(self.view, event, point)
-        session = self.best_session(self.capability, position)
-        if session and position is not None:
+        if sessions and position is not None:
+            requests: list[Promise[GotoResponse]] = []
             params = text_document_position_params(self.view, position)
-            request = Request(self.method, params, self.view, progress=True)
-            session.send_request(
-                request,
-                partial(self._handle_response_async, session, side_by_side, force_group, fallback, group, position)
-            )
+            last_session = sessions[0]
+            for session in sessions:
+                request = Request(self.method, params, self.view, progress=True)
+                requests.append(session.send_request_task(request))
+            Promise.all(requests).then(
+                partial(self._handle_responses_async, last_session, side_by_side, force_group, fallback, group, position))
         else:
             self._handle_no_results(fallback, side_by_side)
+
+    def _handle_responses_async(
+        self,
+        session: Session,
+        side_by_side: bool,
+        force_group: bool,
+        fallback: bool,
+        group: int,
+        position: int,
+        responses: list[GotoResponse]
+    ) -> None:
+        print(responses)
+        # Normalize all responses to LocationLink.
+        results: list[LocationLink] = []
+        for response in responses:
+            if not response:
+                continue
+            if not isinstance(response, list):
+                response = [response]
+            for location in response:
+                if 'targetUri' in location:
+                    results.append(location)
+                else:
+                    # Convert Location to LocationLink.
+                    results.append({
+                        "targetUri": location["uri"],
+                        "targetRange": location["range"],
+                        "targetSelectionRange": location["range"]
+                    })
+        self._handle_response_async(session, side_by_side, force_group, fallback, group, position, results)
 
     def _handle_response_async(
         self,
@@ -73,7 +109,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool,
         group: int,
         position: int,
-        response: None | Location | list[Location] | list[LocationLink]
+        response: GotoResponse
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})

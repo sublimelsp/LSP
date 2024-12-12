@@ -2383,6 +2383,7 @@ class Session(TransportCallbacks):
 
     def send_payload(self, payload: dict[str, Any]) -> None:
         try:
+            payload = self.config.map_uri_on_payload(payload, is_from_client_to_server=True)
             self.transport.send(payload)  # type: ignore
         except AttributeError:
             pass
@@ -2425,6 +2426,7 @@ class Session(TransportCallbacks):
         return (None, None, None, None, None)
 
     def on_payload(self, payload: dict[str, Any]) -> None:
+        payload = self.config.map_uri_on_payload(payload, is_from_client_to_server=False)
         handler, result, req_id, typestr, _method = self.deduce_payload(payload)
         if handler:
             try:

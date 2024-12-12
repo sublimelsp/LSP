@@ -9,6 +9,7 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
+from .core.url import parse_uri
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
@@ -183,7 +184,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             pt = selection[0].b
             view_filename = self.view.file_name()
             for idx, location in enumerate(locations):
-                if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
+                if view_filename != parse_uri(location['uri'])[1]:
                     continue
                 index = idx
                 if position_to_offset(location['range']['start'], self.view) > pt:
@@ -246,7 +247,7 @@ def _group_locations_by_uri(
     grouped_locations: dict[str, list[tuple[Point, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
-        file_path = config.map_server_uri_to_client_path(uri)
+        file_path = parse_uri(uri)[1]
         point = Point.from_lsp(position)
         # get line of the reference, to showcase its use
         reference_line = get_line(window, file_path, point.row)

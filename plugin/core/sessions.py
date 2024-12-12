@@ -115,6 +115,7 @@ from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
+from typing_extensions import deprecated
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -1356,11 +1357,13 @@ class Session(TransportCallbacks):
         for sv in self.session_views_async():
             self.config.set_view_status(sv.view, self.config_status_message)
 
+    @deprecated("Use set_config_status_async(message) instead")
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
         for sv in self.session_views_async():
             sv.view.set_status(key, message)
 
+    @deprecated("Use set_config_status_async('') instead")
     def erase_window_status_async(self, key: str) -> None:
         self._status_messages.pop(key, None)
         for sv in self.session_views_async():

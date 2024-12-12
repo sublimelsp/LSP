@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .constants import CODE_ACTION_KINDS
+from .constants import ST_CACHE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
@@ -115,13 +116,13 @@ def get_storage_path() -> str:
     - on Windows: %LocalAppData%/Sublime Text
     - on Linux: ~/.cache/sublime-text
     """
-    return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
+    return os.path.abspath(os.path.join(ST_CACHE_PATH, "..", "Package Storage"))
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables = window.extract_variables()
     variables["storage_path"] = get_storage_path()
-    variables["cache_path"] = sublime.cache_path()
+    variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
     variables["home"] = os.path.expanduser('~')
     return variables

@@ -1,6 +1,6 @@
 from __future__ import annotations
-from .constants import INSTALLED_PACKAGES_PATH
-from .constants import PACKAGES_PATH
+from .constants import ST_INSTALLED_PACKAGES_PATH
+from .constants import ST_PACKAGES_PATH
 from .protocol import DocumentUri
 from typing import Any
 from typing_extensions import deprecated
@@ -22,10 +22,10 @@ def filename_to_uri(file_name: str) -> str:
     """
     Convert a file name obtained from view.file_name() into an URI
     """
-    prefix = INSTALLED_PACKAGES_PATH
+    prefix = ST_INSTALLED_PACKAGES_PATH
     if file_name.startswith(prefix):
         return _to_resource_uri(file_name, prefix)
-    prefix = PACKAGES_PATH
+    prefix = ST_PACKAGES_PATH
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
     path = pathname2url(file_name)

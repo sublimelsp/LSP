@@ -1,0 +1,48 @@
+=> 2.3.0
+
+# Features
+
+- truncate inlay hint (#2514) (bivashy)
+- add variable for VersionedTextDocumentIdentifier to use with lsp_execute (#2516) (jwortmann)
+
+# Fixes
+
+- code actions on save not fixing issues if saving quickly (#2540) (Rafał Chłodnicki)
+- respect user-preferred flags when canceling completions (#2541) (Rafał Chłodnicki)
+- consider priority_selector when using best_session during rename (#2538) (Rafał Chłodnicki)
+- fix not considering given point when choosing best session in Goto commands (#2533) (jwortmann)
+- ensure ending a session triggers listeners (#2518) (Rafał Chłodnicki)
+- use session-unique region keys for semantic tokens (#2517) (Rafał Chłodnicki)
+
+# Enhancements
+
+- set completions from the async thread (#2563) (jwortmann)
+- cancel pending requests as early as possible (#2543) (Rafał Chłodnicki)
+- don't attach LSP to syntax test files (#2531) (jwortmann)
+- make DocumentSyncListener more efficient if no server is running (#2532) (jwortmann)
+- remove unnecessary parallel debouncing on selection change (#2529) (jwortmann)
+- print URI error to status bar instead of error dialog (#2528) (jwortmann)
+- don't restart servers when userprefs change (#2448) (jwortmann)
+- use orjson to de-/serialize json-rpc messages (#2513) (deathaxe)
+
+# Documentation
+
+- add LSP-twiggy to language servers list (#2558) (Ivan Nikolić)
+- update vue servers (#2549) (Rafał Chłodnicki)
+- tweak badges in Readme (#2544) (jwortmann)
+- add LSP-some-sass to language servers list (#2539) (Ivan Nikolić)
+- update semantic token types in docs (Janos Wortmann)
+- fix phpactor selector (#2512) (Rafał Chłodnicki)
+
+# Refactors
+
+- use namespaced enum constants (Janos Wortmann)
+- improve custom IntFlag enum and annotations (Janos Wortmann)
+- remove deprecated abstractproperty decorator (Janos Wortmann)
+- replace literal with enum constant (Janos Wortmann)
+- update type stubs for Python 3.8 (#2535) (jwortmann)
+- remove unnecessary use of generators for session retrieval (#2524) (Rafał Chłodnicki)
+- feat: make DebouncerNonThreadSafe public (#2525) (Rafał Chłodnicki)
+- update LSP types and pyright (#2519) (Rafał Chłodnicki)
+- use generated types for python 38 (#2500) (Предраг Николић)
+- add info about tinymist (#2473) (Ilia)

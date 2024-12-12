@@ -7,6 +7,7 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
+from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
 from .core.panels import PanelName
@@ -525,7 +526,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
         if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._code_actions_for_selection)
+            content += code_actions_content(self._code_actions_for_selection, lightbulb=False)
         if userprefs().show_diagnostics_severity_level:
             diagnostics_with_config: list[tuple[ClientConfig, Diagnostic]] = []
             diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
@@ -618,8 +619,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         flags: sublime.AutoCompleteFlags = sublime.AutoCompleteFlags.NONE
     ) -> None:
         self._completions_task = None
-        # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
-        sublime.set_timeout(lambda: clist.set_completions(completions, flags))
+        if ST_VERSION >= 4184:  # https://github.com/sublimehq/sublime_text/issues/6249#issuecomment-2502804237
+            clist.set_completions(completions, flags)
+        else:
+            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+            sublime.set_timeout(lambda: clist.set_completions(completions, flags))
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 

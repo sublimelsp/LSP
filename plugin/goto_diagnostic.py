@@ -265,7 +265,7 @@ def open_location(
     session: Session, location: Location, flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE, group: int = -1
 ) -> sublime.View:
     uri, position = get_uri_and_position_from_location(location)
-    file_name = to_encoded_filename(session.config.map_server_uri_to_client_path(uri), position)
+    file_name = to_encoded_filename(parse_uri(uri)[1], position)
     return session.window.open_file(file_name, flags=flags | sublime.NewFileFlags.ENCODED_POSITION, group=group)
 
 

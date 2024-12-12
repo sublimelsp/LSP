@@ -854,24 +854,23 @@ class ClientConfig:
             return False
         return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
 
-    def map_client_path_to_server_uri(self, path: str) -> str:
-        if self.path_maps:
-            for path_map in self.path_maps:
-                path, mapped = path_map.map_from_local_to_remote(path)
-                if mapped:
-                    break
-        return filename_to_uri(path)
+    def map_uri_on_payload(self, payload: Any, is_from_client_to_server: bool) -> Any:
+        if isinstance(payload, dict):
+            for k, v in payload.items():
+                payload[k] = self.map_uri_on_payload(v, is_from_client_to_server)
 
-    def map_server_uri_to_client_path(self, uri: str) -> str:
-        scheme, path = parse_uri(uri)
-        if scheme not in ("file", "res"):
-            raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
-        if self.path_maps:
+        if isinstance(payload, list):
+            for i, v in enumerate(payload):
+                payload[i] = self.map_uri_on_payload(v, is_from_client_to_server)
+
+        if isinstance(payload, str) and payload.startswith("file://"): 
             for path_map in self.path_maps:
-                path, mapped = path_map.map_from_remote_to_local(path)
+                path, mapped = path_map.map_from_local_to_remote(payload) if is_from_client_to_server else \
+                               path_map.map_from_remote_to_local(payload)
                 if mapped:
-                    break
-        return path
+                    payload = path
+
+        return payload
 
     def is_disabled_capability(self, capability_path: str) -> bool:
         for value in self.disabled_capabilities.walk(capability_path):

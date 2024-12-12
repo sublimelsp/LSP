@@ -18,8 +18,8 @@ class DiagnosticsStorage(MutableMapping):
 
     def __init__(self) -> None:
         super().__init__()
-        self._d: dict[tuple[DocumentUri, str], list[Diagnostic]] = dict()
-        self._identifiers = {''}
+        self._d: dict[tuple[DocumentUri, str | None], list[Diagnostic]] = dict()
+        self._identifiers: set[str | None] = {None}
         self._uris: set[DocumentUri] = set()
 
     def __getitem__(self, key: DocumentUri, /) -> list[Diagnostic]:
@@ -29,8 +29,9 @@ class DiagnosticsStorage(MutableMapping):
             key=lambda diagnostic: Point.from_lsp(diagnostic['range']['start'])
         )
 
-    def __setitem__(self, key: DocumentUri | tuple[DocumentUri, str], value: list[Diagnostic], /) -> None:
-        uri, identifier = (normalize_uri(key), '') if isinstance(key, DocumentUri) else (normalize_uri(key[0]), key[1])
+    def __setitem__(self, key: DocumentUri | tuple[DocumentUri, str | None], value: list[Diagnostic], /) -> None:
+        uri, identifier = (normalize_uri(key), None) if isinstance(key, DocumentUri) else \
+            (normalize_uri(key[0]), key[1])
         if identifier not in self._identifiers:
             raise ValueError(f'identifier {identifier} must be registered first')
         if value:

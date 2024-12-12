@@ -132,7 +132,7 @@ class SessionBuffer:
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
-        self._document_diagnostic_pending_requests: dict[str, PendingDocumentDiagnosticRequest | None] = {}
+        self._document_diagnostic_pending_requests: dict[str | None, PendingDocumentDiagnosticRequest | None] = {}
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
@@ -265,20 +265,25 @@ class SessionBuffer:
         for sv in self.session_views:
             sv.on_capability_removed_async(registration_id, discarded)
 
+    @deprecated("Use get_providers instead")
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
             return None
         value = self.capabilities.get(capability_path)
         return value if value is not None else self.session.capabilities.get(capability_path)
 
-    def get_capability_2(self, capability_path: str) -> list[Any]:
-        if self.session.config.is_disabled_capability(capability_path):
+    def get_providers(self, capability_name: str) -> list[Any]:
+        if self.session.config.is_disabled_capability(capability_name):
             return []
-        return self.capabilities.get_all(capability_path) + self.session.capabilities.get_all(capability_path)
+        return self.capabilities.get_all(capability_name) + self.session.capabilities.get_all(capability_name)
 
+    @deprecated("Use has_provider instead")
     def has_capability(self, capability_path: str) -> bool:
         value = self.get_capability(capability_path)
         return value is not False and value is not None
+
+    def has_provider(self, capability_name: str) -> bool:
+        return bool(self.get_providers(capability_name))
 
     def text_sync_kind(self) -> TextDocumentSyncKind:
         value = self.capabilities.text_sync_kind()
@@ -514,8 +519,8 @@ class SessionBuffer:
                 self._document_diagnostic_pending_requests[identifier] = None
         _params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         identifiers = set()
-        for registration in self.get_capability_2('diagnosticProvider'):
-            identifiers.add(registration.get('identifier', ''))
+        for provider in self.get_providers('diagnosticProvider'):
+            identifiers.add(provider.get('identifier', ''))
         for identifier in identifiers:
             params = _params.copy()
             if identifier:
@@ -525,13 +530,15 @@ class SessionBuffer:
                 params['previousResultId'] = result_id
             request_id = self.session.send_request_async(
                 Request.documentDiagnostic(params, view),
-                partial(self._on_document_diagnostic_async, identifier, version),
+                partial(self.on_document_diagnostic_async, identifier, version),
                 partial(self._on_document_diagnostic_error_async, identifier, version)
             )
             self._document_diagnostic_pending_requests[identifier] = \
                 PendingDocumentDiagnosticRequest(version, request_id)
 
-    def _on_document_diagnostic_async(self, identifier: str, version: int, response: DocumentDiagnosticReport) -> None:
+    def on_document_diagnostic_async(
+        self, identifier: str | None, version: int, response: DocumentDiagnosticReport
+    ) -> None:
         self._document_diagnostic_pending_requests[identifier] = None
         view = self.some_view()
         if view and view.change_count() == version:
@@ -541,7 +548,7 @@ class SessionBuffer:
                 mgr.on_diagnostics_updated()
 
     def _apply_document_diagnostic_async(
-        self, identifier: str, version: int, response: DocumentDiagnosticReport
+        self, identifier: str | None, version: int, response: DocumentDiagnosticReport
     ) -> None:
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
@@ -554,7 +561,7 @@ class SessionBuffer:
                 cast(SessionBuffer, sb)._apply_document_diagnostic_async(
                     identifier, version, cast(DocumentDiagnosticReport, diagnostic_report))
 
-    def _on_document_diagnostic_error_async(self, identifier: str, version: int, error: ResponseError) -> None:
+    def _on_document_diagnostic_error_async(self, identifier: str | None, version: int, error: ResponseError) -> None:
         self._document_diagnostic_pending_requests[identifier] = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')

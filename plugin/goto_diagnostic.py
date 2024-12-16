@@ -64,9 +64,8 @@ class LspGotoDiagnosticCommand(sublime_plugin.WindowCommand):
                 return False
         max_severity = userprefs().diagnostics_panel_include_severity_level
         if uri:
-            parsed_uri = parse_uri(uri)
             return any(diagnostic for session in get_sessions(self.window)
-                       for diagnostic in session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
+                       for diagnostic in session.diagnostics[uri]
                        if is_severity_included(max_severity)(diagnostic))
         return any(diagnostic for session in get_sessions(self.window)
                    for diagnostics in session.diagnostics.values()
@@ -112,12 +111,13 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         severities_per_path: OrderedDict[ParsedUri, list[DiagnosticSeverity]] = OrderedDict()
         self.first_locations: dict[ParsedUri, tuple[Session, Location]] = dict()
         for session in get_sessions(self.window):
-            for parsed_uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
+            for uri, severity in session.diagnostics.filter_map_diagnostics_flat_async(
                     is_severity_included(max_severity), lambda _, diagnostic: diagnostic_severity(diagnostic)):
+                parsed_uri = parse_uri(uri)
                 severities_per_path.setdefault(parsed_uri, []).append(severity)
                 if parsed_uri not in self.first_locations:
                     severities_per_path.move_to_end(parsed_uri)
-                    diagnostics = session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
+                    diagnostics = session.diagnostics[uri]
                     if diagnostics:
                         self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
         # build items
@@ -190,6 +190,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         self.window = window
         self.view = view
         self.sessions = list(get_sessions(window))
+        self.uri = uri
         self.parsed_uri = parse_uri(uri)
 
     def name(self) -> str:
@@ -199,8 +200,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         list_items: list[sublime.ListInputItem] = []
         max_severity = userprefs().diagnostics_panel_include_severity_level
         for i, session in enumerate(self.sessions):
-            for diagnostic in filter(is_severity_included(max_severity),
-                                     session.diagnostics.diagnostics_by_parsed_uri(self.parsed_uri)):
+            for diagnostic in filter(is_severity_included(max_severity), session.diagnostics[self.uri]):
                 lines = diagnostic["message"].splitlines()
                 first_line = lines[0] if lines else ""
                 if len(lines) > 1:

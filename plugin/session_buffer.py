@@ -518,9 +518,11 @@ class SessionBuffer:
                 self.session.cancel_request(pending_request.request_id)
                 self._document_diagnostic_pending_requests[identifier] = None
         _params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
+        # Not all diagnostic streams (identifiers) which are stored in the Session's DiagnosticStorage must necessarily
+        # be applicable to this SessionBuffer in case only a subset of them was registered for this DocumentUri.
         identifiers = set()
         for provider in self.get_providers('diagnosticProvider'):
-            identifiers.add(provider.get('identifier', ''))
+            identifiers.add(provider.get('identifier'))
         for identifier in identifiers:
             params = _params.copy()
             if identifier:

@@ -386,6 +386,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.on_activated_async()
 
     def on_post_move_async(self) -> None:
+        if ST_VERSION < 4184:  # Already handled in boot.Listener.on_pre_move
+            return
         self.on_post_move_window_async()
 
     def on_activated_async(self) -> None:

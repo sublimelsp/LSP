@@ -172,18 +172,4 @@ Inlay hints are disabled by default and can be enabled with the `"show_inlay_hin
 
 ## Server Commands
 
-In Sublime Text you can bind any runnable command to a key or add it to various UI elements. Commands in Sublime Text are normally supplied by plugins or packages written in Python. A language server may provide a runnable command as well. These kinds of commands are wrapped in an `lsp_execute` Sublime command that you can bind to a key.
-
-## Server Settings
-
-Regular Sublime Text packages provide settings to adjust their behavior either via a `.sublime-settings` file that you can override in `Packages/User/package-name.sublime-settings`. A package may also allow customization through the `Packages/User/Preferences.sublime-settings` file and/or syntax-specific or project-specific settings.
-
-A language server may itself also expose settings that you can use to customize its behavior. For instance certain linter settings. This package allows customizing language server settings.
-
-## Server Initialization Options
-
-Initialization Options are like [Server Settings](#server-settings), except they are static in the sense that they cannot be changed once the language server subprocess has started.
-
-## Subprocesses
-
-A language server usually runs as a long-lived subprocess of Sublime Text. Once you start Sublime Text and open a view, the syntax of that view is matched against any possible client configurations registered. If a [client configuration](client_configuration.md) matches, a subprocess is started that will then serve you language smartness.
+In Sublime Text you can bind any runnable command to a key or add it to various UI elements. Commands in Sublime Text are normally supplied by plugins or packages written in Python. A language server may provide a runnable command as well. These kinds of commands are wrapped in an `lsp_execute` Sublime command that you can bind to a key, see [Execute server commands](commands.md#execute-server-commands) for details.

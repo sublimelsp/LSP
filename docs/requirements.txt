@@ -1,0 +1,3 @@
+mkdocs==1.6.1
+mkdocs-material==9.5.49
+mkdocs-redirects==1.2.2

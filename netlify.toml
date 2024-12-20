@@ -1,6 +1,6 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration
 
 [build]
-  base    = "docs/"
+  environment = { PYTHON_VERSION = "3.8" }
   publish = "site/"
   command = "make build"

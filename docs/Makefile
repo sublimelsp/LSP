@@ -3,7 +3,7 @@
 .PHONY: clean
 
 install:
-	pip install mkdocs mkdocs-material mkdocs-redirects
+	pip3 install mkdocs mkdocs-material mkdocs-redirects
 
 build:
 	mkdocs build

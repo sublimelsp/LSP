@@ -385,6 +385,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     partial(self._on_initial_folding_ranges, initially_folded_kinds))
         self.on_activated_async()
 
+    def on_post_move_async(self) -> None:
+        if ST_VERSION < 4184:  # Already handled in boot.Listener.on_pre_move
+            return
+        self.on_post_move_window_async()
+
     def on_activated_async(self) -> None:
         if self.view.is_loading() or not is_regular_view(self.view):
             return

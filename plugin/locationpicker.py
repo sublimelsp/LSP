@@ -7,7 +7,6 @@ from .core.protocol import Location
 from .core.protocol import LocationLink
 from .core.protocol import Position
 from .core.sessions import Session
-from .core.url import parse_uri
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
 from .core.views import to_encoded_filename
@@ -50,7 +49,7 @@ def open_basic_file(
     if group is None:
         group = session.window.active_group()
     if uri.startswith("file:"):
-        filename = parse_uri(uri)[1]
+        filename = session.config.map_uri_on_payload(uri, is_from_client_to_server=False)
     else:
         prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)

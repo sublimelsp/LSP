@@ -183,7 +183,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             pt = selection[0].b
             view_filename = self.view.file_name()
             for idx, location in enumerate(locations):
-                if view_filename != session.config.map_uri_on_payload(location['uri'], is_from_client_to_server=False):
+                if view_filename != session.config.map_server_uri_to_client_path(location['uri']):
                     continue
                 index = idx
                 if position_to_offset(location['range']['start'], self.view) > pt:

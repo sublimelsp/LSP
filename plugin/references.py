@@ -246,7 +246,7 @@ def _group_locations_by_uri(
     grouped_locations: dict[str, list[tuple[Point, str]]] = {}
     for location in locations:
         uri, position = get_uri_and_position_from_location(location)
-        file_path = parse_uri(uri)[1]
+        file_path = config.map_uri_on_payload(uri, is_from_client_to_server=False)
         point = Point.from_lsp(position)
         # get line of the reference, to showcase its use
         reference_line = get_line(window, file_path, point.row)

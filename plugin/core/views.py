@@ -771,7 +771,7 @@ def location_to_human_readable(
     scheme, _ = parse_uri(uri)
     if scheme == "file":
         fmt = "{}:{}"
-        pathname = parse_uri(uri)[1]
+        pathname = config.map_uri_on_payload(uri, is_from_client_to_server=False)
         if base_dir and is_subpath_of(pathname, base_dir):
             pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
     elif scheme == "res":

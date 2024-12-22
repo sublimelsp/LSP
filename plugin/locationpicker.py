@@ -49,7 +49,7 @@ def open_basic_file(
     if group is None:
         group = session.window.active_group()
     if uri.startswith("file:"):
-        filename = session.config.map_uri_on_payload(uri, is_from_client_to_server=False)
+        filename = session.config.map_server_uri_to_client_path(uri)
     else:
         prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)

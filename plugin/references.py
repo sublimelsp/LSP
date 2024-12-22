@@ -9,7 +9,6 @@ from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.url import parse_uri
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
@@ -184,7 +183,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             pt = selection[0].b
             view_filename = self.view.file_name()
             for idx, location in enumerate(locations):
-                if view_filename != parse_uri(location['uri'])[1]:
+                if view_filename != session.config.map_uri_on_payload(location['uri'], is_from_client_to_server=False):
                     continue
                 index = idx
                 if position_to_offset(location['range']['start'], self.view) > pt:

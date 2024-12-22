@@ -871,7 +871,7 @@ class ClientConfig:
         if not selector:
             return False
         return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
-        
+
     def map_client_path_to_server_uri(self, path: str) -> str:
         return self.map_uri_on_payload(filename_to_uri(path), is_from_client_to_server=True)
 

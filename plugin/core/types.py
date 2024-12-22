@@ -853,6 +853,15 @@ class ClientConfig:
         if not selector:
             return False
         return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        
+    def map_client_path_to_server_uri(self, path: str) -> str:
+        return self.map_uri_on_payload(filename_to_uri(path), is_from_client_to_server=True)
+
+    def map_server_uri_to_client_path(self, uri: str) -> str:
+        scheme, path = parse_uri(self.map_uri_on_payload(uri, is_from_client_to_server=False))
+        if scheme not in ("file", "res"):
+            raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
+        return path
 
     def map_uri_on_payload(self, payload: Any, is_from_client_to_server: bool) -> Any:
         if isinstance(payload, dict):
@@ -871,15 +880,6 @@ class ClientConfig:
                     payload = path
 
         return payload
-
-    def map_client_path_to_server_uri(self, path: str) -> str:
-        return self.map_uri_on_payload(filename_to_uri(path), is_from_client_to_server=True)
-
-    def map_server_uri_to_client_path(self, uri: str) -> str:
-        scheme, path = parse_uri(self.map_uri_on_payload(uri, is_from_client_to_server=False))
-        if scheme not in ("file", "res"):
-            raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
-        return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:
         for value in self.disabled_capabilities.walk(capability_path):

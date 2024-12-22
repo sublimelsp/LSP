@@ -845,15 +845,6 @@ class ClientConfig:
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
-    def match_view(self, view: sublime.View, scheme: str) -> bool:
-        syntax = view.syntax()
-        if not syntax:
-            return False
-        selector = self.selector.strip()
-        if not selector:
-            return False
-        return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
-
     def map_uri_on_payload(self, payload: Any, is_from_client_to_server: bool) -> Any:
         if isinstance(payload, dict):
             for k, v in payload.items():
@@ -871,6 +862,15 @@ class ClientConfig:
                     payload = path
                     
         return payload
+
+    def match_view(self, view: sublime.View, scheme: str) -> bool:
+        syntax = view.syntax()
+        if not syntax:
+            return False
+        selector = self.selector.strip()
+        if not selector:
+            return False
+        return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         
     def map_client_path_to_server_uri(self, path: str) -> str:
         return self.map_uri_on_payload(filename_to_uri(path), is_from_client_to_server=True)

@@ -854,13 +854,13 @@ class ClientConfig:
             for i, v in enumerate(payload):
                 payload[i] = self.map_uri_on_payload(v, is_from_client_to_server)
 
-        if isinstance(payload, str) and payload.startswith("file://"): 
+        if isinstance(payload, str) and payload.startswith("file://"):
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_local_to_remote(payload) if is_from_client_to_server else \
                                path_map.map_from_remote_to_local(payload)
                 if mapped:
                     payload = path
-                    
+
         return payload
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:

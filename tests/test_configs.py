@@ -145,12 +145,12 @@ class ConfigParsingTests(DeferrableTestCase):
             "selector": "source.foo",
             "path_maps": [
                 {
-                    "local": "/home/user/projects/myproject",
-                    "remote": "/workspace"
+                    "local": "file:///home/user/projects/myproject",
+                    "remote": "file:///workspace"
                 },
                 {
-                    "local": "/home/user/projects/another",
-                    "remote": "/workspace2"
+                    "local": "file:///home/user/projects/another",
+                    "remote": "file:///workspace2"
                 }
             ]
         })

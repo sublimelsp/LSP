@@ -244,7 +244,7 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
         return
     diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
-        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
+        diagnostics.extend(session.diagnostics[uri])
     if not diagnostics:
         return
     # Sort diagnostics by location

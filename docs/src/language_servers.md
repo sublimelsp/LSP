@@ -235,6 +235,23 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
     }
     ```
 
+## Helm
+
+1. Install [helm-ls](https://github.com/mrjosh/helm-ls).
+2. (Optional & recommended) Install [yaml-language-server](https://github.com/redhat-developer/yaml-language-server).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"helm-ls"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "helm-ls": {
+                "command": ["helm_ls", "serve"],
+                "selector": "source.yaml",
+            },
+        },
+    }
+    ```
+
 ## HTML
 
 Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP-html).

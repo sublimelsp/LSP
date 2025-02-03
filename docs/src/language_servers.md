@@ -245,12 +245,17 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
     {
         "clients": {
             "helm-ls": {
+                "enabled": true,
                 "command": ["helm_ls", "serve"],
-                "selector": "source.yaml",
+                "selector": "source.yaml.go", // Requires ST 4181+. Use `source.yaml` otherwise.
             },
         },
     }
     ```
+
+Note that the YAML language server on its own does not function properly for Helm files
+and should thus be disabled –
+ideally by adjusting its selector to `source.yaml - source.yaml.go`.
 
 ## HTML
 

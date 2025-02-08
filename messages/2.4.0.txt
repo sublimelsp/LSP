@@ -1,0 +1,8 @@
+=> 2.4.0
+
+# Breaking changes
+
+- The language-ids.sublime-settings configuration file was removed. Instead, the language IDs are
+  hardcoded now. Language IDs are used by servers which handle more than one language to avoid
+  re-interpreting file extensions. If you used the configuration file and think that a language ID
+  is wrong or missing, please create an issue at https://github.com/sublimelsp/LSP/issues.

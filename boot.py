@@ -198,7 +198,14 @@ def plugin_loaded() -> None:
     windows.enable()
     _register_all_plugins()
     client_configs.update_configs()
+    # TODO: remove this in the next minor release
+    base_scope_map = sublime.load_settings("language-ids.sublime-settings")
+    if base_scope_map.to_dict():
+        def show_warning():
+            print("LSP WARNING - The LSP package is no longer using the language-ids.sublime-settings file, but it looks like you still have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")
+            sublime.status_message("LSP (DEPRECATION WARNING) - Open 'Console' for details")
 
+        sublime.set_timeout(show_warning, 5_000)
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()

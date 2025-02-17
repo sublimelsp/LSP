@@ -253,9 +253,9 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
     }
     ```
 
-Note that the YAML language server on its own does not function properly for Helm files
-and should thus be disabled –
-ideally by adjusting its selector to `source.yaml - source.yaml.go`.
+Note that the YAML language server on its own does not function properly for Helm files,
+which is why helm-ls interfaces with it directly.
+The default configuration of [LSP-yaml](#yaml) disables itself for Go-templated files.
 
 ## HTML
 

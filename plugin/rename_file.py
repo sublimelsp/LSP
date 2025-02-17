@@ -97,6 +97,7 @@ class LspRenameFileCommand(LspWindowCommand):
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []
         if view := self.window.find_open_file(old_path):
+            view.run_command('save', {'async': False})
             old_regions = [region for region in view.sel()]
             view.close()  # LSP spec - send didClose for the old file
         new_dir = Path(new_path).parent

@@ -123,6 +123,7 @@ Furthermore, it is possible to adjust the colors for semantic tokens by applying
 | `meta.semantic-token.number` | number |
 | `meta.semantic-token.regexp` | regexp |
 | `meta.semantic-token.operator` | operator |
+| `meta.semantic-token.decorator` | decorator |
 
 By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the scopes specified above, the latter will take precedence.
 

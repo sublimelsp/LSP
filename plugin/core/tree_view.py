@@ -76,21 +76,21 @@ class TreeItem:
 
     @staticmethod
     def _kind_class_name(kind_id: int) -> str:
-        if kind_id == sublime.KIND_ID_KEYWORD:
+        if kind_id == sublime.KindId.KEYWORD:
             return "kind kind_keyword"
-        if kind_id == sublime.KIND_ID_TYPE:
+        if kind_id == sublime.KindId.TYPE:
             return "kind kind_type"
-        if kind_id == sublime.KIND_ID_FUNCTION:
+        if kind_id == sublime.KindId.FUNCTION:
             return "kind kind_function"
-        if kind_id == sublime.KIND_ID_NAMESPACE:
+        if kind_id == sublime.KindId.NAMESPACE:
             return "kind kind_namespace"
-        if kind_id == sublime.KIND_ID_NAVIGATION:
+        if kind_id == sublime.KindId.NAVIGATION:
             return "kind kind_navigation"
-        if kind_id == sublime.KIND_ID_MARKUP:
+        if kind_id == sublime.KindId.MARKUP:
             return "kind kind_markup"
-        if kind_id == sublime.KIND_ID_VARIABLE:
+        if kind_id == sublime.KindId.VARIABLE:
             return "kind kind_variable"
-        if kind_id == sublime.KIND_ID_SNIPPET:
+        if kind_id == sublime.KindId.SNIPPET:
             return "kind kind_snippet"
         return "kind kind_ambiguous"
 
@@ -281,7 +281,7 @@ def new_tree_view_sheet(
     name: str,
     data_provider: TreeDataProvider,
     header: str = "",
-    flags: int = 0,
+    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
     group: int = -1
 ) -> TreeViewSheet | None:
     """
@@ -297,7 +297,7 @@ def new_tree_view_sheet(
         sheet_id = tree_view_sheet.id()
         if tree_view_sheet.window():
             tree_view_sheet.set_provider(data_provider, header)
-            if flags & sublime.ADD_TO_SELECTION:
+            if flags & sublime.NewFileFlags.ADD_TO_SELECTION:
                 # add to selected sheets if not already selected
                 selected_sheets = window.selected_sheets()
                 for sheet in window.sheets():

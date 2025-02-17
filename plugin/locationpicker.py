@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.constants import ST_PACKAGES_PATH
 from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.protocol import DocumentUri
@@ -22,15 +23,18 @@ def open_location_async(
     force_group: bool,
     group: int = -1
 ) -> None:
-    flags = sublime.ENCODED_POSITION
+    flags = sublime.NewFileFlags.ENCODED_POSITION
     if force_group:
-        flags |= sublime.FORCE_GROUP
+        flags |= sublime.NewFileFlags.FORCE_GROUP
     if side_by_side:
-        flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+        flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
 
     def check_success_async(view: sublime.View | None) -> None:
         if not view:
-            sublime.error_message("Unable to open URI")
+            uri = get_uri_and_position_from_location(location)[0]
+            msg = f"Unable to open URI {uri}"
+            debug(msg)
+            session.window.status_message(msg)
 
     session.open_location_async(location, flags, group).then(check_success_async)
 
@@ -39,7 +43,7 @@ def open_basic_file(
     session: Session,
     uri: str,
     position: Position,
-    flags: int = 0,
+    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
     group: int | None = None
 ) -> sublime.View | None:
     if group is None:
@@ -49,7 +53,7 @@ def open_basic_file(
     else:
         prefix = 'res:/Packages'  # Note: keep in sync with core/url.py#_to_resource_uri
         assert uri.startswith(prefix)
-        filename = sublime.packages_path() + url2pathname(uri[len(prefix):])
+        filename = ST_PACKAGES_PATH + url2pathname(uri[len(prefix):])
         # Window.open_file can only focus and scroll to a location in a resource file if it is already opened
         if not session.window.find_open_file(filename):
             return None
@@ -93,7 +97,7 @@ class LocationPicker:
                 for location in locations
             ],
             on_select=self._select_entry,
-            flags=sublime.KEEP_OPEN_ON_FOCUS_LOST,
+            flags=sublime.QuickPanelFlags.KEEP_OPEN_ON_FOCUS_LOST,
             selected_index=selected_index,
             on_highlight=self._highlight_entry,
             placeholder=placeholder
@@ -115,7 +119,7 @@ class LocationPicker:
             # Note: this has to run on the main thread (and not via open_location_async)
             # otherwise the bevior feels weird. It's the only reason why open_basic_file exists.
             if uri.startswith(("file:", "res:")):
-                flags = sublime.ENCODED_POSITION
+                flags = sublime.NewFileFlags.ENCODED_POSITION
                 if not self._side_by_side:
                     view = open_basic_file(session, uri, position, flags)
                     if not view:
@@ -144,16 +148,16 @@ class LocationPicker:
         if not session:
             return
         if uri.startswith(("file:", "res:")):
-            flags = sublime.ENCODED_POSITION | sublime.FORCE_GROUP
+            flags = sublime.NewFileFlags.ENCODED_POSITION | sublime.NewFileFlags.FORCE_GROUP
             if self._side_by_side:
                 if self._highlighted_view and self._highlighted_view.is_valid():
                     # Replacing the MRU is done relative to the current highlighted sheet
                     self._window.focus_view(self._highlighted_view)
-                    flags |= sublime.REPLACE_MRU | sublime.SEMI_TRANSIENT
+                    flags |= sublime.NewFileFlags.REPLACE_MRU | sublime.NewFileFlags.SEMI_TRANSIENT
                 else:
-                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                    flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
             else:
-                flags |= sublime.TRANSIENT
+                flags |= sublime.NewFileFlags.TRANSIENT
             view = open_basic_file(session, uri, position, flags, self._window.active_group())
             # Don't overwrite self._highlighted_view if resource uri can't preview, so that side-by-side view will still
             # be closed upon canceling

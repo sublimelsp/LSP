@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .constants import CODE_ACTION_KINDS
+from .constants import ST_CACHE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
@@ -56,15 +57,15 @@ import tempfile
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
-_baseflags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.NO_UNDO
-_multilineflags = sublime.DRAW_NO_FILL | sublime.NO_UNDO
+_baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
+_multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
-DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, int, int]] = [
+DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, sublime.RegionFlags, sublime.RegionFlags]] = [
     # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
-    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
+    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
 ]
 
 
@@ -115,13 +116,13 @@ def get_storage_path() -> str:
     - on Windows: %LocalAppData%/Sublime Text
     - on Linux: ~/.cache/sublime-text
     """
-    return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
+    return os.path.abspath(os.path.join(ST_CACHE_PATH, "..", "Package Storage"))
 
 
 def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables = window.extract_variables()
     variables["storage_path"] = get_storage_path()
-    variables["cache_path"] = sublime.cache_path()
+    variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
     variables["home"] = os.path.expanduser('~')
     return variables
@@ -429,7 +430,7 @@ def show_lsp_popup(
     *,
     location: int = -1,
     md: bool = False,
-    flags: int = 0,
+    flags: sublime.PopupFlags = sublime.PopupFlags.NONE,
     css: str | None = None,
     wrapper_class: str | None = None,
     body_id: str | None = None,
@@ -676,7 +677,7 @@ def lsp_color_to_html(color_info: ColorInformation) -> str:
 
 def lsp_color_to_phantom(view: sublime.View, color_info: ColorInformation) -> sublime.Phantom:
     region = range_to_region(color_info['range'], view)
-    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
+    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.PhantomLayout.INLINE)
 
 
 def document_color_params(view: sublime.View) -> DocumentColorParams:

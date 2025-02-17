@@ -17,6 +17,7 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
@@ -230,18 +231,18 @@ class Listener(sublime_plugin.EventListener):
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
 
-    # Note: EventListener.on_post_move_async does not fire when a tab is moved out of the current window in such a way
-    # that a new window is created: https://github.com/sublimehq/sublime_text/issues/4630
-    # Hence, as a workaround we use on_pre_move, which still works in that case.
     def on_pre_move(self, view: sublime.View) -> None:
-        listeners = sublime_plugin.view_event_listeners.get(view.id())
-        if not isinstance(listeners, list):
-            return
-        for listener in listeners:
-            if isinstance(listener, DocumentSyncListener):
-                # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
-                sublime.set_timeout_async(listener.on_post_move_window_async, 1)
+        if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628
+            # Workaround for ViewEventListener.on_post_move_async not being triggered when air-dropping a tab:
+            # https://github.com/sublimehq/sublime_text/issues/4630
+            listeners = sublime_plugin.view_event_listeners.get(view.id())
+            if not isinstance(listeners, list):
                 return
+            for listener in listeners:
+                if isinstance(listener, DocumentSyncListener):
+                    # we need a small delay here, so that the DocumentSyncListener will recognize a possible new window
+                    sublime.set_timeout_async(listener.on_post_move_window_async, 1)
+                    return
 
     def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()

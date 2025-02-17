@@ -23,6 +23,7 @@ from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .settings import client_configs
+from .settings import LspSettingsChangeListener
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
@@ -75,7 +76,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
-        self._sessions: WeakSet[Session] = WeakSet()
+        self._sessions: set[Session] = set()
         self._workspace = workspace
         self._pending_listeners: deque[AbstractViewListener] = deque()
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()
@@ -509,7 +510,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         for row, col, code, href in prephantoms:
             point = panel.text_point(row, col)
             region = sublime.Region(point, point)
-            phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.LAYOUT_INLINE))
+            phantoms.append(sublime.Phantom(region, f"({make_link(href, code)})", sublime.PhantomLayout.INLINE))
         self._panel_code_phantoms.update(phantoms)
 
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
@@ -518,15 +519,11 @@ class WindowManager(Manager, WindowConfigChangeListener):
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
 
 
-class WindowRegistry:
+class WindowRegistry(LspSettingsChangeListener):
     def __init__(self) -> None:
         self._enabled = False
         self._windows: dict[int, WindowManager] = {}
-        client_configs.set_listener(self._on_client_config_updated)
-
-    def _on_client_config_updated(self, config_name: str | None = None) -> None:
-        for wm in self._windows.values():
-            wm.get_config_manager().update(config_name)
+        client_configs.set_listener(self)
 
     def enable(self) -> None:
         self._enabled = True
@@ -565,6 +562,18 @@ class WindowRegistry:
         wm = self._windows.pop(window.id(), None)
         if wm:
             sublime.set_timeout_async(wm.destroy)
+
+    # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------
+
+    def on_client_config_updated(self, config_name: str | None = None) -> None:
+        for wm in self._windows.values():
+            wm.get_config_manager().update(config_name)
+
+    def on_userprefs_updated(self) -> None:
+        for wm in self._windows.values():
+            wm.on_diagnostics_updated()
+            for session in wm.get_sessions():
+                sublime.set_timeout_async(session.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:

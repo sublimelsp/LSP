@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .constants import ST_PLATFORM
 from .logging import exception_log, debug
 from .types import TCP_CONNECT_TIMEOUT
 from .types import TransportConfig
@@ -17,6 +18,10 @@ import threading
 import time
 import weakref
 
+try:
+    import orjson
+except ImportError:
+    orjson = None
 
 T = TypeVar('T')
 T_contra = TypeVar('T_contra', contravariant=True)
@@ -80,6 +85,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
     @staticmethod
     def _encode(data: dict[str, Any]) -> bytes:
+        if orjson:
+            return orjson.dumps(data)
         return json.dumps(
             data,
             ensure_ascii=False,
@@ -90,6 +97,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
 
     @staticmethod
     def _decode(message: bytes) -> dict[str, Any]:
+        if orjson:
+            return orjson.loads(message)
         return json.loads(message.decode('utf-8'))
 
 
@@ -302,7 +311,7 @@ def kill_all_subprocesses() -> None:
 
 def _fixup_startup_args(args: list[str]) -> Any:
     startupinfo = None
-    if sublime.platform() == "windows":
+    if ST_PLATFORM == "windows":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
         executable_arg = args[0]

@@ -448,7 +448,8 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
             "phpactor": {
                 "enabled": true,
                 "command": ["PATH/TO/phpactor", "language-server"],
-                "selector": "source.php"
+                "selector": "embedding.php",
+                "priority_selector": "source.php",
             }
         }
     }
@@ -632,6 +633,10 @@ There are multiple options:
 
 Follow installation instructions on [LSP-rust-analyzer](https://github.com/sublimelsp/LSP-rust-analyzer).
 
+## Sass
+
+Follow installation instructions on [LSP-some-sass](https://github.com/sublimelsp/LSP-some-sass).
+
 ## Scala
 
 Follow installation instructions on [LSP-metals](https://github.com/scalameta/metals-sublime).
@@ -771,6 +776,10 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
     }
     ```
 
+## Twig
+
+Follow installation instructions on [LSP-twiggy](https://github.com/sublimelsp/LSP-twiggy).
+
 ## TypeScript
 
 See [Javascript/TypeScript](#javascripttypescript).
@@ -892,13 +901,23 @@ This server has more features, like go to definition, rename, etc.
 
 There are multiple options:
 
-### Vetur
+### Vue Language Server
+
+Recommended, actively maintained package based on [vuejs/language-tools](https://github.com/vuejs/language-tools).
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 
 ### Volar
 
+Based on 1.x version of Volar (later renamed to Vue Language Server). Not recommended.
+
 Follow installation instructions on [LSP-volar](https://github.com/sublimelsp/LSP-volar).
+
+### Vetur
+
+No longer maintained, not compatible with TypeScript 5+ or new Vue versions.
+
+Follow installation instructions on [LSP-vetur](https://github.com/sublimelsp/LSP-vetur).
 
 ## Vala
 

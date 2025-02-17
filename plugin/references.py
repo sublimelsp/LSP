@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.constants import RegionKey
 from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
@@ -177,7 +178,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         placeholder = "References to " + word
         kind = get_symbol_kind_from_scope(self.view.scope_name(position))
         index = 0
-        locations.sort(key=lambda l: (l['uri'], Point.from_lsp(l['range']['start'])))
+        locations.sort(key=lambda location: (location['uri'], Point.from_lsp(location['range']['start'])))
         if len(selection):
             pt = selection[0].b
             view_filename = self.view.file_name()
@@ -218,7 +219,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
         })
         # highlight all word occurrences
         regions = panel.find_all(rf"\b{word}\b")
-        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_NO_FILL | sublime.NO_UNDO)
+        panel.add_regions(
+            RegionKey.REFERENCE_HIGHLIGHT,
+            regions,
+            'comment',
+            flags=sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
+        )
 
 
 def _get_relative_path(base_dir: str | None, file_path: str) -> str:

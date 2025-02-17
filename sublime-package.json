@@ -739,6 +739,12 @@
               "default": false,
               "markdownDescription": "Show inlay hints in the editor. Inlay hints are short annotations within the code, which show variable types or parameter names.\nThis is the default value used for new windows but can be overriden per-window using the `LSP: Toggle Inlay Hints` command from the Command Palette, Main Menu or a custom keybinding."
             },
+            "inlay_hints_max_length": {
+              "type": "integer",
+              "default": 30,
+              "minimum": 0,
+              "markdownDescription": "Maximum length for inlay hints. Truncates exceeding characters and adds an ellipsis. Set to 0 for unlimited length."
+            },
             "initially_folded": {
               "type": "array",
               "items": {

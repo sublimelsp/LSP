@@ -103,7 +103,6 @@ from .url import filename_to_uri
 from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
-from .views import DiagnosticSeverityData
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
@@ -112,11 +111,11 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
-from abc import abstractproperty
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
+from typing_extensions import deprecated
 from weakref import WeakSet
 import functools
 import mdpopups
@@ -129,8 +128,9 @@ T = TypeVar('T')
 
 
 class ViewStateActions(IntFlag):
-    Close = 2
-    Save = 1
+    NONE = 0
+    SAVE = 1
+    CLOSE = 2
 
 
 def is_workspace_full_document_diagnostic_report(
@@ -195,7 +195,8 @@ class Manager(metaclass=ABCMeta):
 
     # Observers
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def window(self) -> sublime.Window:
         """
         Get the window associated with this manager.
@@ -582,9 +583,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(
-        self, is_view_visible: bool, data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData]
-    ) -> None:
+    def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -609,6 +608,9 @@ class SessionViewProtocol(Protocol):
         ...
 
     def reset_show_definitions(self) -> None:
+        ...
+
+    def on_userprefs_changed_async(self) -> None:
         ...
 
 
@@ -658,6 +660,9 @@ class SessionBufferProtocol(Protocol):
     def has_capability(self, capability_path: str) -> bool:
         ...
 
+    def on_userprefs_changed_async(self) -> None:
+        ...
+
     def on_diagnostics_async(
         self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
@@ -672,7 +677,7 @@ class SessionBufferProtocol(Protocol):
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
         ...
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
     def get_semantic_tokens(self) -> list[Any]:
@@ -681,16 +686,18 @@ class SessionBufferProtocol(Protocol):
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         ...
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int | None = None) -> None:
+    def do_document_diagnostic_async(
+        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
+    ) -> None:
         ...
 
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
 
@@ -706,15 +713,15 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions_async(self, capability: str | None = None) -> Generator[Session, None, None]:
+    def sessions_async(self, capability: str | None = None) -> list[Session]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_buffers_async(self, capability: str | None = None) -> Generator[SessionBufferProtocol, None, None]:
+    def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
-    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
+    def session_views_async(self) -> list[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1349,14 +1356,19 @@ class Session(TransportCallbacks):
         :param message: The message
         """
         self.config_status_message = message.strip()
-        for sv in self.session_views_async():
-            self.config.set_view_status(sv.view, message)
+        self._redraw_config_status_async()
 
+    def _redraw_config_status_async(self) -> None:
+        for sv in self.session_views_async():
+            self.config.set_view_status(sv.view, self.config_status_message)
+
+    @deprecated("Use set_config_status_async(message) instead")
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
         for sv in self.session_views_async():
             sv.view.set_status(key, message)
 
+    @deprecated("Use set_config_status_async('') instead")
     def erase_window_status_async(self, key: str) -> None:
         self._status_messages.pop(key, None)
         for sv in self.session_views_async():
@@ -1484,6 +1496,11 @@ class Session(TransportCallbacks):
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
     # --- misc methods -------------------------------------------------------------------------------------------------
+
+    def on_userprefs_changed_async(self) -> None:
+        self._redraw_config_status_async()
+        for sb in self.session_buffers_async():
+            sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
         return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
@@ -1680,7 +1697,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None] | None:
         if uri.startswith("file:"):
@@ -1702,7 +1719,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None]:
         promise = self.try_open_uri_async(uri, r, flags, group)
@@ -1712,7 +1729,7 @@ class Session(TransportCallbacks):
         self,
         uri: DocumentUri,
         r: Range | None = None,
-        flags: int = 0,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> Promise[sublime.View | None]:
         result: PackagedTask[sublime.View | None] = Promise.packaged_task()
@@ -1730,7 +1747,7 @@ class Session(TransportCallbacks):
         plugin: AbstractPlugin,
         uri: DocumentUri,
         r: Range | None,
-        flags: int,
+        flags: sublime.NewFileFlags,
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
@@ -1759,8 +1776,12 @@ class Session(TransportCallbacks):
             return result[0]
         return None
 
-    def open_location_async(self, location: Location | LocationLink, flags: int = 0,
-                            group: int = -1) -> Promise[sublime.View | None]:
+    def open_location_async(
+        self,
+        location: Location | LocationLink,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
         uri, r = get_uri_and_range_from_location(location)
         return self.open_uri_async(uri, r, flags, group)
 
@@ -1837,17 +1858,17 @@ class Session(TransportCallbacks):
         apply_text_edits(view, edits, required_view_version=view_version)
         return view
 
-    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> int:
+    def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
         Determine the required actions for a view after applying a WorkspaceEdit, depending on the
         "refactoring_auto_save" user setting. Returns a bitwise combination of ViewStateActions.Save and
         ViewStateActions.Close, or 0 if no action is necessary.
         """
         if auto_save == 'never':
-            return 0  # Never save or close automatically
+            return ViewStateActions.NONE  # Never save or close automatically
         scheme, filepath = parse_uri(uri)
         if scheme != 'file':
-            return 0  # Can't save or close unsafed buffers (and other schemes) without user dialog
+            return ViewStateActions.NONE  # Can't save or close unsafed buffers (and other schemes) without user dialog
         view = self.window.find_open_file(filepath)
         if view:
             is_opened = True
@@ -1855,27 +1876,27 @@ class Session(TransportCallbacks):
         else:
             is_opened = False
             is_dirty = False
-        actions = 0
+        actions = ViewStateActions.NONE
         if auto_save == 'always':
-            actions |= ViewStateActions.Save  # Always save
+            actions |= ViewStateActions.SAVE  # Always save
             if not is_opened:
-                actions |= ViewStateActions.Close  # Close if file was previously closed
+                actions |= ViewStateActions.CLOSE  # Close if file was previously closed
         elif auto_save == 'preserve':
             if not is_dirty:
-                actions |= ViewStateActions.Save  # Only save if file didn't have unsaved changes
+                actions |= ViewStateActions.SAVE  # Only save if file didn't have unsaved changes
             if not is_opened:
-                actions |= ViewStateActions.Close  # Close if file was previously closed
+                actions |= ViewStateActions.CLOSE  # Close if file was previously closed
         elif auto_save == 'preserve_opened':
             if is_opened and not is_dirty:
                 # Only save if file was already open and didn't have unsaved changes, but never close
-                actions |= ViewStateActions.Save
+                actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: int, view: sublime.View | None) -> None:
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> None:
         if not view:
             return
-        should_save = bool(actions & ViewStateActions.Save)
-        should_close = bool(actions & ViewStateActions.Close)
+        should_save = bool(actions & ViewStateActions.SAVE)
+        should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
@@ -2059,7 +2080,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 

@@ -6,6 +6,9 @@ from .protocol import FileOperationFilter
 from .protocol import FileOperationPatternKind
 from .protocol import FileOperationRegistrationOptions
 from .protocol import TextDocumentSyncKind
+from .protocol import ServerCapabilities
+from .protocol import TextDocumentSyncKind
+from .protocol import TextDocumentSyncOptions
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -231,6 +234,7 @@ class Settings:
     show_code_actions = cast(str, None)
     show_code_lens = cast(str, None)
     show_inlay_hints = cast(bool, None)
+    inlay_hints_max_length = cast(int, None)
     show_diagnostics_in_hover = cast(bool, None)
     show_code_actions_in_hover = cast(bool, None)
     show_diagnostics_annotations_severity_level = cast(int, None)
@@ -276,6 +280,7 @@ class Settings:
         r("show_code_actions", "annotation")
         r("show_code_lens", "annotation")
         r("show_inlay_hints", False)
+        r("inlay_hints_max_length", 30)
         r("show_diagnostics_in_hover", True)
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_annotations_severity_level", 0)
@@ -330,42 +335,42 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def highlight_style_region_flags(self, style_str: str) -> tuple[int, int]:
-        default = sublime.NO_UNDO
+    def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
+        default = sublime.RegionFlags.NO_UNDO
         if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
-            style = default | sublime.DRAW_NO_OUTLINE
+            style = default | sublime.RegionFlags.DRAW_NO_OUTLINE
             return style, style
         if style_str == "outline":
-            style = default | sublime.DRAW_NO_FILL
+            style = default | sublime.RegionFlags.DRAW_NO_FILL
             return style, style
         if style_str == "stippled":
-            return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
-        return default | sublime.DRAW_NO_FILL, default | sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE  # noqa: E501
+            return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+        return default | sublime.RegionFlags.DRAW_NO_FILL, default | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE  # noqa: E501
 
     @staticmethod
-    def _style_str_to_flag(style_str: str) -> int | None:
-        default = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_NO_FILL | sublime.NO_UNDO
+    def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
+        default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
         # This method could be a dict or lru_cache
         if style_str == "":
-            return default | sublime.DRAW_NO_OUTLINE
+            return default | sublime.RegionFlags.DRAW_NO_OUTLINE
         if style_str == "box":
             return default
         if style_str == "underline":
-            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
+            return default | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE
         if style_str == "stippled":
-            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE
+            return default | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE
         if style_str == "squiggly":
-            return default | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SQUIGGLY_UNDERLINE
+            return default | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE
         # default style (includes NO_UNDO)
         return None
 
-    def diagnostics_highlight_style_flags(self) -> list[int | None]:
+    def diagnostics_highlight_style_flags(self) -> list[sublime.RegionFlags | None]:
         """Returns flags for highlighting diagnostics on single lines per severity"""
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
         elif isinstance(self.diagnostics_highlight_style, dict):
-            flags: list[int | None] = []
+            flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
                 if user_style is None:  # user did not provide a style
@@ -510,13 +515,13 @@ def method_to_capability(method: str) -> tuple[str, str]:
     return capability_path, registration_path
 
 
-def normalize_text_sync(textsync: None | int | dict[str, Any]) -> dict[str, Any]:
+def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind | None) -> dict[str, Any]:
     """
     Brings legacy text sync capabilities to the most modern format
     """
     result: dict[str, Any] = {}
     if isinstance(textsync, int):
-        change: dict[str, Any] | None = {"syncKind": textsync}
+        change = {"syncKind": textsync}
         result["textDocumentSync"] = {"didOpen": {}, "save": {}, "didClose": {}, "change": change}
     elif isinstance(textsync, dict):
         new = {}
@@ -592,9 +597,9 @@ class Capabilities(DottedDict):
             self.remove(registration_path)
             return discarded
 
-    def assign(self, d: dict[str, Any]) -> None:
+    def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(d)
+        super().assign(cast(dict, d))
         if textsync:
             self.update(textsync)
 
@@ -869,6 +874,8 @@ class ClientConfig:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
             status = f"{self.name} ({message})" if message else self.name
             view.set_status(self.status_key, status)
+        else:
+            self.erase_view_status(view)
 
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)

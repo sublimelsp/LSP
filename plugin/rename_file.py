@@ -1,15 +1,13 @@
 from __future__ import annotations
-
-from .core.types import match_file_operation_filters
 from .core.open import open_file_uri
 from .core.protocol import Notification, RenameFilesParams, Request, WorkspaceEdit
 from .core.registry import LspWindowCommand
+from .core.types import match_file_operation_filters
 from pathlib import Path
 from urllib.parse import urljoin
 import os
 import sublime
 import sublime_plugin
-import functools
 
 
 class LspRenameFromSidebarOverride(LspWindowCommand):

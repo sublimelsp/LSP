@@ -7,7 +7,6 @@ from .protocol import FileOperationPatternKind
 from .protocol import FileOperationRegistrationOptions
 from .protocol import TextDocumentSyncKind
 from .protocol import ServerCapabilities
-from .protocol import TextDocumentSyncKind
 from .protocol import TextDocumentSyncOptions
 from .url import filename_to_uri
 from .url import parse_uri

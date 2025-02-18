@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .collections import DottedDict
+from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import ServerCapabilities, TextDocumentSyncKind, TextDocumentSyncOptions
@@ -39,8 +40,10 @@ def basescope2languageid(base_scope: str) -> str:
     result = ""
     # Try to find exact match or less specific match consisting of at least 2 components.
     scope_parts = base_scope.split('.')
+    # TODO: remove base_scope_map in the next minor release
+    language_map = {**LANGUAGE_IDENTIFIERS, **base_scope_map.to_dict()}
     while len(scope_parts) >= 2:
-        result = base_scope_map.get('.'.join(scope_parts))
+        result = language_map.get('.'.join(scope_parts))
         if result:
             break
         scope_parts.pop()

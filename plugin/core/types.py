@@ -37,7 +37,6 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
-    # This is the connection between Language IDs and ST selectors.
     result = ""
     # Try to find exact match or less specific match consisting of at least 2 components.
     scope_parts = base_scope.split('.')

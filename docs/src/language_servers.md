@@ -235,6 +235,28 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
     }
     ```
 
+## Helm
+
+1. Install [helm-ls](https://github.com/mrjosh/helm-ls).
+2. (Optional & recommended) Install [yaml-language-server](https://github.com/mrjosh/helm-ls?tab=readme-ov-file#integration-with-yaml-language-server).
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"helm-ls"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "helm-ls": {
+                "enabled": true,
+                "command": ["helm_ls", "serve"],
+                "selector": "source.yaml.go", // Requires ST 4181+. Use `source.yaml` otherwise.
+            },
+        },
+    }
+    ```
+
+Note that the YAML language server on its own does not function properly for Helm files,
+which is why helm-ls interfaces with it directly.
+The default configuration of [LSP-yaml](#yaml) disables itself for Go-templated files.
+
 ## HTML
 
 Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP-html).

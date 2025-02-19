@@ -447,6 +447,51 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
 
 Follow installation instructions on [ols](https://github.com/DanielGavin/ols/).
 
+## Perl
+
+1. Install [Perl Navigator](https://github.com/bscan/PerlNavigator). The below example configuration assumes global NPM installation.
+2. Install Perl::Critic, Perl::Tidy, etc. as required.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"perlnavigator"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "perlnavigator": {
+                "enabled": true,
+                "command": [
+                    "/path/to/your/node", 
+                    "/path/to/your/globally/installed/perlnavigator",
+                    "--stdio"
+                ],
+                "selector": "source.perl",
+                "settings": {
+                    // "perlnavigator.perltidyProfile": "~/.perltidyrc",
+                    // "perlnavigator.perlcriticProfile": "~/.perlcriticrc",
+                    // "perlnavigator.perlEnvAdd": true,
+                    // "perlnavigator.perlEnv": {
+                    //     "KOHA_CONF": "/home/user/git/KohaCommunity/t/data/koha-conf.xml",
+                    // },
+                    // "perlnavigator.perlPath": "~/perl5/perlbrew/perls/perl-5.38.2/bin",
+                    // "perlnavigator.perlcriticSeverity": 1,
+                    // "perlnavigator.perlcriticEnabled": true,
+                    // "perlnavigator.enableWarnings": true,
+                    "perlnavigator.includePaths": [
+                        // Used for syntax checking, typically local project roots.
+                        // NOT used for finding installed modules such as perlcritic/perltidy/perlimports.
+                        // Supports "$workspaceFolder", no need to include "$workspaceFolder/lib/".
+                    ],
+                    "perlnavigator.perlParams": [
+                        // This is a list of arguments always passed to Perl.
+                        // Does not support $workspaceFolder.
+                        // Useful for finding perlcritic/perltidy/perlimports.
+                        // "-I/path/to/local/perl5/bin"
+                    ]
+                }
+            }
+        },
+    }
+    ```
+
 ## PromQL
 
 Follow installation instructions on [LSP-promql](https://github.com/prometheus-community/sublimelsp-promql).

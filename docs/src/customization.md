@@ -227,3 +227,9 @@ The color scheme rule only works if the "background" color is (marginally) diffe
 | ----- | ----------- |
 | `markup.accent.codelens.lsp` | Accent color for code lens annotations |
 | `markup.accent.codeaction.lsp` | Accent color for code action annotations |
+
+### Inline Completions
+
+| scope | description |
+| ----- | ----------- |
+| `meta.inline-completion.lsp` | Style for inline completions |

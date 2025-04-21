@@ -423,6 +423,9 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
     }
     ```
 
+## Nim
+
+Follow installation instructions on [LSP-nimlangserver](https://github.com/sublimelsp/LSP-nimlangserver).
 
 ## OCaml/Reason
 

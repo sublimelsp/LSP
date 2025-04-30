@@ -423,6 +423,12 @@ Spell check can be provided by [LSP-ltex-ls](https://github.com/LDAP/LSP-ltex-ls
     }
     ```
 
+### Marksman
+
+An LSP server for Markdown that provides completion, go to definition, find references, diagnostics, and more.
+
+Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp/LSP-marksman).
+
 ## Nim
 
 Follow installation instructions on [LSP-nimlangserver](https://github.com/sublimelsp/LSP-nimlangserver).

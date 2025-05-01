@@ -620,7 +620,7 @@ There are multiple options:
         "clients": {
             "sorbet": {
                 "enabled": true,
-                "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+                "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman", "."],
                 "selector": "source.ruby | text.html.ruby",
             }
         }

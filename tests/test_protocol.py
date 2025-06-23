@@ -1,6 +1,6 @@
 from __future__ import annotations
 from LSP.plugin.core.protocol import Point, Position, Range, Request, Notification
-from LSP.plugin.core.transports import JsonRpcProcessor
+from LSP.plugin.core.transports import encode_json, decode_json
 import unittest
 
 
@@ -22,9 +22,9 @@ class PointTests(unittest.TestCase):
 
 class EncodingTests(unittest.TestCase):
     def test_encode(self) -> None:
-        encoded = JsonRpcProcessor._encode({"text": "😃"})
+        encoded = encode_json({"text": "😃"})
         self.assertEqual(encoded, b'{"text":"\xF0\x9F\x98\x83"}')
-        decoded = JsonRpcProcessor._decode(encoded)
+        decoded = decode_json(encoded)
         self.assertEqual(decoded, {"text": "😃"})
 
 

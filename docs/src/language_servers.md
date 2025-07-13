@@ -437,6 +437,7 @@ Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp
     ```sh
     npm install -g wikitext-lsp
     ```
+
 3. Open `Preferences > Package Settings > LSP > Settings` and add the `"mediawiki"` client configuration to the `"clients"`:
 
 

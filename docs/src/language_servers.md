@@ -429,6 +429,37 @@ An LSP server for Markdown that provides completion, go to definition, find refe
 
 Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp/LSP-marksman).
 
+## MediaWiki
+
+1. Install the [Mediawiker](https://packagecontrol.io/packages/Mediawiker) package from Package Control for syntax highlighting.
+2. Install the `wikitext-lsp` package:
+
+    ```sh
+    npm install -g wikitext-lsp
+    ```
+
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"mediawiki"` client configuration to the `"clients"`:
+
+
+    ```jsonc
+    {
+        "clients": {
+            "mediawiki": {
+                "enabled": true,
+                "command": [
+                    "/path/to/your/node", 
+                    "/path/to/your/globally/installed/wikitext-lsp",
+                    "--stdio"
+                ],
+                "selector": "text.html.mediawiki",
+                "settings": {
+                    // Please refer to https://www.npmjs.com/package/wikitext-lsp#configuration
+                }
+            }
+        }
+    }
+    ```
+
 ## Nim
 
 Follow installation instructions on [LSP-nimlangserver](https://github.com/sublimelsp/LSP-nimlangserver).

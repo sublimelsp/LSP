@@ -582,12 +582,6 @@ Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/
 
 Follow installation instructions on [LSP-pylsp](https://github.com/sublimelsp/LSP-pylsp).
 
-### LSP-ruff
-
-> An extremely fast Python linter and code transformation tool, written in Rust.
-
-Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP-ruff).
-
 ### Pyrefly
 
 > A fast Python type checker written in Rust.
@@ -607,6 +601,12 @@ Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP
         }
     }
     ```
+
+### LSP-ruff
+
+> An extremely fast Python linter and code transformation tool, written in Rust.
+
+Follow installation instructions on [LSP-ruff](https://github.com/sublimelsp/LSP-ruff).
 
 ## R
 

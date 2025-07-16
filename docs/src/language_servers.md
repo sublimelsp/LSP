@@ -582,6 +582,26 @@ Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/
 
 Follow installation instructions on [LSP-pylsp](https://github.com/sublimelsp/LSP-pylsp).
 
+### Pyrefly
+
+> A fast Python type checker written in Rust.
+
+1. Follow the instructions on the [Pyrefly website](https://pyrefly.org/en/docs/installation/) to install the `pyrefly` command-line tool.
+
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"pyrefly"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "pyrefly": {
+                "enabled": true,
+                "command": ["pyrefly", "lsp"],
+                "selector": "source.python"
+            }
+        }
+    }
+    ```
+
 ### LSP-ruff
 
 > An extremely fast Python linter and code transformation tool, written in Rust.

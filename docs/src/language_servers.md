@@ -757,25 +757,8 @@ There are multiple options:
     ```
 
 ### Herb
-1. Install the `herb-language-server` package (see [github:marcoroth/herb](https://github.com/marcoroth/herb))
 
-    ```sh
-    npm install -g @herb-tools/language-server
-    ```
-
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"herb"` client configuration to the `"clients"`:
-
-    ```jsonc
-    {
-        "clients": {
-            "herb": {
-                "enabled": true,
-                "command": ["herb-language-server", "--stdio"],
-                "selector": "text.html.rails"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [Herb Language Server](https://herb-tools.dev/projects/language-server#sublime-text-using-sublime-lsp)
 
 ## Rust
 

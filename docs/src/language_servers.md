@@ -758,7 +758,7 @@ There are multiple options:
 
 ### Herb
 
-Follow installation instructions on [Herb Language Server](https://herb-tools.dev/projects/language-server#sublime-text-using-sublime-lsp)
+Follow installation instructions on [Herb Language Server](https://herb-tools.dev/projects/language-server#sublime-text-using-sublime-lsp).
 
 ## Rust
 

@@ -5,6 +5,7 @@ from .protocol import DiagnosticSeverity
 from .protocol import DocumentHighlightKind
 from .protocol import SymbolKind
 from .typing import StrEnum
+from os.path import dirname, join
 from typing import Tuple
 import sublime
 
@@ -17,6 +18,16 @@ ST_INSTALLED_PACKAGES_PATH = sublime.installed_packages_path()
 ST_PACKAGES_PATH = sublime.packages_path()
 ST_PLATFORM = sublime.platform()
 ST_VERSION = int(sublime.version())
+ST_STORAGE_PATH = join(dirname(ST_CACHE_PATH), "Package Storage")
+"""
+The "Package Storage" is a way to store server data without influencing the
+behavior of Sublime Text's "catalog". Its path is '$DATA/Package Storage',
+where $DATA means:
+
+- on macOS: ~/Library/Application Support/Sublime Text
+- on Windows: %LocalAppData%/Sublime Text
+- on Linux: ~/.cache/sublime-text
+"""
 
 
 class RegionKey(StrEnum):

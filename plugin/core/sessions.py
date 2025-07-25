@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
+from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
@@ -104,7 +105,6 @@ from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
-from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
@@ -892,7 +892,7 @@ class AbstractPlugin(metaclass=ABCMeta):
                 return os.path.join(cls.storage_path(), cls.name())
         ```
         """
-        return get_storage_path()
+        return ST_STORAGE_PATH
 
     @classmethod
     def needs_update_or_installation(cls) -> bool:

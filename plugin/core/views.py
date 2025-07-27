@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .constants import CODE_ACTION_KINDS
 from .constants import ST_CACHE_PATH
+from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
@@ -107,21 +108,9 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
     return line.strip() if strip else line
 
 
-def get_storage_path() -> str:
-    """
-    The "Package Storage" is a way to store server data without influencing the behavior of Sublime Text's "catalog".
-    Its path is '$DATA/Package Storage', where $DATA means:
-
-    - on macOS: ~/Library/Application Support/Sublime Text
-    - on Windows: %LocalAppData%/Sublime Text
-    - on Linux: ~/.cache/sublime-text
-    """
-    return os.path.abspath(os.path.join(ST_CACHE_PATH, "..", "Package Storage"))
-
-
 def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables = window.extract_variables()
-    variables["storage_path"] = get_storage_path()
+    variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
     variables["home"] = os.path.expanduser('~')

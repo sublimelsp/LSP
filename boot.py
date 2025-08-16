@@ -56,6 +56,7 @@ from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hierarchy import LspCallHierarchyCommand
 from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.hover import LspCopyTextCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
@@ -158,6 +159,7 @@ __all__ = (
     "LspUpdateLogPanelCommand",
     "LspUpdatePanelCommand",
     "LspWorkspaceSymbolsCommand",
+    'LspCopyTextCommand',
     "TextChangeListener",
     "plugin_loaded",
     "plugin_unloaded",

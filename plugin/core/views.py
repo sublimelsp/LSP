@@ -820,7 +820,7 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 
 
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
-    html = _html_element('span', diagnostic["message"])
+    html = copy_text_html_element(_html_element('span', diagnostic["message"]), copy_text=diagnostic["message"])
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
@@ -838,6 +838,19 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
+
+
+def copy_text_html_element(html_content: str, copy_text: str | None = None) -> str:
+    if copy_text is None:
+        copy_text = html_content
+    return f"""
+    <a title="Click to copy"
+       style='text-decoration: none; display: block; color: var(--foreground)'
+       href='{sublime.command_url('lsp_copy_text', {
+        'text': html.unescape(copy_text.replace(' ', ' '))
+       })}'>
+        {html_content}
+    </a>"""
 
 
 def format_code_actions_for_quick_panel(

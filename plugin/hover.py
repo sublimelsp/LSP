@@ -13,6 +13,8 @@ from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
 from .core.protocol import Error
 from .core.protocol import Hover
+from .core.protocol import MarkedString
+from .core.protocol import MarkupContent
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request
@@ -23,6 +25,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.url import parse_uri
+from .core.views import copy_text_html_element
 from .core.views import diagnostic_severity
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
@@ -45,7 +48,6 @@ import html
 import mdpopups
 import sublime
 import sublime_plugin
-
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]
@@ -259,11 +261,14 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []
+        contents: list[str] = []
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(minihtml(self.view, content, allowed_formats, language_map))
+            html_content = minihtml(self.view, content, allowed_formats, language_map)
+            copy_text = get_copy_text_from_hover_contents(content)
+            html_content = copy_text_html_element(html_content, copy_text)
+            contents.append(html_content)
         return '<hr>'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:
@@ -420,3 +425,20 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
                     session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
                 else:
                     session_view.reset_show_definitions()
+
+
+def get_copy_text_from_hover_contents(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, dict):
+        return content.get('value', '')
+    elif isinstance(content, list):
+        return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
+
+
+class LspCopyTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text: str) -> None:
+        w = self.view.window()
+        if w:
+            w.status_message('Copied: ' + text[:20] + "...")
+        sublime.set_clipboard(text)

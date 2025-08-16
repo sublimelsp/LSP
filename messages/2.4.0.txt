@@ -2,7 +2,37 @@
 
 # Breaking changes
 
-- The language-ids.sublime-settings configuration file has been deprecated and will be removed in the next minor release of LSP. The language IDs are
+- Deprecate language IDs configuration file (#2586) (Janos Wortmann) - The language-ids.sublime-settings configuration file has been deprecated and will be removed in the next minor release of LSP. The language IDs are
   hardcoded now. Language IDs are used by servers which handle more than one language to avoid
   re-interpreting file extensions. If you used the configuration file and think that a language ID
   is wrong or missing, please follow this migration guide https://github.com/sublimelsp/LSP/issues/2592.
+- Remove `syntax2scope` and `view2scope` (#2594) (Предраг Николић) - They are not used.
+- Implement storage path as global constant (#2614) (@deathaxe) - `get_storage_path` was replaced with `ST_STORAGE_PATH`.
+
+# Features
+- Extract more global constants (#2565) (Janos Wortmann)
+
+# Fixes
+- Fix `LspToggleInlayHintsCommand` not initializing (#2571) (Janos Wortmann)
+
+# Enhancements
+- Replace Quick Fix label in hover popup with lightbulb icon (#2567) (Janos Wortmann)
+- Implement storage path as global constant (#2614) (@deathaxe)
+
+# Refactors
+- Deprecate `Session.set_window_status_async` (#2570) (Janos Wortmann)
+- Deprecate language IDs configuration file (#2586) (Janos Wortmann)
+- Remove workaround for `on_post_move_async`listener not triggering (#2582) (Janos Wortmann)
+- Update LSP types (#2593) (Предраг Николић)
+- Bump actions/checkout from 4 to 5 (#2617) (@dependabot)
+
+# Documentation
+- Update docs and README (#2583, #2590) (Janos Wortmann)
+* Add LSP-nimlangserver to the docs (#2602) (Amjad Ben Hedhili)
+* Add instructions for helm-ls to the docs (#2589) (@FichteFoll)
+* Add instructions for Perl LS to the docs (#2595) (Russ @russsaidwords)
+* Add instructions for Marksman to the docs (#2604) (Gavin Wiggins)
+* Add instructions for Herb to the docs (#2610, #2613) (Óscar Carretero)
+* Add instructions for MediaWiki to the docs (#2611) (@bhsd-harry)
+* Add instructions for Pyrefly to the docs (#2612) (Janos Wortmann)
+* Fix Sorbet docs to requires a directory be passed to the typecheck command (#2599) (James Hochadel)

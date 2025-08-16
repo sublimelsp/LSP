@@ -3,13 +3,13 @@ from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemDefaults
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionItemTag
 from .core.protocol import CompletionList
 from .core.protocol import CompletionParams
+from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import Error
 from .core.protocol import InsertReplaceEdit
 from .core.protocol import InsertTextFormat
@@ -20,7 +20,9 @@ from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.views import copy_text_html_element
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
+from .core.views import get_copy_text_from_markup
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -303,9 +305,9 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += f"<div class='highlight'>{detail}</div>"
+            minihtml_content += copy_text_html_element(f"<div class='highlight'>{detail}</div>", copy_text=item.get('detail'))
         if documentation:
-            minihtml_content += documentation
+            minihtml_content += copy_text_html_element(documentation, get_copy_text_from_markup(item.get("documentation") or ""))
 
         def run_main() -> None:
             if not self.view.is_valid():

@@ -843,14 +843,11 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 def copy_text_html_element(html_content: str, copy_text: str | None = None) -> str:
     if copy_text is None:
         copy_text = html_content
-    return f"""
-    <a title="Click to copy"
+    return f"""<a title="Click to copy"
        style='text-decoration: none; display: block; color: var(--foreground)'
        href='{sublime.command_url('lsp_copy_text', {
         'text': html.unescape(copy_text.replace(' ', ' '))
-       })}'>
-        {html_content}
-    </a>"""
+       })}'>{html_content}</a>"""
 
 
 def format_code_actions_for_quick_panel(

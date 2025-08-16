@@ -852,7 +852,7 @@ def get_copy_text_from_markup(content: MarkupContent | MarkedString | list[Marke
 def copy_text_html_element(html_content: str, copy_text: str | None = None) -> str:
     if copy_text is None:
         copy_text = html_content
-    return f"""<a title="Click to copy"
+    return f"""<a title="Click to Copy"
        style='text-decoration: none; display: block; color: var(--foreground)'
        href='{sublime.command_url('lsp_copy_text', {
         'text': html.unescape(copy_text.replace(' ', ' '))

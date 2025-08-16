@@ -822,7 +822,7 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     code = diagnostic.get("code")
     source = diagnostic.get("source") or ""
-    html = copy_text_html_element(_html_element('span', diagnostic["message"]), copy_text=f"{source} {diagnostic['message']}")
+    html = copy_text_html(_html_element('span', diagnostic["message"]), copy_text=f"{source} {diagnostic['message']}")
     if source or code is not None:
         meta_info = ""
         if source:
@@ -840,7 +840,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
-def get_copy_text_from_markup(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
     if isinstance(content, str):
         return content
     elif isinstance(content, dict):
@@ -849,7 +849,7 @@ def get_copy_text_from_markup(content: MarkupContent | MarkedString | list[Marke
         return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
 
 
-def copy_text_html_element(html_content: str, copy_text: str | None = None) -> str:
+def copy_text_html(html_content: str, copy_text: str | None = None) -> str:
     if copy_text is None:
         copy_text = html_content
     return f"""<a title="Click to Copy"

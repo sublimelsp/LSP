@@ -3,7 +3,7 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
-from .views import FORMAT_MARKUP_CONTENT, copy_text_html_element, get_copy_text_from_markup
+from .views import FORMAT_MARKUP_CONTENT, copy_text_html, markup_to_string
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
@@ -147,7 +147,7 @@ class SigHelp:
         else:
             formatted.append(self._function(label))
         formatted.append("</pre></div>")
-        return copy_text_html_element("".join(formatted), label)
+        return copy_text_html("".join(formatted), label)
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []
@@ -175,14 +175,14 @@ class SigHelp:
         documentation = parameter.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html_element(minihtml(view, documentation, allowed_formats, self._language_map), copy_text=get_copy_text_from_markup(documentation))
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map), copy_text=markup_to_string(documentation))
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         documentation = signature.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html_element(minihtml(view, documentation, allowed_formats, self._language_map), copy_text=get_copy_text_from_markup(documentation))
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map), copy_text=markup_to_string(documentation))
         return None
 
     def _function(self, content: str) -> str:

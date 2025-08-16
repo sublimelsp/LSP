@@ -25,13 +25,13 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.url import parse_uri
-from .core.views import copy_text_html_element
+from .core.views import copy_text_html
 from .core.views import diagnostic_severity
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
-from .core.views import get_copy_text_from_markup
+from .core.views import markup_to_string
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -267,8 +267,8 @@ class LspHoverCommand(LspTextCommand):
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
             html_content = minihtml(self.view, content, allowed_formats, language_map)
-            copy_text = get_copy_text_from_markup(content)
-            html_content = copy_text_html_element(html_content, copy_text)
+            copy_text = markup_to_string(content)
+            html_content = copy_text_html(html_content, copy_text)
             contents.append(html_content)
         return '<hr>'.join(contents)
 

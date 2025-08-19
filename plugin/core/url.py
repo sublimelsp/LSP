@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .constants import ST_INSTALLED_PACKAGES_PATH
 from .constants import ST_PACKAGES_PATH
+from .protocol import DocumentUri
 from typing import Any
 from typing_extensions import deprecated
 from urllib.parse import urljoin
@@ -11,6 +12,10 @@ import os
 import re
 
 import sublime
+
+
+def normalize_uri(uri: DocumentUri) -> DocumentUri:
+    return unparse_uri(parse_uri(uri))
 
 
 def filename_to_uri(file_name: str) -> str:

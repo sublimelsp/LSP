@@ -820,9 +820,9 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 
 
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
-    html = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
-    source = diagnostic.get("source")
+    source = diagnostic.get("source") or ""
+    html = copy_text_html(_html_element('span', diagnostic["message"]), copy_text=f"{source} {diagnostic['message']}")
     if source or code is not None:
         meta_info = ""
         if source:
@@ -838,6 +838,25 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
+
+
+def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, dict):
+        return content.get('value', '')
+    elif isinstance(content, list):
+        return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
+
+
+def copy_text_html(html_content: str, copy_text: str | None = None) -> str:
+    if copy_text is None:
+        copy_text = html_content
+    return f"""<a title="Click to Copy"
+       style='text-decoration: none; display: block; color: var(--foreground)'
+       href='{sublime.command_url('lsp_copy_text', {
+        'text': html.unescape(copy_text.replace(' ', ' '))
+       })}'>{html_content}</a>"""
 
 
 def format_code_actions_for_quick_panel(

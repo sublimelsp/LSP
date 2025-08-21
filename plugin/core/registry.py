@@ -227,9 +227,7 @@ class LspRestartServerCommand(LspTextCommand):
             return
 
         def run_async() -> None:
-            config_name = self._config_names[index]
-            if config_name:
-                wm.restart_sessions_async(config_name)
+            wm.restart_sessions_async([self._config_names[index]])
 
         sublime.set_timeout_async(run_async)
 

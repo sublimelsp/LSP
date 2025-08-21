@@ -863,6 +863,25 @@ class AbstractPlugin(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
+    def on_configuration_loaded(cls, window: sublime.Window, workspace_folders: list[WorkspaceFolder],
+                                configuration: ClientConfig) -> None:
+        """
+        Notify when client configuration has loaded to allow for last-minute "configuration" adjustments.
+
+        Triggered initially on plugin initialization and later when the user explicity changes plugin configuration
+        within the Sublime settings or the project file. Note that the provided configuration object does not contain
+        any changes that might have been done previously from within this notification. Every time it's called the
+        configuration is re-read from scratch.
+
+        Prefer this notification over `on_pre_start` for adjusting "configuration".
+
+        :param      window:             The window
+        :param      workspace_folders:  The workspace folders
+        :param      configuration:      The configuration
+        """
+        return
+
+    @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
         """
         In addition to the above variables, add more variables here to be expanded.
@@ -933,9 +952,10 @@ class AbstractPlugin(metaclass=ABCMeta):
                      workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> str | None:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
-        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
-        language server should not care about the working directory.
+        adjustment to the order of the workspace folders. You can also choose to return a custom working directory,
+        but consider that a language server should not care about the working directory.
+
+        Prefer `on_configuration_loaded` for adjusting the "configuration" object.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view

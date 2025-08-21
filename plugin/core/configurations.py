@@ -21,8 +21,8 @@ RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 class WindowConfigChangeListener(metaclass=ABCMeta):
 
     @abstractmethod
-    def on_configs_changed(self, config_name: str | None = None) -> None:
-        raise NotImplementedError()
+    def on_configs_changed(self, configs: list[ClientConfig]) -> None:
+        raise NotImplementedError
 
 
 class WindowConfigManager:
@@ -65,6 +65,7 @@ class WindowConfigManager:
     def _reload_configs(self, updated_config_name: str | None = None, notify_listeners: bool = False) -> None:
         project_data = self._window.project_data()
         project_settings = project_data.get("settings", {}).get("LSP", {}) if isinstance(project_data, dict) else {}
+        updated_configs: list[ClientConfig] = []
         if updated_config_name is None:
             self.all.clear()
         for name, config in self._global_configs.items():
@@ -77,18 +78,22 @@ class WindowConfigManager:
                 overrides = {}
             if name in self._disabled_for_session:
                 overrides["enabled"] = False
-            self.all[name] = ClientConfig.from_config(config, overrides)
+            updated_config = ClientConfig.from_config(config, overrides)
+            self.all[name] = updated_config
+            updated_configs.append(updated_config)
         for name, c in project_settings.items():
             if updated_config_name and updated_config_name != name:
                 continue
             debug("loading project-only configuration", name)
             try:
-                self.all[name] = ClientConfig.from_dict(name, c)
+                updated_config = ClientConfig.from_dict(name, c)
+                self.all[name] = updated_config
+                updated_configs.append(updated_config)
             except Exception as ex:
                 exception_log(f"failed to load project-only configuration {name}", ex)
         if notify_listeners:
             for listener in self._change_listeners:
-                listener.on_configs_changed(updated_config_name)
+                listener.on_configs_changed(updated_configs)
 
     def enable_config(self, config_name: str) -> None:
         if not self._reenable_disabled_for_session(config_name):

@@ -12,6 +12,79 @@ If there are no setup steps for a language server on this page, but a [language 
 !!! info "For legacy ST3 docs, see [lsp.readthedocs.io](https://lsp.readthedocs.io)."
 
 
+## Universal
+
+### Tabby
+
+[Tabby](https://tabby.tabbyml.com/) is a self-hosted AI coding assistant which can provide inline completions for [various programming languages](https://tabby.tabbyml.com/docs/references/programming-languages/).
+
+In order to use Tabby you need a sufficiently fast GPU; the CPU version which can also be downloaded from the GitHub releases page is much too slow and it will result in timeouts for the completion requests.
+Alternatively, Tabby can be setup on a separate server with capable hardware; see the [Configuration docs](https://tabby.tabbyml.com/docs/extensions/configurations/) for the required configuration details.
+The following steps describe a local installation on a Windows PC with compatible Nvidia GPU. More installation methods and the steps for other operation systems are listed in the [Tabby docs](https://tabby.tabbyml.com/docs/quick-start/installation/docker/).
+
+1. Download and install the CUDA Toolkit from <https://developer.nvidia.com/cuda-downloads>
+
+2. Download and extract a CUDA version of Tabby from the [GitHub releases page](https://github.com/TabbyML/tabby/releases) (click on "Assets"); e.g. `tabby_x86_64-windows-msvc-cuda122.zip`
+
+3. On macOS and Linux it might be necessary to change the access permissions of `lama-server` and `tabby` to be executable:
+
+    ```sh
+    $ chmod +x llama-server
+    $ chmod +x tabby
+    ```
+
+    !!! note "On macOS you might get an error that “tabby” cannot be opened because it is from an unidentified developer."
+        After changing the permission to executable, right click on `tabby` and select "Open", that will get rid of the error.
+
+4. Download a completion model (see <https://tabby.tabbyml.com/docs/models/> for available model files and GPU requirements):
+
+    ```sh
+    tabby download --model StarCoder-1B
+    ```
+
+5. Install the `tabby-agent` language server via npm (requires NodeJS):
+
+    ```sh
+    npm install -g tabby-agent
+    ```
+
+6. If necessary, edit the configuration file under `~/.tabby-client/agent/config.toml`, which is generated automatically on the first start of tabby-agent.
+   For example, to disable anonymous usage tracking add
+
+    ```toml
+    [anonymousUsageTracking]
+    disable = true
+    ```
+
+7. Open `Preferences > Package Settings > LSP > Settings` and add the `"tabby"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "tabby": {
+                "enabled": true,
+                "command": ["tabby-agent", "--stdio"],
+                "selector": "source.js | source.python | source.rust",  // replace with your relevant filetype(s)
+                "disabled_capabilities": {
+                    "completionProvider": true
+                }
+            },
+        }
+    }
+    ```
+
+8. Manually start the Tabby backend:
+
+    ```sh
+    tabby serve --model StarCoder-1B --no-webserver
+    ```
+
+    The language server communicates with this backend, i.e. it needs to be running in order for `tabby-agent` to work.
+
+9. Now you can open a file in Sublime Text and start coding.
+   Inline completions are requested when you manually trigger auto-complete via <kbd>Ctrl</kbd> + <kbd>Space</kbd>.
+
+
 ## Angular
 
 Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).

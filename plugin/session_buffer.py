@@ -128,7 +128,7 @@ class SessionBuffer:
         self._pending_changes: PendingChanges | None = None
         self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
-        self.diagnostics_version = -1
+        self._diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
@@ -496,8 +496,13 @@ class SessionBuffer:
             return
         if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
+        change_count = view.change_count()
         if version is None:
-            version = view.change_count()
+            version = change_count
+        elif version < change_count:
+            return
+        if version == self._diagnostics_version:
+            return
         if self._document_diagnostic_pending_request:
             if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
@@ -520,18 +525,17 @@ class SessionBuffer:
         self._document_diagnostic_pending_request = None
         self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
 
-    def _apply_document_diagnostic_async(
-        self, view: sublime.View | None, response: DocumentDiagnosticReport
-    ) -> None:
+    def _apply_document_diagnostic_async(self, view: sublime.View | None, response: DocumentDiagnosticReport) -> None:
         self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
                 {'uri': self._last_known_uri, 'diagnostics': response['items']})
-        for uri, diagnostic_report in response.get('relatedDocuments', {}):
-            sb = self.session.get_session_buffer_for_uri_async(uri)
-            if sb:
-                cast(SessionBuffer, sb)._apply_document_diagnostic_async(
-                    None, cast(DocumentDiagnosticReport, diagnostic_report))
+        if 'relatedDocuments' in response:
+            for uri, diagnostic_report in response['relatedDocuments'].items():
+                sb = self.session.get_session_buffer_for_uri_async(uri)
+                if sb:
+                    cast(SessionBuffer, sb)._apply_document_diagnostic_async(
+                        None, cast(DocumentDiagnosticReport, diagnostic_report))
 
     def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
         self._document_diagnostic_pending_request = None
@@ -580,7 +584,7 @@ class SessionBuffer:
         self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
-            self.diagnostics_version = diagnostics_version
+            self._diagnostics_version = diagnostics_version
             self.diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
@@ -603,6 +607,13 @@ class SessionBuffer:
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
                 )
+
+    def has_latest_diagnostics(self) -> bool:
+        view = self.some_view()
+        if view is None:
+            return False
+        change_count = view.change_count()
+        return self._diagnostics_version == change_count
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

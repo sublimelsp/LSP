@@ -612,8 +612,7 @@ class SessionBuffer:
         view = self.some_view()
         if view is None:
             return False
-        change_count = view.change_count()
-        return self._diagnostics_version == change_count
+        return self._diagnostics_version == view.change_count()
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

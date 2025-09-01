@@ -863,23 +863,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
-    def on_configuration_loaded(cls, window: sublime.Window, workspace_folders: list[WorkspaceFolder],
-                                configuration: ClientConfig) -> None:
+    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
         """
-        Notify when client configuration has loaded to allow for last-minute "configuration" adjustments.
+        Override the default selector used to determine whether server should run on the given view.
 
-        Triggered initially on plugin initialization and later when the user explicity changes plugin configuration
-        within the Sublime settings or the project file. Note that the provided configuration object does not contain
-        any changes that might have been done previously from within this notification. Every time it's called the
-        configuration is re-read from scratch.
-
-        Prefer this notification over `on_pre_start` for adjusting "configuration".
-
-        :param      window:             The window
-        :param      workspace_folders:  The workspace folders
-        :param      configuration:      The configuration
+        :param      view:             The view
+        :param      config:           The config
         """
-        return
+        return config.selector
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
@@ -954,8 +945,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
         adjustment to the order of the workspace folders. You can also choose to return a custom working directory,
         but consider that a language server should not care about the working directory.
-
-        Prefer `on_configuration_loaded` for adjusting the "configuration" object.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view

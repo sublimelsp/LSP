@@ -54,7 +54,7 @@ class WindowConfigManager:
                 return
             scheme = parse_uri(uri)[0]
             for config in self.all.values():
-                if config.match_view(view, scheme) and (config.enabled or include_disabled):
+                if (config.enabled or include_disabled) and config.match_view(view, scheme):
                     yield config
         except (IndexError, RuntimeError):
             pass

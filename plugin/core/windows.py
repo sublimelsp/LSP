@@ -518,10 +518,6 @@ class WindowManager(Manager, WindowConfigChangeListener):
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
-        for config in configs:
-            plugin = get_plugin(config.name)
-            if plugin:
-                plugin.on_configuration_loaded(self._window, self._workspace.get_workspace_folders(), config)
         config_names = [config.name for config in configs]
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
 

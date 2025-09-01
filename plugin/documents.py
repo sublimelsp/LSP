@@ -277,9 +277,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _diagnostics_async(
         self, allow_stale: bool = False
     ) -> Generator[tuple[SessionBufferProtocol, list[tuple[Diagnostic, sublime.Region]]], None, None]:
-        change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            if sb.diagnostics_version == change_count or allow_stale:
+            if sb.has_latest_diagnostics() or allow_stale:
                 yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(

@@ -943,8 +943,9 @@ class AbstractPlugin(metaclass=ABCMeta):
                      workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> str | None:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustment to the order of the workspace folders. You can also choose to return a custom working directory,
-        but consider that a language server should not care about the working directory.
+        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
+        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
+        language server should not care about the working directory.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view

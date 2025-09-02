@@ -22,7 +22,6 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import copy_text_html
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
-from .core.views import markup_to_string
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -308,8 +307,7 @@ class LspResolveDocsCommand(LspTextCommand):
             minihtml_content += copy_text_html(f"<div class='highlight'>{detail}</div>",
                                                copy_text=item.get('detail') or "")
         if documentation:
-            minihtml_content += copy_text_html(documentation,
-                                               copy_text=markup_to_string(item.get("documentation") or ""))
+            minihtml_content += copy_text_html(documentation, copy_text=item.get("documentation") or "")
 
         def run_main() -> None:
             if not self.view.is_valid():

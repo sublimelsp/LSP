@@ -29,7 +29,6 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
-from .core.views import markup_to_string
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -264,9 +263,8 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            html_content = minihtml(self.view, content, allowed_formats, language_map)
-            copy_text = markup_to_string(content)
-            html_content = copy_text_html(html_content, copy_text)
+            html_content = copy_text_html(minihtml(self.view, content, allowed_formats, language_map),
+                                          copy_text=content)
             contents.append(html_content)
         return '<hr>'.join(contents)
 

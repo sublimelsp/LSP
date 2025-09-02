@@ -844,7 +844,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
-def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+def _markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
     if isinstance(content, str):
         return content
     elif isinstance(content, dict):
@@ -853,7 +853,8 @@ def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString])
         return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
 
 
-def copy_text_html(html_content: str, copy_text: str) -> str:
+def copy_text_html(html_content: str, copy_text: str | MarkupContent | MarkedString | list[MarkedString]) -> str:
+    copy_text = _markup_to_string(copy_text)
     if not len(copy_text):
         return html_content
     return f"""<a title="Click to Copy"

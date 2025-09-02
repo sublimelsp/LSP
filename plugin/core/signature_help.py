@@ -3,7 +3,7 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
-from .views import FORMAT_MARKUP_CONTENT, copy_text_html, markup_to_string
+from .views import FORMAT_MARKUP_CONTENT, copy_text_html
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
@@ -176,7 +176,7 @@ class SigHelp:
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
             return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
-                                  copy_text=markup_to_string(documentation))
+                                  copy_text=documentation)
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
@@ -184,7 +184,7 @@ class SigHelp:
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
             return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
-                                  copy_text=markup_to_string(documentation))
+                                  copy_text=documentation)
         return None
 
     def _function(self, content: str) -> str:

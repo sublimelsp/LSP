@@ -305,9 +305,9 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += copy_text_html(f"<div class='highlight'>{detail}</div>", copy_text=item.get('detail'))
+            minihtml_content += copy_text_html(f"<div class='highlight'>{detail}</div>", copy_text=item.get('detail') or "")
         if documentation:
-            minihtml_content += copy_text_html(documentation, markup_to_string(item.get("documentation") or ""))
+            minihtml_content += copy_text_html(documentation, copy_text=markup_to_string(item.get("documentation") or ""))
 
         def run_main() -> None:
             if not self.view.is_valid():

@@ -837,7 +837,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
+        info = "<br>".join(copy_text_html(_format_diagnostic_related_info(config, info, base_dir), copy_text=info['message']) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
@@ -852,9 +852,9 @@ def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString])
         return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
 
 
-def copy_text_html(html_content: str, copy_text: str | None = None) -> str:
-    if copy_text is None:
-        copy_text = html_content
+def copy_text_html(html_content: str, copy_text: str) -> str:
+    if not len(copy_text):
+        return html_content
     return f"""<a title="Click to Copy"
        style='text-decoration: none; display: block; color: var(--foreground)'
        href='{sublime.command_url('lsp_copy_text', {

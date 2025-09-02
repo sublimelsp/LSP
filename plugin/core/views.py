@@ -856,7 +856,7 @@ def copy_text_html(html_content: str, copy_text: str) -> str:
     if not len(copy_text):
         return html_content
     return f"""<a title="Click to Copy"
-       style='text-decoration: none; display: block; color: var(--foreground)'
+       style='text-decoration: none; display: block; color: inherit'
        href='{sublime.command_url('lsp_copy_text', {
         'text': html.unescape(copy_text.replace(' ', ' '))
        })}'>{html_content}</a>"""

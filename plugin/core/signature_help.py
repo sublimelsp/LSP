@@ -175,20 +175,16 @@ class SigHelp:
         documentation = parameter.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html(
-                minihtml(view, documentation, allowed_formats, self._language_map),
-                copy_text=markup_to_string(documentation)
-            )
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
+                                  copy_text=markup_to_string(documentation))
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         documentation = signature.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html(
-                minihtml(view, documentation, allowed_formats, self._language_map),
-                copy_text=markup_to_string(documentation)
-            )
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
+                                  copy_text=markup_to_string(documentation))
         return None
 
     def _function(self, content: str) -> str:

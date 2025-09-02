@@ -822,10 +822,8 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     code = diagnostic.get("code")
     source = diagnostic.get("source") or ""
-    html = copy_text_html(
-        _html_element('span', diagnostic["message"]),
-        copy_text=f"{source} {diagnostic['message']}"
-    )
+    html = copy_text_html(_html_element('span', diagnostic["message"]),
+                          copy_text=f"{source} {diagnostic['message']}")
     if source or code is not None:
         meta_info = ""
         if source:
@@ -837,7 +835,10 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        info = "<br>".join(copy_text_html(_format_diagnostic_related_info(config, info, base_dir), copy_text=info['message']) for info in related_infos)
+        info = "<br>".join(copy_text_html(
+            _format_diagnostic_related_info(config, info, base_dir),
+            copy_text=info['message']
+        ) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)

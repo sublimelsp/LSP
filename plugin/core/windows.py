@@ -163,7 +163,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
                     # debug("listener", listener, "is no longer valid")
-                    return self._dequeue_listener_async()
+                    self._dequeue_listener_async()
+                    return
                 # debug("adding new pending listener", listener)
                 self._listeners.add(listener)
             except IndexError:
@@ -269,7 +270,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     # Continue with handling pending listeners
                     self._new_session = None
                     sublime.set_timeout_async(self._dequeue_listener_async)
-                    return self._window.status_message(message)
+                    self._window.status_message(message)
+                    return
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
@@ -341,17 +343,17 @@ class WindowManager(Manager, WindowConfigChangeListener):
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
-    def restart_sessions_async(self, config_name: str | None = None) -> None:
-        self._end_sessions_async(config_name)
+    def restart_sessions_async(self, config_names: list[str]) -> None:
+        self._end_sessions_async(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self, config_name: str | None = None) -> None:
+    def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
         sessions = list(self._sessions)
         for session in sessions:
-            if config_name is None or config_name == session.config.name:
+            if config_names is None or session.config.name in config_names:
                 session.end_async()
                 self._sessions.discard(session)
 
@@ -515,8 +517,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
-    def on_configs_changed(self, config_name: str | None = None) -> None:
-        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
+    def on_configs_changed(self, configs: list[ClientConfig]) -> None:
+        config_names = [config.name for config in configs]
+        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
 
 
 class WindowRegistry(LspSettingsChangeListener):

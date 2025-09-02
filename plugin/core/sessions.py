@@ -863,6 +863,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
+    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
+        """
+        Override the default selector used to determine whether server should run on the given view.
+
+        :param      view:             The view
+        :param      config:           The config
+        """
+        return config.selector
+
+    @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
         """
         In addition to the above variables, add more variables here to be expanded.

@@ -849,10 +849,12 @@ class ClientConfig:
         view.erase_status(self.status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
+        from .sessions import get_plugin
         syntax = view.syntax()
         if not syntax:
             return False
-        selector = self.selector.strip()
+        plugin = get_plugin(self.name)
+        selector = plugin.selector(view, self).strip() if plugin else self.selector.strip()
         if not selector:
             return False
         return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0

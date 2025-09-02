@@ -13,8 +13,6 @@ from .core.protocol import Diagnostic
 from .core.protocol import DocumentLink
 from .core.protocol import Error
 from .core.protocol import Hover
-from .core.protocol import MarkedString
-from .core.protocol import MarkupContent
 from .core.protocol import Position
 from .core.protocol import Range
 from .core.protocol import Request

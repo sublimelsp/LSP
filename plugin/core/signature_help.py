@@ -3,7 +3,8 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
-from .views import FORMAT_MARKUP_CONTENT, copy_text_html
+from .views import copy_text_html
+from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml

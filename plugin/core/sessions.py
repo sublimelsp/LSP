@@ -211,6 +211,13 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_session(self, config_name: str, file_path: str) -> Session | None:
+        """
+        Gets the session by name and file path.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def get_project_path(self, file_path: str) -> str | None:
         """
         Get the project path for the given file.

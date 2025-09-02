@@ -29,6 +29,9 @@ class MockManager(Manager):
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         pass
 
+    def get_session(self, config_name: str, file_path: str) -> Session | None:
+        pass
+
     def get_project_path(self, file_name: str) -> str | None:
         return None
 

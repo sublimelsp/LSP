@@ -822,7 +822,10 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     code = diagnostic.get("code")
     source = diagnostic.get("source") or ""
-    html = copy_text_html(_html_element('span', diagnostic["message"]), copy_text=f"{source} {diagnostic['message']}")
+    html = copy_text_html(
+        _html_element('span', diagnostic["message"]),
+        copy_text=f"{source} {diagnostic['message']}"
+    )
     if source or code is not None:
         meta_info = ""
         if source:

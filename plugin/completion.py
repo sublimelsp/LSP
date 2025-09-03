@@ -332,7 +332,8 @@ class LspResolveDocsCommand(LspTextCommand):
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
     def _on_navigate(self, url: str) -> None:
-        webbrowser.open(url)
+        if url.startswith("http"):
+            webbrowser.open(url)
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):

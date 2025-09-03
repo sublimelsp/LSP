@@ -860,7 +860,7 @@ def copy_text_html(html_content: str, copy_text: str | MarkupContent | MarkedStr
     return f"""<a title="Click to Copy"
        style='text-decoration: none; display: block; color: inherit'
        href='{sublime.command_url('lsp_copy_text', {
-        'text': html.unescape(copy_text.replace(' ', ' '))
+        'text': copy_text.replace(' ', ' ')
        })}'>{html_content}</a>"""
 
 

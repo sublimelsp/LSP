@@ -1,0 +1,13 @@
+=> 2.5.0
+
+# Features
+
+ - Add selector API in AbstractPlugin (#2620) (Rafał Chłodnicki)
+
+# Fixes
+
+ - skip diagnostics pull if diagnostics already received (#2623) (Rafał Chłodnicki)
+
+# Enhancements
+
+ - Expose publicly Manager.get_session (#2624) (Rafał Chłodnicki)

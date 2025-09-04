@@ -455,6 +455,11 @@
               "default": false,
               "markdownDescription": "Show errors and warnings count in the status bar."
             },
+            "suppress_error_dialogs": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Replace error popup windows with a console message and a short status notification."
+            },
             "lsp_format_on_paste": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .core.css import css
 from .core.logging import debug
+from .core.logging_notify import notify_error
 from .core.registry import windows
 from .core.sessions import get_plugin
 from .core.transports import create_transport
@@ -130,15 +131,19 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         try:
             urllib.parse.urlparse(base_url)
         except Exception:
-            sublime.error_message("The clipboard content must be a URL to a package.json file.")
+            message = "The clipboard content must be a URL to a package.json file."
+            status = "Clipboard must be a URL to package.json"
+            notify_error(sublime.active_window(), message, status)
             return
         if not base_url.endswith("package.json"):
-            sublime.error_message("URL must end with 'package.json'")
+            message = "URL must end with 'package.json'"
+            notify_error(sublime.active_window(), message)
             return
         try:
             package = json.loads(urllib.request.urlopen(base_url).read().decode("utf-8"))
         except Exception as ex:
-            sublime.error_message(f'Unable to load "{base_url}": {ex}')
+            message = f'Unable to load "{base_url}": {ex}'
+            notify_error(sublime.active_window(), message)
             return
 
         # There might be a translations file as well.
@@ -150,11 +155,13 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
 
         contributes = package.get("contributes")
         if not isinstance(contributes, dict):
-            sublime.error_message('No "contributes" key found!')
+            message = 'No "contributes" key found!'
+            notify_error(sublime.active_window(), message)
             return
         configuration = contributes.get("configuration")
         if not isinstance(configuration, dict) and not isinstance(configuration, list):
-            sublime.error_message('No "contributes.configuration" key found!')
+            message = 'No "contributes.configuration" key found!'
+            notify_error(sublime.active_window(), message)
             return
         if isinstance(configuration, dict):
             properties = configuration.get("properties")
@@ -163,7 +170,8 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             for configuration_item in configuration:
                 properties.update(configuration_item.get("properties"))
         if not isinstance(properties, dict):
-            sublime.error_message('No "contributes.configuration.properties" key found!')
+            message = 'No "contributes.configuration.properties" key found!'
+            notify_error(sublime.active_window(), message)
             return
 
         # Process each key-value pair of the server settings.
@@ -303,7 +311,8 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
             return
         view = wm.window.active_view()
         if not view:
-            sublime.message_dialog('Troubleshooting must be run with a file opened')
+            message = 'Troubleshooting must be run with a file opened'
+            notify_error(self.window, message)
             return
         active_view = view
         configs = wm.get_config_manager().get_configs()
@@ -457,7 +466,9 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
             return
         listener = wm.listener_for_view(self.view)
         if not listener or not any(listener.session_views_async()):
-            sublime.error_message("There is no language server running for this view.")
+            message = "There is no language server running for this view."
+            status = "No language server for this view"
+            notify_error(wm.window, message, status)
             return
         v = wm.window.new_file()
         v.set_scratch(True)

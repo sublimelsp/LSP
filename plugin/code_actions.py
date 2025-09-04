@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.logging_notify import notify_error
 from .core.promise import Promise
 from .core.protocol import CodeAction
 from .core.protocol import CodeActionKind
@@ -352,7 +353,8 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            message = f"{session_name}: {str(response)}"
+            notify_error(self.view.window(), message)
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
@@ -414,7 +416,8 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            message = f"{session_name}: {str(response)}"
+            notify_error(self.window, message)
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view

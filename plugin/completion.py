@@ -112,11 +112,11 @@ def format_completion(
     return completion
 
 
-def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
+def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_inset_mode: bool) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
-        if LspCommitCompletionWithOppositeInsertMode.active:
+        if reverse_inset_mode:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast(TextEdit, text_edit)
@@ -334,17 +334,16 @@ class LspResolveDocsCommand(LspTextCommand):
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
-    active = False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        LspCommitCompletionWithOppositeInsertMode.active = True
+        LspSelectCompletionCommand.reverse_insert_mode = True
         self.view.run_command("commit_completion")
-        LspCommitCompletionWithOppositeInsertMode.active = False
 
 
 class LspSelectCompletionCommand(LspTextCommand):
 
     completions: dict[SessionName, CompletionsStore] = {}
+    reverse_insert_mode = False
 
     def want_event(self) -> bool:
         return False
@@ -375,10 +374,13 @@ class LspSelectCompletionCommand(LspTextCommand):
 
 class LspApplyCompletionCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem) -> None:
+        reverse_inset_mode = LspSelectCompletionCommand.reverse_insert_mode
+        LspSelectCompletionCommand.reverse_insert_mode = False
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
+            edit_region = range_to_region(get_text_edit_range(text_edit, reverse_inset_mode=reverse_inset_mode),
+                                          self.view)
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:

@@ -365,6 +365,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         resolve_promise.then(
             lambda item: self.view.run_command('lsp_apply_completion', {'session_name': session_name, 'item': item}))
 
+
 class LspApplyCompletionCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem) -> None:
         text_edit = item.get("textEdit")

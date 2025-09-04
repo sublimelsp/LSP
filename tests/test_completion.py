@@ -9,6 +9,7 @@ from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from setup import TextDocumentTestCase
+from setup import TIMEOUT_TIME
 from typing import Any, Generator
 from unittest import TestCase
 import sublime
@@ -57,16 +58,14 @@ class CompletionsTestsBase(TextDocumentTestCase):
         current_change_count = self.view.change_count()
 
         def commit_completion() -> Generator:
-            if not self.view.is_auto_complete_visible():
-                yield False
-                return
+            yield {"condition": self.view.is_auto_complete_visible, "timeout": TIMEOUT_TIME}
             nonlocal committed
             nonlocal current_change_count
             if not committed:
                 self.view.run_command(commit_completion_command)
                 committed = True
             yield from self.await_message("textDocument/didChange")
-            yield lambda: self.view.change_count() > current_change_count
+            yield self.view.change_count() > current_change_count
 
         yield from commit_completion()
 
@@ -84,10 +83,10 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
         if insert_text:
             self.type(insert_text)
+            yield from self.await_message("textDocument/didChange")
         self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
-        yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.read_file(), expected_text)
 
 

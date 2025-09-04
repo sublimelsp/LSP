@@ -362,8 +362,15 @@ class LspSelectCompletionCommand(LspTextCommand):
                 Request.resolveCompletionItem(item, self.view))
         else:
             resolve_promise = Promise.resolve(item)
-        resolve_promise.then(
-            lambda item: self.view.run_command('lsp_apply_completion', {'session_name': session_name, 'item': item}))
+        resolve_promise.then(lambda resolved_item: self._on_resolved(session_name, item, resolved_item))
+
+    def _on_resolved(self, session_name: str, item: CompletionItem, resolved_item: CompletionItem | Error):
+        if isinstance(resolved_item, Error):
+            print('[LSP] Error resolving completion')
+            used_item = item
+        else:
+            used_item = resolved_item
+        self.view.run_command('lsp_apply_completion', {'session_name': session_name, 'item': used_item})
 
 
 class LspApplyCompletionCommand(LspTextCommand):

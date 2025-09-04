@@ -9,7 +9,7 @@ from LSP.plugin.core.protocol import CompletionItemLabelDetails
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.protocol import InsertTextFormat
 from setup import TextDocumentTestCase
-from typing import Any, Callable, Generator
+from typing import Any, Generator
 from unittest import TestCase
 import sublime
 

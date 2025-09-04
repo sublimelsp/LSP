@@ -346,9 +346,27 @@ class LspSelectCompletionCommand(LspTextCommand):
 
     completions: dict[SessionName, CompletionsStore] = {}
 
+    def want_event(self) -> bool:
+        return False
+
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
+        sublime.set_timeout_async(lambda: self.run_async(session_name, item))
+
+    def run_async(self, session_name: str, item: CompletionItem) -> None:
+        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+        additional_text_edits = item.get('additionalTextEdits')
+        if session and not additional_text_edits:
+            resolve_promise: Promise[CompletionItem] = session.send_request_task(
+                Request.resolveCompletionItem(item, self.view))
+        else:
+            resolve_promise = Promise.resolve(item)
+        resolve_promise.then(
+            lambda item: self.view.run_command('lsp_apply_completion', {'session_name': session_name, 'item': item}))
+
+class LspApplyCompletionCommand(LspTextCommand):
+    def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem) -> None:
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
@@ -362,23 +380,6 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # todo: this should all run from the worker thread
-        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-        additional_text_edits = item.get('additionalTextEdits')
-        if session and not additional_text_edits:
-            session.send_request_async(
-                Request.resolveCompletionItem(item, self.view),
-                functools.partial(self._on_resolved_async, session_name))
-        else:
-            self._on_resolved(session_name, item)
-
-    def want_event(self) -> bool:
-        return False
-
-    def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
-        sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
-
-    def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             apply_text_edits(self.view, additional_edits)

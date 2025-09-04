@@ -349,6 +349,15 @@ class LspSelectCompletionCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
+        # todo: this should all run from the worker thread
+        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+        additional_text_edits = item.get('additionalTextEdits')
+        if session and not additional_text_edits:
+            # send completionItem/resolve before the view is edited with view.erase, "insert_snippet" and "insert"
+            # fixes #https://github.com/sublimelsp/LSP/issues/2631
+            session.send_request_async(
+                Request.resolveCompletionItem(item, self.view),
+                functools.partial(self._on_resolved_async, session_name))
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
@@ -362,14 +371,8 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # todo: this should all run from the worker thread
-        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-        additional_text_edits = item.get('additionalTextEdits')
-        if session and not additional_text_edits:
-            session.send_request_async(
-                Request.resolveCompletionItem(item, self.view),
-                functools.partial(self._on_resolved_async, session_name))
-        else:
+        if additional_text_edits:
+            # apply additional_text_edits after inserting newText, insertText or label
             self._on_resolved(session_name, item)
 
     def want_event(self) -> bool:

@@ -649,7 +649,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -658,7 +658,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> Generator:
@@ -693,7 +693,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -744,7 +744,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -913,7 +913,8 @@ class FormatCompletionsUnitTests(TestCase):
         self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
     ) -> None:
         item = format_completion(
-            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0,
+            prefix_length=0)
         self.assertEqual(item.trigger, trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)

@@ -27,7 +27,7 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from typing import Any, Callable, Generator, List, Tuple, Union
+from typing import Any, Callable, ClassVar, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
 import functools
@@ -132,7 +132,7 @@ def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
 
 
 def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItemDefaults) -> CompletionItem:
-    """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
+    """Currently supports defaults for: ["editRange", "insertTextFormat", "data"]."""
     if not item_defaults:
         return item
     default_text_edit: TextEdit | InsertReplaceEdit | None = None
@@ -173,6 +173,7 @@ class QueryCompletionsTask:
     All public methods must only be called on the async thread and the "on_done_async" callback will also be called
     on the async thread.
     """
+
     def __init__(
         self,
         view: sublime.View,
@@ -342,7 +343,7 @@ class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions: dict[SessionName, CompletionsStore] = {}
+    completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
     reverse_insert_mode = False
 
     def want_event(self) -> bool:
@@ -355,8 +356,7 @@ class LspSelectCompletionCommand(LspTextCommand):
 
     def run_async(self, session_name: str, item: CompletionItem) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-        additional_text_edits = item.get('additionalTextEdits')
-        if session and not additional_text_edits:
+        if session and not item.get('additionalTextEdits'):
             resolve_promise: Promise[CompletionItem] = session.send_request_task(
                 Request.resolveCompletionItem(item, self.view))
         else:

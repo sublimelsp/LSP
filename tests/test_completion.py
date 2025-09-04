@@ -910,7 +910,7 @@ class ItemDefaultTests(TestCase):
 class FormatCompletionsUnitTests(TestCase):
 
     def _verify_completion(
-        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = ''
     ) -> None:
         item = format_completion(
             payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0,
@@ -918,7 +918,6 @@ class FormatCompletionsUnitTests(TestCase):
         self.assertEqual(item.trigger, trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
-        self.assertEqual(item.flags, flags)
 
     def test_label(self) -> None:
         self._verify_completion(

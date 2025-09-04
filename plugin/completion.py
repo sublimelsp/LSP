@@ -48,7 +48,8 @@ def format_completion(
     can_resolve_completion_items: bool,
     session_name: str,
     item_defaults: CompletionItemDefaults,
-    view_id: int
+    view_id: int,
+    prefix_length: int,
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label = item['label']
@@ -102,13 +103,14 @@ def format_completion(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
+        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}","prefix_length":{prefix_length}}}',
         sublime.CompletionFormat.COMMAND,
         kind,
         details=" | ".join(details)
     )
-    if text_edit:
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
+    # Since we want to resolve completion before doing any document changes, we never use the native logic for removing
+    # the prefix.
+    completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
 
 
@@ -179,11 +181,13 @@ class QueryCompletionsTask:
         view: sublime.View,
         location: int,
         triggered_manually: bool,
+        prefix_length: int,
         on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
     ) -> None:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
+        self._prefix_length = prefix_length
         self._on_done_async = on_done_async
         self._resolved = False
         self._pending_completion_requests: dict[int, weakref.ref[Session]] = {}
@@ -238,7 +242,8 @@ class QueryCompletionsTask:
             config_name = session.config.name
             items.extend(
                 format_completion(
-                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
+                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id(),
+                    self._prefix_length)
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
@@ -349,31 +354,34 @@ class LspSelectCompletionCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
+    def run(self, edit: sublime.Edit, index: int, session_name: str, prefix_length: int) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
-        sublime.set_timeout_async(lambda: self.run_async(session_name, item))
+        sublime.set_timeout_async(lambda: self.run_async(session_name, item, prefix_length))
 
-    def run_async(self, session_name: str, item: CompletionItem) -> None:
+    def run_async(self, session_name: str, item: CompletionItem, prefix_length: int) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         if session and not item.get('additionalTextEdits'):
             resolve_promise: Promise[CompletionItem] = session.send_request_task(
                 Request.resolveCompletionItem(item, self.view))
         else:
             resolve_promise = Promise.resolve(item)
-        resolve_promise.then(lambda resolved_item: self._on_resolved(session_name, item, resolved_item))
+        resolve_promise.then(lambda resolved_item: self._on_resolved(session_name, item, resolved_item, prefix_length))
 
-    def _on_resolved(self, session_name: str, item: CompletionItem, resolved_item: CompletionItem | Error):
+    def _on_resolved(
+        self, session_name: str, item: CompletionItem, resolved_item: CompletionItem | Error, prefix_length: int
+    ):
         if isinstance(resolved_item, Error):
             print('[LSP] Error resolving completion')
             used_item = item
         else:
             used_item = resolved_item
-        self.view.run_command('lsp_apply_completion', {'session_name': session_name, 'item': used_item})
+        self.view.run_command('lsp_apply_completion',
+                              {'session_name': session_name, 'item': used_item, 'prefix_length': prefix_length})
 
 
 class LspApplyCompletionCommand(LspTextCommand):
-    def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem) -> None:
+    def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem, prefix_length: int) -> None:
         reverse_insert_mode = LspSelectCompletionCommand.reverse_insert_mode
         LspSelectCompletionCommand.reverse_insert_mode = False
         text_edit = item.get("textEdit")
@@ -384,6 +392,10 @@ class LspApplyCompletionCommand(LspTextCommand):
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:
+            if prefix_length:
+                sel = self.view.sel()
+                for region in self._translated_regions(sublime.Region(sel[0].a - prefix_length, sel[0].b)):
+                    self.view.erase(edit, region)
             new_text = item.get("insertText") or item["label"]
             new_text = new_text.replace("\r", "")
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:

@@ -355,9 +355,11 @@ class LspSelectCompletionCommand(LspTextCommand):
         if session and not additional_text_edits:
             # send completionItem/resolve before the view is edited with view.erase, "insert_snippet" and "insert"
             # fixes #https://github.com/sublimelsp/LSP/issues/2631
-            session.send_request_async(
+            def e():
+                session.send_request_async(
                 Request.resolveCompletionItem(item, self.view),
                 functools.partial(self._on_resolved_async, session_name))
+            sublime.set_timeout(e, 1000)
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")

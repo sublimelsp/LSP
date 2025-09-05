@@ -822,8 +822,7 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     code = diagnostic.get("code")
     source = diagnostic.get("source") or ""
-    html = copy_text_html(_html_element('span', diagnostic["message"]),
-                          copy_text=f"{source} {diagnostic['message']}")
+    html = _html_element('span', diagnostic["message"])
     if source or code is not None:
         meta_info = ""
         if source:
@@ -833,6 +832,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
+    html = copy_text_html(html, copy_text=f"{source} {diagnostic['message']}")
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         info = "<br>".join(copy_text_html(

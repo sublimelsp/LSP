@@ -27,7 +27,7 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from typing import Any, Callable, Generator, List, Tuple, Union
+from typing import Any, Callable, ClassVar, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
 import functools
@@ -48,7 +48,8 @@ def format_completion(
     can_resolve_completion_items: bool,
     session_name: str,
     item_defaults: CompletionItemDefaults,
-    view_id: int
+    view_id: int,
+    prefix_length: int,
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     lsp_label = item['label']
@@ -102,21 +103,22 @@ def format_completion(
         trigger,
         annotation,
         # Not using "sublime.format_command" in a hot path to avoid slow json.dumps.
-        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}"}}',
+        f'lsp_select_completion {{"index":{index},"session_name":"{session_name}","prefix_length":{prefix_length}}}',
         sublime.CompletionFormat.COMMAND,
         kind,
         details=" | ".join(details)
     )
-    if text_edit:
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
+    # Since we want to resolve completion before doing any document changes, we never use the native logic for removing
+    # the prefix.
+    completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion
 
 
-def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
+def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit, *, reverse_insert_mode: bool) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
         text_edit = cast(InsertReplaceEdit, text_edit)
         insert_mode = userprefs().completion_insert_mode
-        if LspCommitCompletionWithOppositeInsertMode.active:
+        if reverse_insert_mode:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
     text_edit = cast(TextEdit, text_edit)
@@ -132,7 +134,7 @@ def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
 
 
 def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItemDefaults) -> CompletionItem:
-    """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
+    """Currently supports defaults for: ["editRange", "insertTextFormat", "data"]."""
     if not item_defaults:
         return item
     default_text_edit: TextEdit | InsertReplaceEdit | None = None
@@ -173,16 +175,19 @@ class QueryCompletionsTask:
     All public methods must only be called on the async thread and the "on_done_async" callback will also be called
     on the async thread.
     """
+
     def __init__(
         self,
         view: sublime.View,
         location: int,
         triggered_manually: bool,
+        prefix_length: int,
         on_done_async: Callable[[list[sublime.CompletionItem], sublime.AutoCompleteFlags], None]
     ) -> None:
         self._view = view
         self._location = location
         self._triggered_manually = triggered_manually
+        self._prefix_length = prefix_length
         self._on_done_async = on_done_async
         self._resolved = False
         self._pending_completion_requests: dict[int, weakref.ref[Session]] = {}
@@ -237,7 +242,8 @@ class QueryCompletionsTask:
             config_name = session.config.name
             items.extend(
                 format_completion(
-                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id())
+                    response_item, index, can_resolve_completion_items, config_name, item_defaults, self._view.id(),
+                    self._prefix_length)
                 for index, response_item in enumerate(response_items)
                 if include_snippets or response_item.get("kind") != CompletionItemKind.Snippet)
         if items:
@@ -334,51 +340,68 @@ class LspResolveDocsCommand(LspTextCommand):
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):
-    active = False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
-        LspCommitCompletionWithOppositeInsertMode.active = True
+        LspSelectCompletionCommand.reverse_insert_mode = True
         self.view.run_command("commit_completion")
-        LspCommitCompletionWithOppositeInsertMode.active = False
 
 
 class LspSelectCompletionCommand(LspTextCommand):
 
-    completions: dict[SessionName, CompletionsStore] = {}
+    completions: ClassVar[dict[SessionName, CompletionsStore]] = {}
+    reverse_insert_mode = False
 
-    def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
+    def want_event(self) -> bool:
+        return False
+
+    def run(self, edit: sublime.Edit, index: int, session_name: str, prefix_length: int) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
+        sublime.set_timeout_async(lambda: self.run_async(session_name, item, prefix_length))
+
+    def run_async(self, session_name: str, item: CompletionItem, prefix_length: int) -> None:
+        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+        if session and not item.get('additionalTextEdits'):
+            resolve_promise: Promise[CompletionItem] = session.send_request_task(
+                Request.resolveCompletionItem(item, self.view))
+        else:
+            resolve_promise = Promise.resolve(item)
+        resolve_promise.then(lambda resolved_item: self._on_resolved(session_name, item, resolved_item, prefix_length))
+
+    def _on_resolved(
+        self, session_name: str, item: CompletionItem, resolved_item: CompletionItem | Error, prefix_length: int
+    ):
+        if isinstance(resolved_item, Error):
+            print('[LSP] Error resolving completion')
+            used_item = item
+        else:
+            used_item = resolved_item
+        self.view.run_command('lsp_apply_completion',
+                              {'session_name': session_name, 'item': used_item, 'prefix_length': prefix_length})
+
+
+class LspApplyCompletionCommand(LspTextCommand):
+    def run(self, edit: sublime.Edit, session_name: str, item: CompletionItem, prefix_length: int) -> None:
+        reverse_insert_mode = LspSelectCompletionCommand.reverse_insert_mode
+        LspSelectCompletionCommand.reverse_insert_mode = False
         text_edit = item.get("textEdit")
         if text_edit:
             new_text = text_edit["newText"].replace("\r", "")
-            edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
+            edit_region = range_to_region(get_text_edit_range(text_edit, reverse_insert_mode=reverse_insert_mode),
+                                          self.view)
             for region in self._translated_regions(edit_region):
                 self.view.erase(edit, region)
         else:
+            if prefix_length:
+                sel = self.view.sel()
+                for region in self._translated_regions(sublime.Region(sel[0].a - prefix_length, sel[0].b)):
+                    self.view.erase(edit, region)
             new_text = item.get("insertText") or item["label"]
             new_text = new_text.replace("\r", "")
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # todo: this should all run from the worker thread
-        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-        additional_text_edits = item.get('additionalTextEdits')
-        if session and not additional_text_edits:
-            session.send_request_async(
-                Request.resolveCompletionItem(item, self.view),
-                functools.partial(self._on_resolved_async, session_name))
-        else:
-            self._on_resolved(session_name, item)
-
-    def want_event(self) -> bool:
-        return False
-
-    def _on_resolved_async(self, session_name: str, item: CompletionItem) -> None:
-        sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
-
-    def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             apply_text_edits(self.view, additional_edits)

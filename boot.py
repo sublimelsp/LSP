@@ -10,6 +10,7 @@ from .plugin.code_actions import LspSourceActionCommand
 from .plugin.code_lens import LspCodeLensCommand
 from .plugin.code_lens import LspToggleCodeLensesCommand
 from .plugin.color import LspColorPresentationCommand
+from .plugin.completion import LspApplyCompletionCommand
 from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.completion import LspSelectCompletionCommand
@@ -90,6 +91,7 @@ from typing import Any
 __all__ = (
     "DocumentSyncListener",
     "Listener",
+    "LspApplyCompletionCommand",
     "LspApplyDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
     "LspCallHierarchyCommand",

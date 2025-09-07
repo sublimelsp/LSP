@@ -42,6 +42,10 @@ ResolvedCompletions: TypeAlias = Tuple[Union[CompletionResponse, Error], 'weakre
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
 
+def format_details(detail: str, cutoff_length: int = 80) -> str:
+    return html.escape(detail if len(detail) <= cutoff_length else detail[:cutoff_length] + '…')
+
+
 def format_completion(
     item: CompletionItem,
     index: int,
@@ -71,7 +75,7 @@ def format_completion(
             # labelDetails.detail is likely a type annotation
             # Don't append it to the trigger: https://github.com/sublimelsp/LSP/issues/2169
             trigger = lsp_label
-            details.append(html.escape(lsp_label_detail))
+            details.append(format_details(lsp_label_detail))
         else:
             # labelDetails.detail is likely a function signature
             trigger = lsp_label + lsp_label_detail
@@ -80,14 +84,14 @@ def format_completion(
         if lsp_label.startswith(lsp_filter_text):
             trigger = lsp_label
             if lsp_label_detail:
-                details.append(html.escape(lsp_label + lsp_label_detail))
+                details.append(format_details(lsp_label + lsp_label_detail))
         else:
             trigger = lsp_filter_text
-            details.append(html.escape(lsp_label + lsp_label_detail))
+            details.append(format_details(lsp_label + lsp_label_detail))
         if lsp_label_description:
             annotation = lsp_label_description
             if lsp_detail:
-                details.append(html.escape(lsp_detail))
+                details.append(format_details(lsp_detail))
         else:
             annotation = lsp_detail
     if item.get('deprecated') or CompletionItemTag.Deprecated in item.get('tags', []):

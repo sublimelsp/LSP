@@ -3,6 +3,7 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
+from .views import copy_text_html
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
@@ -83,7 +84,7 @@ class SigHelp:
         else:
             self._active_parameter_bold = active_parameter_style.get('bold', False)
             self._active_parameter_underline = active_parameter_style.get('underline', False)
-        formatted.extend(self._render_label(signature))
+        formatted.append(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
 
@@ -111,7 +112,7 @@ class SigHelp:
             len(self._signatures),
         )
 
-    def _render_label(self, signature: SignatureInformation) -> list[str]:
+    def _render_label(self, signature: SignatureInformation) -> str:
         formatted: list[str] = []
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
@@ -147,7 +148,7 @@ class SigHelp:
         else:
             formatted.append(self._function(label))
         formatted.append("</pre></div>")
-        return formatted
+        return copy_text_html("".join(formatted), label)
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []
@@ -175,14 +176,16 @@ class SigHelp:
         documentation = parameter.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return minihtml(view, documentation, allowed_formats, self._language_map)
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
+                                  copy_text=documentation)
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         documentation = signature.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return minihtml(view, documentation, allowed_formats, self._language_map)
+            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
+                                  copy_text=documentation)
         return None
 
     def _function(self, content: str) -> str:

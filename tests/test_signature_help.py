@@ -44,14 +44,22 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 0
             },
             r'''
+            <a[^>]+>
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
+            </a>
+            <a[^>]+>
             <p>must be in the frobnicate range</p>
+            </a>
             <hr/>
-            <div style="font-size: 0\.9rem"><p>f does interesting things</p></div>
+            <div style="font-size: 0\.9rem">
+            <a[^>]+>
+            <p>f does interesting things</p>
+            </a>
+            </div>
             '''
         )
 
@@ -84,14 +92,22 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 0
             },
             r'''
+            <a[^>]+>
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
+            </a>
+            <a[^>]+>
             <p>must be in the <strong>frobnicate</strong> range</p>
+            </a>
             <hr/>
-            <div style="font-size: 0\.9rem"><p>f does <em>interesting</em> things</p></div>
+            <div style="font-size: 0\.9rem">
+            <a[^>]+>
+            <p>f does <em>interesting</em> things</p>
+            </a>
+            </div>
             '''
         )
 
@@ -118,6 +134,7 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 1
             },
             r'''
+            <a[^>]+>
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}">x</span>
@@ -125,7 +142,10 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">y</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
+            </a>
+            <a[^>]+>
             <p>hello there</p>
+            </a>
             '''
         )
 
@@ -152,6 +172,7 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 1
             },
             r'''
+            <a[^>]+>
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}">x</span>
@@ -159,7 +180,10 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">y</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
+            </a>
+            <a[^>]+>
             <p>hello there</p>
+            </a>
             '''
         )
 
@@ -206,6 +230,7 @@ class SignatureHelpTest(unittest.TestCase):
             <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\):
             </div>
             </p>
+            <a[^>]+>
             <div class="highlight"><pre><span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
             <span style="color: #\w{6}">, </span>
@@ -214,6 +239,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}">b</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
+            </a>
             '''
         )
 
@@ -238,7 +264,7 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 2
             },
             r'''
-            <div class="highlight"><pre>
+            <a[^>]+><div class="highlight"><pre>
             <span style="color: #\w{6}">RUN </span>
             <span style="color: #\w{6}">\[</span>
             <span style="color: #\w{6}"> </span>
@@ -250,5 +276,6 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}"> </span>
             <span style="color: #\w{6}">\]</span>
             </pre></div>
+            </a>
             '''
         )

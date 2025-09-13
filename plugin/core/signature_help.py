@@ -3,11 +3,12 @@ from .logging import debug
 from .protocol import SignatureHelp
 from .protocol import SignatureInformation
 from .registry import LspTextCommand
-from .views import copy_text_html
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
+from .views import markup_to_string
 from .views import minihtml
+from .views import wrap_in_copy_link
 import functools
 import html
 import re
@@ -148,7 +149,7 @@ class SigHelp:
         else:
             formatted.append(self._function(label))
         formatted.append("</pre></div>")
-        return copy_text_html("".join(formatted), label)
+        return wrap_in_copy_link("".join(formatted), label)
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []
@@ -176,16 +177,16 @@ class SigHelp:
         documentation = parameter.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
-                                  copy_text=documentation)
+            return wrap_in_copy_link(minihtml(view, documentation, allowed_formats, self._language_map),
+                                     text_to_copy=markup_to_string(documentation))
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         documentation = signature.get("documentation")
         if documentation:
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
-            return copy_text_html(minihtml(view, documentation, allowed_formats, self._language_map),
-                                  copy_text=documentation)
+            return wrap_in_copy_link(minihtml(view, documentation, allowed_formats, self._language_map),
+                                     text_to_copy=markup_to_string(documentation))
         return None
 
     def _function(self, content: str) -> str:

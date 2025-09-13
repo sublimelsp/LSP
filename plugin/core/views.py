@@ -850,7 +850,7 @@ def _markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]
     elif isinstance(content, dict):
         return content.get('value', '')
     elif isinstance(content, list):
-        return " ".join(content)   # pyright: ignore[reportCallIssue, reportUnknownVariableType, reportArgumentType]
+        return " ".join([_markup_to_string(text) for text in content])
 
 
 def copy_text_html(html_content: str, copy_text: str | MarkupContent | MarkedString | list[MarkedString]) -> str:

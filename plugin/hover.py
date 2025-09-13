@@ -32,12 +32,14 @@ from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
 from .core.views import MarkdownLangMap
+from .core.views import markup_to_string
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
+from .core.views import wrap_in_copy_link
 from functools import partial
 from typing import Sequence, Union
 from urllib.parse import urlparse
@@ -45,7 +47,6 @@ import html
 import mdpopups
 import sublime
 import sublime_plugin
-
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]
@@ -259,11 +260,13 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []
+        contents: list[str] = []
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(minihtml(self.view, content, allowed_formats, language_map))
+            html_content = wrap_in_copy_link(minihtml(self.view, content, allowed_formats, language_map),
+                                             text_to_copy=markup_to_string(content))
+            contents.append(html_content)
         return '<hr>'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:
@@ -420,3 +423,10 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
                     session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
                 else:
                     session_view.reset_show_definitions()
+
+
+class LspCopyTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text: str) -> None:
+        sublime.set_clipboard(text)
+        text_length = len(text)
+        sublime.status_message(f"Copied {text_length} character{'s' if text_length > 1 else ''}")

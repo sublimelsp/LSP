@@ -847,9 +847,9 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 def _markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
     if isinstance(content, str):
         return content
-    elif isinstance(content, dict):
+    if isinstance(content, dict):
         return content.get('value', '')
-    elif isinstance(content, list):
+    if isinstance(content, list):
         return " ".join([_markup_to_string(text) for text in content])
 
 

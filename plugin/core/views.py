@@ -844,15 +844,6 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
-def _markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, dict):
-        return content.get('value', '')
-    if isinstance(content, list):
-        return " ".join([_markup_to_string(text) for text in content])
-
-
 def copy_text_html(html_content: str, copy_text: str | MarkupContent | MarkedString | list[MarkedString]) -> str:
     copy_text = _markup_to_string(copy_text)
     if not len(copy_text):
@@ -862,6 +853,15 @@ def copy_text_html(html_content: str, copy_text: str | MarkupContent | MarkedStr
        href='{sublime.command_url('lsp_copy_text', {
         'text': copy_text
        })}'>{html_content}</a>"""
+
+
+def _markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        return content.get('value', '')
+    if isinstance(content, list):
+        return " ".join([_markup_to_string(text) for text in content])
 
 
 def format_code_actions_for_quick_panel(

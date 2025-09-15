@@ -220,6 +220,7 @@ LANGUAGE_IDENTIFIERS = {
     "text.html.handlebars": "handlebars",
     "text.html.markdown": "markdown",
     "text.html.markdown.rmarkdown": "r",  # https://github.com/REditorSupport/sublime-ide-r
+    "text.html.rails": "erb",
     "text.html.vue": "vue",
     "text.jinja": "html",  # https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "plaintext",

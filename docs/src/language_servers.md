@@ -646,7 +646,7 @@ There are multiple options:
             "ruby": {
                 "enabled": true,
                 "command": ["solargraph", "stdio"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
                 "initializationOptions": {
                     "diagnostics": true
                 }
@@ -678,7 +678,7 @@ There are multiple options:
             "sorbet": {
                 "enabled": true,
                 "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman", "."],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
             }
         }
     }
@@ -722,7 +722,7 @@ There are multiple options:
             "ruby-lsp": {
                 "enabled": true,
                 "command": ["ruby-lsp"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby | text.html.rails",
                 "initializationOptions": {
                     "enabledFeatures": {
                         "diagnostics": true
@@ -750,7 +750,7 @@ There are multiple options:
             "steep": {
                 "enabled": true,
                 "command": ["steep", "langserver"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
             }
         }
     }

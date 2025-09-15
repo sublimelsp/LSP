@@ -1079,16 +1079,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
+    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
         invoke the passed-in callback some time.
 
         The arguments of the provided callback work as follows:
 
-        - The first argument is the title of the view that will be populated with the content of a new scratch view
-        - The second argument is the content of the view
-        - The third argument is the syntax to apply for the new view
+        - The first argument is the title of the view that will be populated with the content of a new scratch view.
+          If `None` is passed, no new view will be opened and the other arguments are ignored.
+        - The second argument is the content of the view.
+        - The third argument is the syntax to apply for the new view.
         """
         return False
 
@@ -1763,28 +1764,31 @@ class Session(TransportCallbacks):
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
-        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
+        pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
-            def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
-                if group > -1:
-                    self.window.focus_group(group)
-                v = self.window.new_file(syntax=syntax, flags=flags)
-                # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                # settings object here at our leisure.
-                v.settings().set("lsp_uri", uri)
-                v.set_scratch(True)
-                v.set_name(title)
-                v.run_command("append", {"characters": content})
-                v.set_read_only(True)
-                if r:
-                    center_selection(v, r)
-                sublime.set_timeout_async(lambda: result[1](v))
+            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
+                if title is not None:
+                    if group > -1:
+                        self.window.focus_group(group)
+                    v = self.window.new_file(syntax=syntax, flags=flags)
+                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+                    # settings object here at our leisure.
+                    v.settings().set("lsp_uri", uri)
+                    v.set_scratch(True)
+                    v.set_name(title)
+                    v.run_command("append", {"characters": content})
+                    v.set_read_only(True)
+                    if r:
+                        center_selection(v, r)
+                    sublime.set_timeout_async(lambda: result[1](v))
+                else:
+                    sublime.set_timeout_async(lambda: result[1](None))
 
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
+            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
             return result[0]
         return None
 

@@ -257,12 +257,12 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         self.assertTrue(kind_contains_other_kind('a', 'a.b'))
         self.assertTrue(kind_contains_other_kind('a.b', 'a.b'))
         # Negative
+        self.assertFalse(kind_contains_other_kind('a', 'b.a'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'b'))
         self.assertFalse(kind_contains_other_kind('a.b', 'a'))
         self.assertFalse(kind_contains_other_kind('aa', 'a'))
         self.assertFalse(kind_contains_other_kind('aa.b', 'a'))
-        self.assertFalse(kind_contains_other_kind('a.b', 'b'))
         self.assertFalse(kind_contains_other_kind('aa.b', 'b'))
-        self.assertFalse(kind_contains_other_kind('a', 'b.a'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):

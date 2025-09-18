@@ -1652,7 +1652,7 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, *, progress: bool, view: sublime.View | None = None,
+        self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""

@@ -6523,7 +6523,7 @@ RangeLsp = Range
 
 def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     """
-    Check if `other_kind` is a sub-kind of this `kind`.
+    Check if `other_kind` is a sub-kind of `kind`.
 
     The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
     but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.

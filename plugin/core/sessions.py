@@ -46,6 +46,7 @@ from .protocol import InitializeError
 from .protocol import InitializeParams
 from .protocol import InitializeResult
 from .protocol import InsertTextMode
+from .protocol import kind_includes_other_kind
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import LogMessageParams
@@ -59,8 +60,8 @@ from .protocol import PreviousResultId
 from .protocol import ProgressParams
 from .protocol import ProgressToken
 from .protocol import PublishDiagnosticsParams
-from .protocol import RegistrationParams
 from .protocol import Range
+from .protocol import RegistrationParams
 from .protocol import Request
 from .protocol import Response
 from .protocol import ResponseError
@@ -82,8 +83,8 @@ from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceDiagnosticParams
 from .protocol import WorkspaceDiagnosticReport
 from .protocol import WorkspaceDocumentDiagnosticReport
-from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
+from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
@@ -1317,6 +1318,7 @@ class Session(TransportCallbacks):
         self._plugin: AbstractPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
+        self._is_executing_refactoring_command = False
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1650,7 +1652,8 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, progress: bool, view: sublime.View | None = None
+        self, command: ExecuteCommandParams, *, progress: bool, view: sublime.View | None = None,
+        is_refactoring: bool = False,
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1677,14 +1680,20 @@ class Session(TransportCallbacks):
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
+        self._is_executing_refactoring_command = is_refactoring
         # TODO: Our Promise class should be able to handle errors/exceptions
-        return Promise(
+        execute_command = Promise(
             lambda resolve: self.send_request(
                 Request("workspace/executeCommand", command, None, progress),
                 resolve,
                 lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
+        execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
+        return execute_command
+
+    def _reset_is_executing_refactoring_command(self) -> None:
+        self._is_executing_refactoring_command = False
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
@@ -1697,7 +1706,8 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress, view)
+            is_refactoring = kind_includes_other_kind(code_action.get('kind', ''), CodeActionKind.Refactor)
+            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1826,7 +1836,7 @@ class Session(TransportCallbacks):
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        is_refactoring = code_action.get('kind') == CodeActionKind.Refactor
+        is_refactoring = kind_includes_other_kind(code_action.get('kind', ''), CodeActionKind.Refactor)
         promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
@@ -1836,7 +1846,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
+            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view,
+                                                               is_refactoring=is_refactoring))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
@@ -1844,6 +1855,7 @@ class Session(TransportCallbacks):
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
+        is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:

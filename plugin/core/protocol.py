@@ -6519,3 +6519,14 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range
+
+
+def kind_includes_other_kind(kind: str, other_kind: str) -> bool:
+    """
+    The Code Action "kind" includes "other_kind" if "kind" matches "other_kind" exactly or "other_kind" is a subset
+    of "kind".
+    """
+    if kind == other_kind:
+        return True
+    other_kind_len = len(other_kind)
+    return len(kind) > other_kind_len and kind.startswith(other_kind) and kind[other_kind_len] == '.'

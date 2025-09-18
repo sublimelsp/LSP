@@ -6523,8 +6523,7 @@ RangeLsp = Range
 
 def kind_includes_other_kind(kind: str, other_kind: str) -> bool:
     """
-    The Code Action "kind" includes "other_kind" if "kind" matches "other_kind" exactly or "other_kind" is a subset
-    of "kind".
+    Return True if "kind" includes "other_kind". For example: kind "a.b" includes kind "a" and "a.b" but not "a.b.c".
     """
     if kind == other_kind:
         return True

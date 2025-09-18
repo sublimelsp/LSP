@@ -2,7 +2,7 @@ from __future__ import annotations
 from copy import deepcopy
 from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
-from LSP.plugin.core.protocol import Point, Range, kind_includes_other_kind
+from LSP.plugin.core.protocol import Point, Range, kind_contains_other_kind
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
@@ -254,15 +254,15 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 
     def test_kind_matching(self) -> None:
         # Positive
-        self.assertTrue(kind_includes_other_kind('a.b', 'a'))
-        self.assertTrue(kind_includes_other_kind('a.b', 'a.b'))
+        self.assertTrue(kind_contains_other_kind('a', 'a.b'))
+        self.assertTrue(kind_contains_other_kind('a.b', 'a.b'))
         # Negative
-        self.assertFalse(kind_includes_other_kind('a', 'a.b'))
-        self.assertFalse(kind_includes_other_kind('a', 'aa'))
-        self.assertFalse(kind_includes_other_kind('a', 'aa.b'))
-        self.assertFalse(kind_includes_other_kind('b', 'a.b'))
-        self.assertFalse(kind_includes_other_kind('b', 'aa.b'))
-        self.assertFalse(kind_includes_other_kind('b.a', 'a'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'b'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'b'))
+        self.assertFalse(kind_contains_other_kind('a' 'b.a'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):

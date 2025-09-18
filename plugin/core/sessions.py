@@ -46,7 +46,7 @@ from .protocol import InitializeError
 from .protocol import InitializeParams
 from .protocol import InitializeResult
 from .protocol import InsertTextMode
-from .protocol import kind_includes_other_kind
+from .protocol import kind_contains_other_kind
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import LogMessageParams
@@ -1706,7 +1706,7 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            is_refactoring = kind_includes_other_kind(code_action.get('kind', ''), CodeActionKind.Refactor)
+            is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
             return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
@@ -1836,7 +1836,7 @@ class Session(TransportCallbacks):
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        is_refactoring = kind_includes_other_kind(code_action.get('kind', ''), CodeActionKind.Refactor)
+        is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
         promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:

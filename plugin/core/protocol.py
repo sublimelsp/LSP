@@ -6521,11 +6521,14 @@ CodeLensExtended = TypedDict('CodeLensExtended', {
 RangeLsp = Range
 
 
-def kind_includes_other_kind(kind: str, other_kind: str) -> bool:
+def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     """
-    Return True if "kind" includes "other_kind". For example: kind "a.b" includes kind "a" and "a.b" but not "a.b.c".
+    Check if `other_kind` is a sub-kind of this `kind`.
+
+    The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.
     """
     if kind == other_kind:
         return True
-    other_kind_len = len(other_kind)
-    return len(kind) > other_kind_len and kind.startswith(other_kind) and kind[other_kind_len] == '.'
+    kind_len = len(kind)
+    return len(other_kind) > kind_len and other_kind.startswith(kind + '.')

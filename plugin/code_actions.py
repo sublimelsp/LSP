@@ -5,7 +5,7 @@ from .core.protocol import CodeActionKind
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import Error
-from .core.protocol import kind_includes_other_kind
+from .core.protocol import kind_contains_other_kind
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
@@ -93,13 +93,13 @@ class CodeActionsManager:
                 if manual and only_kinds == MENU_ACTIONS_KINDS:
                     for action in code_actions:
                         kind = action.get('kind')
-                        if kind and kind_includes_other_kind(kind, CodeActionKind.Refactor):
+                        if kind and kind_contains_other_kind(CodeActionKind.Refactor, kind):
                             self.refactor_actions_cache.append((sb.session.config.name, action))
-                        elif kind and kind_includes_other_kind(kind, CodeActionKind.Source):
+                        elif kind and kind_contains_other_kind(CodeActionKind.Source, kind):
                             self.source_actions_cache.append((sb.session.config.name, action))
                 return [
                     action for action in code_actions
-                    if any(kind_includes_other_kind(action.get('kind', ''), other_kind) for other_kind in only_kinds)
+                    if any(kind_contains_other_kind(only_kind, action.get('kind', '')) for only_kind in only_kinds)
                 ]
             if manual:
                 return [a for a in actions if not a.get('disabled')]
@@ -108,7 +108,7 @@ class CodeActionsManager:
                 a for a in actions
                 if is_command(a) or (
                     not a.get('disabled') and
-                    kind_includes_other_kind(a.get('kind', CodeActionKind.QuickFix), CodeActionKind.QuickFix)
+                    kind_contains_other_kind(CodeActionKind.QuickFix, a.get('kind', CodeActionKind.QuickFix))
                 )
             ]
 

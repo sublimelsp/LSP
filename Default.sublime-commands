@@ -139,7 +139,11 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
-        "caption": "LSP: Rename",
+        "caption": "LSP: Rename Path",
+        "command": "lsp_rename_path"
+    },
+    {
+        "caption": "LSP: Rename Symbol",
         "command": "lsp_symbol_rename"
     },
     {

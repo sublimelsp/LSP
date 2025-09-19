@@ -5,7 +5,6 @@ from .core.protocol import CodeActionKind
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import Error
-from .core.protocol import kind_contains_other_kind
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
@@ -16,6 +15,7 @@ from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand
 from .save_command import SaveTask

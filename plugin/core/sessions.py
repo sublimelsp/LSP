@@ -46,7 +46,6 @@ from .protocol import InitializeError
 from .protocol import InitializeParams
 from .protocol import InitializeResult
 from .protocol import InsertTextMode
-from .protocol import kind_contains_other_kind
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import LogMessageParams
@@ -107,6 +106,7 @@ from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_uri_and_range_from_location
+from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder

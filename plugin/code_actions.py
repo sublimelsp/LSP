@@ -15,6 +15,7 @@ from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
+from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand
 from .save_command import SaveTask
@@ -92,18 +93,23 @@ class CodeActionsManager:
                 if manual and only_kinds == MENU_ACTIONS_KINDS:
                     for action in code_actions:
                         kind = action.get('kind')
-                        if kinds_include_kind([CodeActionKind.Refactor], kind):
+                        if kind and kind_contains_other_kind(CodeActionKind.Refactor, kind):
                             self.refactor_actions_cache.append((sb.session.config.name, action))
-                        elif kinds_include_kind([CodeActionKind.Source], kind):
+                        elif kind and kind_contains_other_kind(CodeActionKind.Source, kind):
                             self.source_actions_cache.append((sb.session.config.name, action))
-                return [action for action in code_actions if kinds_include_kind(only_kinds, action.get('kind'))]
+                return [
+                    action for action in code_actions
+                    if any(kind_contains_other_kind(only_kind, action.get('kind', '')) for only_kind in only_kinds)
+                ]
             if manual:
                 return [a for a in actions if not a.get('disabled')]
             # On implicit (selection change) request, only return commands and quick fix kinds.
             return [
                 a for a in actions
-                if is_command(a) or not a.get('disabled') and
-                kinds_include_kind([CodeActionKind.QuickFix], a.get('kind', CodeActionKind.QuickFix))
+                if is_command(a) or (
+                    not a.get('disabled') and
+                    kind_contains_other_kind(CodeActionKind.QuickFix, a.get('kind', CodeActionKind.QuickFix))
+                )
             ]
 
         task = self._collect_code_actions_async(listener, request_factory, response_filter)
@@ -206,22 +212,6 @@ def get_matching_on_save_kinds(
         if enabled:
             matching_kinds.append(session_kind)
     return matching_kinds
-
-
-def kinds_include_kind(kinds: list[CodeActionKind], kind: CodeActionKind | None) -> bool:
-    """
-    The "kinds" include "kind" if "kind" matches one of the "kinds" exactly or one of the "kinds" is a prefix
-    of the whole "kind" (where prefix must be followed by a dot).
-    """
-    if not kind:
-        return False
-    for kinds_item in kinds:
-        if kinds_item == kind:
-            return True
-        kinds_item_len = len(kinds_item)
-        if len(kind) > kinds_item_len and kind.startswith(kinds_item) and kind[kinds_item_len] == '.':
-            return True
-    return False
 
 
 class CodeActionOnSaveTask(SaveTask):

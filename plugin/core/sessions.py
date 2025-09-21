@@ -1680,7 +1680,8 @@ class Session(TransportCallbacks):
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
-        self._is_executing_refactoring_command = is_refactoring
+        if is_refactoring:
+            self._is_executing_refactoring_command = True
         # TODO: Our Promise class should be able to handle errors/exceptions
         execute_command = Promise(
             lambda resolve: self.send_request(

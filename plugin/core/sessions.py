@@ -1689,7 +1689,8 @@ class Session(TransportCallbacks):
                 lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
-        execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
+        if is_refactoring:
+            execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
         return execute_command
 
     def _reset_is_executing_refactoring_command(self) -> None:

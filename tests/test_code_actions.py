@@ -1,12 +1,14 @@
 from __future__ import annotations
 from copy import deepcopy
-from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
+from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
-from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.documents import DocumentSyncListener
+from LSP.plugin.core.views import kind_contains_other_kind
+from LSP.plugin.core.views import Point
+from LSP.plugin.core.views import Range
 from LSP.plugin.core.views import versioned_text_document_identifier
+from LSP.plugin.documents import DocumentSyncListener
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 from typing import Any, Generator
@@ -254,16 +256,15 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 
     def test_kind_matching(self) -> None:
         # Positive
-        self.assertTrue(kinds_include_kind(['a'], 'a.b'))
-        self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
-        self.assertTrue(kinds_include_kind(['a.b', 'b'], 'b.c'))
+        self.assertTrue(kind_contains_other_kind('a', 'a.b'))
+        self.assertTrue(kind_contains_other_kind('a.b', 'a.b'))
         # Negative
-        self.assertFalse(kinds_include_kind(['a'], 'b.a'))
-        self.assertFalse(kinds_include_kind(['a.b'], 'b'))
-        self.assertFalse(kinds_include_kind(['a.b'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa.b'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa.b'], 'b'))
+        self.assertFalse(kind_contains_other_kind('a', 'b.a'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'b'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'b'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):

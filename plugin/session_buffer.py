@@ -488,18 +488,14 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = None, forced_update: bool = False
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, forced_update: bool = False) -> None:
         mgr = self.session.manager()
         if not mgr or not self.has_capability("diagnosticProvider"):
             return
         if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
         change_count = view.change_count()
-        if version is None:
-            version = change_count
-        elif version < change_count:
+        if version < change_count:
             return
         if version == self._diagnostics_version:
             return

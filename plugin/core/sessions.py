@@ -695,9 +695,7 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
@@ -2109,7 +2107,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 

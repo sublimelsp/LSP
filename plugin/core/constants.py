@@ -215,6 +215,7 @@ LANGUAGE_IDENTIFIERS = {
     "source.tsx": "typescriptreact",
     "source.unity.unity_shader": "shaderlab",  # https://github.com/petereichinger/Unity3D-Shader
     "source.yaml-tmlanguage": "yaml",  # https://github.com/SublimeText/PackageDev
+    "source.yaml.go": "helm",  # https://github.com/sublimelsp/LSP/issues/2649#issuecomment-3353285556
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": "html",  # https://github.com/willstott101/django-sublime-syntax
     "text.html.handlebars": "handlebars",

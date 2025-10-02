@@ -80,6 +80,11 @@
               },
               "markdownDescription": "The command to start the language server."
             },
+            "ClientUseNodeIpc": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Communicate with the language server over Node.js IPC. The command must be adjusted accordingly, e.g. `--stdio` must be replaced with `--node-ipc` for some servers."
+            },
             "ClientEnabled": {
               "type": "boolean",
               "default": false,
@@ -327,6 +332,9 @@
               "properties": {
                 "command": {
                   "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+                },
+                "use_node_ipc": {
+                  "$ref": "sublime://settings/LSP#/definitions/ClientUseNodeIpc"
                 },
                 "enabled": {
                   "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
@@ -884,6 +892,9 @@
           "properties": {
             "command": {
               "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+            },
+            "use_node_ipc": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientUseNodeIpc"
             },
             "enabled": {
               "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"

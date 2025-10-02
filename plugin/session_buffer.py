@@ -157,6 +157,10 @@ class SessionBuffer:
         return self._session_views
 
     @property
+    def last_synced_version(self) -> int:
+        return self._last_synced_version
+
+    @property
     def version(self) -> int | None:
         view = self.some_view()
         return view.change_count() if view else None
@@ -533,6 +537,7 @@ class SessionBuffer:
     def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
         self._document_diagnostic_pending_request = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
+            self._diagnostics_version = -1
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                 # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
@@ -546,15 +551,12 @@ class SessionBuffer:
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
             return
-        change_count = view.change_count()
-        if version is None:
-            version = change_count
-        if version != change_count:
+        if version != view.change_count():
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []

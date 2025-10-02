@@ -106,7 +106,7 @@ class MockSessionBuffer:
     ) -> None:
         pass
 
-    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int | None) -> None:
+    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int) -> None:
         pass
 
 

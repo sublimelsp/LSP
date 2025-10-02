@@ -1472,8 +1472,8 @@ class Session(TransportCallbacks):
     def has_capability(self, capability: str, *, include_local: bool = False) -> bool:
         """
         Check whether this `Session` has the given `capability`. If `include_local` is set to `True`, this includes
-        capabilitites from dynamic registration restricted to certain views if at least one such view is open and
-        matches the corresponding `DocumentSelector`.
+        capabilities from dynamic registration restricted to certain views if at least one such view is open and matches
+        the corresponding `DocumentSelector`.
         """
         value = self.get_capability(capability)
         if value is not False and value is not None:

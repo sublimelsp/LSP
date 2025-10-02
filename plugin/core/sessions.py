@@ -1469,9 +1469,18 @@ class Session(TransportCallbacks):
                 return self.has_capability(capability)
         return False
 
-    def has_capability(self, capability: str) -> bool:
+    def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
+        """
+        Check whether this `Session` has the given `capability`. If `check_views` is set to `True`, this includes
+        capabilities from dynamic registration restricted to certain views if at least one such view is open and matches
+        the corresponding `DocumentSelector`.
+        """
         value = self.get_capability(capability)
-        return value is not False and value is not None
+        if value is not False and value is not None:
+            return True
+        if check_views:
+            return any(sb.has_capability(capability) for sb in self.session_buffers_async())
+        return False
 
     def get_capability(self, capability: str) -> Any | None:
         if self.config.is_disabled_capability(capability):

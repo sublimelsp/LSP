@@ -84,7 +84,7 @@ class MockSessionBuffer:
         self.mock_language_id = mock_language_id
 
     @property
-    def version(self) -> int | None:
+    def last_synced_version(self) -> int:
         return 0
 
     def get_uri(self) -> DocumentUri | None:

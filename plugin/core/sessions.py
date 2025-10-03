@@ -631,10 +631,6 @@ class SessionBufferProtocol(Protocol):
     def last_synced_version(self) -> int:
         ...
 
-    @property
-    def version(self) -> int | None:
-        ...
-
     def get_uri(self) -> str | None:
         ...
 
@@ -1398,7 +1394,7 @@ class Session(TransportCallbacks):
         for data in self._registrations.values():
             data.check_applicable(sb)
         uri = sb.get_uri()
-        version = sb.version
+        version = sb.last_synced_version
         if uri and version is not None:
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
@@ -2022,7 +2018,7 @@ class Session(TransportCallbacks):
             # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.version != version:
+                if sb and sb.last_synced_version != version:
                     continue
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):

@@ -160,11 +160,6 @@ class SessionBuffer:
     def last_synced_version(self) -> int:
         return self._last_synced_version
 
-    @property
-    def version(self) -> int | None:
-        view = self.some_view()
-        return view.change_count() if view else None
-
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
             language_id = self.get_language_id()

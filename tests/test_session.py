@@ -83,6 +83,10 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
+    @property
+    def version(self) -> int | None:
+        return 0
+
     def get_uri(self) -> DocumentUri | None:
         return self.mock_uri
 

@@ -1394,11 +1394,10 @@ class Session(TransportCallbacks):
         for data in self._registrations.values():
             data.check_applicable(sb)
         uri = sb.get_uri()
-        version = sb.last_synced_version
-        if uri and version is not None:
+        if uri:
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
-                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
         self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int

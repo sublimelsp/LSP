@@ -532,7 +532,6 @@ class SessionBuffer:
     def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
         self._document_diagnostic_pending_request = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
-            self._diagnostics_version = -1
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                 # Retrigger the request after a short delay, but only if there were no additional changes to the buffer

@@ -12,6 +12,7 @@ class ServerNotifications(TextDocumentTestCase):
 
     def test_publish_diagnostics(self) -> Generator:
         self.insert_characters("a b c\n")
+        yield from self.await_message('textDocument/didChange')
         params: PublishDiagnosticsParams = {
             'uri': filename_to_uri(self.view.file_name() or ''),
             'diagnostics': [

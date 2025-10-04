@@ -157,9 +157,8 @@ class SessionBuffer:
         return self._session_views
 
     @property
-    def version(self) -> int | None:
-        view = self.some_view()
-        return view.change_count() if view else None
+    def last_synced_version(self) -> int:
+        return self._last_synced_version
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
@@ -546,15 +545,12 @@ class SessionBuffer:
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
             return
-        change_count = view.change_count()
-        if version is None:
-            version = change_count
-        if version != change_count:
+        if version != view.change_count():
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []

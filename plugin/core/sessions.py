@@ -628,7 +628,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     @property
-    def version(self) -> int | None:
+    def last_synced_version(self) -> int:
         ...
 
     def get_uri(self) -> str | None:
@@ -667,7 +667,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
@@ -1397,10 +1397,10 @@ class Session(TransportCallbacks):
         if uri:
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
-                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -2026,7 +2026,7 @@ class Session(TransportCallbacks):
             # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.version != version:
+                if sb and sb.last_synced_version != version:
                     continue
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
@@ -2128,13 +2128,15 @@ class Session(TransportCallbacks):
         uri = params["uri"]
         reason = mgr.should_ignore_diagnostics(uri, self.config)
         if isinstance(reason, str):
-            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            return
         diagnostics = params["diagnostics"]
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
+            version = params.get('version', sb.last_synced_version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

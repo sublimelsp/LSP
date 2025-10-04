@@ -83,6 +83,10 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
+    @property
+    def last_synced_version(self) -> int:
+        return 0
+
     def get_uri(self) -> DocumentUri | None:
         return self.mock_uri
 
@@ -106,7 +110,7 @@ class MockSessionBuffer:
     ) -> None:
         pass
 
-    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int | None) -> None:
+    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int) -> None:
         pass
 
 

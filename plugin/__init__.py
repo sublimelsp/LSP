@@ -15,6 +15,7 @@ from .core.sessions import AbstractPlugin
 from .core.sessions import register_plugin
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
+from .core.sessions import SessionViewProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
@@ -53,6 +54,7 @@ __all__ = [
     'Response',
     'Session',
     'SessionBufferProtocol',
+    'SessionViewProtocol',
     'unregister_plugin',
     'uri_from_view',
     'uri_to_filename',  # deprecated

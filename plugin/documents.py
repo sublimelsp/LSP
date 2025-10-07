@@ -54,6 +54,7 @@ from .core.views import update_lsp_popup
 from .core.windows import WindowManager
 from .folding_range import folding_range_to_range
 from .hover import code_actions_content
+from .inline_completion import InlineCompletionData
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -197,6 +198,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
         self.hover_provider_count = 0
+        self.inline_completion = InlineCompletionData(self.view, 'lsp_inline_completion')
         self._setup()
 
     def __del__(self) -> None:
@@ -226,6 +228,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_selection = []
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
+        self.inline_completion.clear_async()
         self._clear_session_views_async()
 
     def _reset(self) -> None:
@@ -422,6 +425,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
         self._clear_code_actions_annotation()
+        self.inline_completion.clear_async()
         if userprefs().document_highlight_style or userprefs().show_code_actions:
             self._when_selection_remains_stable_async(
                 self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
@@ -515,6 +519,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if not session_view:
                 return not operand
             return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
+        elif key == 'lsp.inline_completion_visible' and operator == sublime.QueryOperator.EQUAL:
+            return operand == self.inline_completion.visible
         return None
 
     @requires_session
@@ -564,6 +570,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_text_command(self, command_name: str, args: dict | None) -> tuple[str, dict] | None:
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
+            self.view.run_command('lsp_inline_completion')
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
             session = self.session_async("semanticTokensProvider")
             if session:
@@ -998,6 +1005,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if first_region is None:
             return
         self._clear_highlight_regions()
+        self.inline_completion.clear_async()
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)

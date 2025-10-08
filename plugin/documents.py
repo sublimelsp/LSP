@@ -422,9 +422,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
         self._clear_code_actions_annotation()
-        if userprefs().document_highlight_style or userprefs().show_code_actions:
-            self._when_selection_remains_stable_async(
-                self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
+        self._when_selection_remains_stable_async(
+            self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
         self._resolve_visible_code_lenses_async()
 
@@ -433,6 +432,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_highlights_async()
         if userprefs().show_code_actions:
             self._do_code_actions_async()
+        for sv in self.session_views_async():
+            if plugin := sv.session.plugin:
+                plugin.on_selection_modified_async(sv)
 
     def on_post_save_async(self) -> None:
         # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real

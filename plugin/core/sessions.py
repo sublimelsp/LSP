@@ -1098,6 +1098,12 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
+        """
+        Called after the selection has been modified in a view (debounced).
+        """
+        pass
+
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
@@ -1335,6 +1341,10 @@ class Session(TransportCallbacks):
 
     def uses_plugin(self) -> bool:
         return self._plugin is not None
+
+    @property
+    def plugin(self) -> AbstractPlugin | None:
+        return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
 

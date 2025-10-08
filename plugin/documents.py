@@ -433,8 +433,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions_async()
         for sv in self.session_views_async():
-            plugin = sv.session.plugin
-            if plugin:
+            if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
     def on_post_save_async(self) -> None:

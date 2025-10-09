@@ -280,4 +280,5 @@ SEMANTIC_TOKENS_MAP = {
     "regexp": "string.regexp.lsp",
     "operator": "keyword.operator.lsp",
     "decorator": "variable.annotation.lsp",
+    "label": "entity.name.label.lsp",
 }

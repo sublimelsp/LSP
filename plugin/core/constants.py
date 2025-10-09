@@ -3,6 +3,7 @@ from .protocol import CodeActionKind
 from .protocol import CompletionItemKind
 from .protocol import DiagnosticSeverity
 from .protocol import DocumentHighlightKind
+from .protocol import LanguageKind
 from .protocol import SymbolKind
 from .typing import StrEnum
 from os.path import dirname, join
@@ -193,40 +194,40 @@ DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
 # match any of the entries here, then the rule is that we split the base scope on the ".", and take the second
 # component. The resulting string is assumed to be the language ID. The official list is maintained at
 # https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
-LANGUAGE_IDENTIFIERS = {
-    "source.c++": "cpp",
-    "source.coffee": "coffeescript",
-    "source.cs": "csharp",
-    "source.dosbatch": "bat",
+LANGUAGE_IDENTIFIERS: dict[str, str] = {
+    "source.c++": LanguageKind.CPP,
+    "source.coffee": LanguageKind.Coffeescript,
+    "source.cs": LanguageKind.CSharp,
+    "source.dosbatch": LanguageKind.WindowsBat,
     "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
-    "source.js": "javascript",
-    "source.js.react": "javascriptreact",  # https://github.com/Thom1729/Sublime-JS-Custom
+    "source.js": LanguageKind.JavaScript,
+    "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
     "source.json.sublime": "jsonc",  # https://github.com/SublimeText/PackageDev
-    "source.jsx": "javascriptreact",
+    "source.jsx": LanguageKind.JavaScriptReact,
     "source.Kotlin": "kotlin",  # https://github.com/vkostyukov/kotlin-sublime-package
     "source.modern-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
-    "source.objc": "objective-c",
-    "source.objc++": "objective-cpp",
-    "source.shader": "shaderlab",  # https://github.com/waqiju/unity_shader_st3
-    "source.shell": "shellscript",
-    "source.ts": "typescript",
-    "source.ts.react": "typescriptreact",  # https://github.com/Thom1729/Sublime-JS-Custom
-    "source.tsx": "typescriptreact",
-    "source.unity.unity_shader": "shaderlab",  # https://github.com/petereichinger/Unity3D-Shader
-    "source.yaml-tmlanguage": "yaml",  # https://github.com/SublimeText/PackageDev
+    "source.objc": LanguageKind.ObjectiveC,
+    "source.objc++": LanguageKind.ObjectiveCPP,
+    "source.shader": LanguageKind.ShaderLab,  # https://github.com/waqiju/unity_shader_st3
+    "source.shell": LanguageKind.ShellScript,
+    "source.ts": LanguageKind.TypeScript,
+    "source.ts.react": LanguageKind.TypeScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
+    "source.tsx": LanguageKind.TypeScriptReact,
+    "source.unity.unity_shader": LanguageKind.ShaderLab,  # https://github.com/petereichinger/Unity3D-Shader
+    "source.yaml-tmlanguage": LanguageKind.YAML,  # https://github.com/SublimeText/PackageDev
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
-    "text.django": "html",  # https://github.com/willstott101/django-sublime-syntax
-    "text.html.handlebars": "handlebars",
-    "text.html.markdown": "markdown",
-    "text.html.markdown.rmarkdown": "r",  # https://github.com/REditorSupport/sublime-ide-r
+    "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
+    "text.html.handlebars": LanguageKind.Handlebars,
+    "text.html.markdown": LanguageKind.Markdown,
+    "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r
     "text.html.rails": "erb",
     "text.html.vue": "vue",
-    "text.jinja": "html",  # https://github.com/Sublime-Instincts/BetterJinja
+    "text.jinja": LanguageKind.HTML,  # https://github.com/Sublime-Instincts/BetterJinja
     "text.plain": "plaintext",
-    "text.plist": "xml",  # https://bitbucket.org/fschwehn/sublime_plist
-    "text.tex.latex": "latex",
-    "text.xml.xsl": "xsl",
+    "text.plist": LanguageKind.XML,  # https://bitbucket.org/fschwehn/sublime_plist
+    "text.tex.latex": LanguageKind.LaTeX,
+    "text.xml.xsl": LanguageKind.XSL,
 }
 
 SEMANTIC_TOKENS_MAP = {

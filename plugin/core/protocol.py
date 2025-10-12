@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ...protocol import *
+from ...protocol import *  # for backward compatibility with plugins
 from functools import total_ordering
 from typing import Any, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
 from typing_extensions import NotRequired

@@ -259,7 +259,7 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []
+        contents: list[str] = []
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
@@ -420,3 +420,10 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
                     session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
                 else:
                     session_view.reset_show_definitions()
+
+
+class LspCopyTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text: str) -> None:
+        sublime.set_clipboard(text)
+        text_length = len(text)
+        sublime.status_message(f"Copied {text_length} character{'s' if text_length > 1 else ''}")

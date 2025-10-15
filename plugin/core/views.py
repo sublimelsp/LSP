@@ -822,7 +822,7 @@ def _html_element(name: str, text: str, class_name: str | None = None, escape: b
 def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
     html = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
-    source = diagnostic.get("source")
+    source = diagnostic.get("source") or ""
     if source or code is not None:
         meta_info = ""
         if source:
@@ -832,12 +832,21 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
+    html += "&nbsp;" + copy_icon_html(f"{source} {diagnostic['message']}")
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
+
+
+def copy_icon_html(text_to_copy: str) -> str:
+    return f"""<a class="copy_button"
+       style="color: inherit"
+       href='{sublime.command_url('lsp_copy_text', {
+        'text': text_to_copy
+       })}'>copy</a>"""
 
 
 def format_code_actions_for_quick_panel(

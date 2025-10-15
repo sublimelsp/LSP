@@ -3,13 +3,13 @@ from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionItemDefaults
 from .core.protocol import CompletionItemKind
 from .core.protocol import CompletionItemTag
 from .core.protocol import CompletionList
 from .core.protocol import CompletionParams
+from .core.protocol import EditRangeWithInsertReplace
 from .core.protocol import Error
 from .core.protocol import InsertReplaceEdit
 from .core.protocol import InsertTextFormat
@@ -333,8 +333,11 @@ class LspResolveDocsCommand(LspTextCommand):
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
 
-    def _on_navigate(self, url: str) -> None:
-        webbrowser.open(url)
+    def _on_navigate(self, href: str) -> None:
+        if href.startswith("http"):
+            webbrowser.open(href)
+            return
+        debug('on_navigate unhandled href:', href)
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):

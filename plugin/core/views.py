@@ -841,16 +841,6 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 
-def wrap_in_copy_link(html: str, text_to_copy: str) -> str:
-    if not len(text_to_copy):
-        return html
-    return f"""<a title="Click to Copy"
-       style='text-decoration: none; display: block; color: inherit'
-       href='{sublime.command_url('lsp_copy_text', {
-        'text': text_to_copy
-       })}'>{html}</a>"""
-
-
 def copy_icon_html(text_to_copy: str) -> str:
     return f"""<a class="link with-padding"
        style='color: inherit; text-decoration: none'

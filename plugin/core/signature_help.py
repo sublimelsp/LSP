@@ -83,7 +83,7 @@ class SigHelp:
         else:
             self._active_parameter_bold = active_parameter_style.get('bold', False)
             self._active_parameter_underline = active_parameter_style.get('underline', False)
-        formatted.append(self._render_label(signature))
+        formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
 
@@ -111,7 +111,7 @@ class SigHelp:
             len(self._signatures),
         )
 
-    def _render_label(self, signature: SignatureInformation) -> str:
+    def _render_label(self, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
@@ -147,7 +147,7 @@ class SigHelp:
         else:
             formatted.append(self._function(label))
         formatted.append("</pre></div>")
-        return "".join(formatted)
+        return formatted
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []

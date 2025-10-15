@@ -308,7 +308,6 @@ class LspResolveDocsCommand(LspTextCommand):
         minihtml_content = ""
         if detail:
             minihtml_content += f"<div class='highlight'>{detail}</div>"
-
         if documentation:
             minihtml_content += documentation
 

@@ -46,6 +46,7 @@ import mdpopups
 import sublime
 import sublime_plugin
 
+
 SessionName = str
 ResolvedHover = Union[Hover, Error]
 

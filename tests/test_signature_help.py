@@ -51,8 +51,7 @@ class SignatureHelpTest(unittest.TestCase):
             </pre></div>
             <p>must be in the frobnicate range</p>
             <hr/>
-            <div style="font-size: 0\.9rem"><p>f does interesting things</p>
-            </div>
+            <div style="font-size: 0\.9rem"><p>f does interesting things</p></div>
             '''
         )
 
@@ -92,8 +91,7 @@ class SignatureHelpTest(unittest.TestCase):
             </pre></div>
             <p>must be in the <strong>frobnicate</strong> range</p>
             <hr/>
-            <div style="font-size: 0\.9rem"><p>f does <em>interesting</em> things</p>
-            </div>
+            <div style="font-size: 0\.9rem"><p>f does <em>interesting</em> things</p></div>
             '''
         )
 

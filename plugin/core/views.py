@@ -832,13 +832,10 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    html = wrap_in_copy_link(html, text_to_copy=f"{source} {diagnostic['message']}")
+    html = html + copy_icon_html(f"{source} {diagnostic['message']}")
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
-        info = "<br>".join(wrap_in_copy_link(
-            _format_diagnostic_related_info(config, info, base_dir),
-            text_to_copy=info['message']
-        ) for info in related_infos)
+        info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
@@ -854,13 +851,12 @@ def wrap_in_copy_link(html: str, text_to_copy: str) -> str:
        })}'>{html}</a>"""
 
 
-def markup_to_string(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, dict):
-        return content.get('value', '')
-    if isinstance(content, list):
-        return " ".join([markup_to_string(text) for text in content])
+def copy_icon_html(text_to_copy: str) -> str:
+    return f"""<a class="link with-padding"
+       style='color: inherit; text-decoration: none'
+       href='{sublime.command_url('lsp_copy_text', {
+        'text': text_to_copy
+       })}'>Copy ⧉</a>"""
 
 
 def format_code_actions_for_quick_panel(

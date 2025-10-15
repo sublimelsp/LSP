@@ -22,13 +22,11 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
 from .core.views import MarkdownLangMap
-from .core.views import markup_to_string
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from .core.views import wrap_in_copy_link
 from typing import Any, Callable, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
@@ -309,13 +307,10 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += wrap_in_copy_link(f"<div class='highlight'>{detail}</div>",
-                                                  text_to_copy=item.get('detail') or "")
+            minihtml_content += f"<div class='highlight'>{detail}</div>"
+
         if documentation:
-            minihtml_content += wrap_in_copy_link(
-                documentation,
-                text_to_copy=markup_to_string(item.get("documentation") or "")
-            )
+            minihtml_content += documentation
 
         def run_main() -> None:
             if not self.view.is_valid():

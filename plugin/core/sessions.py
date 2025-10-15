@@ -59,8 +59,8 @@ from .protocol import PreviousResultId
 from .protocol import ProgressParams
 from .protocol import ProgressToken
 from .protocol import PublishDiagnosticsParams
-from .protocol import RegistrationParams
 from .protocol import Range
+from .protocol import RegistrationParams
 from .protocol import Request
 from .protocol import Response
 from .protocol import ResponseError
@@ -82,8 +82,8 @@ from .protocol import WorkspaceClientCapabilities
 from .protocol import WorkspaceDiagnosticParams
 from .protocol import WorkspaceDiagnosticReport
 from .protocol import WorkspaceDocumentDiagnosticReport
-from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .protocol import WorkspaceEdit
+from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
@@ -106,6 +106,7 @@ from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_uri_and_range_from_location
+from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -207,6 +208,13 @@ class Manager(metaclass=ABCMeta):
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_session(self, config_name: str, file_path: str) -> Session | None:
+        """
+        Gets the session by name and file path.
         """
         raise NotImplementedError()
 
@@ -620,7 +628,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     @property
-    def version(self) -> int | None:
+    def last_synced_version(self) -> int:
         ...
 
     def get_uri(self) -> str | None:
@@ -659,7 +667,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
@@ -687,9 +695,7 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
@@ -861,6 +867,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         basename = f"LSP-{name}.sublime-settings"
         filepath = f"Packages/LSP-{name}/{basename}"
         return sublime.load_settings(basename), filepath
+
+    @classmethod
+    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
+        """
+        Override the default selector used to determine whether server should run on the given view.
+
+        :param      view:             The view
+        :param      config:           The config
+        """
+        return config.selector
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
@@ -1062,22 +1078,29 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
+    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
         invoke the passed-in callback some time.
 
         The arguments of the provided callback work as follows:
 
-        - The first argument is the title of the view that will be populated with the content of a new scratch view
-        - The second argument is the content of the view
-        - The third argument is the syntax to apply for the new view
+        - The first argument is the title of the view that will be populated with the content of a new scratch view.
+          If `None` is passed, no new view will be opened and the other arguments are ignored.
+        - The second argument is the content of the view.
+        - The third argument is the syntax to apply for the new view.
         """
         return False
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """
         Called when the context of the session buffer has changed or a new buffer was opened.
+        """
+        pass
+
+    def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
+        """
+        Called after the selection has been modified in a view (debounced).
         """
         pass
 
@@ -1300,6 +1323,7 @@ class Session(TransportCallbacks):
         self._plugin: AbstractPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
+        self._is_executing_refactoring_command = False
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1317,6 +1341,10 @@ class Session(TransportCallbacks):
 
     def uses_plugin(self) -> bool:
         return self._plugin is not None
+
+    @property
+    def plugin(self) -> AbstractPlugin | None:
+        return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
 
@@ -1379,10 +1407,10 @@ class Session(TransportCallbacks):
         if uri:
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
-                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -1451,9 +1479,18 @@ class Session(TransportCallbacks):
                 return self.has_capability(capability)
         return False
 
-    def has_capability(self, capability: str) -> bool:
+    def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
+        """
+        Check whether this `Session` has the given `capability`. If `check_views` is set to `True`, this includes
+        capabilities from dynamic registration restricted to certain views if at least one such view is open and matches
+        the corresponding `DocumentSelector`.
+        """
         value = self.get_capability(capability)
-        return value is not False and value is not None
+        if value is not False and value is not None:
+            return True
+        if check_views:
+            return any(sb.has_capability(capability) for sb in self.session_buffers_async())
+        return False
 
     def get_capability(self, capability: str) -> Any | None:
         if self.config.is_disabled_capability(capability):
@@ -1633,7 +1670,8 @@ class Session(TransportCallbacks):
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, progress: bool, view: sublime.View | None = None
+        self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
+        is_refactoring: bool = False,
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1661,13 +1699,20 @@ class Session(TransportCallbacks):
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
         # TODO: Our Promise class should be able to handle errors/exceptions
-        return Promise(
+        execute_command = Promise(
             lambda resolve: self.send_request(
                 Request("workspace/executeCommand", command, None, progress),
                 resolve,
                 lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
+        if is_refactoring:
+            self._is_executing_refactoring_command = True
+            execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
+        return execute_command
+
+    def _reset_is_executing_refactoring_command(self) -> None:
+        self._is_executing_refactoring_command = False
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
@@ -1680,7 +1725,8 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress, view)
+            is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
+            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1746,28 +1792,31 @@ class Session(TransportCallbacks):
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
-        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
+        pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
-            def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
-                if group > -1:
-                    self.window.focus_group(group)
-                v = self.window.new_file(syntax=syntax, flags=flags)
-                # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                # settings object here at our leisure.
-                v.settings().set("lsp_uri", uri)
-                v.set_scratch(True)
-                v.set_name(title)
-                v.run_command("append", {"characters": content})
-                v.set_read_only(True)
-                if r:
-                    center_selection(v, r)
-                sublime.set_timeout_async(lambda: result[1](v))
+            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
+                if title is not None:
+                    if group > -1:
+                        self.window.focus_group(group)
+                    v = self.window.new_file(syntax=syntax, flags=flags)
+                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+                    # settings object here at our leisure.
+                    v.settings().set("lsp_uri", uri)
+                    v.set_scratch(True)
+                    v.set_name(title)
+                    v.run_command("append", {"characters": content})
+                    v.set_read_only(True)
+                    if r:
+                        center_selection(v, r)
+                    sublime.set_timeout_async(lambda: result[1](v))
+                else:
+                    sublime.set_timeout_async(lambda: result[1](None))
 
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
+            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
             return result[0]
         return None
 
@@ -1809,7 +1858,7 @@ class Session(TransportCallbacks):
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        is_refactoring = code_action.get('kind') == CodeActionKind.Refactor
+        is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
         promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
@@ -1819,7 +1868,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
+            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view,
+                                                               is_refactoring=is_refactoring))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
@@ -1827,6 +1877,7 @@ class Session(TransportCallbacks):
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
+        is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
@@ -1985,7 +2036,7 @@ class Session(TransportCallbacks):
             # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.version != version:
+                if sb and sb.last_synced_version != version:
                     continue
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
@@ -2075,7 +2126,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 
@@ -2087,13 +2138,15 @@ class Session(TransportCallbacks):
         uri = params["uri"]
         reason = mgr.should_ignore_diagnostics(uri, self.config)
         if isinstance(reason, str):
-            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            return
         diagnostics = params["diagnostics"]
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
+            version = params.get('version', sb.last_synced_version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

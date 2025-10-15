@@ -68,7 +68,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
@@ -81,7 +81,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
@@ -92,7 +92,7 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if session.config.name == session_name:
                 return session
@@ -227,9 +227,7 @@ class LspRestartServerCommand(LspTextCommand):
             return
 
         def run_async() -> None:
-            config_name = self._config_names[index]
-            if config_name:
-                wm.restart_sessions_async(config_name)
+            wm.restart_sessions_async([self._config_names[index]])
 
         sublime.set_timeout_async(run_async)
 

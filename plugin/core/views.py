@@ -876,3 +876,16 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
+
+
+def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
+    """
+    Check if `other_kind` is a sub-kind of `kind`.
+
+    The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.
+    """
+    if kind == other_kind:
+        return True
+    kind_len = len(kind)
+    return len(other_kind) > kind_len and other_kind.startswith(kind + '.')

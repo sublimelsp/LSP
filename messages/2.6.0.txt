@@ -1,0 +1,12 @@
+=> 2.6.0
+
+# Features
+
+ - Allow to suppress opening new view on open URI with plugin (#2640) (jwortmann)
+
+# Enhancements
+
+ - respect `refactoring_auto_save` in more cases (#2643) (Rafał Chłodnicki)
+ - Send 'erb' as language id for ERB files (#2642) (Guillermo)
+ - Limit length of text in completion popup details pane (#2636) (jwortmann)
+ - Don't show error dialog for failed workspace command (#2634) (jwortmann)

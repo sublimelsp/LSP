@@ -29,6 +29,9 @@ class MockManager(Manager):
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         pass
 
+    def get_session(self, config_name: str, file_path: str) -> Session | None:
+        pass
+
     def get_project_path(self, file_name: str) -> str | None:
         return None
 
@@ -80,6 +83,10 @@ class MockSessionBuffer:
         self.mock_uri = mock_uri
         self.mock_language_id = mock_language_id
 
+    @property
+    def last_synced_version(self) -> int:
+        return 0
+
     def get_uri(self) -> DocumentUri | None:
         return self.mock_uri
 
@@ -103,7 +110,7 @@ class MockSessionBuffer:
     ) -> None:
         pass
 
-    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int | None) -> None:
+    def on_diagnostics_async(self, raw_diagnostics: list[Diagnostic], version: int) -> None:
         pass
 
 

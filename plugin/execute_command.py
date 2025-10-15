@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.logging import debug
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
@@ -58,7 +59,11 @@ class LspExecuteCommand(LspTextCommand):
         :param error: The Error object.
         :param command_name: The name of the command that was executed.
         """
-        sublime.message_dialog(f"command {command_name} failed. Reason: {str(error)}")
+        msg = f"command {command_name} failed: {str(error)}"
+        debug(msg)
+        window = self.view.window()
+        if window:
+            window.status_message(msg)
 
     def _expand_variables(self, command_args: list[Any]) -> list[Any]:
         view = self.view

@@ -128,7 +128,7 @@ class SessionBuffer:
         self._pending_changes: PendingChanges | None = None
         self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
-        self.diagnostics_version = -1
+        self._diagnostics_version = -1
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.document_diagnostic_needs_refresh = False
@@ -157,9 +157,8 @@ class SessionBuffer:
         return self._session_views
 
     @property
-    def version(self) -> int | None:
-        view = self.some_view()
-        return view.change_count() if view else None
+    def last_synced_version(self) -> int:
+        return self._last_synced_version
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
@@ -488,16 +487,14 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = None, forced_update: bool = False
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = False) -> None:
         mgr = self.session.manager()
         if not mgr or not self.has_capability("diagnosticProvider"):
             return
         if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
-        if version is None:
-            version = view.change_count()
+        if version < view.change_count() or version == self._diagnostics_version:
+            return
         if self._document_diagnostic_pending_request:
             if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
@@ -520,18 +517,17 @@ class SessionBuffer:
         self._document_diagnostic_pending_request = None
         self._if_view_unchanged(self._apply_document_diagnostic_async, version)(response)
 
-    def _apply_document_diagnostic_async(
-        self, view: sublime.View | None, response: DocumentDiagnosticReport
-    ) -> None:
+    def _apply_document_diagnostic_async(self, view: sublime.View | None, response: DocumentDiagnosticReport) -> None:
         self.session.diagnostics_result_ids[self._last_known_uri] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.m_textDocument_publishDiagnostics(
                 {'uri': self._last_known_uri, 'diagnostics': response['items']})
-        for uri, diagnostic_report in response.get('relatedDocuments', {}):
-            sb = self.session.get_session_buffer_for_uri_async(uri)
-            if sb:
-                cast(SessionBuffer, sb)._apply_document_diagnostic_async(
-                    None, cast(DocumentDiagnosticReport, diagnostic_report))
+        if 'relatedDocuments' in response:
+            for uri, diagnostic_report in response['relatedDocuments'].items():
+                sb = self.session.get_session_buffer_for_uri_async(uri)
+                if sb:
+                    cast(SessionBuffer, sb)._apply_document_diagnostic_async(
+                        None, cast(DocumentDiagnosticReport, diagnostic_report))
 
     def _on_document_diagnostic_error_async(self, version: int, error: ResponseError) -> None:
         self._document_diagnostic_pending_request = None
@@ -549,15 +545,12 @@ class SessionBuffer:
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
             return
-        change_count = view.change_count()
-        if version is None:
-            version = change_count
-        if version != change_count:
+        if version != view.change_count():
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
@@ -580,7 +573,7 @@ class SessionBuffer:
         self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
-            self.diagnostics_version = diagnostics_version
+            self._diagnostics_version = diagnostics_version
             self.diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
@@ -603,6 +596,12 @@ class SessionBuffer:
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
                 )
+
+    def has_latest_diagnostics(self) -> bool:
+        view = self.some_view()
+        if view is None:
+            return False
+        return self._diagnostics_version == view.change_count()
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

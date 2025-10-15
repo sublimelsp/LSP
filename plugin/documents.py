@@ -732,6 +732,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_sighelp_navigate(self, href: str) -> None:
         if href.startswith("http"):
             webbrowser.open_new_tab(href)
+            return
+        debug('on_sighelp_navigate unhandled href:', href)
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 

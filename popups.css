@@ -91,6 +91,6 @@ pre.related_info {
     border-radius: 4px;
     border: 1px solid color(var(--foreground) alpha(0.6));
     font-size: 0.9rem;
-    padding: 0.2rem 0.5rem;
+    padding: 0.1rem 0.5rem;
     text-decoration: none;
 }

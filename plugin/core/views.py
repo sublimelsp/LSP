@@ -832,7 +832,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    html = html + copy_icon_html(f"{source} {diagnostic['message']}")
+    html = html + "&nbsp;" + copy_icon_html(f"{source} {diagnostic['message']}")
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
@@ -842,11 +842,11 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 
 
 def copy_icon_html(text_to_copy: str) -> str:
-    return f"""<a class="link with-padding"
-       style='color: inherit; text-decoration: none'
+    return f"""<a class="copy_button"
+       style="color: inherit"
        href='{sublime.command_url('lsp_copy_text', {
         'text': text_to_copy
-       })}'>Copy ⧉</a>"""
+       })}'>copy</a>"""
 
 
 def format_code_actions_for_quick_panel(

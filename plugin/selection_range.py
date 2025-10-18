@@ -1,6 +1,6 @@
 from __future__ import annotations
+from ..protocol import SelectionRange
 from .core.protocol import Request
-from .core.protocol import SelectionRange
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.views import range_to_region

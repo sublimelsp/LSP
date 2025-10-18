@@ -1,6 +1,6 @@
 from __future__ import annotations
+from ..protocol import CodeLens
 from .core.constants import CODE_LENS_ENABLED_KEY
-from .core.protocol import CodeLens
 from .core.protocol import CodeLensExtended
 from .core.protocol import Error
 from .core.registry import LspTextCommand

@@ -239,6 +239,7 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         expected: list[str] = []
         self.assertEqual(actual, expected)
 
+
     def test_matches_exact_action(self) -> None:
         actual = get_matching_on_save_kinds({'a.b': True}, ['a.b'])
         expected = ['a.b']

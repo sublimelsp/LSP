@@ -1,8 +1,8 @@
 from __future__ import annotations
-from ..protocol import TextEdit
-from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
 from .core.logging import debug
+from .core.protocol import TextEdit
+from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
 from contextlib import contextmanager
 from typing import Any, Generator, Iterable, Tuple

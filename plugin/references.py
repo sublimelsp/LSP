@@ -1,6 +1,6 @@
 from __future__ import annotations
-from ..protocol import Location
 from .core.constants import RegionKey
+from .core.protocol import Location
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import get_position

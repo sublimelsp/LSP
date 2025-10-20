@@ -1,10 +1,10 @@
 from __future__ import annotations
-from ...protocol import AnnotatedTextEdit
-from ...protocol import Position
-from ...protocol import TextEdit
-from ...protocol import WorkspaceEdit
 from .logging import debug
+from .protocol import AnnotatedTextEdit
+from .protocol import Position
+from .protocol import TextEdit
 from .protocol import UINT_MAX
+from .protocol import WorkspaceEdit
 from typing import Dict, List, Optional, Tuple, Union
 import sublime
 

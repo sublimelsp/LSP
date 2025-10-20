@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ...protocol import WorkspaceFolder as LspWorkspaceFolder
+from .protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob

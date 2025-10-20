@@ -1,7 +1,4 @@
 from __future__ import annotations
-from ...protocol import DocumentUri
-from ...protocol import LogMessageParams
-from ...protocol import MessageType
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -16,7 +13,10 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
+from .protocol import DocumentUri
 from .protocol import Error
+from .protocol import LogMessageParams
+from .protocol import MessageType
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger

@@ -1,6 +1,6 @@
 from __future__ import annotations
-from ...protocol import FileChangeType
-from ...protocol import WatchKind
+from .protocol import FileChangeType
+from .protocol import WatchKind
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Literal, Protocol, Tuple, Union

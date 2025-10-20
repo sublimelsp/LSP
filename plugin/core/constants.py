@@ -1,10 +1,10 @@
 from __future__ import annotations
-from .protocol import CodeActionKind
-from .protocol import CompletionItemKind
-from .protocol import DiagnosticSeverity
-from .protocol import DocumentHighlightKind
-from .protocol import LanguageKind
-from .protocol import SymbolKind
+from ...protocol import CodeActionKind
+from ...protocol import CompletionItemKind
+from ...protocol import DiagnosticSeverity
+from ...protocol import DocumentHighlightKind
+from ...protocol import LanguageKind
+from ...protocol import SymbolKind
 from .typing import StrEnum
 from os.path import dirname, join
 from typing import Tuple

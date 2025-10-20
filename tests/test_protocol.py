@@ -1,6 +1,7 @@
 from __future__ import annotations
-from LSP.plugin.core.protocol import Point, Position, Range, Request, Notification
+from LSP.plugin.core.protocol import Point, Request, Notification
 from LSP.plugin.core.transports import JsonRpcProcessor
+from LSP.protocol import Position, Range
 import unittest
 
 

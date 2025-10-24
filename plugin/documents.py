@@ -247,7 +247,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
-        added = False
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session, self._uri)
             buf = self.view.buffer()
@@ -256,9 +255,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if text_change_listener:
                     text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
-            added = True
-        if added:
-            self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
@@ -808,12 +804,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
-
-    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
-
-    def _do_code_lenses_async(self) -> None:
-        for session_buffer in self.session_buffers_async('codeLensProvider'):
-            session_buffer.do_code_lenses_async(self.view)
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 

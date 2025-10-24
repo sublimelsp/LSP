@@ -828,11 +828,12 @@ class SessionBuffer:
         if not supported_commands:
             return []
         # Filter out CodeLenses with unknown commands
-        return [code_lens for code_lens in code_lenses if self._code_lens_filter(supported_commands, code_lens)]
+        return [code_lens for code_lens in code_lenses if self._has_supported_command(code_lens, supported_commands)]
 
-    def _code_lens_filter(self, supported_commands: list[str], code_lens: CodeLens) -> bool:
+    @staticmethod
+    def _has_supported_command(code_lens: CodeLens, supported_commands: list[str]) -> bool:
         command = code_lens.get('command')
-        if not command:  # 'command' for this CodeLens still needs to be resolved
+        if not command:  # The command for this CodeLens still needs to be resolved
             return True
         return command['command'] in supported_commands
 

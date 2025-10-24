@@ -18,7 +18,6 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import DIAGNOSTIC_SEVERITY
-from .core.views import text_document_identifier
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any, Generator, Iterable
@@ -119,6 +118,10 @@ class SessionView:
     @property
     def session_buffer(self) -> SessionBuffer:
         return self._session_buffer
+
+    @property
+    def active_requests(self) -> dict[int, ActiveRequest]:
+        return self._active_requests
 
     def _is_listener_alive(self) -> bool:
         return bool(self.listener())
@@ -270,9 +273,7 @@ class SessionView:
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
         elif capability_path.startswith("codeLensProvider"):
-            listener = self.listener()
-            if listener:
-                listener.on_code_lens_capability_registered_async()
+            self.session_buffer.do_code_lenses_async(self.view)
 
     def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded_capabilities:
@@ -383,29 +384,20 @@ class SessionView:
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
-    def start_code_lenses_async(self) -> None:
-        if not LspToggleCodeLensesCommand.are_enabled(self.view.window()):
-            return
-        params = {'textDocument': text_document_identifier(self.view)}
-        for request_id, data in self._active_requests.items():
-            if data.request.method == "codeAction/resolve":
-                self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-        self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
-
     def clear_code_lenses_async(self) -> None:
         self._code_lenses.clear_view()
 
-    def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
-        if not self._is_listener_alive() or not isinstance(response, list):
+    def handle_code_lenses_async(self, code_lenses: list[CodeLens]) -> None:
+        if not self._is_listener_alive():
             return
-        self._code_lenses.handle_response(self.session.config.name, response)
+        self._code_lenses.handle_response(self.session.config.name, code_lenses)
         self.resolve_visible_code_lenses_async()
 
     def resolve_visible_code_lenses_async(self) -> None:
         if not LspToggleCodeLensesCommand.are_enabled(self.view.window()):
             return
         if not self._code_lenses.is_initialized():
-            self.start_code_lenses_async()
+            self.session_buffer.do_code_lenses_async(self.view)
             return
         if self._code_lenses.is_empty():
             return
@@ -416,15 +408,13 @@ class SessionView:
                 callback = functools.partial(code_lens.resolve, self.view)
                 promise = self.session.send_request_task(request).then(callback)
                 promises.append(promise)
+        # TODO filter out code lenses with unsupported commands
         mode = userprefs().show_code_lens
         Promise.all(promises).then(lambda _: self._on_code_lenses_resolved_async(mode))
 
     def _on_code_lenses_resolved_async(self, mode: str) -> None:
         if self._is_listener_alive():
             sublime.set_timeout(lambda: self._code_lenses.render(mode))
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.code_lenses_needs_refresh = needs_refresh
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

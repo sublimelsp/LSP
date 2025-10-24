@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ..protocol import CodeLens
 from ..protocol import ColorInformation
 from ..protocol import Diagnostic
 from ..protocol import DocumentDiagnosticParams
@@ -15,9 +16,11 @@ from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import ResponseError
 from .core.sessions import is_diagnostic_server_cancellation_data
@@ -144,6 +147,7 @@ class SessionBuffer:
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
+        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
         self._check_did_open(view)
@@ -372,6 +376,7 @@ class SessionBuffer:
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
             self.do_inlay_hints_async(view)
+            self.do_code_lenses_async(view)
         except MissingUriError:
             pass
 
@@ -791,6 +796,48 @@ class SessionBuffer:
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
+
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        if not self.has_capability('codeLensProvider'):
+            return
+        if not LspToggleCodeLensesCommand.are_enabled(view.window()):
+            return
+        params = {'textDocument': text_document_identifier(view)}
+        for sv in self.session_views:
+            if sv.view == view:
+                for request_id, data in sv.active_requests.items():
+                    if data.request.method == 'codeAction/resolve':
+                        self.session.send_notification(Notification('$/cancelRequest', {'id': request_id}))
+                break
+        self.session.send_request_async(Request('textDocument/codeLens', params, view), self._on_code_lenses_async)
+
+    def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
+        if not response:
+            return
+        supported_code_lenses = self._filter_code_lenses(response)
+        for sv in self.session_views:
+            sv.handle_code_lenses_async(supported_code_lenses)
+
+    def _filter_code_lenses(self, code_lenses: list[CodeLens]) -> list[CodeLens]:
+        if self.session.uses_plugin():
+            # Assume that unknown commands are handled by the plugin
+            return code_lenses
+        supported_commands = self.get_capability('executeCommandProvider.commands')
+        if not supported_commands:
+            return []
+        # Filter out CodeLenses with unknown commands
+        return [code_lens for code_lens in code_lenses if self._code_lens_filter(supported_commands, code_lens)]
+
+    def _code_lens_filter(self, supported_commands: list[str], code_lens: CodeLens) -> bool:
+        command = code_lens.get('command')
+        if not command:  # 'command' for this CodeLens still needs to be resolved
+            return True
+        return command['command'] in supported_commands
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.code_lenses_needs_refresh = needs_refresh
 
     # ------------------------------------------------------------------------------------------------------------------
 

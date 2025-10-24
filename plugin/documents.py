@@ -35,7 +35,6 @@ from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import ClientConfig
 from .core.types import debounced
-from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
@@ -166,7 +165,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
-    code_lenses_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -191,7 +189,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
         self._stored_selection: list[sublime.Region] = []
@@ -399,11 +396,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if userprefs().show_code_actions:
             self._do_code_actions_async()
-        for sv in session_views:
-            if sv.code_lenses_needs_refresh:
-                sv.set_code_lenses_pending_refresh(needs_refresh=False)
-                sv.start_code_lenses_async()
         for sb in self.session_buffers_async():
+            if sb.code_lenses_needs_refresh:
+                sb.set_code_lenses_pending_refresh(needs_refresh=False)
+                sb.do_code_lenses_async(self.view)
             if sb.document_diagnostic_needs_refresh:
                 sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
                 sb.do_document_diagnostic_async(self.view, self.view.change_count())
@@ -425,7 +421,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._when_selection_remains_stable_async(
             self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
-        self._resolve_visible_code_lenses_async()
 
     def _on_selection_modified_debounced_async(self) -> None:
         if userprefs().document_highlight_style:
@@ -816,22 +811,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
-    def on_code_lens_capability_registered_async(self) -> None:
-        self._do_code_lenses_async()
-
     def _do_code_lenses_async(self) -> None:
-        session = self.session_async("codeLensProvider")
-        if session and session.uses_plugin():
-            for sv in self.session_views_async():
-                if sv.session == session:
-                    sv.start_code_lenses_async()
-
-    def _resolve_visible_code_lenses_async(self) -> None:
-        session = self.session_async("codeLensProvider")
-        if session and session.uses_plugin():
-            for sv in self.session_views_async():
-                if sv.session == session:
-                    sv.resolve_visible_code_lenses_async()
+        for session_buffer in self.session_buffers_async('codeLensProvider'):
+            session_buffer.do_code_lenses_async(self.view)
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
@@ -994,8 +976,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._should_format_on_paste:
             self._should_format_on_paste = False
             sublime.get_clipboard_async(self._format_on_paste_async)
-        self._code_lenses_debouncer_async.debounce(
-            self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return

@@ -2,6 +2,8 @@ from __future__ import annotations
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
 from ...protocol import MessageType
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -56,7 +58,7 @@ if TYPE_CHECKING:
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
 
 
-def extract_message(params: Any) -> str:
+def extract_message(params: ShowMessageParams) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
 
 
@@ -338,7 +340,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
+    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
         view = self._window.active_view()
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
@@ -458,7 +460,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: Any) -> None:
+    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
         sublime.status_message(f"{session.config.name}: {extract_message(params)}")
 
     def on_diagnostics_updated(self) -> None:

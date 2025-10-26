@@ -461,7 +461,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
     def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
-        sublime.status_message(f"{session.config.name}: {extract_message(params)}")
+        self.window.status_message(f"{session.config.name}: {extract_message(params)}")
 
     def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0

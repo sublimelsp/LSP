@@ -13,7 +13,8 @@ ICONS: dict[MessageType, str] = {
     MessageType.Error: '❗',
     MessageType.Warning: '⚠️',
     MessageType.Info: 'ℹ️',
-    MessageType.Log: '📝'
+    MessageType.Log: '📝',
+    MessageType.Debug: '🐛'
 }
 
 
@@ -44,6 +45,7 @@ class MessageRequestHandler:
         show_lsp_popup(
             self.view,
             "".join(formatted),
+            location=self.view.layout_to_text(self.view.viewport_position()),
             css=sublime.load_resource("Packages/LSP/notification.css"),
             wrapper_class='notification',
             on_navigate=self._send_user_choice,

@@ -1752,6 +1752,18 @@ class Session(TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)
+        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+            if name := uri[len('untitled:'):]:
+                # Check if there is a pre-existing unsaved buffer with the given name
+                for view in self.window.views():
+                    if view.file_name() is None and view.name() == name:
+                        self.window.focus_view(view)
+                        return Promise.resolve(view)
+                view = self.window.new_file()
+                view.set_name(name)
+                return Promise.resolve(view)
+            view = self.window.new_file()
+            return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)

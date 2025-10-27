@@ -20,7 +20,6 @@ from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import SEMANTIC_TOKEN_FLAGS
-from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import ResponseError
 from .core.sessions import is_diagnostic_server_cancellation_data
@@ -812,7 +811,7 @@ class SessionBuffer:
             if sv.view == view:
                 for request_id, data in sv.active_requests.items():
                     if data.request.method == 'codeAction/resolve':
-                        self.session.send_notification(Notification('$/cancelRequest', {'id': request_id}))
+                        self.session.cancel_request(request_id)
                 break
         self.session.send_request_async(Request('textDocument/codeLens', params, view), self._on_code_lenses_async)
 

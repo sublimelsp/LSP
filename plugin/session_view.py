@@ -272,8 +272,6 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
                 self._register_auto_complete_triggers(registration_id, trigger_chars or [])
-        elif capability_path.startswith("codeLensProvider"):
-            self.session_buffer.do_code_lenses_async(self.view)
 
     def on_capability_removed_async(self, registration_id: str, discarded_capabilities: dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded_capabilities:

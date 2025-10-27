@@ -256,6 +256,8 @@ class SessionBuffer:
                 self._check_did_open(view)
             elif capability_path.startswith("diagnosticProvider"):
                 self.do_document_diagnostic_async(view, view.change_count())
+            elif capability_path.startswith("codeLensProvider"):
+                self.do_code_lenses_async(view)
 
     def unregister_capability_async(
         self,

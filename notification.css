@@ -7,8 +7,8 @@
     margin-bottom: 1rem;
 }
 
-.notification .message {
-    margin-bottom: 2rem;
+.notification .actions {
+    margin-top: 2rem;
 }
 
 .notification .actions a {

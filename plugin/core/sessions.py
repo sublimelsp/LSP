@@ -1335,7 +1335,7 @@ class Session(TransportCallbacks):
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
-        self._logged_unsupported_commands = set()
+        self._logged_unsupported_commands: set[str] = set()
 
     def __getattr__(self, name: str) -> Any:
         """

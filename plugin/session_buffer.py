@@ -149,6 +149,9 @@ class SessionBuffer:
         self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
+        self._dynamically_registered_commands: dict[str, list[str]] = {}
+        self._supported_commands: set[str] = set()
+        self._update_supported_commands()
         self._check_did_open(view)
 
     @property
@@ -162,6 +165,10 @@ class SessionBuffer:
     @property
     def last_synced_version(self) -> int:
         return self._last_synced_version
+
+    @property
+    def supported_commands(self) -> set[str]:
+        return self._supported_commands
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
@@ -257,6 +264,9 @@ class SessionBuffer:
                 self.do_document_diagnostic_async(view, view.change_count())
             elif capability_path.startswith("codeLensProvider"):
                 self.do_code_lenses_async(view)
+            elif capability_path == "executeCommandProvider":
+                self._dynamically_registered_commands[registration_id] = options['commands']
+                self._update_supported_commands()
 
     def unregister_capability_async(
         self,
@@ -269,6 +279,9 @@ class SessionBuffer:
             return
         for sv in self.session_views:
             sv.on_capability_removed_async(registration_id, discarded)
+        if capability_path == "executeCommandProvider":
+            self._dynamically_registered_commands.pop(registration_id)
+            self._update_supported_commands()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -434,6 +447,12 @@ class SessionBuffer:
                 f(view, *args)
 
         return handler
+
+    def _update_supported_commands(self) -> None:
+        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        for commands in self._dynamically_registered_commands.values():
+            for command in commands:
+                self._supported_commands.add(command)
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
@@ -818,26 +837,24 @@ class SessionBuffer:
     def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
         if not response:
             return
-        supported_code_lenses = self._filter_code_lenses(response)
+        if self.session.uses_plugin():
+            supported_code_lenses = response
+        else:
+            # Filter out CodeLenses with unknown commands
+            supported_code_lenses = []
+            for code_lens in response:
+                command = code_lens.get('command')
+                if command is None:
+                    # The command for this CodeLens still needs to be resolved
+                    supported_code_lenses.append(code_lens)
+                    continue
+                command_name = command['command']
+                if command_name in self.supported_commands:
+                    supported_code_lenses.append(code_lens)
+                else:
+                    self.session.check_log_unsupported_command(command_name)
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
-
-    def _filter_code_lenses(self, code_lenses: list[CodeLens]) -> list[CodeLens]:
-        if self.session.uses_plugin():
-            # Assume that unknown commands are handled by the plugin
-            return code_lenses
-        supported_commands = self.get_capability('executeCommandProvider.commands')
-        if not supported_commands:
-            return []
-        # Filter out CodeLenses with unknown commands
-        return [code_lens for code_lens in code_lenses if self._has_supported_command(code_lens, supported_commands)]
-
-    @staticmethod
-    def _has_supported_command(code_lens: CodeLens, supported_commands: list[str]) -> bool:
-        command = code_lens.get('command')
-        if not command:  # The command for this CodeLens still needs to be resolved
-            return True
-        return command['command'] in supported_commands
 
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh

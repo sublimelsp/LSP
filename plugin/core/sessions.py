@@ -1335,6 +1335,7 @@ class Session(TransportCallbacks):
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
+        self._logged_unsupported_commands = set()
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1724,6 +1725,11 @@ class Session(TransportCallbacks):
 
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False
+
+    def check_log_unsupported_command(self, command: str) -> None:
+        if userprefs().log_debug and command not in self._logged_unsupported_commands:
+            self._logged_unsupported_commands.add(command)
+            debug(f'{self.config.name}: unsupported command: {command}')
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None

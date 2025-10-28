@@ -841,7 +841,7 @@ class SessionBuffer:
             supported_code_lenses = response
         else:
             # Filter out CodeLenses with unknown commands
-            supported_code_lenses = []
+            supported_code_lenses: list[CodeLens] = []
             for code_lens in response:
                 command = code_lens.get('command')
                 if command is None:

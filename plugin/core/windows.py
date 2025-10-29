@@ -2,11 +2,14 @@ from __future__ import annotations
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
 from ...protocol import MessageType
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
+from .constants import MESSAGE_TYPE_LEVELS
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
@@ -54,10 +57,6 @@ if TYPE_CHECKING:
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
-
-
-def extract_message(params: Any) -> str:
-    return params.get("message", "???") if isinstance(params, dict) else "???"
 
 
 def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> None:
@@ -338,7 +337,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
+    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
         view = self._window.active_view()
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
@@ -423,13 +422,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         if not userprefs().log_debug:
             return
         message_type = params['type']
-        level = {
-            MessageType.Error: "ERROR",
-            MessageType.Warning: "WARNING",
-            MessageType.Info: "INFO",
-            MessageType.Log: "LOG",
-            MessageType.Debug: "DEBUG"
-        }.get(message_type, "?")
+        level = MESSAGE_TYPE_LEVELS[message_type]
         message = params['message']
         print(f"{session.config.name}: {level}: {message}")
         if message_type == MessageType.Error:
@@ -458,8 +451,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: Any) -> None:
-        sublime.status_message(f"{session.config.name}: {extract_message(params)}")
+    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
+        level = MESSAGE_TYPE_LEVELS[params['type']]
+        message = params['message']
+        msg = f"{session.config.name}: {level}: {message}"
+        debug(msg)
+        self.window.status_message(msg)
 
     def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0

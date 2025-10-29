@@ -4,6 +4,7 @@ from ...protocol import CompletionItemKind
 from ...protocol import DiagnosticSeverity
 from ...protocol import DocumentHighlightKind
 from ...protocol import LanguageKind
+from ...protocol import MessageType
 from ...protocol import SymbolKind
 from .typing import StrEnum
 from os.path import dirname, join
@@ -170,6 +171,15 @@ DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
+}
+
+
+MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
+    MessageType.Error: "ERROR",
+    MessageType.Warning: "WARNING",
+    MessageType.Info: "INFO",
+    MessageType.Log: "LOG",
+    MessageType.Debug: "DEBUG"
 }
 
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
+from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
 from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
+from ...protocol import ConfigurationItem
+from ...protocol import ConfigurationParams
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
@@ -40,6 +43,9 @@ from ...protocol import Range
 from ...protocol import RegistrationParams
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
+from ...protocol import ShowDocumentParams
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
@@ -1018,7 +1024,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: dict, configuration: Any) -> Any:
+    def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
@@ -2073,11 +2079,11 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
+    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: Any) -> None:
         """handles the window/showMessageRequest request"""
         self.call_manager('handle_message_request', self, params, request_id)
 
-    def m_window_showMessage(self, params: Any) -> None:
+    def m_window_showMessage(self, params: ShowMessageParams) -> None:
         """handles the window/showMessage notification"""
         self.call_manager('handle_show_message', self, params)
 
@@ -2085,11 +2091,11 @@ class Session(TransportCallbacks):
         """handles the window/logMessage notification"""
         self.call_manager('handle_log_message', self, params)
 
-    def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
+    def m_workspace_workspaceFolders(self, params: None, request_id: Any) -> None:
         """handles the workspace/workspaceFolders request"""
         self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def m_workspace_configuration(self, params: dict[str, Any], request_id: Any) -> None:
+    def m_workspace_configuration(self, params: ConfigurationParams, request_id: Any) -> None:
         """handles the workspace/configuration request"""
         items: list[Any] = []
         requested_items = params.get("items") or []
@@ -2101,12 +2107,12 @@ class Session(TransportCallbacks):
                 items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
-    def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
+    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
         self.apply_workspace_edit_async(params.get('edit', {})) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
-    def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
+    def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
         self.send_response(Response(request_id, None))
         if self.uses_plugin():
@@ -2116,7 +2122,7 @@ class Session(TransportCallbacks):
             for sv in not_visible_session_views:
                 sv.set_code_lenses_pending_refresh()
 
-    def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
+    def m_workspace_semanticTokens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2228,7 +2234,7 @@ class Session(TransportCallbacks):
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
 
-    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+    def m_window_showDocument(self, params: ShowDocumentParams, request_id: Any) -> None:
         """handles the window/showDocument request"""
         uri = params.get("uri")
 

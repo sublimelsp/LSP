@@ -38,10 +38,10 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: '3.14'
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils
-      - run: pip3 install mypy==1.7.1 flake8==7.1.1 pyright==1.1.381 orjson==3.10.7 --user
+      - run: pip3 install mypy==1.18.2 flake8==7.1.1 pyright==1.1.407 orjson==3.11.4 --user
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: mypy stubs
       - run: flake8 plugin tests

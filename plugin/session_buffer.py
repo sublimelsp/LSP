@@ -835,9 +835,9 @@ class SessionBuffer:
         self.session.send_request_async(Request('textDocument/codeLens', params, view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
-        if not response:
-            return
-        if self.session.uses_plugin():
+        if response is None:
+            supported_code_lenses = []
+        elif self.session.uses_plugin():
             supported_code_lenses = response
         else:
             # Filter out CodeLenses with unknown commands
@@ -854,7 +854,10 @@ class SessionBuffer:
                 else:
                     self.session.check_log_unsupported_command(command_name)
         for sv in self.session_views:
-            sv.handle_code_lenses_async(supported_code_lenses)
+            if supported_code_lenses:
+                sv.handle_code_lenses_async(supported_code_lenses)
+            else:
+                sv.clear_code_lenses_async()
 
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh

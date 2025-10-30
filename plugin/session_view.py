@@ -398,6 +398,7 @@ class SessionView:
             self.session_buffer.do_code_lenses_async(self.view)
             return
         if self._code_lenses.is_empty():
+            self.clear_code_lenses_async()
             return
         promises: list[Promise[None]] = [Promise.resolve(None)]
         if self.get_capability_async('codeLensProvider.resolveProvider'):

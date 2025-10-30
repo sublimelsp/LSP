@@ -832,7 +832,7 @@ class SessionBuffer:
 
     def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
         if response is None:
-            supported_code_lenses = []
+            supported_code_lenses: list[CodeLens] = []
         elif self.session.uses_plugin():
             supported_code_lenses = response
         else:
@@ -850,10 +850,7 @@ class SessionBuffer:
                 else:
                     self.session.check_log_unsupported_command(command_name)
         for sv in self.session_views:
-            if supported_code_lenses:
-                sv.handle_code_lenses_async(supported_code_lenses)
-            else:
-                sv.clear_code_lenses_async()
+            sv.handle_code_lenses_async(supported_code_lenses)
 
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh

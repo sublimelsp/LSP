@@ -166,10 +166,6 @@ class SessionBuffer:
     def last_synced_version(self) -> int:
         return self._last_synced_version
 
-    @property
-    def supported_commands(self) -> set[str]:
-        return self._supported_commands
-
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
             language_id = self.get_language_id()
@@ -849,7 +845,7 @@ class SessionBuffer:
                     supported_code_lenses.append(code_lens)
                     continue
                 command_name = command['command']
-                if command_name in self.supported_commands:
+                if command_name in self._supported_commands:
                     supported_code_lenses.append(code_lens)
                 else:
                     self.session.check_log_unsupported_command(command_name)

@@ -825,13 +825,13 @@ class SessionBuffer:
             return
         if not LspToggleCodeLensesCommand.are_enabled(view.window()):
             return
-        params = {'textDocument': text_document_identifier(view)}
         for sv in self.session_views:
             if sv.view == view:
                 for request_id, data in sv.active_requests.items():
                     if data.request.method == 'codeAction/resolve':
                         self.session.cancel_request(request_id)
                 break
+        params = {'textDocument': text_document_identifier(view)}
         self.session.send_request_async(Request('textDocument/codeLens', params, view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:

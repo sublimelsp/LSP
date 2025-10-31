@@ -40,7 +40,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
         for session in window_manager.get_sessions():
             for session_view in session.session_views_async():
                 if enable:
-                    session_view.start_code_lenses_async()
+                    session_view.session_buffer.do_code_lenses_async(session_view.view)
                 else:
                     session_view.clear_code_lenses_async()
 

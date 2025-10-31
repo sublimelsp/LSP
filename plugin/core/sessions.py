@@ -3,6 +3,7 @@ from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
+from ...protocol import CodeLens
 from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
@@ -122,6 +123,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
@@ -130,6 +132,11 @@ import mdpopups
 import os
 import sublime
 import weakref
+
+
+if TYPE_CHECKING:
+    from .active_request import ActiveRequest
+
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
@@ -572,6 +579,10 @@ class SessionViewProtocol(Protocol):
     def session_buffer(self) -> SessionBufferProtocol:
         ...
 
+    @property
+    def active_requests(self) -> dict[int, ActiveRequest]:
+        ...
+
     def get_uri(self) -> DocumentUri | None:
         ...
 
@@ -608,13 +619,10 @@ class SessionViewProtocol(Protocol):
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
         ...
 
-    def start_code_lenses_async(self) -> None:
+    def handle_code_lenses_async(self, code_lenses: list[CodeLens]) -> None:
         ...
 
     def clear_code_lenses_async(self) -> None:
-        ...
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
     def reset_show_definitions(self) -> None:
@@ -708,6 +716,12 @@ class SessionBufferProtocol(Protocol):
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        ...
+
 
 class AbstractViewListener(metaclass=ABCMeta):
 
@@ -772,10 +786,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_code_lens_capability_registered_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1331,6 +1341,7 @@ class Session(TransportCallbacks):
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
+        self._logged_unsupported_commands: set[str] = set()
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1720,6 +1731,11 @@ class Session(TransportCallbacks):
 
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False
+
+    def check_log_unsupported_command(self, command: str) -> None:
+        if userprefs().log_debug and command not in self._logged_unsupported_commands:
+            self._logged_unsupported_commands.add(command)
+            debug(f'{self.config.name}: unsupported command: {command}')
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
@@ -2115,12 +2131,11 @@ class Session(TransportCallbacks):
     def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
         self.send_response(Response(request_id, None))
-        if self.uses_plugin():
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                sv.start_code_lenses_async()
-            for sv in not_visible_session_views:
-                sv.set_code_lenses_pending_refresh()
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_code_lenses_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_code_lenses_pending_refresh()
 
     def m_workspace_semanticTokens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""

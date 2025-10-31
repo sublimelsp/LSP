@@ -235,6 +235,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
 
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
+        print('debug settings', sublime.active_window().active_view().settings().to_dict())
         actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
         expected: list[str] = []
         self.assertEqual(actual, expected)

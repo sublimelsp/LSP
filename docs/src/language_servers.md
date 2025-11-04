@@ -532,6 +532,22 @@ Follow installation instructions on [ols](https://github.com/DanielGavin/ols/).
     }
     ```
 
+## PostgresSQL
+
+1. Install [Postgres Language Server](https://pg-language-server.com/latest/manual_installation/)
+2. Open any .sql file and select `View > Syntax > Open all with current extension as... > SQL > PostgreSQL` to set the PostgreSQL syntax as the default.
+3. Open `Preferences > Package Settings > LSP > Settings` and add the `"postgres-language-server"` client configuration to the `"clients"`:
+
+    ```jsonc
+        "clients": {
+            "postgres-language-server": {
+                "enabled": true,
+                "command": ["/path/to/postgres-language-server", "lsp-proxy"],
+                "selector": "source.sql.psql",
+            }
+        }
+    ```
+
 ## PromQL
 
 Follow installation instructions on [LSP-promql](https://github.com/prometheus-community/sublimelsp-promql).

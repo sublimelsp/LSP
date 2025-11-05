@@ -825,8 +825,6 @@ class SessionBuffer:
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def do_code_lenses_async(self, view: sublime.View) -> None:
-        if not userprefs().show_code_lens:
-            return
         if not self.has_capability('codeLensProvider'):
             return
         if not LspToggleCodeLensesCommand.are_enabled(view.window()):
@@ -852,8 +850,7 @@ class SessionBuffer:
                 request = Request('codeLens/resolve', code_lens.data, view)
                 promise = self.session.send_request_task(request).then(code_lens.resolve)
                 promises.append(promise)
-        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async)  # FIXME doesn't work
-        sublime.set_timeout_async(self._on_visible_code_lenses_resolved_async, 100)  # FIXME workaround
+        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _on_visible_code_lenses_resolved_async(self) -> None:
         code_lenses = self._code_lenses.code_lenses_with_command()

@@ -4,8 +4,6 @@
     "capture_console": true,
     "failfast": false,
     "reload_package_on_testing": false,
-    "start_coverage_after_reload": false,
-    "show_reload_progress": false,
     "output": null,
     "generate_html_report": true
 }

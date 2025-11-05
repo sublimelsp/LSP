@@ -9,7 +9,8 @@ from LSP.protocol import CompletionItemLabelDetails
 from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
 from setup import TextDocumentTestCase
-from typing import Any, Callable, Generator
+from setup import TIMEOUT_TIME
+from typing import Any, Generator
 from unittest import TestCase
 import sublime
 
@@ -52,29 +53,29 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Callable[[], bool]:
+    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Generator:
         committed = False
         current_change_count = self.view.change_count()
 
-        def commit_completion() -> bool:
-            if not self.view.is_auto_complete_visible():
-                return False
+        def commit_completion() -> Generator:
+            yield {"condition": self.view.is_auto_complete_visible, "timeout": TIMEOUT_TIME}
             nonlocal committed
             nonlocal current_change_count
             if not committed:
                 self.view.run_command(commit_completion_command)
                 committed = True
-            return self.view.change_count() > current_change_count
+            yield from self.await_message("textDocument/didChange")
+            yield self.view.change_count() > current_change_count
 
-        return commit_completion
+        yield from commit_completion()
 
     def select_completion(self) -> Generator:
         self.view.run_command('auto_complete')
-        yield self.create_commit_completion_closure()
+        yield from self.create_commit_completion_closure()
 
     def shift_select_completion(self) -> Generator:
         self.view.run_command('auto_complete')
-        yield self.create_commit_completion_closure("lsp_commit_completion_with_opposite_insert_mode")
+        yield from self.create_commit_completion_closure("lsp_commit_completion_with_opposite_insert_mode")
 
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
@@ -82,10 +83,10 @@ class CompletionsTestsBase(TextDocumentTestCase):
     def verify(self, *, completion_items: list[dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
         if insert_text:
             self.type(insert_text)
+            yield from self.await_message("textDocument/didChange")
         self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
-        yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.read_file(), expected_text)
 
 
@@ -565,7 +566,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield 100
         # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
         # remove "u>" is invalid. The code in completion.py must be able to handle this.
-        yield self.create_commit_completion_closure()
+        yield from self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '#include <uchar.h>')
 
     def test_nontrivial_text_edit_removal_with_buffer_modifications_json(self) -> Generator:
@@ -593,7 +594,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         yield 100
         # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
-        yield self.create_commit_completion_closure()
+        yield from self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
 
     def test_text_edit_plaintext_with_multiple_lines_indented(self) -> Generator[None, None, None]:
@@ -648,7 +649,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "deprecated": True
         }
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_show_deprecated_tag(self) -> None:
@@ -657,7 +658,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             "kind": CompletionItemKind.Method,
             "tags": [CompletionItemTag.Deprecated]
         }
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id())
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "", {}, self.view.id(), 0)
         self.assertIn("DEPRECATED", formatted_completion_item.annotation)
 
     def test_strips_carriage_return_in_insert_text(self) -> Generator:
@@ -692,7 +693,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label, "filterText": "force_label_to_go_into_st_detail_field"}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.details, expected_regex)
 
         check(
@@ -743,7 +744,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             lsp: CompletionItem = {"label": label}
             if label_details is not None:
                 lsp["labelDetails"] = label_details
-            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id())
+            native = format_completion(lsp, 0, resolve_support, "", {}, self.view.id(), 0)
             self.assertRegex(native.trigger, expected_regex)
 
         check(
@@ -909,14 +910,14 @@ class ItemDefaultTests(TestCase):
 class FormatCompletionsUnitTests(TestCase):
 
     def _verify_completion(
-        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = '', flags: int = 0
+        self, payload: CompletionItem, trigger: str, annotation: str = '', details: str = ''
     ) -> None:
         item = format_completion(
-            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0)
+            payload, index=0, can_resolve_completion_items=False, session_name='abc', item_defaults={}, view_id=0,
+            prefix_length=0)
         self.assertEqual(item.trigger, trigger)
         self.assertEqual(item.annotation, annotation)
         self.assertEqual(item.details, details)
-        self.assertEqual(item.flags, flags)
 
     def test_label(self) -> None:
         self._verify_completion(

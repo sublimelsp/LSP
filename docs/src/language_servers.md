@@ -919,7 +919,7 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
         "clients": {
             "jag": {
                 "enabled": true,
-                "command": ["jag" "lsp"],
+                "command": ["jag", "lsp"],
                 "selector": "source.toit"
             }
         }

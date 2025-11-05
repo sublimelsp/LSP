@@ -14,6 +14,7 @@ from ..protocol import SignatureHelpTriggerKind
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
@@ -423,7 +424,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_highlights_async()
         if userprefs().show_code_actions:
             self._do_code_actions_async()
+        code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
+            if code_lenses_enabled:
+                sv.session_buffer.resolve_visible_code_lenses_async(self.view)
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 

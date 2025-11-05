@@ -393,7 +393,7 @@ class SessionView:
         self._code_lens_phantoms.update([])
         self.view.erase_regions(self._code_lens_key())
 
-    def _redraw_code_lenses_async(self, clear: bool = False) -> None:
+    def _redraw_code_lenses_async(self, *, clear: bool = False) -> None:
         if clear:
             self.clear_code_lenses_async()
         if userprefs().show_code_lens == 'annotation':

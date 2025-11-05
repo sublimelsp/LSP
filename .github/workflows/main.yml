@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: SublimeText/UnitTesting/actions/setup@v1
-      - uses: SublimeText/UnitTesting/actions/run-tests@v1
+      - uses: sublimelsp/UnitTesting/actions/run-tests@7505ac44fc5838090dc4878520c325ea4a32d2eb
         # with:
         #   coverage: true
 

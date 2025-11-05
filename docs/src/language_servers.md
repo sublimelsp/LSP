@@ -862,7 +862,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
         }
     ```
 
-!!! info "Ensure that the PostgreSQL syntax is applied to the relevant files, for example by selecting `View > Syntax > SQL > PostgreSQL`"
+!!! info "Ensure that the PostgreSQL syntax is applied to the relevant files by selecting `View > Syntax > SQL > PostgreSQL`"
 
 ## Stylelint
 

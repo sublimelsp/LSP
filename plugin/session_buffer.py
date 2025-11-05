@@ -131,7 +131,7 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
-        self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostics_version = -1
         self.diagnostics_flags = 0
@@ -165,6 +165,10 @@ class SessionBuffer:
     @property
     def session_views(self) -> WeakSet[SessionViewProtocol]:
         return self._session_views
+
+    @property
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
+        return self._diagnostics
 
     @property
     def last_synced_version(self) -> int:
@@ -600,7 +604,7 @@ class SessionBuffer:
 
         def present() -> None:
             self._diagnostics_version = diagnostics_version
-            self.diagnostics = diagnostics
+            self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
                 sv.present_diagnostics_async(sv in visible_session_views)

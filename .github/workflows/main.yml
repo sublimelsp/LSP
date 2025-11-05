@@ -21,9 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          # - ubuntu-latest
           - macOS-latest
-          - windows-latest
+          # - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5

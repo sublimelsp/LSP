@@ -27,7 +27,7 @@ from typing import cast
 import sublime
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Generator, Iterator
     from typing import TypeGuard
 
 
@@ -247,7 +247,7 @@ class CodeActionOnSaveTask(SaveTask):
         request_iterator = actions_manager.request_on_save_async(view, on_save_actions)
         self._process_next_request(request_iterator)
 
-    def _process_next_request(self, request_iterator: Generator[Promise[CodeActionsByConfigName]]) -> None:
+    def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
         if self._cancelled:
             return
         request = next(request_iterator, None)
@@ -257,7 +257,7 @@ class CodeActionOnSaveTask(SaveTask):
             self._on_complete()
 
     def _handle_response_async(
-        self, response: CodeActionsByConfigName, request_iterator: Generator[Promise[CodeActionsByConfigName]]
+        self, response: CodeActionsByConfigName, request_iterator: Iterator[Promise[CodeActionsByConfigName]]
     ) -> None:
         if self._cancelled:
             return

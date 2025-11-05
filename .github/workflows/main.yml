@@ -22,15 +22,15 @@ jobs:
       matrix:
         os:
           # - ubuntu-latest
-          - macOS-26
+          - macOS-latest
           # - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: SublimeText/UnitTesting/actions/setup@v1
       - uses: SublimeText/UnitTesting/actions/run-tests@v1
-        with:
-          coverage: true
+        # with:
+        #   coverage: true
 
   Lint:
     runs-on: ubuntu-latest

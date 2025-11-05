@@ -850,8 +850,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 ### PostgresSQL
 
 1. Install the [Postgres Language Server](https://pg-language-server.com/latest/manual_installation/).
-2. Open any .sql file and select `View > Syntax > Open all with current extension as... > SQL > PostgreSQL` to set the PostgreSQL syntax as the default.
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"postgres-language-server"` client configuration to the `"clients"`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"postgres-language-server"` client configuration to the `"clients"`:
 
     ```jsonc
         "clients": {
@@ -862,6 +861,8 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
             }
         }
     ```
+
+!!! info "Ensure that the PostgreSQL syntax is applied to the relevant files, for example by selecting `View > Syntax > SQL > PostgreSQL`"
 
 ## Stylelint
 

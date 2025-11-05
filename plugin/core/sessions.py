@@ -643,6 +643,10 @@ class SessionBufferProtocol(Protocol):
         ...
 
     @property
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
+        ...
+
+    @property
     def last_synced_version(self) -> int:
         ...
 

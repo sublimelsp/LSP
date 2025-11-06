@@ -833,7 +833,6 @@ class SessionBuffer:
             return
         for sv in self.session_views:
             if sv.view == view:
-                # TODO should the active requests be stored per SessionBuffer?
                 for request_id, data in sv.active_requests.items():
                     if data.request.method == 'codeLens/resolve':
                         self.session.cancel_request(request_id)
@@ -846,7 +845,7 @@ class SessionBuffer:
         self.resolve_visible_code_lenses_async(view)
 
     def resolve_visible_code_lenses_async(self, view: sublime.View) -> None:
-        promises: list[Promise] = []
+        promises: list[Promise[None]] = []
         if self.has_capability('codeLensProvider.resolveProvider'):
             for code_lens in self._code_lenses.unresolved_visible_code_lenses_async(view):
                 request = Request('codeLens/resolve', code_lens.data, view)

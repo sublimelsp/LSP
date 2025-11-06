@@ -3,7 +3,6 @@ from ..protocol import CodeLens
 from ..protocol import Command
 from ..protocol import Range
 from .core.constants import CODE_LENS_ENABLED_KEY
-from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
@@ -40,19 +39,20 @@ class HashableRange:
 
 class CachedCodeLens:
 
+    __slots__ = ('data', 'range_', 'cached_command')
+
     def __init__(self, data: CodeLens) -> None:
         self.data = data
-        self.region = HashableRange(data['range'])
+        self.range_ = HashableRange(data['range'])
         self.cached_command = data.get('command')
 
-    def resolve(self, response: CodeLens | Error) -> Promise[None]:
+    def resolve(self, response: CodeLens | Error) -> None:
         if isinstance(response, Error):
-            return Promise.resolve(None)
+            return
         assert is_resolved(response)
         self.data = cast(CodeLens, response)
-        self.region = HashableRange(response['range'])
+        self.range_ = HashableRange(response['range'])
         self.cached_command = cast(Command, response['command'])
-        return Promise.resolve(None)
 
 
 class CodeLensCache:
@@ -61,11 +61,10 @@ class CodeLensCache:
         self.code_lenses: dict[HashableRange, list[CachedCodeLens]] = {}
 
     def handle_response_async(self, code_lenses: list[CodeLens]) -> None:
-        # self.code_lenses = code_lenses
         new_code_lenses = [CachedCodeLens(code_lens) for code_lens in code_lenses]
-        new_code_lenses.sort(key=lambda c: c.region)
+        new_code_lenses.sort(key=lambda c: c.range_)
         grouped_code_lenses = {
-            range_: list(group) for range_, group in itertools.groupby(new_code_lenses, key=lambda c: c.region)
+            range_: list(group) for range_, group in itertools.groupby(new_code_lenses, key=lambda c: c.range_)
         }
         # Fast path: no extra work to do
         if not self.code_lenses:

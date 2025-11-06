@@ -153,6 +153,7 @@ class SessionBuffer:
         self._is_saving = False
         self._has_changed_during_save = False
         self._code_lenses = CodeLensCache()
+        self._filtered_code_lenses: list[ResolvedCodeLens] = []
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
@@ -226,6 +227,7 @@ class SessionBuffer:
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
+        sv.handle_code_lenses_async(self._filtered_code_lenses)
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
@@ -857,18 +859,18 @@ class SessionBuffer:
         if self.session.uses_plugin():
             # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
-            supported_code_lenses = code_lenses
+            self._filtered_code_lenses = code_lenses
         else:
-            supported_code_lenses: list[ResolvedCodeLens] = []
+            self._filtered_code_lenses.clear()
             # Filter out CodeLenses with commands that are not handled directly by the language server
             for code_lens in code_lenses:
                 command_name = code_lens['command']['command']
                 if command_name in self._supported_commands:
-                    supported_code_lenses.append(code_lens)
+                    self._filtered_code_lenses.append(code_lens)
                 else:
                     self.session.check_log_unsupported_command(command_name)
         for sv in self.session_views:
-            sv.handle_code_lenses_async(supported_code_lenses)
+            sv.handle_code_lenses_async(self._filtered_code_lenses)
 
     def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         self.code_lenses_needs_refresh = needs_refresh

@@ -35,10 +35,7 @@ __package__ = "server"
 __version__ = "1.0.0"
 
 
-if sys.version_info[0] < 3:
-    print("only works for python3.6 and higher")
-    exit(1)
-if sys.version_info[1] < 6:
+if sys.version_info[:2] < (3, 6):
     print("only works for python3.6 and higher")
     exit(1)
 
@@ -515,7 +512,8 @@ if __name__ == '__main__':
     if args.version:
         print(__package__, __version__)
         exit(0)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
         shutdown_received = loop.run_until_complete(main(args.tcp_port))

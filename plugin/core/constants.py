@@ -226,6 +226,7 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.tsx": LanguageKind.TypeScriptReact,
     "source.unity.unity_shader": LanguageKind.ShaderLab,  # https://github.com/petereichinger/Unity3D-Shader
     "source.yaml-tmlanguage": LanguageKind.YAML,  # https://github.com/SublimeText/PackageDev
+    "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
     "text.html.handlebars": LanguageKind.Handlebars,

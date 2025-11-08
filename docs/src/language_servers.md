@@ -847,7 +847,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
 
 ## SQL
 
-### PostgresSQL
+### PostgreSQL
 
 1. Install the [Postgres Language Server](https://pg-language-server.com/latest/manual_installation/).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"postgres-language-server"` client configuration to the `"clients"`:

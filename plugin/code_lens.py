@@ -17,7 +17,7 @@ import itertools
 import sublime
 
 
-def is_resolved(code_lens: CodeLens) -> TypeGuard[ResolvedCodeLens]:
+def is_resolved(code_lens: CodeLens | ResolvedCodeLens) -> TypeGuard[ResolvedCodeLens]:
     return 'command' in code_lens
 
 
@@ -39,20 +39,20 @@ class HashableRange:
 
 class CachedCodeLens:
 
-    __slots__ = ('data', 'range_', 'cached_command')
+    __slots__ = ('data', 'range', 'cached_command')
 
     def __init__(self, data: CodeLens) -> None:
-        self.data = data
-        self.range_ = HashableRange(data['range'])
+        self.data: CodeLens | ResolvedCodeLens = data
+        self.range = HashableRange(data['range'])
         self.cached_command = data.get('command')
 
-    def resolve(self, response: CodeLens | Error) -> None:
+    def on_resolve(self, response: CodeLens | Error) -> None:
         if isinstance(response, Error):
             return
         assert is_resolved(response)
-        self.data = cast(CodeLens, response)
-        self.range_ = HashableRange(response['range'])
-        self.cached_command = cast(Command, response['command'])
+        self.data = response
+        self.range = HashableRange(response['range'])
+        self.cached_command = response['command']
 
 
 class CodeLensCache:
@@ -62,9 +62,9 @@ class CodeLensCache:
 
     def handle_response_async(self, code_lenses: list[CodeLens]) -> None:
         new_code_lenses = [CachedCodeLens(code_lens) for code_lens in code_lenses]
-        new_code_lenses.sort(key=lambda c: c.range_)
+        new_code_lenses.sort(key=lambda c: c.range)
         grouped_code_lenses = {
-            range_: list(group) for range_, group in itertools.groupby(new_code_lenses, key=lambda c: c.range_)
+            range_: list(group) for range_, group in itertools.groupby(new_code_lenses, key=lambda c: c.range)
         }
         # Fast path: no extra work to do
         if not self.code_lenses:
@@ -88,14 +88,12 @@ class CodeLensCache:
                     new.cached_command = old.data['command'] if is_resolved(old.data) else old.cached_command
         self.code_lenses = grouped_code_lenses
 
-    def unresolved_visible_code_lenses_async(self, view: sublime.View) -> Generator[CachedCodeLens]:
+    def unresolved_visible_code_lenses(self, view: sublime.View) -> list[CachedCodeLens]:
         visible_region = view.visible_region()
-        for group in self.code_lenses.values():
-            for code_lens in group:
-                if is_resolved(code_lens.data):
-                    continue
-                if range_to_region(code_lens.data['range'], view).intersects(visible_region):
-                    yield code_lens
+        return [
+            cl for cl in itertools.chain.from_iterable(self.code_lenses.values())
+            if not is_resolved(cl.data) and range_to_region(cl.data['range'], view).intersects(visible_region)
+        ]
 
     def code_lenses_with_command(self) -> list[ResolvedCodeLens]:
         """ Returns only the code lenses that are either resolved, or have a cached command. """

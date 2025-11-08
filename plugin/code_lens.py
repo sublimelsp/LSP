@@ -10,7 +10,6 @@ from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.views import range_to_region
 from functools import partial
-from typing import Generator
 from typing import cast
 from typing_extensions import TypeGuard
 import itertools

@@ -189,7 +189,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return bool(
             has_single_nonempty_selection(self.view)
             or
-            (self.view.has_non_empty_selection_region() and  self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
+            (self.view.has_non_empty_selection_region() and self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
         )
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:

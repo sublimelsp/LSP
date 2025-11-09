@@ -130,7 +130,10 @@ class LspFormatDocumentCommand(LspTextCommand):
         base_scope = syntax.scope
         if select:
             self.select_formatter(base_scope, session_names)
-        elif len(session_names) > 1:
+            return
+        if listener := self.get_listener():
+            listener.purge_changes_async()
+        if len(session_names) > 1:
             formatter = get_formatter(self.view.window(), base_scope)
             if formatter:
                 session = self.session_by_name(formatter, self.capability)
@@ -171,6 +174,8 @@ class LspFormatDocumentCommand(LspTextCommand):
                 window_manager.formatters[base_scope] = session_name
         session = self.session_by_name(session_name, self.capability)
         if session:
+            if listener := self.get_listener():
+                listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
 
 
@@ -181,14 +186,15 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled(event, point):
             return False
-        if has_single_nonempty_selection(self.view):
-            return True
-        if self.view.has_non_empty_selection_region() and \
-                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
-            return True
-        return False
+        return bool(
+            has_single_nonempty_selection(self.view)
+            or
+            (self.view.has_non_empty_selection_region() and  self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
+        )
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
+        if listener := self.get_listener():
+            listener.purge_changes_async()
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)
@@ -207,8 +213,9 @@ class LspFormatCommand(LspTextCommand):
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled():
             return False
-        return bool(self.best_session('documentFormattingProvider')) or \
-            bool(self.best_session('documentRangeFormattingProvider'))
+        return bool(
+            self.best_session('documentFormattingProvider') or self.best_session('documentRangeFormattingProvider')
+        )
 
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         return self.is_enabled(event, point)
@@ -225,9 +232,8 @@ class LspFormatCommand(LspTextCommand):
         self.view.run_command(command)
 
     def _range_formatting_available(self) -> bool:
-        if has_single_nonempty_selection(self.view) and bool(self.best_session('documentRangeFormattingProvider')):
-            return True
-        if self.view.has_non_empty_selection_region() and \
-                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
-            return True
-        return False
+        return bool(
+            (has_single_nonempty_selection(self.view) and self.best_session('documentRangeFormattingProvider'))
+            or
+            (self.view.has_non_empty_selection_region() and self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
+        )

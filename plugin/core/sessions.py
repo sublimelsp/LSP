@@ -3,7 +3,6 @@ from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
-from ...protocol import CodeLens
 from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
@@ -86,10 +85,10 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeLensExtended
 from .protocol import Error
 from .protocol import Notification
 from .protocol import Request
+from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
 from .settings import client_configs
@@ -616,10 +615,10 @@ class SessionViewProtocol(Protocol):
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         ...
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
+    def get_code_lenses_for_region(self, region: sublime.Region) -> list[Command]:
         ...
 
-    def handle_code_lenses_async(self, code_lenses: list[CodeLens]) -> None:
+    def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:
         ...
 
     def clear_code_lenses_async(self) -> None:

@@ -1,29 +1,29 @@
 from __future__ import annotations
-from ..protocol import CodeLens
+from ..protocol import Command
 from ..protocol import DiagnosticTag
 from ..protocol import DocumentUri
-from .code_lens import CodeLensView
-from .code_lens import LspToggleCodeLensesCommand
 from .core.active_request import ActiveRequest
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.promise import Promise
-from .core.protocol import CodeLensExtended
 from .core.protocol import Notification
 from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import make_command_link
+from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
-from typing import Any, Generator, Iterable
+from typing import Any, Iterable
 from weakref import ref
 from weakref import WeakValueDictionary
-import functools
+import html
+import itertools
 import sublime
 
 DIAGNOSTIC_TAG_VALUES: list[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
@@ -57,7 +57,8 @@ class SessionView:
         self._initialize_region_keys()
         self._active_requests: dict[int, ActiveRequest] = {}
         self._listener = ref(listener)
-        self._code_lenses = CodeLensView(self._view)
+        self._code_lenses: list[ResolvedCodeLens] = []
+        self._code_lens_phantoms = sublime.PhantomSet(self.view, self._code_lens_key())
         self.code_lenses_needs_refresh = False
         settings = self._view.settings()
         buffer_id = self._view.buffer_id()
@@ -81,7 +82,7 @@ class SessionView:
     def on_before_remove(self) -> None:
         settings: sublime.Settings = self.view.settings()
         self._clear_auto_complete_triggers(settings)
-        self._code_lenses.clear_view()
+        self.clear_code_lenses_async()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -379,44 +380,85 @@ class SessionView:
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_diagnostics_async()
+        self._redraw_code_lenses_async(clear=True)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
+    def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:
+        if self._code_lenses or code_lenses:
+            self._code_lenses = code_lenses
+            self._redraw_code_lenses_async()
+
     def clear_code_lenses_async(self) -> None:
-        self._code_lenses.clear_view()
+        self._code_lens_phantoms.update([])
+        self.view.erase_regions(self._code_lens_key())
 
-    def handle_code_lenses_async(self, code_lenses: list[CodeLens]) -> None:
-        if not self._is_listener_alive():
-            return
-        self._code_lenses.handle_response(self.session.config.name, code_lenses)
-        self.resolve_visible_code_lenses_async()
-
-    def resolve_visible_code_lenses_async(self) -> None:
-        if not LspToggleCodeLensesCommand.are_enabled(self.view.window()):
-            return
-        if not self._code_lenses.is_initialized():
-            self.session_buffer.do_code_lenses_async(self.view)
-            return
-        if self._code_lenses.is_empty():
+    def _redraw_code_lenses_async(self, *, clear: bool = False) -> None:
+        if clear:
             self.clear_code_lenses_async()
-            return
-        promises: list[Promise[None]] = [Promise.resolve(None)]
-        if self.get_capability_async('codeLensProvider.resolveProvider'):
-            for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
-                request = Request("codeLens/resolve", code_lens.data, self.view)
-                callback = functools.partial(code_lens.resolve, self.view)
-                promise = self.session.send_request_task(request).then(callback)
-                promises.append(promise)
-        # TODO filter out code lenses with unsupported commands
-        mode = userprefs().show_code_lens
-        Promise.all(promises).then(lambda _: self._on_code_lenses_resolved_async(mode))
+        if userprefs().show_code_lens == 'annotation':
+            key = self._code_lens_key()
+            regions = [self._code_lens_region(code_lens) for code_lens in self._code_lenses]
+            flags = sublime.RegionFlags.NO_UNDO
+            annotations = [self._code_lens_annotation(code_lens) for code_lens in self._code_lenses]
+            annotation_color = self.view.style_for_scope('region.greenish markup.accent.codelens.lsp')['foreground']
+            self.view.add_regions(key, regions, flags=flags, annotations=annotations, annotation_color=annotation_color)
+        elif userprefs().show_code_lens == 'phantom':
+            # Workaround for https://github.com/sublimehq/sublime_text/issues/6188
+            # Phantoms added to a particular view also show up on all clones, so we only draw phantoms on the primary
+            # view. Note that when the primary view gets closed, another clone automatically becomes the primary view.
+            if not self.view.is_primary():
+                return
+            phantoms: list[sublime.Phantom] = []
+            for region, group in itertools.groupby(self._code_lenses, key=self._code_lens_region):
+                phantom_region = self._get_phantom_region(region)
+                html = '<body id="lsp-code-lens">{}</body>'.format(
+                    '\n<small style="font-family: system">|</small>\n'.join(
+                        self._code_lens_annotation(code_lens) for code_lens in group
+                    )
+                )
+                phantoms.append(sublime.Phantom(phantom_region, html, sublime.PhantomLayout.BELOW))
+            self._code_lens_phantoms.update(phantoms)
 
-    def _on_code_lenses_resolved_async(self, mode: str) -> None:
-        if self._is_listener_alive():
-            sublime.set_timeout(lambda: self._code_lenses.render(mode))
+    def _code_lens_key(self) -> str:
+        return f'lsp_code_lens.{self.session.config.name}'
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
-        yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
+    def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
+        return range_to_region(code_lens['range'], self.view)
+
+    def _code_lens_annotation(self, code_lens: ResolvedCodeLens) -> str:
+        command = code_lens['command']
+        if code_lens.get('uses_cached_command', False):
+            # Only show the cached command title but don't create a clickable link until the code lens gets resolved
+            # with the actual command.
+            annotation = html.escape(command['title'])
+        else:
+            annotation = make_command_link('lsp_execute', command['title'], {
+                'session_name': self.session.config.name,
+                'command_name': command['command'],
+                'command_args': command.get('arguments', [])
+            }, view_id=self.view.id())
+        return f'<small style="font-family: system">{annotation}</small>'
+
+    def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
+        line = self.view.line(region)
+        code = self.view.substr(line)
+        offset = 0
+        for ch in code:
+            if ch.isspace():
+                offset += 1
+            else:
+                break
+        return sublime.Region(line.a + offset, line.b)
+
+    def get_code_lenses_for_region(self, region: sublime.Region) -> list[Command]:
+        return [
+            code_lens['command']
+            for code_lens in self._code_lenses
+            if not code_lens.get('uses_cached_command', False) and self._code_lens_region(code_lens).intersects(region)
+        ]
+
+    # ------------------------------------------------------------------------------------------------------------------
 
     def __str__(self) -> str:
         return f'{self.session.config.name}:{self.view.id()}'

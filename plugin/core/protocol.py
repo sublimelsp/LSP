@@ -315,17 +315,10 @@ ResponseError = TypedDict('ResponseError', {
 })
 
 
-CodeLensExtended = TypedDict('CodeLensExtended', {
-    # The range in which this code lens is valid. Should only span a single line.
-    'range': 'Range',
-    # The command this code lens represents.
-    'command': NotRequired['Command'],
-    # A data entry field that is preserved on a code lens item between
-    # a [CodeLensRequest](#CodeLensRequest) and a [CodeLensResolveRequest]
-    # (#CodeLensResolveRequest)
-    'data': NotRequired['LSPAny'],
-    # Custom property to bring along the name of the session
-    'session_name': str
+ResolvedCodeLens = TypedDict('ResolvedCodeLens', {
+    'range': Range,
+    'command': Command,
+    'uses_cached_command': NotRequired[bool]
 })
 
 # Temporary for backward compatibility with LSP packages.

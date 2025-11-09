@@ -16,11 +16,14 @@ from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.promise import Promise
 from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
@@ -149,6 +152,7 @@ class SessionBuffer:
         self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
+        self._code_lenses = CodeLensCache()
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
@@ -222,6 +226,7 @@ class SessionBuffer:
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
+        sv.handle_code_lenses_async(self._filter_supported_code_lenses())
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
@@ -828,31 +833,44 @@ class SessionBuffer:
         for sv in self.session_views:
             if sv.view == view:
                 for request_id, data in sv.active_requests.items():
-                    if data.request.method == 'codeAction/resolve':
+                    if data.request.method == 'codeLens/resolve':
                         self.session.cancel_request(request_id)
                 break
-        params = {'textDocument': text_document_identifier(view)}
-        self.session.send_request_async(Request('textDocument/codeLens', params, view), self._on_code_lenses_async)
+        request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
+        self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
 
-    def _on_code_lenses_async(self, response: list[CodeLens] | None) -> None:
-        if response is None:
-            supported_code_lenses: list[CodeLens] = []
-        elif self.session.uses_plugin():
-            supported_code_lenses = response
+    def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
+        self._code_lenses.handle_response_async(response or [])
+        self.resolve_visible_code_lenses_async(view)
+
+    def resolve_visible_code_lenses_async(self, view: sublime.View) -> None:
+        promises: list[Promise[None]] = []
+        if self.has_capability('codeLensProvider.resolveProvider'):
+            for code_lens in self._code_lenses.unresolved_visible_code_lenses(view):
+                request = Request('codeLens/resolve', code_lens.data, view)
+                promise = self.session.send_request_task(request).then(code_lens.on_resolve)
+                promises.append(promise)
+        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
+
+    def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
+        code_lenses = self._code_lenses.code_lenses_with_command()
+        if self.session.uses_plugin():
+            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # commands here as well?
+            return code_lenses
         else:
-            # Filter out CodeLenses with unknown commands
-            supported_code_lenses: list[CodeLens] = []
-            for code_lens in response:
-                command = code_lens.get('command')
-                if command is None:
-                    # The command for this CodeLens still needs to be resolved
-                    supported_code_lenses.append(code_lens)
-                    continue
-                command_name = command['command']
+            supported_code_lenses: list[ResolvedCodeLens] = []
+            # Filter out CodeLenses with commands that are not handled directly by the language server
+            for code_lens in code_lenses:
+                command_name = code_lens['command']['command']
                 if command_name in self._supported_commands:
                     supported_code_lenses.append(code_lens)
                 else:
                     self.session.check_log_unsupported_command(command_name)
+            return supported_code_lenses
+
+    def _on_visible_code_lenses_resolved_async(self) -> None:
+        supported_code_lenses = self._filter_supported_code_lenses()
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
 

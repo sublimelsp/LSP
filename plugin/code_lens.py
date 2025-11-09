@@ -1,19 +1,112 @@
 from __future__ import annotations
 from ..protocol import CodeLens
+from ..protocol import Command
+from ..protocol import Range
 from .core.constants import CODE_LENS_ENABLED_KEY
-from .core.protocol import CodeLensExtended
 from .core.protocol import Error
+from .core.protocol import ResolvedCodeLens
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.views import make_command_link
 from .core.views import range_to_region
-from html import escape as html_escape
 from functools import partial
-from typing import Generator, Iterable
 from typing import cast
+from typing_extensions import TypeGuard
 import itertools
 import sublime
+
+
+def is_resolved(code_lens: CodeLens | ResolvedCodeLens) -> TypeGuard[ResolvedCodeLens]:
+    return 'command' in code_lens
+
+
+class HashableRange:
+
+    def __init__(self, r: Range, /) -> None:
+        start, end = r['start'], r['end']
+        self.data = (start['line'], start['character'], end['line'], end['character'])
+
+    def __hash__(self):
+        return hash(self.data)
+
+    def __eq__(self, rhs: object) -> bool:
+        return isinstance(rhs, HashableRange) and self.data == rhs.data
+
+    def __lt__(self, rhs: HashableRange) -> bool:
+        return self.data < rhs.data
+
+
+class CachedCodeLens:
+
+    __slots__ = ('data', 'range', 'cached_command')
+
+    def __init__(self, data: CodeLens) -> None:
+        self.data: CodeLens | ResolvedCodeLens = data
+        self.range = HashableRange(data['range'])
+        self.cached_command = data.get('command')
+
+    def on_resolve(self, response: CodeLens | Error) -> None:
+        if isinstance(response, Error):
+            return
+        assert is_resolved(response)
+        self.data = response
+        self.range = HashableRange(response['range'])
+        self.cached_command = response['command']
+
+
+class CodeLensCache:
+
+    def __init__(self) -> None:
+        self.code_lenses: dict[HashableRange, list[CachedCodeLens]] = {}
+
+    def handle_response_async(self, code_lenses: list[CodeLens]) -> None:
+        new_code_lenses = [CachedCodeLens(code_lens) for code_lens in code_lenses]
+        new_code_lenses.sort(key=lambda c: c.range)
+        grouped_code_lenses = {
+            range_: list(group) for range_, group in itertools.groupby(new_code_lenses, key=lambda c: c.range)
+        }
+        # Fast path: no extra work to do
+        if not self.code_lenses:
+            self.code_lenses = grouped_code_lenses
+            return
+        # Update new code lenses with cached data to prevent the editor from jumping around due to some code lenses
+        # going from resolved to unresolved due to a requery of the document data.
+        for range_, group in grouped_code_lenses.items():
+            try:
+                old_group = self.code_lenses[range_]
+            except KeyError:
+                continue
+            # Use the number of code lenses as a heuristic whether the group still contains the same code lenses.
+            if len(group) == len(old_group):
+                for old, new in zip(old_group, group):
+                    if is_resolved(new.data):
+                        continue
+                    # This assignment is only temporary, the resolve call in the future will fill in the actual command
+                    # after resolve() is called on the CachedCodeLens. However reusing the previous command title if the
+                    # code lens groups are the same makes the screen not jump from the phantoms moving around too much.
+                    new.cached_command = old.data['command'] if is_resolved(old.data) else old.cached_command
+        self.code_lenses = grouped_code_lenses
+
+    def unresolved_visible_code_lenses(self, view: sublime.View) -> list[CachedCodeLens]:
+        visible_region = view.visible_region()
+        return [
+            cl for cl in itertools.chain.from_iterable(self.code_lenses.values())
+            if not is_resolved(cl.data) and range_to_region(cl.data['range'], view).intersects(visible_region)
+        ]
+
+    def code_lenses_with_command(self) -> list[ResolvedCodeLens]:
+        """ Returns only the code lenses that are either resolved, or have a cached command. """
+        code_lenses: list[ResolvedCodeLens] = []
+        for cached_code_lens in itertools.chain.from_iterable(self.code_lenses.values()):
+            code_lens = cached_code_lens.data.copy()
+            if is_resolved(code_lens):
+                code_lenses.append(code_lens)
+            elif cached_command := cached_code_lens.cached_command:
+                code_lens['command'] = cached_command
+                code_lens = cast(ResolvedCodeLens, code_lens)
+                code_lens['uses_cached_command'] = True
+                code_lenses.append(code_lens)
+        return code_lenses
 
 
 class LspToggleCodeLensesCommand(LspWindowCommand):
@@ -45,215 +138,40 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
                     session_view.clear_code_lenses_async()
 
 
-class CodeLensData:
-    __slots__ = (
-        'data',
-        'region',
-        'session_name',
-        'annotation',
-        'is_resolve_error',
-    )
-
-    def __init__(self, data: CodeLens, view: sublime.View, session_name: str) -> None:
-        self.data = data
-        self.region = range_to_region(data['range'], view)
-        self.session_name = session_name
-        self.annotation = '...'
-        self.resolve_annotation(view.id())
-        self.is_resolve_error = False
-
-    def __repr__(self) -> str:
-        return f'CodeLensData(resolved={self.is_resolved()}, region={self.region!r})'
-
-    def is_resolved(self) -> bool:
-        """A code lens is considered resolved if the inner data contains the 'command' key."""
-        return 'command' in self.data or self.is_resolve_error
-
-    def to_lsp(self) -> CodeLensExtended:
-        copy = cast(CodeLensExtended, self.data.copy())
-        copy['session_name'] = self.session_name
-        return copy
-
-    @property
-    def small_html(self) -> str:
-        return f'<small style="font-family: system">{self.annotation}</small>'
-
-    def resolve_annotation(self, view_id: int) -> None:
-        command = self.data.get('command')
-        if command is not None:
-            command_name = command.get('command')
-            if command_name:
-                self.annotation = make_command_link('lsp_execute', command['title'], {
-                    'session_name': self.session_name,
-                    'command_name': command_name,
-                    'command_args': command.get('arguments', []),
-                }, view_id=view_id)
-            else:
-                self.annotation = html_escape(command['title'])
-        else:
-            self.annotation = '...'
-
-    def resolve(self, view: sublime.View, code_lens_or_error: CodeLens | Error) -> None:
-        if isinstance(code_lens_or_error, Error):
-            self.is_resolve_error = True
-            self.annotation = '<span style="color: color(var(--redish)">error</span>'
-            return
-        self.data = code_lens_or_error
-        self.region = range_to_region(code_lens_or_error['range'], view)
-        self.resolve_annotation(view.id())
-
-
-class CodeLensView:
-    CODE_LENS_KEY = 'lsp_code_lens'
-
-    def __init__(self, view: sublime.View) -> None:
-        self.view = view
-        self._init = False
-        self._phantom = sublime.PhantomSet(view, self.CODE_LENS_KEY)
-        self._code_lenses: dict[tuple[int, int], list[CodeLensData]] = {}
-
-    def clear(self) -> None:
-        self._code_lenses.clear()
-
-    def is_empty(self) -> bool:
-        return not self._code_lenses
-
-    def is_initialized(self) -> bool:
-        return self._init
-
-    def _clear_annotations(self) -> None:
-        for index, lens in enumerate(self._flat_iteration()):
-            self.view.erase_regions(self._region_key(lens.session_name, index))
-
-    def _region_key(self, session_name: str, index: int) -> str:
-        return f'{self.CODE_LENS_KEY}.{session_name}.{index}'
-
-    def clear_view(self) -> None:
-        self._phantom.update([])
-        self._clear_annotations()
-
-    def handle_response(self, session_name: str, response: list[CodeLens]) -> None:
-        self._init = True
-        responses = [CodeLensData(data, self.view, session_name) for data in response]
-        responses.sort(key=lambda c: c.region)
-        result: dict[tuple[int, int], list[CodeLensData]] = {
-            region.to_tuple(): list(groups)
-            for region, groups in itertools.groupby(responses, key=lambda c: c.region)
-        }
-
-        # Fast path: no extra work to do
-        if self.is_empty():
-            self._code_lenses = result
-            return
-
-        # Update new code lenses with cached data to prevent the editor
-        # from jumping around due to some code lenses going from resolved
-        # to unresolved due to a requery of the document data
-        for key, groups in result.items():
-            try:
-                old_groups = self._code_lenses[key]
-            except KeyError:
-                continue
-
-            # It's only really safe to do this when both groups are the same
-            if len(groups) == len(old_groups):
-                for old, new in zip(old_groups, groups):
-                    # This assignment is only temporary, the resolve call in the future
-                    # will fill it in with the actual data after resolve_annotation() is called
-                    # However assigning the annotation if they're the same makes the screen not jump
-                    # from the phantoms moving around too much
-                    new.annotation = old.annotation
-
-        self._code_lenses = result
-
-    def _flat_iteration(self) -> Iterable[CodeLensData]:
-        for group in self._code_lenses.values():
-            yield from group
-
-    def unresolved_visible_code_lenses(self, visible: sublime.Region) -> Iterable[CodeLensData]:
-        for lens in self._flat_iteration():
-            if not lens.is_resolved() and visible.intersects(lens.region):
-                yield lens
-
-    def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
-        line = self.view.line(region)
-        code = self.view.substr(line)
-        offset = 0
-        for ch in code:
-            if ch.isspace():
-                offset += 1
-            else:
-                break
-        return sublime.Region(line.a + offset, line.b)
-
-    def render(self, mode: str) -> None:
-        if mode == 'phantom':
-            phantoms = []
-            for key, group in self._code_lenses.items():
-                region = sublime.Region(*key)
-                phantom_region = self._get_phantom_region(region)
-                html = '<body id="lsp-code-lens">{}</body>'.format(
-                    '\n<small style="font-family: system">|</small>\n'.join(lens.small_html for lens in group))
-                phantoms.append(sublime.Phantom(phantom_region, html, sublime.PhantomLayout.BELOW))
-            self._phantom.update(phantoms)
-        else:  # 'annotation'
-            self._clear_annotations()
-            flags = sublime.RegionFlags.NO_UNDO
-            accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
-            for index, lens in enumerate(self._flat_iteration()):
-                self.view.add_regions(
-                    self._region_key(lens.session_name, index), [lens.region], "", "", flags, [lens.small_html], accent)
-
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
-        region = self.view.line(region)
-        for lens in self._flat_iteration():
-            if lens.is_resolved() and lens.region.intersects(region):
-                yield lens.to_lsp()
-
-
 class LspCodeLensCommand(LspTextCommand):
+
+    capability = 'codeLensProvider'
 
     def run(self, edit: sublime.Edit) -> None:
         listener = windows.listener_for_view(self.view)
         if not listener:
             return
-        code_lenses: list[CodeLensExtended] = []
+        commands: list[tuple[str, Command]] = []
         for region in self.view.sel():
             for sv in listener.session_views_async():
-                code_lenses.extend(sv.get_resolved_code_lenses_for_region(region))
-        if not code_lenses:
+                session_name = sv.session.config.name
+                for command in sv.get_code_lenses_for_region(region):
+                    commands.append((session_name, command))
+        if not commands:
             return
-        elif len(code_lenses) == 1:
-            command = code_lenses[0].get("command")
-            assert command
-            if not command:
-                return
-            args = {
-                "session_name": code_lenses[0]["session_name"],
-                "command_name": command["command"],
-                "command_args": command.get("arguments")
-            }
-            self.view.run_command("lsp_execute", args)
-        else:
-            self.view.show_popup_menu(
-                [c["command"]["title"] for c in code_lenses],  # type: ignore
-                lambda i: self.on_select(code_lenses, i)
+        elif len(commands) == 1:
+            self.on_select(commands, 0)
+        elif window := self.view.window():
+            window.show_quick_panel(
+                [sublime.QuickPanelItem(cmd["title"], annotation=session_name) for session_name, cmd in commands],
+                lambda index: self.on_select(commands, index)
             )
 
     def want_event(self) -> bool:
         return False
 
-    def on_select(self, code_lenses: list[CodeLensExtended], index: int) -> None:
+    def on_select(self, commands: list[tuple[str, Command]], index: int) -> None:
         try:
-            code_lens = code_lenses[index]
+            session_name, command = commands[index]
         except IndexError:
             return
-        command = code_lens.get("command")
-        assert command
-        if not command:
-            return
         args = {
-            "session_name": code_lens["session_name"],
+            "session_name": session_name,
             "command_name": command["command"],
             "command_args": command.get("arguments")
         }

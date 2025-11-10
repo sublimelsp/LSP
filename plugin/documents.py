@@ -121,8 +121,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
-        v = buffer.primary_view()
-        return v is not None and is_regular_view(v)
+        return (view := buffer.primary_view()) is not None and is_regular_view(view)
 
     def __init__(self) -> None:
         super().__init__()
@@ -201,8 +200,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._cleanup()
 
     def _setup(self) -> None:
-        syntax = self.view.syntax()
-        if syntax:
+        if syntax := self.view.syntax():
             self._language_id = basescope2languageid(syntax.scope)
         else:
             debug("view", self.view.id(), "has no syntax")
@@ -250,16 +248,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         assert not self.view.is_loading()
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session, self._uri)
-            buf = self.view.buffer()
-            if buf:
+            if buf := self.view.buffer():
                 text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
                 if text_change_listener:
                     text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
 
     def on_session_shutdown_async(self, session: Session) -> None:
-        removed_session = self._session_views.pop(session.config.name, None)
-        if removed_session:
+        if removed_session := self._session_views.pop(session.config.name, None):
             removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
@@ -303,8 +299,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sb, diagnostics in self._diagnostics_async():
             intersections: list[Diagnostic] = []
             for diagnostic, candidate in diagnostics:
-                severity = diagnostic_severity(diagnostic)
-                if severity > max_diagnostic_severity_level:
+                if diagnostic_severity(diagnostic) > max_diagnostic_severity_level:
                     continue
                 if candidate.contains(pt):
                     covering = covering.cover(candidate)
@@ -330,8 +325,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
                 if session_buffer_diagnostics:
                     for _, diagnostics in session_buffer_diagnostics:
-                        diag = next(iter(diagnostics), None)
-                        if diag:
+                        if diag := next(iter(diagnostics), None):
                             self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
@@ -368,10 +362,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._registered and is_regular_view(self.view):
             self._register_async()
             return
-        initially_folded_kinds = userprefs().initially_folded
-        if initially_folded_kinds:
-            session = self.session_async('foldingRangeProvider')
-            if session:
+        if initially_folded_kinds := userprefs().initially_folded:
+            if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
@@ -518,11 +510,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_hover(self, point: int, hover_zone: int) -> None:
         if self.view.is_popup_visible():
             return
-        window = self.view.window()
-        if hover_zone == sublime.HoverZone.TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
-            self.view.run_command("lsp_hover", {"point": point})
-        elif hover_zone == sublime.HoverZone.GUTTER:
-            sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
+        if window := self.view.window():
+            if hover_zone == sublime.HoverZone.TEXT:
+                if window.settings().get(HOVER_ENABLED_KEY, True):
+                    self.view.run_command("lsp_hover", {"point": point})
+            elif hover_zone == sublime.HoverZone.GUTTER:
+                sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
@@ -562,8 +555,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
-            session = self.session_async("semanticTokensProvider")
-            if session:
+            if self.session_async("semanticTokensProvider"):
                 return ("lsp_show_scope_name", {})
         elif command_name == 'paste_and_indent':
             # it is easier to find the region to format when `paste` is invoked,
@@ -784,8 +776,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             _, config_name = href.split(":")
             actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
             if len(actions) > 1:
-                window = self.view.window()
-                if window:
+                if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
                         map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
@@ -803,8 +794,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
 
         def run_async() -> None:
-            session = self.session_by_name(config_name)
-            if session:
+            if session := self.session_by_name(config_name):
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
@@ -834,8 +824,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if region is None:
             return
         point = region.b
-        session = self.session_async("documentHighlightProvider", point)
-        if session:
+        if session := self.session_async("documentHighlightProvider", point):
             params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)

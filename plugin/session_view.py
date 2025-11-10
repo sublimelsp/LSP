@@ -100,8 +100,7 @@ class SessionView:
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_underline")
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
-        listener = self.listener()
-        if listener:
+        if listener := self.listener():
             listener.on_diagnostics_updated_async(False)
 
     @property
@@ -236,8 +235,7 @@ class SessionView:
         if not listener:
             return
         listener.hover_provider_count += 1
-        window = self.view.window()
-        if window and window.settings().get(HOVER_ENABLED_KEY, True):
+        if (window := self.view.window()) and window.settings().get(HOVER_ENABLED_KEY, True):
             self.view.settings().set(SHOW_DEFINITIONS_KEY, False)
 
     def _decrement_hover_count(self) -> None:
@@ -284,8 +282,7 @@ class SessionView:
         return self.session_buffer.has_capability(capability_path)
 
     def shutdown_async(self) -> None:
-        listener = self.listener()
-        if listener:
+        if listener := self.listener():
             listener.on_session_shutdown_async(self.session)
 
     def diagnostics_key(self, severity: int, multiline: bool) -> str:
@@ -299,8 +296,7 @@ class SessionView:
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
-        listener = self.listener()
-        if listener:
+        if listener := self.listener():
             listener.on_diagnostics_updated_async(is_view_visible)
 
     def _redraw_diagnostics_async(self) -> None:
@@ -356,8 +352,7 @@ class SessionView:
         self._active_requests.pop(request_id, None)
 
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
-        request = self._active_requests.get(request_id, None)
-        if request:
+        if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
@@ -442,9 +437,8 @@ class SessionView:
 
     def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
         line = self.view.line(region)
-        code = self.view.substr(line)
         offset = 0
-        for ch in code:
+        for ch in self.view.substr(line):
             if ch.isspace():
                 offset += 1
             else:

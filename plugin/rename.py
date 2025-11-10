@@ -158,8 +158,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         event: dict | None = None,
         point: int | None = None
     ) -> None:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
@@ -323,6 +322,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
+
     def want_event(self) -> bool:
         return False
 

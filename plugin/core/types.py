@@ -958,8 +958,7 @@ def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
                 selectors.append(syntax.scope)
         return "|".join(selectors)
     # No syntaxes and no document_selector... then there must exist a languageId.
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 
@@ -998,8 +997,7 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(scopes, list):
         return "|".join(map("({})".format, scopes))
     # No scopes and no feature_selector... then there must exist a languageId
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 

@@ -56,6 +56,7 @@ from typing import cast
 from typing_extensions import TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
+import itertools
 import sublime
 import time
 
@@ -211,8 +212,7 @@ class SessionBuffer:
 
     def get_view_in_group(self, group: int) -> sublime.View:
         for sv in self.session_views:
-            view = sv.get_view_for_group(group)
-            if view:
+            if view := sv.get_view_for_group(group):
                 return view
         return next(iter(self.session_views)).view
 
@@ -238,8 +238,7 @@ class SessionBuffer:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
             self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        wm = self.session.manager()
-        if wm:
+        if wm := self.session.manager():
             wm.on_diagnostics_updated()
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -447,17 +446,14 @@ class SessionBuffer:
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
         def handler(*args: Any) -> None:
-            view = self.some_view()
-            if view and view.change_count() == version:
+            if (view := self.some_view()) and view.change_count() == version:
                 f(view, *args)
 
         return handler
 
     def _update_supported_commands(self) -> None:
         self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
-        for commands in self._dynamically_registered_commands.values():
-            for command in commands:
-                self._supported_commands.add(command)
+        self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
@@ -505,8 +501,7 @@ class SessionBuffer:
         for link in self._document_links:
             if range_to_region(link["range"], view).contains(point):
                 return link
-        else:
-            return None
+        return None
 
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
@@ -555,8 +550,7 @@ class SessionBuffer:
                 {'uri': self._last_known_uri, 'diagnostics': response['items']})
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
-                sb = self.session.get_session_buffer_for_uri_async(uri)
-                if sb:
+                if sb := self.session.get_session_buffer_for_uri_async(uri):
                     cast(SessionBuffer, sb)._apply_document_diagnostic_async(
                         None, cast(DocumentDiagnosticReport, diagnostic_report))
 
@@ -594,8 +588,7 @@ class SessionBuffer:
             if data is None:
                 data = DiagnosticSeverityData(severity)
                 data_per_severity[key] = data
-            tags = diagnostic.get('tags', [])
-            if tags:
+            if tags := diagnostic.get('tags', []):
                 for tag in tags:
                     data.regions_with_tag.setdefault(tag, []).append(region)
             else:
@@ -629,10 +622,9 @@ class SessionBuffer:
                 )
 
     def has_latest_diagnostics(self) -> bool:
-        view = self.some_view()
-        if view is None:
-            return False
-        return self._diagnostics_version == view.change_count()
+        if view := self.some_view():
+            return self._diagnostics_version == view.change_count()
+        return False
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

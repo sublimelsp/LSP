@@ -117,8 +117,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
                 severities_per_path.setdefault(parsed_uri, []).append(severity)
                 if parsed_uri not in self.first_locations:
                     severities_per_path.move_to_end(parsed_uri)
-                    diagnostics = session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
-                    if diagnostics:
+                    if diagnostics := session.diagnostics.diagnostics_by_parsed_uri(parsed_uri):
                         self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
         # build items
         list_items = list()
@@ -154,8 +153,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
 
     def cancel(self) -> None:
         if self._preview is not None:
-            sheet = self._preview.sheet()
-            if sheet and sheet.is_transient():
+            if (sheet := self._preview.sheet()) and sheet.is_transient():
                 self._preview.close()
         self.window.focus_view(self.view)
 
@@ -232,8 +230,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
 
     def cancel(self) -> None:
         if self._preview is not None:
-            sheet = self._preview.sheet()
-            if sheet and sheet.is_transient():
+            if (sheet := self._preview.sheet()) and sheet.is_transient():
                 self._preview.close()
         self.window.focus_view(self.view)
 

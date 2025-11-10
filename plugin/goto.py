@@ -96,15 +96,11 @@ class LspGotoCommand(LspTextCommand):
             self._handle_no_results(fallback, side_by_side)
 
     def _handle_no_results(self, fallback: bool = False, side_by_side: bool = False) -> None:
-        window = self.view.window()
-
-        if not window:
-            return
-
-        if fallback and self.fallback_command:
-            window.run_command(self.fallback_command, {"side_by_side": side_by_side})
-        else:
-            window.status_message("No results found")
+        if window := self.view.window():
+            if fallback and self.fallback_command:
+                window.run_command(self.fallback_command, {"side_by_side": side_by_side})
+            else:
+                window.status_message("No results found")
 
 
 class LspSymbolDefinitionCommand(LspGotoCommand):

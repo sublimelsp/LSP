@@ -121,8 +121,7 @@ class LocationPicker:
             if uri.startswith(("file:", "res:")):
                 flags = sublime.NewFileFlags.ENCODED_POSITION
                 if not self._side_by_side:
-                    view = open_basic_file(session, uri, position, flags)
-                    if not view:
+                    if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
                 sublime.set_timeout_async(
@@ -158,10 +157,9 @@ class LocationPicker:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
             else:
                 flags |= sublime.NewFileFlags.TRANSIENT
-            view = open_basic_file(session, uri, position, flags, self._window.active_group())
             # Don't overwrite self._highlighted_view if resource uri can't preview, so that side-by-side view will still
             # be closed upon canceling
-            if view:
+            if view := open_basic_file(session, uri, position, flags, self._window.active_group()):
                 self._highlighted_view = view
         else:
             # TODO: Preview for other uri schemes?

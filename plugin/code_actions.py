@@ -140,8 +140,7 @@ class CodeActionsManager:
         tasks: list[Promise[CodeActionsByConfigName]] = []
         for sb in listener.session_buffers_async('codeActionProvider'):
             session = sb.session
-            request = request_factory(sb)
-            if request:
+            if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
@@ -188,8 +187,7 @@ actions_manager = CodeActionsManager()
 
 
 def get_session_kinds(sb: SessionBufferProtocol) -> list[CodeActionKind]:
-    session_kinds: list[CodeActionKind] | None = sb.get_capability('codeActionProvider.codeActionKinds')
-    return session_kinds or []
+    return sb.get_capability('codeActionProvider.codeActionKinds') or []
 
 
 def get_matching_on_save_kinds(
@@ -205,7 +203,7 @@ def get_matching_on_save_kinds(
     (for example user's a.b matching session's a.b.c), then the more specific (a.b.c) must be
     returned as servers must receive only kinds that they advertise support for.
     """
-    matching_kinds = []
+    matching_kinds: list[CodeActionKind] = []
     for session_kind in session_kinds:
         enabled = False
         action_parts = session_kind.split('.')
@@ -250,8 +248,7 @@ class CodeActionOnSaveTask(SaveTask):
     def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
         if self._cancelled:
             return
-        request = next(request_iterator, None)
-        if request:
+        if request := next(request_iterator, None):
             request.then(lambda response: self._handle_response_async(response, request_iterator))
         else:
             self._on_complete()
@@ -324,21 +321,17 @@ class LspCodeActionsCommand(LspTextCommand):
                 self._handle_select(0, actions)
             else:
                 self._show_code_actions(actions)
-        else:
-            window = self.view.window()
-            if window:
-                window.status_message("No code actions available")
+        elif window := self.view.window():
+            window.status_message("No code actions available")
 
     def _show_code_actions(self, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
-        window = self.view.window()
-        if not window:
-            return
-        items, selected_index = format_code_actions_for_quick_panel(actions)
-        window.show_quick_panel(
-            items,
-            lambda i: self._handle_select(i, actions),
-            selected_index=selected_index,
-            placeholder="Code action")
+        if window := self.view.window():
+            items, selected_index = format_code_actions_for_quick_panel(actions)
+            window.show_quick_panel(
+                items,
+                lambda i: self._handle_select(i, actions),
+                selected_index=selected_index,
+                placeholder="Code action")
 
     def _handle_select(self, index: int, actions: list[tuple[ConfigName, CodeActionOrCommand]]) -> None:
         if index == -1:
@@ -346,8 +339,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
         def run_async() -> None:
             config_name, action = actions[index]
-            session = self.session_by_name(config_name)
-            if session:
+            if session := self.session_by_name(config_name):
                 session.run_code_action_async(action, progress=True, view=self.view) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
@@ -410,8 +402,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
     def run_async(self, index: int, event: dict | None) -> None:
         if self._is_cache_valid(event):
             config_name, action = self.actions_cache[index]
-            session = self.session_by_name(config_name)
-            if session:
+            if session := self.session_by_name(config_name):
                 session.run_code_action_async(action, progress=True, view=self.view) \
                     .then(lambda response: self._handle_response_async(config_name, response))
 
@@ -423,10 +414,9 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
         view = self.view
         if not view:
             return False
-        region = self._get_region(event)
-        if region is None:
-            return False
-        return actions_manager.menu_actions_cache_key == f"{view.buffer_id()}#{view.change_count()}:{region}"
+        if region := self._get_region(event):
+            return actions_manager.menu_actions_cache_key == f"{view.buffer_id()}#{view.change_count()}:{region}"
+        return False
 
     def _get_region(self, event: dict | None) -> sublime.Region | None:
         view = self.view
@@ -444,8 +434,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
         view = self.view
         if not view:
             return
-        region = self._get_region(event)
-        if region is not None:
+        if region := self._get_region(event):
             actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
 
 

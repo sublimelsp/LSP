@@ -186,11 +186,11 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled(event, point):
             return False
-        return bool(
-            has_single_nonempty_selection(self.view)
-            or
-            (self.view.has_non_empty_selection_region() and self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
-        )
+        if has_single_nonempty_selection(self.view):
+            return True
+        if self.view.has_non_empty_selection_region() and \
+                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
+            return True
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         if listener := self.get_listener():
@@ -213,9 +213,8 @@ class LspFormatCommand(LspTextCommand):
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if not super().is_enabled():
             return False
-        return bool(
-            self.best_session('documentFormattingProvider') or self.best_session('documentRangeFormattingProvider')
-        )
+        return bool(self.best_session('documentFormattingProvider')) or \
+            bool(self.best_session('documentRangeFormattingProvider'))
 
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         return self.is_enabled(event, point)
@@ -232,8 +231,9 @@ class LspFormatCommand(LspTextCommand):
         self.view.run_command(command)
 
     def _range_formatting_available(self) -> bool:
-        return bool(
-            (has_single_nonempty_selection(self.view) and self.best_session('documentRangeFormattingProvider'))
-            or
-            (self.view.has_non_empty_selection_region() and self.best_session('documentRangeFormattingProvider.rangesSupport'))  # noqa: E501
-        )
+        if has_single_nonempty_selection(self.view) and bool(self.best_session('documentRangeFormattingProvider')):
+            return True
+        if self.view.has_non_empty_selection_region() and \
+                bool(self.best_session('documentRangeFormattingProvider.rangesSupport')):
+            return True
+        return False

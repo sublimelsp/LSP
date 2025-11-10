@@ -130,7 +130,10 @@ class LspFormatDocumentCommand(LspTextCommand):
         base_scope = syntax.scope
         if select:
             self.select_formatter(base_scope, session_names)
-        elif len(session_names) > 1:
+            return
+        if listener := self.get_listener():
+            listener.purge_changes_async()
+        if len(session_names) > 1:
             formatter = get_formatter(self.view.window(), base_scope)
             if formatter:
                 session = self.session_by_name(formatter, self.capability)
@@ -171,6 +174,8 @@ class LspFormatDocumentCommand(LspTextCommand):
                 window_manager.formatters[base_scope] = session_name
         session = self.session_by_name(session_name, self.capability)
         if session:
+            if listener := self.get_listener():
+                listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
 
 
@@ -189,6 +194,8 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
+        if listener := self.get_listener():
+            listener.purge_changes_async()
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)

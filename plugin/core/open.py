@@ -9,7 +9,6 @@ from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
-from typing import cast
 from urllib.parse import unquote, urlparse
 import os
 import re

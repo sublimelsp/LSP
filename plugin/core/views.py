@@ -841,10 +841,11 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 
 def copy_icon_html(text_to_copy: str) -> str:
     return f"""<a class="copy_button"
+       title="Copy"
        style="color: inherit"
        href='{sublime.command_url('lsp_copy_text', {
         'text': text_to_copy
-       })}'>Copy <span style="font-size: 1.2rem;">⏍</span></a>"""
+       })}'>⧉</a>"""
 
 
 def format_code_actions_for_quick_panel(

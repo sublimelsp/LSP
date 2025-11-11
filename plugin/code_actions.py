@@ -414,7 +414,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
         view = self.view
         if not view:
             return False
-        if region := self._get_region(event):
+        if (region := self._get_region(event)) is not None:
             return actions_manager.menu_actions_cache_key == f"{view.buffer_id()}#{view.change_count()}:{region}"
         return False
 
@@ -434,7 +434,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
         view = self.view
         if not view:
             return
-        if region := self._get_region(event):
+        if (region := self._get_region(event)) is not None:
             actions_manager.request_for_region_async(view, region, [], MENU_ACTIONS_KINDS, True)
 
 

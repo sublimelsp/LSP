@@ -18,6 +18,18 @@ import uuid
 T = TypeVar('T')
 
 
+KIND_CLASS_NAMES: dict[int, str] = {
+    sublime.KindId.KEYWORD: 'kind kind_keyword',
+    sublime.KindId.TYPE: 'kind kind_type',
+    sublime.KindId.FUNCTION: 'kind kind_function',
+    sublime.KindId.NAMESPACE: 'kind kind_namespace',
+    sublime.KindId.NAVIGATION: 'kind kind_navigation',
+    sublime.KindId.MARKUP: 'kind kind_markup',
+    sublime.KindId.VARIABLE: 'kind kind_variable',
+    sublime.KindId.SNIPPET: 'kind kind_snippet'
+}
+
+
 class TreeItemCollapsibleState(IntEnum):
     NONE = 1
     COLLAPSED = 2
@@ -58,8 +70,9 @@ class TreeItem:
                 sublime.command_url('lsp_collapse_tree_item', {'name': sheet_name, 'id': self.id}))
         else:
             disclosure_button_html = '<span class="disclosure-button">&nbsp;</span>'
+        kind_class_name = KIND_CLASS_NAMES.get(self.kind[0], 'kind kind_ambiguous')
         icon_html = '<span class="{}" title="{}">{}</span>'.format(
-            self._kind_class_name(self.kind[0]), self.kind[2], self.kind[1] if self.kind[1] else '&nbsp;')
+            kind_class_name, self.kind[2], self.kind[1] if self.kind[1] else '&nbsp;')
         if self.command_url and self.tooltip:
             label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
                 self.command_url, html.escape(self.tooltip), html.escape(self.label))
@@ -73,26 +86,6 @@ class TreeItem:
             self.description else ''
         return '<div class="tree-view-row">{}</div>'.format(
             indent_html + disclosure_button_html + icon_html + label_html + description_html)
-
-    @staticmethod
-    def _kind_class_name(kind_id: int) -> str:
-        if kind_id == sublime.KindId.KEYWORD:
-            return "kind kind_keyword"
-        if kind_id == sublime.KindId.TYPE:
-            return "kind kind_type"
-        if kind_id == sublime.KindId.FUNCTION:
-            return "kind kind_function"
-        if kind_id == sublime.KindId.NAMESPACE:
-            return "kind kind_namespace"
-        if kind_id == sublime.KindId.NAVIGATION:
-            return "kind kind_navigation"
-        if kind_id == sublime.KindId.MARKUP:
-            return "kind kind_markup"
-        if kind_id == sublime.KindId.VARIABLE:
-            return "kind kind_variable"
-        if kind_id == sublime.KindId.SNIPPET:
-            return "kind kind_snippet"
-        return "kind kind_ambiguous"
 
 
 class Node:

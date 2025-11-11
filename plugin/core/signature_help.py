@@ -19,8 +19,7 @@ class LspSignatureHelpNavigateCommand(LspTextCommand):
         return False
 
     def run(self, _: sublime.Edit, forward: bool) -> None:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             listener.navigate_signature_help(forward)
 
 
@@ -30,8 +29,7 @@ class LspSignatureHelpShowCommand(LspTextCommand):
         return False
 
     def run(self, _: sublime.Edit) -> None:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             sublime.set_timeout_async(functools.partial(listener.do_signature_help_async, manual=True))
 
 
@@ -117,8 +115,7 @@ class SigHelp:
         # its output style, we must update this literal string accordingly.
         formatted.append('<div class="highlight"><pre>')
         label = signature["label"]
-        parameters = signature.get("parameters")
-        if parameters:
+        if parameters := signature.get("parameters"):
             prev, start, end = 0, 0, 0
             active_parameter_index = signature.get("activeParameter", self._active_parameter_index)
             for i, param in enumerate(parameters):
@@ -151,11 +148,9 @@ class SigHelp:
 
     def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
         formatted: list[str] = []
-        docs = self._parameter_documentation(view, signature)
-        if docs:
+        if docs := self._parameter_documentation(view, signature):
             formatted.append(docs)
-        docs = self._signature_documentation(view, signature)
-        if docs:
+        if docs := self._signature_documentation(view, signature):
             if formatted:
                 formatted.append("<hr/>")
             formatted.append('<div style="font-size: 0.9rem">')
@@ -172,15 +167,13 @@ class SigHelp:
             parameter = parameters[active_parameter or self._active_parameter_index]
         except IndexError:
             return None
-        documentation = parameter.get("documentation")
-        if documentation:
+        if documentation := parameter.get("documentation"):
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
             return minihtml(view, documentation, allowed_formats, self._language_map)
         return None
 
     def _signature_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
-        documentation = signature.get("documentation")
-        if documentation:
+        if documentation := signature.get("documentation"):
             allowed_formats = FORMAT_STRING | FORMAT_MARKUP_CONTENT
             return minihtml(view, documentation, allowed_formats, self._language_map)
         return None

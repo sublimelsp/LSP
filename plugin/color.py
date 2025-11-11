@@ -15,8 +15,7 @@ class LspColorPresentationCommand(LspTextCommand):
     capability = 'colorProvider'
 
     def run(self, edit: sublime.Edit, color_information: ColorInformation) -> None:
-        session = self.best_session(self.capability)
-        if session:
+        if session := self.best_session(self.capability):
             self._version = self.view.change_count()
             self._range = color_information['range']
             params: ColorPresentationParams = {
@@ -41,8 +40,7 @@ class LspColorPresentationCommand(LspTextCommand):
         self._filtered_response: list[ColorPresentation] = []
         for item in response:
             # Filter out items that would apply no change
-            text_edit = item.get('textEdit')
-            if text_edit:
+            if text_edit := item.get('textEdit'):
                 if text_edit['range'] == self._range and text_edit['newText'] == old_text:
                     continue
             elif item['label'] == old_text:

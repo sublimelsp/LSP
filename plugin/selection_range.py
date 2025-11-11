@@ -30,8 +30,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         position = get_position(self.view, event)
         if position is None:
             return
-        session = self.best_session(self.capability, position)
-        if session:
+        if session := self.best_session(self.capability, position):
             params = selection_range_params(self.view)
             self._regions.extend(self.view.sel())
             self._change_count = self.view.change_count()
@@ -54,8 +53,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         self._run_builtin_expand_selection("Error: {}".format(params["message"]))
 
     def _status_message(self, msg: str) -> None:
-        window = self.view.window()
-        if window:
+        if window := self.view.window():
             window.status_message(msg)
 
     def _run_builtin_expand_selection(self, fallback_reason: str) -> None:
@@ -67,7 +65,6 @@ class LspExpandSelectionCommand(LspTextCommand):
         # Test for *strict* containment
         if r.contains(region) and (r.a < region.a or r.b > region.b):
             return r.a, r.b
-        parent = param.get("parent")
-        if parent:
+        if parent := param.get("parent"):
             return self._smallest_containing(region, parent)
         return region.a, region.b

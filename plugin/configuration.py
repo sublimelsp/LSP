@@ -8,6 +8,7 @@ import sublime_plugin
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
+
     def run(self) -> None:
         self._items = [config.name for config in client_configs.all.values() if not config.enabled]
         if len(self._items) > 0:
@@ -22,6 +23,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+
     def run(self) -> None:
         wm = windows.lookup(self.window)
         if not wm:
@@ -40,6 +42,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
+
     def run(self) -> None:
         wm = windows.lookup(self.window)
         if not wm:
@@ -58,6 +61,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+
     def run(self) -> None:
         wm = windows.lookup(self.window)
         if not wm:

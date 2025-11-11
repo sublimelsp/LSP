@@ -127,6 +127,7 @@ from typing_extensions import TypeAlias, TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
 import functools
+import itertools
 import mdpopups
 import os
 import sublime
@@ -181,8 +182,9 @@ def decode_semantic_token(
     """
 
     token_type = types_legend[token_type_encoded]
-    token_modifiers = [modifiers_legend[idx]
-                       for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+    token_modifiers = [
+        modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
+    ]
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
     if token_type in tokens_scope_map_dict:
@@ -1424,8 +1426,7 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
-        uri = sb.get_uri()
-        if uri:
+        if uri := sb.get_uri():
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
                 self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
@@ -1493,8 +1494,7 @@ class Session(TransportCallbacks):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
-            sv = self.session_view_for_view_async(view)
-            if sv:
+            if sv := self.session_view_for_view_async(view):
                 return sv.has_capability_async(capability)
             else:
                 return self.has_capability(capability)
@@ -1616,22 +1616,17 @@ class Session(TransportCallbacks):
             self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
-        execute_commands = self.get_capability('executeCommandProvider.commands')
-        if execute_commands:
+        if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
-        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
-        if code_action_kinds:
+        if code_action_kinds := self.get_capability('codeActionProvider.codeActionKinds'):
             debug(f'{self.config.name}: supported code action kinds: {code_action_kinds}')
-        semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
-        if semantic_token_types:
+        if semantic_token_types := self.get_capability('semanticTokensProvider.legend.tokenTypes'):
             debug(f'{self.config.name}: Supported semantic token types: {semantic_token_types}')
-        semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
-        if semantic_token_modifiers:
+        if semantic_token_modifiers := self.get_capability('semanticTokensProvider.legend.tokenModifiers'):
             debug(f'{self.config.name}: Supported semantic token modifiers: {semantic_token_modifiers}')
         if self._watcher_impl:
             config = self.config.file_watcher
-            patterns = config.get('patterns')
-            if patterns:
+            if patterns := config.get('patterns'):
                 events = config.get('events') or ['create', 'change', 'delete']
                 for folder in self.get_workspace_folders():
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
@@ -1663,8 +1658,7 @@ class Session(TransportCallbacks):
         return folder_excludes + file_excludes + ['**/node_modules/**']
 
     def call_manager(self, method: str, *args: Any) -> None:
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             getattr(mgr, method)(*args)
 
     def on_stderr_message(self, message: str) -> None:
@@ -1685,8 +1679,7 @@ class Session(TransportCallbacks):
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
         if self._plugin_class is not None:
-            extra_vars = self._plugin_class.additional_variables()
-            if extra_vars:
+            if extra_vars := self._plugin_class.additional_variables():
                 variables.update(extra_vars)
         return variables
 
@@ -1770,8 +1763,7 @@ class Session(TransportCallbacks):
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
+        if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
             self.window.focus_view(view)
             if r:
@@ -1842,17 +1834,17 @@ class Session(TransportCallbacks):
                 if title is not None:
                     if group > -1:
                         self.window.focus_group(group)
-                    v = self.window.new_file(syntax=syntax, flags=flags)
+                    view = self.window.new_file(syntax=syntax, flags=flags)
                     # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
                     # settings object here at our leisure.
-                    v.settings().set("lsp_uri", uri)
-                    v.set_scratch(True)
-                    v.set_name(title)
-                    v.run_command("append", {"characters": content})
-                    v.set_read_only(True)
+                    view.settings().set("lsp_uri", uri)
+                    view.set_scratch(True)
+                    view.set_name(title)
+                    view.run_command("append", {"characters": content})
+                    view.set_read_only(True)
                     if r:
-                        center_selection(v, r)
-                    sublime.set_timeout_async(lambda: result[1](v))
+                        center_selection(view, r)
+                    sublime.set_timeout_async(lambda: result[1](view))
                 else:
                     sublime.set_timeout_async(lambda: result[1](None))
 
@@ -1879,8 +1871,7 @@ class Session(TransportCallbacks):
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
-                session_view = self.session_view_for_view_async(view)
-                if session_view:
+                if session_view := self.session_view_for_view_async(view):
                     has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
             if has_capability:
                 # We must first resolve the command and edit properties, because they can potentially be absent.
@@ -1955,8 +1946,7 @@ class Session(TransportCallbacks):
         scheme, filepath = parse_uri(uri)
         if scheme != 'file':
             return ViewStateActions.NONE  # Can't save or close unsafed buffers (and other schemes) without user dialog
-        view = self.window.find_open_file(filepath)
-        if view:
+        if view := self.window.find_open_file(filepath):
             is_opened = True
             is_dirty = view.is_dirty()
         else:
@@ -2040,8 +2030,7 @@ class Session(TransportCallbacks):
             if result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        identifier = self.get_capability("diagnosticProvider.identifier")
-        if identifier:
+        if identifier := self.get_capability("diagnosticProvider.identifier"):
             params['identifier'] = identifier
         self.workspace_diagnostics_pending_response = self.send_request_async(
             Request.workspaceDiagnostic(params),
@@ -2182,8 +2171,7 @@ class Session(TransportCallbacks):
         diagnostics = params["diagnostics"]
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
+        if sb := self.get_session_buffer_for_uri_async(uri):
             version = params.get('version', sb.last_synced_version)
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
 
@@ -2241,8 +2229,7 @@ class Session(TransportCallbacks):
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
             if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
-                file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
-                if file_watchers:
+                if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
                     for file_watcher in file_watchers:
                         file_watcher.destroy()
             if data and not data.selector:
@@ -2280,8 +2267,7 @@ class Session(TransportCallbacks):
 
     def _invoke_views(self, request: Request, method: str, *args: Any) -> None:
         if request.view:
-            sv = self.session_view_for_view_async(request.view)
-            if sv:
+            if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
         else:
             for sv in self.session_views_async():
@@ -2374,9 +2360,8 @@ class Session(TransportCallbacks):
         for watcher in self._static_file_watchers:
             watcher.destroy()
         self._static_file_watchers = []
-        for watchers in self._dynamic_file_watchers.values():
-            for watcher in watchers:
-                watcher.destroy()
+        for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
+            watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
@@ -2395,8 +2380,7 @@ class Session(TransportCallbacks):
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             if self._init_callback:
                 self._init_callback(self, True)
                 self._init_callback = None

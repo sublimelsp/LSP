@@ -178,8 +178,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 self._sessions.discard(self._new_session)
                 self._new_session.end_async()
             self._new_session = None
-        config = self._needed_config(listener.view)
-        if config:
+        if config := self._needed_config(listener.view):
             # debug("found new config for listener", listener)
             self._new_listener = listener
             self.start_async(config, listener.view)
@@ -338,8 +337,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             return router_logger
 
     def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
-        view = self._window.active_view()
-        if view:
+        if view := self._window.active_view():
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
@@ -350,8 +348,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.register_listener_async(listener)
 
     def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
-        sessions = list(self._sessions)
-        for session in sessions:
+        for session in list(self._sessions):
             if config_names is None or session.config.name in config_names:
                 session.end_async()
                 self._sessions.discard(session)
@@ -543,8 +540,7 @@ class WindowRegistry(LspSettingsChangeListener):
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
         if not self._enabled or not window or not window.is_valid():
             return None
-        wm = self._windows.get(window.id())
-        if wm:
+        if wm := self._windows.get(window.id()):
             return wm
         workspace = ProjectFolders(window)
         window_config_manager = WindowConfigManager(window, client_configs.all)
@@ -553,14 +549,12 @@ class WindowRegistry(LspSettingsChangeListener):
         return manager
 
     def listener_for_view(self, view: sublime.View) -> AbstractViewListener | None:
-        manager = self.lookup(view.window())
-        if not manager:
-            return None
-        return manager.listener_for_view(view)
+        if manager := self.lookup(view.window()):
+            return manager.listener_for_view(view)
+        return None
 
     def discard(self, window: sublime.Window) -> None:
-        wm = self._windows.pop(window.id(), None)
-        if wm:
+        if wm := self._windows.pop(window.id(), None):
             sublime.set_timeout_async(wm.destroy)
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------

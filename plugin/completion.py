@@ -257,8 +257,7 @@ class QueryCompletionsTask:
 
     def _cancel_pending_requests_async(self) -> None:
         for request_id, weak_session in self._pending_completion_requests.items():
-            session = weak_session()
-            if session:
+            if session := weak_session():
                 session.cancel_request(request_id, False)
         self._pending_completion_requests.clear()
 
@@ -284,8 +283,7 @@ class LspResolveDocsCommand(LspTextCommand):
         def run_async() -> None:
             items, item_defaults = LspSelectCompletionCommand.completions[session_name]
             item = completion_with_defaults(items[index], item_defaults)
-            session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
-            if session:
+            if session := self.session_by_name(session_name, 'completionProvider.resolveProvider'):
                 request = Request.resolveCompletionItem(item, self.view)
                 language_map = session.markdown_language_id_to_st_syntax_map()
                 handler = functools.partial(self._handle_resolve_response_async, language_map)
@@ -353,8 +351,7 @@ class LspSelectCompletionCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int, session_name: str) -> None:
         items, item_defaults = LspSelectCompletionCommand.completions[session_name]
         item = completion_with_defaults(items[index], item_defaults)
-        text_edit = item.get("textEdit")
-        if text_edit:
+        if text_edit := item.get("textEdit"):
             new_text = text_edit["newText"].replace("\r", "")
             edit_region = range_to_region(get_text_edit_range(text_edit), self.view)
             for region in self._translated_regions(edit_region):
@@ -383,11 +380,9 @@ class LspSelectCompletionCommand(LspTextCommand):
         sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
 
     def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
-        additional_edits = item.get('additionalTextEdits')
-        if additional_edits:
+        if additional_edits := item.get('additionalTextEdits'):
             apply_text_edits(self.view, additional_edits)
-        command = item.get("command")
-        if command:
+        if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')
             args = {
                 "command_name": command["command"],

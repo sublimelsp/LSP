@@ -37,15 +37,12 @@ def get_formatter(window: sublime.Window | None, base_scope: str) -> str | None:
 def format_document(text_command: LspTextCommand, formatter: str | None = None) -> Promise[FormatResponse]:
     view = text_command.view
     if formatter:
-        session = text_command.session_by_name(formatter, LspFormatDocumentCommand.capability)
-        if session:
+        if session := text_command.session_by_name(formatter, LspFormatDocumentCommand.capability):
             return session.send_request_task(text_document_formatting(view))
-    session = text_command.best_session(LspFormatDocumentCommand.capability)
-    if session:
+    if session := text_command.best_session(LspFormatDocumentCommand.capability):
         # Either use the documentFormattingProvider ...
         return session.send_request_task(text_document_formatting(view))
-    session = text_command.best_session(LspFormatDocumentRangeCommand.capability)
-    if session:
+    if session := text_command.best_session(LspFormatDocumentRangeCommand.capability):
         # ... or use the documentRangeFormattingProvider and format the entire range.
         return session.send_request_task(text_document_range_formatting(view, entire_content_region(view)))
     return Promise.resolve(None)
@@ -149,18 +146,18 @@ class LspFormatDocumentCommand(LspTextCommand):
             apply_text_edits(self.view, result)
 
     def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
-        window = self.view.window()
-        if not window:
-            return
-        window.show_quick_panel(
-            session_names, partial(self.on_select_formatter, base_scope, session_names), placeholder="Select Formatter")
+        if window := self.view.window():
+            window.show_quick_panel(
+                session_names,
+                partial(self.on_select_formatter, base_scope, session_names),
+                placeholder="Select Formatter"
+            )
 
     def on_select_formatter(self, base_scope: str, session_names: list[str], index: int) -> None:
         if index == -1:
             return
         session_name = session_names[index]
-        window_manager = windows.lookup(self.view.window())
-        if window_manager:
+        if window_manager := windows.lookup(self.view.window()):
             window = window_manager.window
             project_data = window.project_data()
             if isinstance(project_data, dict):
@@ -172,8 +169,7 @@ class LspFormatDocumentCommand(LspTextCommand):
                 window.set_project_data(project_data)
             else:  # Save temporarily for this window
                 window_manager.formatters[base_scope] = session_name
-        session = self.session_by_name(session_name, self.capability)
-        if session:
+        if session := self.session_by_name(session_name, self.capability):
             if listener := self.get_listener():
                 listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
@@ -200,13 +196,12 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)
             if session and selection is not None:
-                req = text_document_range_formatting(self.view, selection)
-                session.send_request(req, lambda response: apply_text_edits(self.view, response))
+                request = text_document_range_formatting(self.view, selection)
+                session.send_request(request, lambda response: apply_text_edits(self.view, response))
         elif self.view.has_non_empty_selection_region():
-            session = self.best_session('documentRangeFormattingProvider.rangesSupport')
-            if session:
-                req = text_document_ranges_formatting(self.view)
-                session.send_request(req, lambda response: apply_text_edits(self.view, response))
+            if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
+                request = text_document_ranges_formatting(self.view)
+                session.send_request(request, lambda response: apply_text_edits(self.view, response))
 
 
 class LspFormatCommand(LspTextCommand):

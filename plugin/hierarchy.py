@@ -57,10 +57,9 @@ class HierarchyDataProvider(TreeDataProvider):
     def get_children(self, element: HierarchyItemWrapper | None) -> Promise[list[HierarchyItemWrapper]]:
         if element is None:
             return Promise.resolve(self.root_elements)
-        session = self.weaksession()
-        if not session:
-            return Promise.resolve([])
-        return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
+        if session := self.weaksession():
+            return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
+        return Promise.resolve([])
 
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']

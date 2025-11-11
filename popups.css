@@ -86,10 +86,11 @@ pre.related_info {
     margin-top: 0.7rem;
     padding-top: 0.7rem;
 }
-.copy_button {
+a.copy_button {
     background-color: color(var(--foreground) alpha(0.1));
     border-radius: 4px;
     font-size: 1.2rem;
     padding: 0.3rem 0.5rem 0.3rem 0.5rem;
     text-decoration: none;
+    color: inherit;
 }

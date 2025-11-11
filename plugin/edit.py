@@ -1,8 +1,8 @@
 from __future__ import annotations
+from ..protocol import TextEdit
+from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
 from .core.logging import debug
-from .core.protocol import TextEdit
-from .core.protocol import WorkspaceEdit
 from .core.registry import LspWindowCommand
 from contextlib import contextmanager
 from typing import Any, Generator, Iterable, Tuple
@@ -31,11 +31,10 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
     def run(self, session_name: str, edit: WorkspaceEdit, is_refactoring: bool = False) -> None:
-        session = self.session_by_name(session_name)
-        if not session:
+        if session := self.session_by_name(session_name):
+            sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, is_refactoring))
+        else:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
-            return
-        sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, is_refactoring))
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
@@ -63,8 +62,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             for start, end, replacement in reversed(_sort_by_application_order(edits)):
                 placeholder_region: tuple[tuple[int, int], tuple[int, int]] | None = None
                 if process_placeholders and replacement:
-                    parsed = self.parse_snippet(replacement)
-                    if parsed:
+                    if parsed := self.parse_snippet(replacement):
                         replacement, (placeholder_start, placeholder_length) = parsed
                         # There might be newlines before the placeholder. Find the actual line
                         # and the character offset of the placeholder.
@@ -102,20 +100,18 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def apply_change(self, region: sublime.Region, replacement: str, edit: sublime.Edit) -> None:
         if region.empty():
             self.view.insert(edit, region.a, replacement)
+        elif len(replacement) > 0:
+            self.view.replace(edit, region, replacement)
         else:
-            if len(replacement) > 0:
-                self.view.replace(edit, region, replacement)
-            else:
-                self.view.erase(edit, region)
+            self.view.erase(edit, region)
 
     def parse_snippet(self, replacement: str) -> tuple[str, tuple[int, int]] | None:
-        match = re.search(self.re_placeholder, replacement)
-        if not match:
-            return
-        placeholder = match.group(2) or ''
-        new_replacement = replacement.replace(match.group(0), placeholder)
-        placeholder_start_and_length = (match.start(0), len(placeholder))
-        return (new_replacement, placeholder_start_and_length)
+        if match := re.search(self.re_placeholder, replacement):
+            placeholder = match.group(2) or ''
+            new_replacement = replacement.replace(match.group(0), placeholder)
+            placeholder_start_and_length = (match.start(0), len(placeholder))
+            return (new_replacement, placeholder_start_and_length)
+        return None
 
 
 def _parse_text_edit(text_edit: TextEdit) -> TextEditTuple:

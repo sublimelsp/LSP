@@ -217,24 +217,23 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
+
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
-    def on_load_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_load_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_load_project_async()
 
-    def on_post_save_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_post_save_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_post_save_project_async()
 
-    def on_new_window_async(self, w: sublime.Window) -> None:
-        sublime.set_timeout(lambda: windows.lookup(w))
+    def on_new_window_async(self, window: sublime.Window) -> None:
+        sublime.set_timeout(lambda: windows.lookup(window))
 
-    def on_pre_close_window(self, w: sublime.Window) -> None:
-        windows.discard(w)
+    def on_pre_close_window(self, window: sublime.Window) -> None:
+        windows.discard(window)
 
     def on_pre_move(self, view: sublime.View) -> None:
         if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628

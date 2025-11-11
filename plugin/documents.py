@@ -1,7 +1,20 @@
 from __future__ import annotations
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentHighlight
+from ..protocol import DocumentHighlightKind
+from ..protocol import DocumentHighlightParams
+from ..protocol import DocumentUri
+from ..protocol import FoldingRange
+from ..protocol import FoldingRangeParams
+from ..protocol import SignatureHelp
+from ..protocol import SignatureHelpContext
+from ..protocol import SignatureHelpParams
+from ..protocol import SignatureHelpTriggerKind
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
@@ -11,19 +24,7 @@ from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
 from .core.panels import PanelName
-from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticSeverity
-from .core.protocol import DocumentHighlight
-from .core.protocol import DocumentHighlightKind
-from .core.protocol import DocumentHighlightParams
-from .core.protocol import DocumentUri
-from .core.protocol import FoldingRange
-from .core.protocol import FoldingRangeParams
 from .core.protocol import Request
-from .core.protocol import SignatureHelp
-from .core.protocol import SignatureHelpContext
-from .core.protocol import SignatureHelpParams
-from .core.protocol import SignatureHelpTriggerKind
 from .core.registry import best_session
 from .core.registry import get_position
 from .core.registry import windows
@@ -35,7 +36,6 @@ from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import ClientConfig
 from .core.types import debounced
-from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
@@ -121,8 +121,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
-        v = buffer.primary_view()
-        return v is not None and is_regular_view(v)
+        return (view := buffer.primary_view()) is not None and is_regular_view(view)
 
     def __init__(self) -> None:
         super().__init__()
@@ -166,7 +165,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
-    code_lenses_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -191,7 +189,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._code_lenses_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
         self._stored_selection: list[sublime.Region] = []
@@ -203,8 +200,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._cleanup()
 
     def _setup(self) -> None:
-        syntax = self.view.syntax()
-        if syntax:
+        if syntax := self.view.syntax():
             self._language_id = basescope2languageid(syntax.scope)
         else:
             debug("view", self.view.id(), "has no syntax")
@@ -250,22 +246,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
-        added = False
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session, self._uri)
-            buf = self.view.buffer()
-            if buf:
+            if buf := self.view.buffer():
                 text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
                 if text_change_listener:
                     text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
-            added = True
-        if added:
-            self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
-        removed_session = self._session_views.pop(session.config.name, None)
-        if removed_session:
+        if removed_session := self._session_views.pop(session.config.name, None):
             removed_session.on_before_remove()
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
@@ -309,8 +299,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sb, diagnostics in self._diagnostics_async():
             intersections: list[Diagnostic] = []
             for diagnostic, candidate in diagnostics:
-                severity = diagnostic_severity(diagnostic)
-                if severity > max_diagnostic_severity_level:
+                if diagnostic_severity(diagnostic) > max_diagnostic_severity_level:
                     continue
                 if candidate.contains(pt):
                     covering = covering.cover(candidate)
@@ -336,8 +325,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
                 if session_buffer_diagnostics:
                     for _, diagnostics in session_buffer_diagnostics:
-                        diag = next(iter(diagnostics), None)
-                        if diag:
+                        if diag := next(iter(diagnostics), None):
                             self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
@@ -374,10 +362,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._registered and is_regular_view(self.view):
             self._register_async()
             return
-        initially_folded_kinds = userprefs().initially_folded
-        if initially_folded_kinds:
-            session = self.session_async('foldingRangeProvider')
-            if session:
+        if initially_folded_kinds := userprefs().initially_folded:
+            if session := self.session_async('foldingRangeProvider'):
                 params: FoldingRangeParams = {'textDocument': text_document_identifier(self.view)}
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
@@ -399,11 +385,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if userprefs().show_code_actions:
             self._do_code_actions_async()
-        for sv in session_views:
-            if sv.code_lenses_needs_refresh:
-                sv.set_code_lenses_pending_refresh(needs_refresh=False)
-                sv.start_code_lenses_async()
         for sb in self.session_buffers_async():
+            if sb.code_lenses_needs_refresh:
+                sb.set_code_lenses_pending_refresh(needs_refresh=False)
+                sb.do_code_lenses_async(self.view)
             if sb.document_diagnostic_needs_refresh:
                 sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
                 sb.do_document_diagnostic_async(self.view, self.view.change_count())
@@ -425,14 +410,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._when_selection_remains_stable_async(
             self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
-        self._resolve_visible_code_lenses_async()
 
     def _on_selection_modified_debounced_async(self) -> None:
         if userprefs().document_highlight_style:
             self._do_highlights_async()
         if userprefs().show_code_actions:
             self._do_code_actions_async()
+        code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
+            if code_lenses_enabled:
+                sv.session_buffer.resolve_visible_code_lenses_async(self.view)
             if plugin := sv.session.plugin:
                 plugin.on_selection_modified_async(sv)
 
@@ -523,11 +510,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_hover(self, point: int, hover_zone: int) -> None:
         if self.view.is_popup_visible():
             return
-        window = self.view.window()
-        if hover_zone == sublime.HoverZone.TEXT and window and window.settings().get(HOVER_ENABLED_KEY, True):
-            self.view.run_command("lsp_hover", {"point": point})
-        elif hover_zone == sublime.HoverZone.GUTTER:
-            sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
+        if window := self.view.window():
+            if hover_zone == sublime.HoverZone.TEXT:
+                if window.settings().get(HOVER_ENABLED_KEY, True):
+                    self.view.run_command("lsp_hover", {"point": point})
+            elif hover_zone == sublime.HoverZone.GUTTER:
+                sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
@@ -567,8 +555,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
-            session = self.session_async("semanticTokensProvider")
-            if session:
+            if self.session_async("semanticTokensProvider"):
                 return ("lsp_show_scope_name", {})
         elif command_name == 'paste_and_indent':
             # it is easier to find the region to format when `paste` is invoked,
@@ -792,8 +779,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             _, config_name = href.split(":")
             actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
             if len(actions) > 1:
-                window = self.view.window()
-                if window:
+                if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
                         map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
@@ -811,30 +797,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
 
         def run_async() -> None:
-            session = self.session_by_name(config_name)
-            if session:
+            if session := self.session_by_name(config_name):
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
-
-    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
-
-    def on_code_lens_capability_registered_async(self) -> None:
-        self._do_code_lenses_async()
-
-    def _do_code_lenses_async(self) -> None:
-        session = self.session_async("codeLensProvider")
-        if session and session.uses_plugin():
-            for sv in self.session_views_async():
-                if sv.session == session:
-                    sv.start_code_lenses_async()
-
-    def _resolve_visible_code_lenses_async(self) -> None:
-        session = self.session_async("codeLensProvider")
-        if session and session.uses_plugin():
-            for sv in self.session_views_async():
-                if sv.session == session:
-                    sv.resolve_visible_code_lenses_async()
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
@@ -861,8 +827,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if region is None:
             return
         point = region.b
-        session = self.session_async("documentHighlightProvider", point)
-        if session:
+        if session := self.session_async("documentHighlightProvider", point):
             params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
@@ -997,8 +962,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._should_format_on_paste:
             self._should_format_on_paste = False
             sublime.get_clipboard_async(self._format_on_paste_async)
-        self._code_lenses_debouncer_async.debounce(
-            self._do_code_lenses_async, timeout_ms=self.code_lenses_debounce_time)
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return

@@ -1,9 +1,11 @@
 from __future__ import annotations
+from ...protocol import ServerCapabilities
+from ...protocol import TextDocumentSyncKind
+from ...protocol import TextDocumentSyncOptions
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import ServerCapabilities, TextDocumentSyncKind, TextDocumentSyncOptions
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -956,8 +958,7 @@ def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
                 selectors.append(syntax.scope)
         return "|".join(selectors)
     # No syntaxes and no document_selector... then there must exist a languageId.
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 
@@ -996,8 +997,7 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(scopes, list):
         return "|".join(map("({})".format, scopes))
     # No scopes and no feature_selector... then there must exist a languageId
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 

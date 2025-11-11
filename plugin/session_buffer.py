@@ -1,25 +1,30 @@
 from __future__ import annotations
+from ..protocol import CodeLens
+from ..protocol import ColorInformation
+from ..protocol import Diagnostic
+from ..protocol import DocumentDiagnosticParams
+from ..protocol import DocumentDiagnosticReport
+from ..protocol import DocumentDiagnosticReportKind
+from ..protocol import DocumentLink
+from ..protocol import DocumentUri
+from ..protocol import FullDocumentDiagnosticReport
+from ..protocol import InlayHint
+from ..protocol import InlayHintParams
+from ..protocol import LSPErrorCodes
+from ..protocol import SemanticTokensDeltaParams
+from ..protocol import SemanticTokensParams
+from ..protocol import SemanticTokensRangeParams
+from ..protocol import TextDocumentSaveReason
+from ..protocol import TextDocumentSyncKind
+from .code_lens import CodeLensCache
+from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import SEMANTIC_TOKEN_FLAGS
-from .core.protocol import ColorInformation
-from .core.protocol import Diagnostic
-from .core.protocol import DocumentDiagnosticParams
-from .core.protocol import DocumentDiagnosticReport
-from .core.protocol import DocumentDiagnosticReportKind
-from .core.protocol import DocumentLink
-from .core.protocol import DocumentUri
-from .core.protocol import FullDocumentDiagnosticReport
-from .core.protocol import InlayHint
-from .core.protocol import InlayHintParams
-from .core.protocol import LSPErrorCodes
+from .core.promise import Promise
 from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
-from .core.protocol import SemanticTokensDeltaParams
-from .core.protocol import SemanticTokensParams
-from .core.protocol import SemanticTokensRangeParams
-from .core.protocol import TextDocumentSaveReason
-from .core.protocol import TextDocumentSyncKind
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -51,6 +56,7 @@ from typing import cast
 from typing_extensions import TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
+import itertools
 import sublime
 import time
 
@@ -126,7 +132,7 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
-        self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostics_version = -1
         self.diagnostics_flags = 0
@@ -144,8 +150,13 @@ class SessionBuffer:
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
+        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
+        self._code_lenses = CodeLensCache()
+        self._dynamically_registered_commands: dict[str, list[str]] = {}
+        self._supported_commands: set[str] = set()
+        self._update_supported_commands()
         self._check_did_open(view)
 
     @property
@@ -155,6 +166,10 @@ class SessionBuffer:
     @property
     def session_views(self) -> WeakSet[SessionViewProtocol]:
         return self._session_views
+
+    @property
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
+        return self._diagnostics
 
     @property
     def last_synced_version(self) -> int:
@@ -174,6 +189,7 @@ class SessionBuffer:
             self.do_document_diagnostic_async(view, version)
             self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             self.do_inlay_hints_async(view)
+            self.do_code_lenses_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
@@ -196,8 +212,7 @@ class SessionBuffer:
 
     def get_view_in_group(self, group: int) -> sublime.View:
         for sv in self.session_views:
-            view = sv.get_view_for_group(group)
-            if view:
+            if view := sv.get_view_for_group(group):
                 return view
         return next(iter(self.session_views)).view
 
@@ -211,6 +226,7 @@ class SessionBuffer:
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
+        sv.handle_code_lenses_async(self._filter_supported_code_lenses())
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
@@ -222,8 +238,7 @@ class SessionBuffer:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
             self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        wm = self.session.manager()
-        if wm:
+        if wm := self.session.manager():
             wm.on_diagnostics_updated()
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -251,6 +266,11 @@ class SessionBuffer:
                 self._check_did_open(view)
             elif capability_path.startswith("diagnosticProvider"):
                 self.do_document_diagnostic_async(view, view.change_count())
+            elif capability_path.startswith("codeLensProvider"):
+                self.do_code_lenses_async(view)
+            elif capability_path == "executeCommandProvider":
+                self._dynamically_registered_commands[registration_id] = options['commands']
+                self._update_supported_commands()
 
     def unregister_capability_async(
         self,
@@ -263,6 +283,9 @@ class SessionBuffer:
             return
         for sv in self.session_views:
             sv.on_capability_removed_async(registration_id, discarded)
+        if capability_path == "executeCommandProvider":
+            self._dynamically_registered_commands.pop(registration_id)
+            self._update_supported_commands()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -372,6 +395,7 @@ class SessionBuffer:
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
             self.do_inlay_hints_async(view)
+            self.do_code_lenses_async(view)
         except MissingUriError:
             pass
 
@@ -422,11 +446,14 @@ class SessionBuffer:
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
         def handler(*args: Any) -> None:
-            view = self.some_view()
-            if view and view.change_count() == version:
+            if (view := self.some_view()) and view.change_count() == version:
                 f(view, *args)
 
         return handler
+
+    def _update_supported_commands(self) -> None:
+        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
@@ -474,8 +501,7 @@ class SessionBuffer:
         for link in self._document_links:
             if range_to_region(link["range"], view).contains(point):
                 return link
-        else:
-            return None
+        return None
 
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
@@ -524,8 +550,7 @@ class SessionBuffer:
                 {'uri': self._last_known_uri, 'diagnostics': response['items']})
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
-                sb = self.session.get_session_buffer_for_uri_async(uri)
-                if sb:
+                if sb := self.session.get_session_buffer_for_uri_async(uri):
                     cast(SessionBuffer, sb)._apply_document_diagnostic_async(
                         None, cast(DocumentDiagnosticReport, diagnostic_report))
 
@@ -563,8 +588,7 @@ class SessionBuffer:
             if data is None:
                 data = DiagnosticSeverityData(severity)
                 data_per_severity[key] = data
-            tags = diagnostic.get('tags', [])
-            if tags:
+            if tags := diagnostic.get('tags', []):
                 for tag in tags:
                     data.regions_with_tag.setdefault(tag, []).append(region)
             else:
@@ -574,7 +598,7 @@ class SessionBuffer:
 
         def present() -> None:
             self._diagnostics_version = diagnostics_version
-            self.diagnostics = diagnostics
+            self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
                 sv.present_diagnostics_async(sv in visible_session_views)
@@ -598,10 +622,9 @@ class SessionBuffer:
                 )
 
     def has_latest_diagnostics(self) -> bool:
-        view = self.some_view()
-        if view is None:
-            return False
-        return self._diagnostics_version == view.change_count()
+        if view := self.some_view():
+            return self._diagnostics_version == view.change_count()
+        return False
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
@@ -791,6 +814,60 @@ class SessionBuffer:
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
+
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        if not self.has_capability('codeLensProvider'):
+            return
+        if not LspToggleCodeLensesCommand.are_enabled(view.window()):
+            return
+        for sv in self.session_views:
+            if sv.view == view:
+                for request_id, data in sv.active_requests.items():
+                    if data.request.method == 'codeLens/resolve':
+                        self.session.cancel_request(request_id)
+                break
+        request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
+        self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
+
+    def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
+        self._code_lenses.handle_response_async(response or [])
+        self.resolve_visible_code_lenses_async(view)
+
+    def resolve_visible_code_lenses_async(self, view: sublime.View) -> None:
+        promises: list[Promise[None]] = []
+        if self.has_capability('codeLensProvider.resolveProvider'):
+            for code_lens in self._code_lenses.unresolved_visible_code_lenses(view):
+                request = Request('codeLens/resolve', code_lens.data, view)
+                promise = self.session.send_request_task(request).then(code_lens.on_resolve)
+                promises.append(promise)
+        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
+
+    def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
+        code_lenses = self._code_lenses.code_lenses_with_command()
+        if self.session.uses_plugin():
+            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # commands here as well?
+            return code_lenses
+        else:
+            supported_code_lenses: list[ResolvedCodeLens] = []
+            # Filter out CodeLenses with commands that are not handled directly by the language server
+            for code_lens in code_lenses:
+                command_name = code_lens['command']['command']
+                if command_name in self._supported_commands:
+                    supported_code_lenses.append(code_lens)
+                else:
+                    self.session.check_log_unsupported_command(command_name)
+            return supported_code_lenses
+
+    def _on_visible_code_lenses_resolved_async(self) -> None:
+        supported_code_lenses = self._filter_supported_code_lenses()
+        for sv in self.session_views:
+            sv.handle_code_lenses_async(supported_code_lenses)
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.code_lenses_needs_refresh = needs_refresh
 
     # ------------------------------------------------------------------------------------------------------------------
 

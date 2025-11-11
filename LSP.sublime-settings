@@ -166,9 +166,9 @@
   // Show symbol references in Sublime's quick panel instead of the output panel.
   "show_references_in_quick_panel": true,
 
-  // Show code lens:
-  // "annotation" - show an annotation on the right when code actions are available
-  // "phantom" - show a phantom on the top when code actions are available
+  // Show code lenses:
+  // "annotation" - show code lenses as annotations on the right.
+  // "phantom" - show code lenses as phantoms between lines.
   "show_code_lens": "annotation",
 
    // Show inlay hints in the editor. Inlay hints are short annotations within the code,

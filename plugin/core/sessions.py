@@ -1,4 +1,69 @@
 from __future__ import annotations
+from ...protocol import ApplyWorkspaceEditParams
+from ...protocol import ClientCapabilities
+from ...protocol import CodeAction
+from ...protocol import CodeActionKind
+from ...protocol import Command
+from ...protocol import CompletionItemKind
+from ...protocol import CompletionItemTag
+from ...protocol import ConfigurationItem
+from ...protocol import ConfigurationParams
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticServerCancellationData
+from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
+from ...protocol import DidChangeWatchedFilesRegistrationOptions
+from ...protocol import DidChangeWorkspaceFoldersParams
+from ...protocol import DocumentDiagnosticReportKind
+from ...protocol import DocumentLink
+from ...protocol import DocumentUri
+from ...protocol import ErrorCodes
+from ...protocol import ExecuteCommandParams
+from ...protocol import FailureHandlingKind
+from ...protocol import FileEvent
+from ...protocol import FoldingRangeKind
+from ...protocol import GeneralClientCapabilities
+from ...protocol import InitializeError
+from ...protocol import InitializeParams
+from ...protocol import InitializeResult
+from ...protocol import InsertTextMode
+from ...protocol import Location
+from ...protocol import LocationLink
+from ...protocol import LogMessageParams
+from ...protocol import LSPAny
+from ...protocol import LSPErrorCodes
+from ...protocol import LSPObject
+from ...protocol import MarkupKind
+from ...protocol import PrepareSupportDefaultBehavior
+from ...protocol import PreviousResultId
+from ...protocol import ProgressParams
+from ...protocol import ProgressToken
+from ...protocol import PublishDiagnosticsParams
+from ...protocol import Range
+from ...protocol import RegistrationParams
+from ...protocol import SemanticTokenModifiers
+from ...protocol import SemanticTokenTypes
+from ...protocol import ShowDocumentParams
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
+from ...protocol import SymbolKind
+from ...protocol import SymbolTag
+from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentSyncKind
+from ...protocol import TextEdit
+from ...protocol import TokenFormat
+from ...protocol import UnregistrationParams
+from ...protocol import WindowClientCapabilities
+from ...protocol import WorkDoneProgressBegin
+from ...protocol import WorkDoneProgressCreateParams
+from ...protocol import WorkDoneProgressEnd
+from ...protocol import WorkDoneProgressReport
+from ...protocol import WorkspaceClientCapabilities
+from ...protocol import WorkspaceDiagnosticParams
+from ...protocol import WorkspaceDiagnosticReport
+from ...protocol import WorkspaceDocumentDiagnosticReport
+from ...protocol import WorkspaceEdit
+from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
@@ -20,70 +85,12 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import ClientCapabilities
-from .protocol import CodeAction, CodeActionKind
-from .protocol import CodeLensExtended
-from .protocol import Command
-from .protocol import CompletionItemKind
-from .protocol import CompletionItemTag
-from .protocol import Diagnostic
-from .protocol import DiagnosticServerCancellationData
-from .protocol import DiagnosticSeverity
-from .protocol import DiagnosticTag
-from .protocol import DidChangeWatchedFilesRegistrationOptions
-from .protocol import DidChangeWorkspaceFoldersParams
-from .protocol import DocumentDiagnosticReportKind
-from .protocol import DocumentLink
-from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import ErrorCodes
-from .protocol import ExecuteCommandParams
-from .protocol import FailureHandlingKind
-from .protocol import FileEvent
-from .protocol import FoldingRangeKind
-from .protocol import GeneralClientCapabilities
-from .protocol import InitializeError
-from .protocol import InitializeParams
-from .protocol import InitializeResult
-from .protocol import InsertTextMode
-from .protocol import Location
-from .protocol import LocationLink
-from .protocol import LogMessageParams
-from .protocol import LSPAny
-from .protocol import LSPErrorCodes
-from .protocol import LSPObject
-from .protocol import MarkupKind
 from .protocol import Notification
-from .protocol import PrepareSupportDefaultBehavior
-from .protocol import PreviousResultId
-from .protocol import ProgressParams
-from .protocol import ProgressToken
-from .protocol import PublishDiagnosticsParams
-from .protocol import Range
-from .protocol import RegistrationParams
 from .protocol import Request
+from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
-from .protocol import SemanticTokenModifiers
-from .protocol import SemanticTokenTypes
-from .protocol import SymbolKind
-from .protocol import SymbolTag
-from .protocol import TextDocumentClientCapabilities
-from .protocol import TextDocumentSyncKind
-from .protocol import TextEdit
-from .protocol import TokenFormat
-from .protocol import UnregistrationParams
-from .protocol import WindowClientCapabilities
-from .protocol import WorkDoneProgressBegin
-from .protocol import WorkDoneProgressCreateParams
-from .protocol import WorkDoneProgressEnd
-from .protocol import WorkDoneProgressReport
-from .protocol import WorkspaceClientCapabilities
-from .protocol import WorkspaceDiagnosticParams
-from .protocol import WorkspaceDiagnosticReport
-from .protocol import WorkspaceDocumentDiagnosticReport
-from .protocol import WorkspaceEdit
-from .protocol import WorkspaceFullDocumentDiagnosticReport
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
@@ -115,14 +122,21 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
 import functools
+import itertools
 import mdpopups
 import os
 import sublime
 import weakref
+
+
+if TYPE_CHECKING:
+    from .active_request import ActiveRequest
+
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
@@ -168,8 +182,9 @@ def decode_semantic_token(
     """
 
     token_type = types_legend[token_type_encoded]
-    token_modifiers = [modifiers_legend[idx]
-                       for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+    token_modifiers = [
+        modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
+    ]
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
     if token_type in tokens_scope_map_dict:
@@ -565,6 +580,10 @@ class SessionViewProtocol(Protocol):
     def session_buffer(self) -> SessionBufferProtocol:
         ...
 
+    @property
+    def active_requests(self) -> dict[int, ActiveRequest]:
+        ...
+
     def get_uri(self) -> DocumentUri | None:
         ...
 
@@ -598,16 +617,13 @@ class SessionViewProtocol(Protocol):
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         ...
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
+    def get_code_lenses_for_region(self, region: sublime.Region) -> list[Command]:
         ...
 
-    def start_code_lenses_async(self) -> None:
+    def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:
         ...
 
     def clear_code_lenses_async(self) -> None:
-        ...
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
     def reset_show_definitions(self) -> None:
@@ -625,6 +641,10 @@ class SessionBufferProtocol(Protocol):
 
     @property
     def session_views(self) -> WeakSet[SessionViewProtocol]:
+        ...
+
+    @property
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
         ...
 
     @property
@@ -701,6 +721,12 @@ class SessionBufferProtocol(Protocol):
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        ...
+
 
 class AbstractViewListener(metaclass=ABCMeta):
 
@@ -765,10 +791,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_code_lens_capability_registered_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1017,7 +1039,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: dict, configuration: Any) -> Any:
+    def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
@@ -1324,6 +1346,7 @@ class Session(TransportCallbacks):
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
+        self._logged_unsupported_commands: set[str] = set()
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1403,8 +1426,7 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
-        uri = sb.get_uri()
-        if uri:
+        if uri := sb.get_uri():
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
                 self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
@@ -1472,8 +1494,7 @@ class Session(TransportCallbacks):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
-            sv = self.session_view_for_view_async(view)
-            if sv:
+            if sv := self.session_view_for_view_async(view):
                 return sv.has_capability_async(capability)
             else:
                 return self.has_capability(capability)
@@ -1595,22 +1616,17 @@ class Session(TransportCallbacks):
             self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
-        execute_commands = self.get_capability('executeCommandProvider.commands')
-        if execute_commands:
+        if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
-        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
-        if code_action_kinds:
+        if code_action_kinds := self.get_capability('codeActionProvider.codeActionKinds'):
             debug(f'{self.config.name}: supported code action kinds: {code_action_kinds}')
-        semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
-        if semantic_token_types:
+        if semantic_token_types := self.get_capability('semanticTokensProvider.legend.tokenTypes'):
             debug(f'{self.config.name}: Supported semantic token types: {semantic_token_types}')
-        semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
-        if semantic_token_modifiers:
+        if semantic_token_modifiers := self.get_capability('semanticTokensProvider.legend.tokenModifiers'):
             debug(f'{self.config.name}: Supported semantic token modifiers: {semantic_token_modifiers}')
         if self._watcher_impl:
             config = self.config.file_watcher
-            patterns = config.get('patterns')
-            if patterns:
+            if patterns := config.get('patterns'):
                 events = config.get('events') or ['create', 'change', 'delete']
                 for folder in self.get_workspace_folders():
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
@@ -1642,8 +1658,7 @@ class Session(TransportCallbacks):
         return folder_excludes + file_excludes + ['**/node_modules/**']
 
     def call_manager(self, method: str, *args: Any) -> None:
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             getattr(mgr, method)(*args)
 
     def on_stderr_message(self, message: str) -> None:
@@ -1664,8 +1679,7 @@ class Session(TransportCallbacks):
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
         if self._plugin_class is not None:
-            extra_vars = self._plugin_class.additional_variables()
-            if extra_vars:
+            if extra_vars := self._plugin_class.additional_variables():
                 variables.update(extra_vars)
         return variables
 
@@ -1714,6 +1728,11 @@ class Session(TransportCallbacks):
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False
 
+    def check_log_unsupported_command(self, command: str) -> None:
+        if userprefs().log_debug and command not in self._logged_unsupported_commands:
+            self._logged_unsupported_commands.add(command)
+            debug(f'{self.config.name}: unsupported command: {command}')
+
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
     ) -> Promise:
@@ -1744,12 +1763,25 @@ class Session(TransportCallbacks):
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
+        if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
             self.window.focus_view(view)
             if r:
                 center_selection(view, r)
+            return Promise.resolve(view)
+        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+            if name := uri[len('untitled:'):]:
+                # Check if there is a pre-existing unsaved buffer with the given name
+                for view in self.window.views():
+                    if view.file_name() is None and view.name() == name:
+                        self.window.focus_view(view)
+                        return Promise.resolve(view)
+                view = self.window.new_file()
+                view.set_scratch(True)
+                view.set_name(name)
+                return Promise.resolve(view)
+            view = self.window.new_file()
+            view.set_scratch(True)
             return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
@@ -1802,17 +1834,17 @@ class Session(TransportCallbacks):
                 if title is not None:
                     if group > -1:
                         self.window.focus_group(group)
-                    v = self.window.new_file(syntax=syntax, flags=flags)
+                    view = self.window.new_file(syntax=syntax, flags=flags)
                     # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
                     # settings object here at our leisure.
-                    v.settings().set("lsp_uri", uri)
-                    v.set_scratch(True)
-                    v.set_name(title)
-                    v.run_command("append", {"characters": content})
-                    v.set_read_only(True)
+                    view.settings().set("lsp_uri", uri)
+                    view.set_scratch(True)
+                    view.set_name(title)
+                    view.run_command("append", {"characters": content})
+                    view.set_read_only(True)
                     if r:
-                        center_selection(v, r)
-                    sublime.set_timeout_async(lambda: result[1](v))
+                        center_selection(view, r)
+                    sublime.set_timeout_async(lambda: result[1](view))
                 else:
                     sublime.set_timeout_async(lambda: result[1](None))
 
@@ -1839,8 +1871,7 @@ class Session(TransportCallbacks):
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
-                session_view = self.session_view_for_view_async(view)
-                if session_view:
+                if session_view := self.session_view_for_view_async(view):
                     has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
             if has_capability:
                 # We must first resolve the command and edit properties, because they can potentially be absent.
@@ -1915,8 +1946,7 @@ class Session(TransportCallbacks):
         scheme, filepath = parse_uri(uri)
         if scheme != 'file':
             return ViewStateActions.NONE  # Can't save or close unsafed buffers (and other schemes) without user dialog
-        view = self.window.find_open_file(filepath)
-        if view:
+        if view := self.window.find_open_file(filepath):
             is_opened = True
             is_dirty = view.is_dirty()
         else:
@@ -2000,8 +2030,7 @@ class Session(TransportCallbacks):
             if result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        identifier = self.get_capability("diagnosticProvider.identifier")
-        if identifier:
+        if identifier := self.get_capability("diagnosticProvider.identifier"):
             params['identifier'] = identifier
         self.workspace_diagnostics_pending_response = self.send_request_async(
             Request.workspaceDiagnostic(params),
@@ -2060,11 +2089,11 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
+    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: Any) -> None:
         """handles the window/showMessageRequest request"""
         self.call_manager('handle_message_request', self, params, request_id)
 
-    def m_window_showMessage(self, params: Any) -> None:
+    def m_window_showMessage(self, params: ShowMessageParams) -> None:
         """handles the window/showMessage notification"""
         self.call_manager('handle_show_message', self, params)
 
@@ -2072,11 +2101,11 @@ class Session(TransportCallbacks):
         """handles the window/logMessage notification"""
         self.call_manager('handle_log_message', self, params)
 
-    def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
+    def m_workspace_workspaceFolders(self, params: None, request_id: Any) -> None:
         """handles the workspace/workspaceFolders request"""
         self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def m_workspace_configuration(self, params: dict[str, Any], request_id: Any) -> None:
+    def m_workspace_configuration(self, params: ConfigurationParams, request_id: Any) -> None:
         """handles the workspace/configuration request"""
         items: list[Any] = []
         requested_items = params.get("items") or []
@@ -2088,22 +2117,21 @@ class Session(TransportCallbacks):
                 items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
-    def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
+    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
         self.apply_workspace_edit_async(params.get('edit', {})) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
-    def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
+    def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
         self.send_response(Response(request_id, None))
-        if self.uses_plugin():
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                sv.start_code_lenses_async()
-            for sv in not_visible_session_views:
-                sv.set_code_lenses_pending_refresh()
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_code_lenses_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_code_lenses_pending_refresh()
 
-    def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
+    def m_workspace_semanticTokens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2143,8 +2171,7 @@ class Session(TransportCallbacks):
         diagnostics = params["diagnostics"]
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
+        if sb := self.get_session_buffer_for_uri_async(uri):
             version = params.get('version', sb.last_synced_version)
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
 
@@ -2202,8 +2229,7 @@ class Session(TransportCallbacks):
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
             if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
-                file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
-                if file_watchers:
+                if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
                     for file_watcher in file_watchers:
                         file_watcher.destroy()
             if data and not data.selector:
@@ -2215,7 +2241,7 @@ class Session(TransportCallbacks):
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
 
-    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+    def m_window_showDocument(self, params: ShowDocumentParams, request_id: Any) -> None:
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
@@ -2241,8 +2267,7 @@ class Session(TransportCallbacks):
 
     def _invoke_views(self, request: Request, method: str, *args: Any) -> None:
         if request.view:
-            sv = self.session_view_for_view_async(request.view)
-            if sv:
+            if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
         else:
             for sv in self.session_views_async():
@@ -2335,9 +2360,8 @@ class Session(TransportCallbacks):
         for watcher in self._static_file_watchers:
             watcher.destroy()
         self._static_file_watchers = []
-        for watchers in self._dynamic_file_watchers.values():
-            for watcher in watchers:
-                watcher.destroy()
+        for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
+            watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
@@ -2356,8 +2380,7 @@ class Session(TransportCallbacks):
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             if self._init_callback:
                 self._init_callback(self, True)
                 self._init_callback = None

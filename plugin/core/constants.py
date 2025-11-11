@@ -1,10 +1,11 @@
 from __future__ import annotations
-from .protocol import CodeActionKind
-from .protocol import CompletionItemKind
-from .protocol import DiagnosticSeverity
-from .protocol import DocumentHighlightKind
-from .protocol import LanguageKind
-from .protocol import SymbolKind
+from ...protocol import CodeActionKind
+from ...protocol import CompletionItemKind
+from ...protocol import DiagnosticSeverity
+from ...protocol import DocumentHighlightKind
+from ...protocol import LanguageKind
+from ...protocol import MessageType
+from ...protocol import SymbolKind
 from .typing import StrEnum
 from os.path import dirname, join
 from typing import Tuple
@@ -173,6 +174,15 @@ DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
 }
 
 
+MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
+    MessageType.Error: "ERROR",
+    MessageType.Warning: "WARNING",
+    MessageType.Info: "INFO",
+    MessageType.Log: "LOG",
+    MessageType.Debug: "DEBUG"
+}
+
+
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
 SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
@@ -216,6 +226,7 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.tsx": LanguageKind.TypeScriptReact,
     "source.unity.unity_shader": LanguageKind.ShaderLab,  # https://github.com/petereichinger/Unity3D-Shader
     "source.yaml-tmlanguage": LanguageKind.YAML,  # https://github.com/SublimeText/PackageDev
+    "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
     "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
     "text.html.handlebars": LanguageKind.Handlebars,

@@ -5,9 +5,9 @@ from LSP.plugin import FileWatcherEventType
 from LSP.plugin import FileWatcherProtocol
 from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
-from LSP.plugin.core.protocol import WatchKind
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import sublime_pattern_to_glob
+from LSP.protocol import WatchKind
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase

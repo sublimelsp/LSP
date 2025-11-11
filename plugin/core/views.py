@@ -1,45 +1,45 @@
 from __future__ import annotations
+from ...protocol import CodeAction
+from ...protocol import CodeActionContext
+from ...protocol import CodeActionKind
+from ...protocol import CodeActionParams
+from ...protocol import CodeActionTriggerKind
+from ...protocol import Color
+from ...protocol import ColorInformation
+from ...protocol import Command
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticRelatedInformation
+from ...protocol import DiagnosticSeverity
+from ...protocol import DidChangeTextDocumentParams
+from ...protocol import DidCloseTextDocumentParams
+from ...protocol import DidOpenTextDocumentParams
+from ...protocol import DidSaveTextDocumentParams
+from ...protocol import DocumentColorParams
+from ...protocol import DocumentUri
+from ...protocol import LanguageKind
+from ...protocol import Location
+from ...protocol import LocationLink
+from ...protocol import MarkedString
+from ...protocol import MarkupContent
+from ...protocol import Position
+from ...protocol import Range
+from ...protocol import SelectionRangeParams
+from ...protocol import TextDocumentContentChangeEvent
+from ...protocol import TextDocumentIdentifier
+from ...protocol import TextDocumentItem
+from ...protocol import TextDocumentPositionParams
+from ...protocol import TextDocumentSaveReason
+from ...protocol import VersionedTextDocumentIdentifier
+from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import ST_CACHE_PATH
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
-from .protocol import CodeAction
-from .protocol import CodeActionContext
-from .protocol import CodeActionKind
-from .protocol import CodeActionParams
-from .protocol import CodeActionTriggerKind
-from .protocol import Color
-from .protocol import ColorInformation
-from .protocol import Command
-from .protocol import Diagnostic
-from .protocol import DiagnosticRelatedInformation
-from .protocol import DiagnosticSeverity
-from .protocol import DidChangeTextDocumentParams
-from .protocol import DidCloseTextDocumentParams
-from .protocol import DidOpenTextDocumentParams
-from .protocol import DidSaveTextDocumentParams
-from .protocol import DocumentColorParams
-from .protocol import DocumentUri
-from .protocol import LanguageKind
-from .protocol import Location
-from .protocol import LocationLink
-from .protocol import MarkedString
-from .protocol import MarkupContent
 from .protocol import Notification
 from .protocol import Point
-from .protocol import Position
-from .protocol import Range
 from .protocol import Request
-from .protocol import SelectionRangeParams
-from .protocol import TextDocumentContentChangeEvent
-from .protocol import TextDocumentIdentifier
-from .protocol import TextDocumentItem
-from .protocol import TextDocumentPositionParams
-from .protocol import TextDocumentSaveReason
-from .protocol import VersionedTextDocumentIdentifier
-from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
@@ -96,8 +96,7 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
     '''
-    view = window.find_open_file(file_name)
-    if view:
+    if view := window.find_open_file(file_name):
         # get from buffer
         point = view.text_point(row, 0)
         line = view.substr(view.line(point))
@@ -583,8 +582,7 @@ def _replace_match(match: Any) -> str:
     special_match = match.group('special')
     if special_match:
         return REPLACEMENT_MAP[special_match]
-    url = match.group('url')
-    if url:
+    if url := match.group('url'):
         return f"<a href='{url}'>{url}</a>"
     return len(match.group('multispace')) * '&nbsp;'
 
@@ -622,6 +620,7 @@ def make_command_link(
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
+
     def run(self, view_id: int, command: str, args: dict[str, Any] | None = None) -> None:
         view = sublime.View(view_id)
         if view.is_valid():
@@ -833,8 +832,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     html += "&nbsp;" + copy_icon_html(f"{source} {diagnostic['message']}")
-    related_infos = diagnostic.get("relatedInformation")
-    if related_infos:
+    if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]

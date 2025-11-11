@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .protocol import WorkspaceFolder as LspWorkspaceFolder
+from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
@@ -125,8 +125,7 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
     other_paths: list[str] = []
 
     for folder in folders:
-        is_subpath = is_subpath_of(file_path, folder)
-        if is_subpath:
+        if is_subpath_of(file_path, folder):
             if matching_paths and len(folder) > len(matching_paths[0]):
                 matching_paths.insert(0, folder)
             else:

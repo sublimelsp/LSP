@@ -1,7 +1,7 @@
 from __future__ import annotations
+from ..protocol import ExecuteCommandParams
 from .core.logging import debug
 from .core.protocol import Error
-from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.views import first_selection_region
 from .core.views import offset_to_point
@@ -48,8 +48,7 @@ class LspExecuteCommand(LspTextCommand):
         :param command_name: The name of the command that was executed.
         """
         msg = f"command {command_name} completed"
-        window = self.view.window()
-        if window:
+        if window := self.view.window():
             window.status_message(msg)
 
     def handle_error_async(self, error: Error, command_name: str) -> None:
@@ -61,8 +60,7 @@ class LspExecuteCommand(LspTextCommand):
         """
         msg = f"command {command_name} failed: {str(error)}"
         debug(msg)
-        window = self.view.window()
-        if window:
+        if window := self.view.window():
             window.status_message(msg)
 
     def _expand_variables(self, command_args: list[Any]) -> list[Any]:

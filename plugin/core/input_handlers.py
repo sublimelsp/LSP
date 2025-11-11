@@ -137,7 +137,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
     def list_items(self) -> list[sublime.ListInputItem]:
         if not self.text:  # Show initial items when the command was just invoked
             return self.get_list_items() or [sublime.ListInputItem("No Results", "")]
-        elif items := getattr(self.command, '_items', None):  # Items were updated after typing
+        if items := getattr(self.command, '_items', None):  # Items were updated after typing
             if ST_VERSION >= 4157:
                 return items
             else:

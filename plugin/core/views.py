@@ -840,8 +840,8 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 
 
 def copy_icon_html(text_to_copy: str) -> str:
-    return f"""<a class="copy_button"
-       title="Copy"
+    return f"""<a class='copy_button'
+       title='Copy'
        href='{sublime.command_url('lsp_copy_text', {
         'text': text_to_copy
        })}'>⧉</a>"""

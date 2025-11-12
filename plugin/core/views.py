@@ -840,11 +840,13 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
 
 
 def copy_icon_html(text_to_copy: str) -> str:
+    copy_light_icon = '<img class="light_only" src="res://Packages/LSP/icons/copy_light_theme.png" />'
+    copy_dark_icon = '<img class="dark_only" src="res://Packages/LSP/icons/copy_dark_theme.png" />'
     return f"""<a class='copy_button'
        title='Copy'
        href='{sublime.command_url('lsp_copy_text', {
         'text': text_to_copy
-       })}'>⧉</a>"""
+       })}'>{copy_light_icon}{copy_dark_icon}</a>"""
 
 
 def format_code_actions_for_quick_panel(

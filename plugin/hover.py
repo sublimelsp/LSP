@@ -411,8 +411,8 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
                         session_view.reset_show_definitions()
 
 
-class LspCopyTextCommand(sublime_plugin.TextCommand):
-    def run(self, edit, text: str) -> None:
+class LspCopyTextCommand(sublime_plugin.WindowCommand):
+    def run(self, text: str) -> None:
         sublime.set_clipboard(text)
         text_length = len(text)
-        sublime.status_message(f"Copied {text_length} character{'s' if text_length > 1 else ''}")
+        self.window.status_message(f"Copied {text_length} characters")

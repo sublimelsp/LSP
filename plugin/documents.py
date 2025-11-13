@@ -789,8 +789,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                         placeholder="Code actions")
             else:
                 self.handle_code_action_select(config_name, actions, 0)
-        else:
+        elif href.startswith("http"):
             open_in_browser(href)
+        else:
+            debug('on_navigate unhandled href:', href)
 
     def handle_code_action_select(self, config_name: str, actions: list[CodeActionOrCommand], index: int) -> None:
         if index == -1:

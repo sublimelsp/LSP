@@ -2228,7 +2228,7 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
-            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
+            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
                 if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
                     for file_watcher in file_watchers:
                         file_watcher.destroy()

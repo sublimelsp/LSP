@@ -87,7 +87,6 @@ pre.related_info {
     padding-top: 0.7rem;
 }
 a.copy-icon {
-    font-size: 1rem;
     padding: 0.5rem;
     text-decoration: none;
     color: color(var(--foreground) alpha(0.6));

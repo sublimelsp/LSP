@@ -21,8 +21,10 @@ from ...protocol import ErrorCodes
 from ...protocol import ExecuteCommandParams
 from ...protocol import FailureHandlingKind
 from ...protocol import FileEvent
+from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
+from ...protocol import GlobPattern
 from ...protocol import InitializeError
 from ...protocol import InitializeParams
 from ...protocol import InitializeResult
@@ -547,7 +549,10 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
     if get_file_watcher_implementation():
-        workspace_capabilites["didChangeWatchedFiles"] = {"dynamicRegistration": True}
+        workspace_capabilites["didChangeWatchedFiles"] = {
+            "dynamicRegistration": True,
+            "relativePatternSupport": True
+        }
     return {
         "processId": os.getpid(),
         "clientInfo": {
@@ -2204,20 +2209,9 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
-            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
-                capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
-                file_watchers: list[FileWatcher] = []
-                for config in capability_options.get("watchers", []):
-                    pattern = config.get("globPattern", '')
-                    if not isinstance(pattern, str):
-                        print('LSP: Relative glob patterns are not supported in File Watcher yet.')
-                        continue
-                    kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
-                    for folder in self.get_workspace_folders():
-                        ignores = self._get_global_ignore_globs(folder.path)
-                        watcher = self._watcher_impl.create(folder.path, [pattern], kind, ignores, self)
-                        file_watchers.append(watcher)
-                self._dynamic_file_watchers[registration_id] = file_watchers
+            if capability_path == "didChangeWatchedFilesProvider":
+                capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
+                self.register_file_system_watchers(registration_id, capability_options['watchers'])
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
@@ -2228,10 +2222,8 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
-            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
-                if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
-                    for file_watcher in file_watchers:
-                        file_watcher.destroy()
+            if capability_path == "didChangeWatchedFilesProvider":
+                self.unregister_file_system_watchers(registration_id)
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -2240,6 +2232,31 @@ class Session(TransportCallbacks):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
+
+    def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
+        if not self._watcher_impl:
+            return
+        self.unregister_file_system_watchers(registration_id)
+        file_watchers: list[FileWatcher] = []
+        for config in watchers:
+            kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
+            glob_pattern = config["globPattern"]
+            if isinstance(glob_pattern, str):
+                for folder in self.get_workspace_folders():
+                    ignores = self._get_global_ignore_globs(folder.path)
+                    file_watchers.append(self._watcher_impl.create(folder.path, [glob_pattern], kind, ignores, self))
+            else:  # RelativePattern
+                base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
+                pattern = glob_pattern["pattern"]
+                _, base_path = parse_uri(base if isinstance(base, str) else base["uri"])
+                ignores = self._get_global_ignore_globs(base_path)
+                file_watchers.append(self._watcher_impl.create(base_path, [pattern], kind, ignores, self))
+        self._dynamic_file_watchers[registration_id] = file_watchers
+
+    def unregister_file_system_watchers(self, registration_id: str) -> None:
+        if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
+            for file_watcher in file_watchers:
+                file_watcher.destroy()
 
     def m_window_showDocument(self, params: ShowDocumentParams, request_id: Any) -> None:
         """handles the window/showDocument request"""

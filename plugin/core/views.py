@@ -844,7 +844,7 @@ def copy_icon_html(text_to_copy: str) -> str:
        title='Copy to clipboard'
        href='{sublime.command_url('lsp_copy_text', {
         'text': text_to_copy
-       })}'><span>⧉</span></a>"""
+       })}'>⧉</a>"""
 
 
 def format_code_actions_for_quick_panel(

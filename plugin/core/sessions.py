@@ -24,7 +24,6 @@ from ...protocol import FileEvent
 from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
-from ...protocol import GlobPattern
 from ...protocol import InitializeError
 from ...protocol import InitializeParams
 from ...protocol import InitializeResult

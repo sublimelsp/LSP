@@ -86,15 +86,15 @@ pre.related_info {
     margin-top: 0.7rem;
     padding-top: 0.7rem;
 }
-a.copy_button {
+a.copy-icon {
     background: #00000001; /* required to make the empty area inside the a tag clickable */
     padding: 0.5rem;
 }
-.copy_button img {
+.copy-icon img {
     height: 1rem;
     width: 1rem;
 }
-.light .dark_only, .dark .light_only {
+.light .dark-only, .dark .light-only {
     display: none;
 }
 

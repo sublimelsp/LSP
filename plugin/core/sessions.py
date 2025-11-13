@@ -2246,8 +2246,8 @@ class Session(TransportCallbacks):
                     ignores = self._get_global_ignore_globs(folder.path)
                     file_watchers.append(self._watcher_impl.create(folder.path, [glob_pattern], kind, ignores, self))
             else:  # RelativePattern
-                base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
                 pattern = glob_pattern["pattern"]
+                base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
                 _, base_path = parse_uri(base if isinstance(base, str) else base["uri"])
                 ignores = self._get_global_ignore_globs(base_path)
                 file_watchers.append(self._watcher_impl.create(base_path, [pattern], kind, ignores, self))

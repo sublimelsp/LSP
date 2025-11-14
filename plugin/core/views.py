@@ -831,20 +831,15 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    html += copy_icon_html(f"{diagnostic['message']} {f'({source})' if source else ''}".strip())
+    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip()
+    html += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
+        'lsp_copy_text', {'text': copy_text}
+    )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
     return _html_element("pre", html, class_name=severity_class, escape=False)
-
-
-def copy_icon_html(text_to_copy: str) -> str:
-    return f"""<a class='copy-icon'
-       title='Copy to clipboard'
-       href='{sublime.command_url('lsp_copy_text', {
-        'text': text_to_copy
-       })}'>⧉</a>"""
 
 
 def format_code_actions_for_quick_panel(

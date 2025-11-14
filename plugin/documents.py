@@ -189,6 +189,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
+        self._is_documenation_popup_open = False
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
         self._stored_selection: list[sublime.Region] = []
@@ -575,9 +576,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
-        if command_name in ("hide_auto_complete", "move", "commit_completion", "delete_word", "delete_to_mark",
-                            "left_delete", "right_delete") and not self._sighelp:
-            # hide the popup when `esc` or arrows are pressed
+        if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
+                                                              "delete_to_mark", "left_delete", "right_delete"):
             self.view.hide_popup()
 
     @requires_session
@@ -698,6 +698,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._sighelp:
             self._sighelp.select_signature(forward)
             self._update_sighelp_popup(self._sighelp.render(self.view))
+
+    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
+        self._is_documenation_popup_open = opened
 
     def _update_sighelp_popup(self, content: str) -> None:
         update_lsp_popup(self.view, content)

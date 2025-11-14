@@ -320,7 +320,10 @@ class LspResolveDocsCommand(LspTextCommand):
                     minihtml_content,
                     flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
                     md=False,
+                    on_hide=self._on_documentation_close,
                     on_navigate=self._on_navigate)
+                if listener := self.get_listener():
+                    listener.on_documentation_popup_toggle(opened=True)
 
         sublime.set_timeout(run_main)
 
@@ -330,6 +333,10 @@ class LspResolveDocsCommand(LspTextCommand):
         language_map: MarkdownLangMap | None
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
+
+    def _on_documentation_close(self) -> None:
+        if listener := self.get_listener():
+            listener.on_documentation_popup_toggle(opened=False)
 
     def _on_navigate(self, url: str) -> None:
         webbrowser.open(url)

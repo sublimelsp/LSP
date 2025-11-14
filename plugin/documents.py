@@ -189,9 +189,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._is_documenation_popup_open = False
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
+        self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
         self.hover_provider_count = 0
@@ -577,7 +577,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
-                                                              "delete_to_mark", "left_delete", "right_delete"):
+                                                                 "delete_to_mark", "left_delete", "right_delete"):
             self.view.hide_popup()
 
     @requires_session

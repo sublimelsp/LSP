@@ -576,7 +576,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self.view.is_popup_visible():
             return
         if command_name in ("hide_auto_complete", "move", "commit_completion", "delete_word", "delete_to_mark",
-                            "left_delete", "right_delete"):
+                            "left_delete", "right_delete") and not self._sighelp:
             # hide the popup when `esc` or arrows are pressed
             self.view.hide_popup()
 

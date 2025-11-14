@@ -831,7 +831,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip()
+    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip().replace(' ', ' ')
     html += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
         'lsp_copy_text', {'text': copy_text}
     )}'>⧉</a>"""

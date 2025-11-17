@@ -66,6 +66,7 @@ from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
+from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
@@ -815,6 +816,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
 

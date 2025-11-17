@@ -20,6 +20,7 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
+from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
@@ -355,6 +356,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def get_language_id(self) -> str:
         return self._language_id
+
+    def get_request_flags(self, session: Session) -> RequestFlags:
+        request_flags = RequestFlags.NONE
+        if session == self.session_async('colorProvider'):
+            request_flags |= RequestFlags.DOCUMENT_COLOR
+        if session ==  self.session_async('inlayHintProvider'):
+            request_flags |= RequestFlags.INLAY_HINT
+        if session == self.session_async('semanticTokensProvider'):
+            request_flags |= RequestFlags.SEMANTIC_TOKENS
+        return request_flags
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 

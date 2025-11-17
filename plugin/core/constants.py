@@ -34,6 +34,11 @@ where $DATA means:
 
 
 class RequestFlags(IntFlag):
+    """
+    A bitflag that indicates how some of the requests are prioritized between the sessions.
+    This is used for multi-session configurations, where the best session is selected for each of the relevant features
+    below and the corresponding request is made only by that one session.
+    """
     NONE = 0
     DOCUMENT_COLOR = 1
     """ textDocument/documentColor """

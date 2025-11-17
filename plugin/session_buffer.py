@@ -158,7 +158,7 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
-        # Ensure that SessionView is initialized before running requests
+        # set_timeout_async is required to ensure that the SessionView is initialized before running requests
         sublime.set_timeout_async(lambda: self._check_did_open(view))
 
     @property

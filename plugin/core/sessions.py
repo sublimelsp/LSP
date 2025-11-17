@@ -2237,7 +2237,7 @@ class Session(TransportCallbacks):
         if not self._watcher_impl:
             return
         self.unregister_file_system_watchers(registration_id)
-        # Aggregated list of patterns by base path and kind.
+        # List of patterns aggregated by base path and kind.
         aggregated_watchers: dict[tuple[str, WatchKind], list[str]] = {}
         for config in watchers:
             kind = config.get("kind") or DEFAULT_WATCH_KIND

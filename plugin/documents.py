@@ -361,7 +361,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         request_flags = RequestFlags.NONE
         if session == self.session_async('colorProvider'):
             request_flags |= RequestFlags.DOCUMENT_COLOR
-        if session ==  self.session_async('inlayHintProvider'):
+        if session == self.session_async('inlayHintProvider'):
             request_flags |= RequestFlags.INLAY_HINT
         if session == self.session_async('semanticTokensProvider'):
             request_flags |= RequestFlags.SEMANTIC_TOKENS

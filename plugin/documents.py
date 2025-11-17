@@ -672,14 +672,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._sighelp = SigHelp.from_lsp(response, language_map)
         if self._sighelp:
             content = self._sighelp.render(self.view)
-
-            def render_sighelp_on_main_thread() -> None:
-                if self.view.is_popup_visible():
-                    self._update_sighelp_popup(content)
-                else:
-                    self._show_sighelp_popup(content, point)
-
-            sublime.set_timeout(render_sighelp_on_main_thread)
+            # Render on main thread.
+            sublime.set_timeout(lambda: self._show_sighelp_popup(content, point))
 
     def _show_sighelp_popup(self, content: str, point: int) -> None:
         # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
@@ -697,13 +691,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def navigate_signature_help(self, forward: bool) -> None:
         if self._sighelp:
             self._sighelp.select_signature(forward)
-            self._update_sighelp_popup(self._sighelp.render(self.view))
+            update_lsp_popup(self.view, self._sighelp.render(self.view))
 
     def on_documentation_popup_toggle(self, *, opened: bool) -> None:
         self._is_documenation_popup_open = opened
-
-    def _update_sighelp_popup(self, content: str) -> None:
-        update_lsp_popup(self.view, content)
 
     def _on_sighelp_hide(self) -> None:
         self._sighelp = None

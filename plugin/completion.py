@@ -309,23 +309,20 @@ class LspResolveDocsCommand(LspTextCommand):
         if documentation:
             minihtml_content += documentation
 
-        def run_main() -> None:
+        def run_on_main_thread() -> None:
             if not self.view.is_valid():
                 return
-            if self.view.is_popup_visible():
-                update_lsp_popup(self.view, minihtml_content, md=False)
-            else:
-                show_lsp_popup(
-                    self.view,
-                    minihtml_content,
-                    flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
-                    md=False,
-                    on_hide=self._on_documentation_close,
-                    on_navigate=self._on_navigate)
-                if listener := self.get_listener():
-                    listener.on_documentation_popup_toggle(opened=True)
+            show_lsp_popup(
+                self.view,
+                minihtml_content,
+                flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
+                md=False,
+                on_hide=self._on_documentation_close,
+                on_navigate=self._on_navigate)
+            if listener := self.get_listener():
+                listener.on_documentation_popup_toggle(opened=True)
 
-        sublime.set_timeout(run_main)
+        sublime.set_timeout(run_on_main_thread)
 
     def _format_documentation(
         self,

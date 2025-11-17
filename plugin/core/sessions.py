@@ -73,7 +73,7 @@ from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
-from .file_watcher import DEFAULT_KIND
+from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
 from .file_watcher import FileWatcherEvent
@@ -2240,7 +2240,7 @@ class Session(TransportCallbacks):
         # Aggregated list of patterns by base path and kind.
         aggregated_watchers: dict[tuple[str, WatchKind], list[str]] = {}
         for config in watchers:
-            kind = config.get("kind") or DEFAULT_KIND
+            kind = config.get("kind") or DEFAULT_WATCH_KIND
             glob_pattern = config["globPattern"]
             if isinstance(glob_pattern, str):
                 for folder in self.get_workspace_folders():

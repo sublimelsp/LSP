@@ -631,10 +631,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if session == sb.session:
                     triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
                     break
-        if not manual and not triggers:
+        if not manual and not triggers and not self._sighelp:
             return
         last_char = previous_non_whitespace_char(self.view, pos)
-        if manual or last_char in triggers:
+        if manual or last_char in triggers or self._sighelp:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
             trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
@@ -669,24 +669,30 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point: int,
         language_map: MarkdownLangMap | None
     ) -> None:
-        self._sighelp = SigHelp.from_lsp(response, language_map)
-        if self._sighelp:
-            content = self._sighelp.render(self.view)
+        sighelp = SigHelp.from_lsp(response, language_map)
+        if sighelp:
             # Render on main thread.
-            sublime.set_timeout(lambda: self._show_sighelp_popup(content, point))
+            sublime.set_timeout(lambda: self._show_sighelp_popup(sighelp, point))
+        elif self._sighelp:
+            self.view.hide_popup()
 
-    def _show_sighelp_popup(self, content: str, point: int) -> None:
+    def _show_sighelp_popup(self, sighelp: SigHelp, point: int) -> None:
+        content = sighelp.render(self.view)
         # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
         # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
         # class.
-        show_lsp_popup(
-            self.view,
-            content,
-            flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
-            location=point,
-            body_id='lsp-signature-help',
-            on_hide=self._on_sighelp_hide,
-            on_navigate=self._on_sighelp_navigate)
+        if self._sighelp:
+            update_lsp_popup(self.view, content)
+        else:
+            self._sighelp = sighelp
+            show_lsp_popup(
+                self.view,
+                content,
+                flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
+                location=point,
+                body_id='lsp-signature-help',
+                on_hide=self._on_sighelp_hide,
+                on_navigate=self._on_sighelp_navigate)
 
     def navigate_signature_help(self, forward: bool) -> None:
         if self._sighelp:

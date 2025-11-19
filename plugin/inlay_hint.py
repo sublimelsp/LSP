@@ -2,6 +2,7 @@ from __future__ import annotations
 from ..protocol import InlayHint
 from ..protocol import InlayHintLabelPart
 from ..protocol import MarkupContent
+from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -42,7 +43,10 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         sublime.status_message(f'Inlay Hints are {status}')
         for session in self.sessions():
             for sv in session.session_views_async():
-                sv.session_buffer.do_inlay_hints_async(sv.view)
+                if not enable:
+                    sv.session_buffer.remove_all_inlay_hints()
+                elif (listener := sv.listener()) and listener.get_request_flags(session) & RequestFlags.INLAY_HINT:
+                    sv.session_buffer.do_inlay_hints_async(sv.view)
 
     def is_checked(self) -> bool:
         return bool(self.window.settings().get('lsp_show_inlay_hints'))

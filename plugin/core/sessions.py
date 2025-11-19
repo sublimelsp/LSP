@@ -720,6 +720,9 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
+    def remove_all_inlay_hints(self) -> None:
+        ...
+
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 

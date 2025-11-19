@@ -637,6 +637,9 @@ class SessionViewProtocol(Protocol):
     def on_userprefs_changed_async(self) -> None:
         ...
 
+    def get_request_flags(self) -> RequestFlags:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -2148,7 +2151,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_semantic_tokens_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                sv.session_buffer.do_semantic_tokens_async(sv.view)
+            else:
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 
@@ -2157,7 +2163,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_inlay_hints_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.INLAY_HINT:
+                sv.session_buffer.do_inlay_hints_async(sv.view)
+            else:
+                sv.session_buffer.set_inlay_hints_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 

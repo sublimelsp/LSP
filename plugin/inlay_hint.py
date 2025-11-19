@@ -45,7 +45,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
             for sv in session.session_views_async():
                 if not enable:
                     sv.session_buffer.remove_all_inlay_hints()
-                elif (listener := sv.listener()) and listener.get_request_flags(session) & RequestFlags.INLAY_HINT:
+                elif sv.get_request_flags() & RequestFlags.INLAY_HINT:
                     sv.session_buffer.do_inlay_hints_async(sv.view)
 
     def is_checked(self) -> bool:

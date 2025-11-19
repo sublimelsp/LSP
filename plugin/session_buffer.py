@@ -467,8 +467,7 @@ class SessionBuffer:
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):
-            if listener := session_view.listener():
-                return listener.get_request_flags(self.session)
+            return session_view.get_request_flags()
         return RequestFlags.NONE
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------

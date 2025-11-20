@@ -245,6 +245,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._manager.unregister_listener_async(self)
             sublime.set_timeout(self._reset)
 
+    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
+        self._is_documenation_popup_open = opened
+
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
         if session.config.name not in self._session_views:
@@ -698,9 +701,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._sighelp:
             self._sighelp.select_signature(forward)
             update_lsp_popup(self.view, self._sighelp.render(self.view))
-
-    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
-        self._is_documenation_popup_open = opened
 
     def _on_sighelp_hide(self) -> None:
         self._sighelp = None

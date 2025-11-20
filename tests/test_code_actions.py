@@ -369,9 +369,9 @@ class CodeActionsTestCase(TextDocumentTestCase):
         )
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEqual(params['range']['start']['line'], 1)
-        self.assertEqual(params['range']['start']['character'], 0)
+        self.assertEqual(params['range']['start']['character'], 1)
         self.assertEqual(params['range']['end']['line'], 1)
-        self.assertEqual(params['range']['end']['character'], 0)
+        self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 1)
 
     def test_applies_code_action_with_matching_document_version(self) -> Generator:

@@ -1,5 +1,7 @@
 from __future__ import annotations
-from .protocol import Diagnostic, DiagnosticSeverity, DocumentUri
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticSeverity
+from ...protocol import DocumentUri
 from .url import parse_uri
 from .views import diagnostic_severity
 from collections import OrderedDict

@@ -1,13 +1,13 @@
 from __future__ import annotations
+from ..protocol import PrepareRenameParams
+from ..protocol import PrepareRenameResult
+from ..protocol import Range
+from ..protocol import RenameParams
+from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
-from .core.protocol import PrepareRenameParams
-from .core.protocol import PrepareRenameResult
-from .core.protocol import Range
-from .core.protocol import RenameParams
 from .core.protocol import Request
-from .core.protocol import WorkspaceEdit
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -158,8 +158,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         event: dict | None = None,
         point: int | None = None
     ) -> None:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
@@ -323,6 +322,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
+
     def want_event(self) -> bool:
         return False
 

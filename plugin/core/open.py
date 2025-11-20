@@ -1,15 +1,14 @@
 from __future__ import annotations
+from ...protocol import DocumentUri
+from ...protocol import Range
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
-from .protocol import DocumentUri
-from .protocol import Range
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
-from typing import cast
 from urllib.parse import unquote, urlparse
 import os
 import re
@@ -24,8 +23,7 @@ FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
 def lsp_range_from_uri_fragment(fragment: str) -> Range | None:
-    match = FRAGMENT_PATTERN.match(fragment)
-    if match:
+    if match := FRAGMENT_PATTERN.match(fragment):
         selection: Range = {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 0}}
         # Line and column numbers in the fragment are assumed to be 1-based and need to be converted to 0-based
         # numbers for the LSP Position structure.
@@ -50,12 +48,10 @@ def open_file_uri(
 ) -> Promise[sublime.View | None]:
 
     decoded_uri = unquote(uri)  # decode percent-encoded characters
-    parsed = urlparse(decoded_uri)
     open_promise = open_file(window, decoded_uri, flags, group)
-    if parsed.fragment:
-        selection = lsp_range_from_uri_fragment(parsed.fragment)
-        if selection:
-            return open_promise.then(lambda view: _select_and_center(view, cast(Range, selection)))
+    if fragment := urlparse(decoded_uri).fragment:
+        if selection := lsp_range_from_uri_fragment(fragment):
+            return open_promise.then(lambda view: _select_and_center(view, selection))
     return open_promise
 
 
@@ -128,14 +124,13 @@ def open_file(
     return promise
 
 
-def center_selection(v: sublime.View, r: Range) -> sublime.View:
-    selection = range_to_region(r, v)
-    v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
-    window = v.window()
-    if window:
-        window.focus_view(v)
-    v.show_at_center(selection.begin(), animate=False)
-    return v
+def center_selection(view: sublime.View, r: Range) -> sublime.View:
+    selection = range_to_region(r, view)
+    view.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
+    if window := view.window():
+        window.focus_view(view)
+    view.show_at_center(selection.begin(), animate=False)
+    return view
 
 
 def open_in_browser(uri: str) -> None:

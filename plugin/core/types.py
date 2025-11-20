@@ -1,13 +1,14 @@
 from __future__ import annotations
+from ...protocol import FileOperationFilter
+from ...protocol import FileOperationPatternKind
+from ...protocol import FileOperationRegistrationOptions
+from ...protocol import ServerCapabilities
+from ...protocol import TextDocumentSyncKind
+from ...protocol import TextDocumentSyncOptions
 from .collections import DottedDict
+from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .protocol import FileOperationFilter
-from .protocol import FileOperationPatternKind
-from .protocol import FileOperationRegistrationOptions
-from .protocol import TextDocumentSyncKind
-from .protocol import ServerCapabilities
-from .protocol import TextDocumentSyncOptions
 from .url import filename_to_uri
 from .url import parse_uri
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
@@ -45,8 +46,10 @@ def basescope2languageid(base_scope: str) -> str:
     result = ""
     # Try to find exact match or less specific match consisting of at least 2 components.
     scope_parts = base_scope.split('.')
+    # TODO: remove base_scope_map in the next minor release
+    language_map = {**LANGUAGE_IDENTIFIERS, **base_scope_map.to_dict()}
     while len(scope_parts) >= 2:
-        result = base_scope_map.get('.'.join(scope_parts))
+        result = language_map.get('.'.join(scope_parts))
         if result:
             break
         scope_parts.pop()
@@ -880,10 +883,12 @@ class ClientConfig:
         view.erase_status(self.status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
+        from .sessions import get_plugin
         syntax = view.syntax()
         if not syntax:
             return False
-        selector = self.selector.strip()
+        plugin = get_plugin(self.name)
+        selector = plugin.selector(view, self).strip() if plugin else self.selector.strip()
         if not selector:
             return False
         return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
@@ -943,18 +948,6 @@ class ClientConfig:
         return True
 
 
-def syntax2scope(syntax_path: str) -> str | None:
-    syntax = sublime.syntax_from_path(syntax_path)
-    return syntax.scope if syntax else None
-
-
-def view2scope(view: sublime.View) -> str:
-    try:
-        return view.scope_name(0).split()[0]
-    except IndexError:
-        return ''
-
-
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
     # Best base scenario,
     selector = config.get("selector")
@@ -997,8 +990,7 @@ def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
                 selectors.append(syntax.scope)
         return "|".join(selectors)
     # No syntaxes and no document_selector... then there must exist a languageId.
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 
@@ -1037,8 +1029,7 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(scopes, list):
         return "|".join(map("({})".format, scopes))
     # No scopes and no feature_selector... then there must exist a languageId
-    language_id = config.get("languageId")
-    if language_id:
+    if language_id := config.get("languageId"):
         return f"source.{language_id}"
     return ""
 

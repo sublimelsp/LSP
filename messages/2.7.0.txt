@@ -1,0 +1,33 @@
+=> 2.6.0
+
+# Features
+
+- Add support to open unsaved buffers with VSCode-specific 'untitled' scheme (#2667) (jwortmann)
+- Add on_selection_modified_async API method (#2657) (jwortmann)
+
+# Fixes
+
+- Purge changes before triggering formatting (#2680) (Rafał Chłodnicki)
+- Request each code action kind separately during save (#2674) (Rafał Chłodnicki)
+- Fix code lenses with dynamic registration (#2666) (jwortmann)
+- Ensure ShowMessage request popup is shown inside the viewport area (#2668) (jwortmann)
+- Fix another case of outdated diagnostics (#2654) (Rafał Chłodnicki)
+- Consider dynamic registration when checking for capabilities (#2652) (jwortmann)
+- Ensure document state is synced before requesting diagnostics (#2648) (Rafał Chłodnicki)
+
+# Enhancements
+
+- Add helm language id (#2679) (Предраг Николић)
+- Add scope for new semantic token type 'label' (#2659) (jwortmann)
+
+# Refactors
+
+- Refactor code lenses (#2677) (jwortmann)
+- Move protocol types to separate folder (#2660) (jwortmann)
+- Use predefined constants in language ID mapping (#2658) (jwortmann)
+
+# Documentation
+
+- Reorganize PostgreSQL section in language_servers.md (#2675) (Предраг Николић)
+- Add instructions for PostgresSQL (#2669) (Olivier Le Moal)
+- Update instructions for Typst (#2644) (jwortmann)

@@ -5,6 +5,7 @@ docs/ export-ignore
 icons/convert.bat export-ignore
 icons/*.svg export-ignore
 mypy.ini export-ignore
+renovate.json export-ignore
 stubs/ export-ignore
 tests/ export-ignore
 tox.ini export-ignore

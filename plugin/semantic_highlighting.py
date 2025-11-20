@@ -57,9 +57,8 @@ class LspShowScopeNameCommand(LspTextCommand):
             )
 
     def _get_semantic_info(self, point: int) -> tuple[str, str]:
-        session = self.best_session('semanticTokensProvider')
         session_buffer = None
-        if session:
+        if session := self.best_session('semanticTokensProvider'):
             for sv in session.session_views_async():
                 if self.view == sv.view:
                     session_buffer = sv.session_buffer
@@ -219,8 +218,7 @@ class LspShowScopeNameCommand(LspTextCommand):
 
     def on_navigate(self, link: str) -> None:
         if link.startswith('o:'):
-            window = self.view.window()
-            if window:
+            if window := self.view.window():
                 window.run_command('open_file', {'file': link[2:], 'encoded_position': True})
         else:
             copy(self.view, link[2:])

@@ -1,6 +1,73 @@
 from __future__ import annotations
+from ...protocol import ApplyWorkspaceEditParams
+from ...protocol import ClientCapabilities
+from ...protocol import CodeAction
+from ...protocol import CodeActionKind
+from ...protocol import Command
+from ...protocol import CompletionItemKind
+from ...protocol import CompletionItemTag
+from ...protocol import ConfigurationItem
+from ...protocol import ConfigurationParams
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticServerCancellationData
+from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
+from ...protocol import DidChangeWatchedFilesRegistrationOptions
+from ...protocol import DidChangeWorkspaceFoldersParams
+from ...protocol import DocumentDiagnosticReportKind
+from ...protocol import DocumentLink
+from ...protocol import DocumentUri
+from ...protocol import ErrorCodes
+from ...protocol import ExecuteCommandParams
+from ...protocol import FailureHandlingKind
+from ...protocol import FileEvent
+from ...protocol import FileSystemWatcher
+from ...protocol import FoldingRangeKind
+from ...protocol import GeneralClientCapabilities
+from ...protocol import InitializeError
+from ...protocol import InitializeParams
+from ...protocol import InitializeResult
+from ...protocol import InsertTextMode
+from ...protocol import Location
+from ...protocol import LocationLink
+from ...protocol import LogMessageParams
+from ...protocol import LSPAny
+from ...protocol import LSPErrorCodes
+from ...protocol import LSPObject
+from ...protocol import MarkupKind
+from ...protocol import PrepareSupportDefaultBehavior
+from ...protocol import PreviousResultId
+from ...protocol import ProgressParams
+from ...protocol import ProgressToken
+from ...protocol import PublishDiagnosticsParams
+from ...protocol import Range
+from ...protocol import RegistrationParams
+from ...protocol import SemanticTokenModifiers
+from ...protocol import SemanticTokenTypes
+from ...protocol import ShowDocumentParams
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
+from ...protocol import SymbolKind
+from ...protocol import SymbolTag
+from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentSyncKind
+from ...protocol import TextEdit
+from ...protocol import TokenFormat
+from ...protocol import UnregistrationParams
+from ...protocol import WindowClientCapabilities
+from ...protocol import WorkDoneProgressBegin
+from ...protocol import WorkDoneProgressCreateParams
+from ...protocol import WorkDoneProgressEnd
+from ...protocol import WorkDoneProgressReport
+from ...protocol import WorkspaceClientCapabilities
+from ...protocol import WorkspaceDiagnosticParams
+from ...protocol import WorkspaceDiagnosticReport
+from ...protocol import WorkspaceDocumentDiagnosticReport
+from ...protocol import WorkspaceEdit
+from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
 from .constants import SEMANTIC_TOKENS_MAP
+from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
@@ -19,70 +86,12 @@ from .open import open_file
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import ClientCapabilities
-from .protocol import CodeAction, CodeActionKind
-from .protocol import CodeLensExtended
-from .protocol import Command
-from .protocol import CompletionItemKind
-from .protocol import CompletionItemTag
-from .protocol import Diagnostic
-from .protocol import DiagnosticServerCancellationData
-from .protocol import DiagnosticSeverity
-from .protocol import DiagnosticTag
-from .protocol import DidChangeWatchedFilesRegistrationOptions
-from .protocol import DidChangeWorkspaceFoldersParams
-from .protocol import DocumentDiagnosticReportKind
-from .protocol import DocumentLink
-from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import ErrorCodes
-from .protocol import ExecuteCommandParams
-from .protocol import FailureHandlingKind
-from .protocol import FileEvent
-from .protocol import FoldingRangeKind
-from .protocol import GeneralClientCapabilities
-from .protocol import InitializeError
-from .protocol import InitializeParams
-from .protocol import InitializeResult
-from .protocol import InsertTextMode
-from .protocol import Location
-from .protocol import LocationLink
-from .protocol import LogMessageParams
-from .protocol import LSPAny
-from .protocol import LSPErrorCodes
-from .protocol import LSPObject
-from .protocol import MarkupKind
 from .protocol import Notification
-from .protocol import PrepareSupportDefaultBehavior
-from .protocol import PreviousResultId
-from .protocol import ProgressParams
-from .protocol import ProgressToken
-from .protocol import PublishDiagnosticsParams
-from .protocol import RegistrationParams
-from .protocol import Range
 from .protocol import Request
+from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
-from .protocol import SemanticTokenModifiers
-from .protocol import SemanticTokenTypes
-from .protocol import SymbolKind
-from .protocol import SymbolTag
-from .protocol import TextDocumentClientCapabilities
-from .protocol import TextDocumentSyncKind
-from .protocol import TextEdit
-from .protocol import TokenFormat
-from .protocol import UnregistrationParams
-from .protocol import WindowClientCapabilities
-from .protocol import WorkDoneProgressBegin
-from .protocol import WorkDoneProgressCreateParams
-from .protocol import WorkDoneProgressEnd
-from .protocol import WorkDoneProgressReport
-from .protocol import WorkspaceClientCapabilities
-from .protocol import WorkspaceDiagnosticParams
-from .protocol import WorkspaceDiagnosticReport
-from .protocol import WorkspaceDocumentDiagnosticReport
-from .protocol import WorkspaceFullDocumentDiagnosticReport
-from .protocol import WorkspaceEdit
 from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
@@ -104,8 +113,8 @@ from .url import parse_uri
 from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
-from .views import get_storage_path
 from .views import get_uri_and_range_from_location
+from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -114,14 +123,21 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from typing import Any, Callable, Generator, List, Protocol, TypeVar
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
 import functools
+import itertools
 import mdpopups
 import os
 import sublime
 import weakref
+
+
+if TYPE_CHECKING:
+    from .active_request import ActiveRequest
+
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
@@ -167,8 +183,9 @@ def decode_semantic_token(
     """
 
     token_type = types_legend[token_type_encoded]
-    token_modifiers = [modifiers_legend[idx]
-                       for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"]
+    token_modifiers = [
+        modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
+    ]
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
     if token_type in tokens_scope_map_dict:
@@ -207,6 +224,13 @@ class Manager(metaclass=ABCMeta):
     def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
         """
         Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_session(self, config_name: str, file_path: str) -> Session | None:
+        """
+        Gets the session by name and file path.
         """
         raise NotImplementedError()
 
@@ -529,7 +553,10 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
     if get_file_watcher_implementation():
-        workspace_capabilites["didChangeWatchedFiles"] = {"dynamicRegistration": True}
+        workspace_capabilites["didChangeWatchedFiles"] = {
+            "dynamicRegistration": True,
+            "relativePatternSupport": True
+        }
     return {
         "processId": os.getpid(),
         "clientInfo": {
@@ -560,6 +587,10 @@ class SessionViewProtocol(Protocol):
 
     @property
     def session_buffer(self) -> SessionBufferProtocol:
+        ...
+
+    @property
+    def active_requests(self) -> dict[int, ActiveRequest]:
         ...
 
     def get_uri(self) -> DocumentUri | None:
@@ -595,16 +626,13 @@ class SessionViewProtocol(Protocol):
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         ...
 
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLensExtended, None, None]:
+    def get_code_lenses_for_region(self, region: sublime.Region) -> list[Command]:
         ...
 
-    def start_code_lenses_async(self) -> None:
+    def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:
         ...
 
     def clear_code_lenses_async(self) -> None:
-        ...
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
     def reset_show_definitions(self) -> None:
@@ -625,7 +653,11 @@ class SessionBufferProtocol(Protocol):
         ...
 
     @property
-    def version(self) -> int | None:
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
+        ...
+
+    @property
+    def last_synced_version(self) -> int:
         ...
 
     def get_uri(self) -> str | None:
@@ -664,7 +696,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
@@ -692,12 +724,16 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = ..., *, forced_update: bool = ...
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
     def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
+        ...
+
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        ...
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
         ...
 
 
@@ -764,10 +800,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_code_lens_capability_registered_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -868,6 +900,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
+    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
+        """
+        Override the default selector used to determine whether server should run on the given view.
+
+        :param      view:             The view
+        :param      config:           The config
+        """
+        return config.selector
+
+    @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
         """
         In addition to the above variables, add more variables here to be expanded.
@@ -897,7 +939,7 @@ class AbstractPlugin(metaclass=ABCMeta):
                 return os.path.join(cls.storage_path(), cls.name())
         ```
         """
-        return get_storage_path()
+        return ST_STORAGE_PATH
 
     @classmethod
     def needs_update_or_installation(cls) -> bool:
@@ -1006,7 +1048,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_workspace_configuration(self, params: dict, configuration: Any) -> Any:
+    def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
@@ -1067,22 +1109,29 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
+    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
         invoke the passed-in callback some time.
 
         The arguments of the provided callback work as follows:
 
-        - The first argument is the title of the view that will be populated with the content of a new scratch view
-        - The second argument is the content of the view
-        - The third argument is the syntax to apply for the new view
+        - The first argument is the title of the view that will be populated with the content of a new scratch view.
+          If `None` is passed, no new view will be opened and the other arguments are ignored.
+        - The second argument is the content of the view.
+        - The third argument is the syntax to apply for the new view.
         """
         return False
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """
         Called when the context of the session buffer has changed or a new buffer was opened.
+        """
+        pass
+
+    def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
+        """
+        Called after the selection has been modified in a view (debounced).
         """
         pass
 
@@ -1305,6 +1354,8 @@ class Session(TransportCallbacks):
         self._plugin: AbstractPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
+        self._is_executing_refactoring_command = False
+        self._logged_unsupported_commands: set[str] = set()
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1322,6 +1373,10 @@ class Session(TransportCallbacks):
 
     def uses_plugin(self) -> bool:
         return self._plugin is not None
+
+    @property
+    def plugin(self) -> AbstractPlugin | None:
+        return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
 
@@ -1380,14 +1435,13 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb)
-        uri = sb.get_uri()
-        if uri:
+        if uri := sb.get_uri():
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:
-                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version=None)
+                self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -1449,16 +1503,24 @@ class Session(TransportCallbacks):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
-            sv = self.session_view_for_view_async(view)
-            if sv:
+            if sv := self.session_view_for_view_async(view):
                 return sv.has_capability_async(capability)
             else:
                 return self.has_capability(capability)
         return False
 
-    def has_capability(self, capability: str) -> bool:
+    def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
+        """
+        Check whether this `Session` has the given `capability`. If `check_views` is set to `True`, this includes
+        capabilities from dynamic registration restricted to certain views if at least one such view is open and matches
+        the corresponding `DocumentSelector`.
+        """
         value = self.get_capability(capability)
-        return value is not False and value is not None
+        if value is not False and value is not None:
+            return True
+        if check_views:
+            return any(sb.has_capability(capability) for sb in self.session_buffers_async())
+        return False
 
     def get_capability(self, capability: str) -> Any | None:
         if self.config.is_disabled_capability(capability):
@@ -1563,22 +1625,17 @@ class Session(TransportCallbacks):
             self._plugin.on_server_response_async('initialize', Response(-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
-        execute_commands = self.get_capability('executeCommandProvider.commands')
-        if execute_commands:
+        if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
-        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
-        if code_action_kinds:
+        if code_action_kinds := self.get_capability('codeActionProvider.codeActionKinds'):
             debug(f'{self.config.name}: supported code action kinds: {code_action_kinds}')
-        semantic_token_types = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes'))
-        if semantic_token_types:
+        if semantic_token_types := self.get_capability('semanticTokensProvider.legend.tokenTypes'):
             debug(f'{self.config.name}: Supported semantic token types: {semantic_token_types}')
-        semantic_token_modifiers = cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers'))
-        if semantic_token_modifiers:
+        if semantic_token_modifiers := self.get_capability('semanticTokensProvider.legend.tokenModifiers'):
             debug(f'{self.config.name}: Supported semantic token modifiers: {semantic_token_modifiers}')
         if self._watcher_impl:
             config = self.config.file_watcher
-            patterns = config.get('patterns')
-            if patterns:
+            if patterns := config.get('patterns'):
                 events = config.get('events') or ['create', 'change', 'delete']
                 for folder in self.get_workspace_folders():
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
@@ -1610,8 +1667,7 @@ class Session(TransportCallbacks):
         return folder_excludes + file_excludes + ['**/node_modules/**']
 
     def call_manager(self, method: str, *args: Any) -> None:
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             getattr(mgr, method)(*args)
 
     def on_stderr_message(self, message: str) -> None:
@@ -1632,13 +1688,13 @@ class Session(TransportCallbacks):
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
         if self._plugin_class is not None:
-            extra_vars = self._plugin_class.additional_variables()
-            if extra_vars:
+            if extra_vars := self._plugin_class.additional_variables():
                 variables.update(extra_vars)
         return variables
 
     def execute_command(
-        self, command: ExecuteCommandParams, progress: bool, view: sublime.View | None = None
+        self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
+        is_refactoring: bool = False,
     ) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
@@ -1666,13 +1722,25 @@ class Session(TransportCallbacks):
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
         # TODO: Our Promise class should be able to handle errors/exceptions
-        return Promise(
+        execute_command = Promise(
             lambda resolve: self.send_request(
                 Request("workspace/executeCommand", command, None, progress),
                 resolve,
                 lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
+        if is_refactoring:
+            self._is_executing_refactoring_command = True
+            execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
+        return execute_command
+
+    def _reset_is_executing_refactoring_command(self) -> None:
+        self._is_executing_refactoring_command = False
+
+    def check_log_unsupported_command(self, command: str) -> None:
+        if userprefs().log_debug and command not in self._logged_unsupported_commands:
+            self._logged_unsupported_commands.add(command)
+            debug(f'{self.config.name}: unsupported command: {command}')
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
@@ -1685,7 +1753,8 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params, progress, view)
+            is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
+            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1703,12 +1772,25 @@ class Session(TransportCallbacks):
         if uri.startswith("file:"):
             return self._open_file_uri_async(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
+        if sb := self.get_session_buffer_for_uri_async(uri):
             view = sb.get_view_in_group(group)
             self.window.focus_view(view)
             if r:
                 center_selection(view, r)
+            return Promise.resolve(view)
+        if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+            if name := uri[len('untitled:'):]:
+                # Check if there is a pre-existing unsaved buffer with the given name
+                for view in self.window.views():
+                    if view.file_name() is None and view.name() == name:
+                        self.window.focus_view(view)
+                        return Promise.resolve(view)
+                view = self.window.new_file()
+                view.set_scratch(True)
+                view.set_name(name)
+                return Promise.resolve(view)
+            view = self.window.new_file()
+            view.set_scratch(True)
             return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
@@ -1751,28 +1833,31 @@ class Session(TransportCallbacks):
         group: int,
     ) -> Promise[sublime.View | None] | None:
         # I cannot type-hint an unpacked tuple
-        pair: PackagedTask[tuple[str, str, str]] = Promise.packaged_task()
+        pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
-            def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
-                if group > -1:
-                    self.window.focus_group(group)
-                v = self.window.new_file(syntax=syntax, flags=flags)
-                # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                # settings object here at our leisure.
-                v.settings().set("lsp_uri", uri)
-                v.set_scratch(True)
-                v.set_name(title)
-                v.run_command("append", {"characters": content})
-                v.set_read_only(True)
-                if r:
-                    center_selection(v, r)
-                sublime.set_timeout_async(lambda: result[1](v))
+            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
+                if title is not None:
+                    if group > -1:
+                        self.window.focus_group(group)
+                    view = self.window.new_file(syntax=syntax, flags=flags)
+                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+                    # settings object here at our leisure.
+                    view.settings().set("lsp_uri", uri)
+                    view.set_scratch(True)
+                    view.set_name(title)
+                    view.run_command("append", {"characters": content})
+                    view.set_read_only(True)
+                    if r:
+                        center_selection(view, r)
+                    sublime.set_timeout_async(lambda: result[1](view))
+                else:
+                    sublime.set_timeout_async(lambda: result[1](None))
 
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
+            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
             return result[0]
         return None
 
@@ -1795,8 +1880,7 @@ class Session(TransportCallbacks):
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
-                session_view = self.session_view_for_view_async(view)
-                if session_view:
+                if session_view := self.session_view_for_view_async(view):
                     has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
             if has_capability:
                 # We must first resolve the command and edit properties, because they can potentially be absent.
@@ -1814,7 +1898,7 @@ class Session(TransportCallbacks):
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
         edit = code_action.get("edit")
-        is_refactoring = code_action.get('kind') == CodeActionKind.Refactor
+        is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
         promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
@@ -1824,7 +1908,8 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view))
+            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view,
+                                                               is_refactoring=is_refactoring))
         return promise
 
     def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
@@ -1832,6 +1917,7 @@ class Session(TransportCallbacks):
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
+        is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
@@ -1869,8 +1955,7 @@ class Session(TransportCallbacks):
         scheme, filepath = parse_uri(uri)
         if scheme != 'file':
             return ViewStateActions.NONE  # Can't save or close unsafed buffers (and other schemes) without user dialog
-        view = self.window.find_open_file(filepath)
-        if view:
+        if view := self.window.find_open_file(filepath):
             is_opened = True
             is_dirty = view.is_dirty()
         else:
@@ -1954,8 +2039,7 @@ class Session(TransportCallbacks):
             if result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        identifier = self.get_capability("diagnosticProvider.identifier")
-        if identifier:
+        if identifier := self.get_capability("diagnosticProvider.identifier"):
             params['identifier'] = identifier
         self.workspace_diagnostics_pending_response = self.send_request_async(
             Request.workspaceDiagnostic(params),
@@ -1990,7 +2074,7 @@ class Session(TransportCallbacks):
             # results are expected to be streamed by the server.
             if isinstance(version, int):
                 sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.version != version:
+                if sb and sb.last_synced_version != version:
                     continue
             self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
@@ -2014,11 +2098,11 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
+    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: Any) -> None:
         """handles the window/showMessageRequest request"""
         self.call_manager('handle_message_request', self, params, request_id)
 
-    def m_window_showMessage(self, params: Any) -> None:
+    def m_window_showMessage(self, params: ShowMessageParams) -> None:
         """handles the window/showMessage notification"""
         self.call_manager('handle_show_message', self, params)
 
@@ -2026,11 +2110,11 @@ class Session(TransportCallbacks):
         """handles the window/logMessage notification"""
         self.call_manager('handle_log_message', self, params)
 
-    def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
+    def m_workspace_workspaceFolders(self, params: None, request_id: Any) -> None:
         """handles the workspace/workspaceFolders request"""
         self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def m_workspace_configuration(self, params: dict[str, Any], request_id: Any) -> None:
+    def m_workspace_configuration(self, params: ConfigurationParams, request_id: Any) -> None:
         """handles the workspace/configuration request"""
         items: list[Any] = []
         requested_items = params.get("items") or []
@@ -2042,22 +2126,21 @@ class Session(TransportCallbacks):
                 items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
-    def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
+    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
         self.apply_workspace_edit_async(params.get('edit', {})) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
-    def m_workspace_codeLens_refresh(self, _: Any, request_id: Any) -> None:
+    def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/codeLens/refresh request"""
         self.send_response(Response(request_id, None))
-        if self.uses_plugin():
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                sv.start_code_lenses_async()
-            for sv in not_visible_session_views:
-                sv.set_code_lenses_pending_refresh()
+        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+        for sv in visible_session_views:
+            sv.session_buffer.do_code_lenses_async(sv.view)
+        for sv in not_visible_session_views:
+            sv.session_buffer.set_code_lenses_pending_refresh()
 
-    def m_workspace_semanticTokens_refresh(self, params: Any, request_id: Any) -> None:
+    def m_workspace_semanticTokens_refresh(self, params: None, request_id: Any) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2080,7 +2163,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view, forced_update=True)
+            sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
 
@@ -2092,13 +2175,14 @@ class Session(TransportCallbacks):
         uri = params["uri"]
         reason = mgr.should_ignore_diagnostics(uri, self.config)
         if isinstance(reason, str):
-            return debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
+            return
         diagnostics = params["diagnostics"]
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
-        sb = self.get_session_buffer_for_uri_async(uri)
-        if sb:
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
+        if sb := self.get_session_buffer_for_uri_async(uri):
+            version = params.get('version', sb.last_synced_version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""
@@ -2129,20 +2213,9 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
-            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
-                capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
-                file_watchers: list[FileWatcher] = []
-                for config in capability_options.get("watchers", []):
-                    pattern = config.get("globPattern", '')
-                    if not isinstance(pattern, str):
-                        print('LSP: Relative glob patterns are not supported in File Watcher yet.')
-                        continue
-                    kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
-                    for folder in self.get_workspace_folders():
-                        ignores = self._get_global_ignore_globs(folder.path)
-                        watcher = self._watcher_impl.create(folder.path, [pattern], kind, ignores, self)
-                        file_watchers.append(watcher)
-                self._dynamic_file_watchers[registration_id] = file_watchers
+            if capability_path == "didChangeWatchedFilesProvider":
+                capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
+                self.register_file_system_watchers(registration_id, capability_options['watchers'])
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
@@ -2153,11 +2226,8 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
-            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
-                file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
-                if file_watchers:
-                    for file_watcher in file_watchers:
-                        file_watcher.destroy()
+            if capability_path == "didChangeWatchedFilesProvider":
+                self.unregister_file_system_watchers(registration_id)
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -2167,7 +2237,32 @@ class Session(TransportCallbacks):
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
 
-    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+    def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
+        if not self._watcher_impl:
+            return
+        self.unregister_file_system_watchers(registration_id)
+        file_watchers: list[FileWatcher] = []
+        for config in watchers:
+            kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
+            glob_pattern = config["globPattern"]
+            if isinstance(glob_pattern, str):
+                for folder in self.get_workspace_folders():
+                    ignores = self._get_global_ignore_globs(folder.path)
+                    file_watchers.append(self._watcher_impl.create(folder.path, [glob_pattern], kind, ignores, self))
+            else:  # RelativePattern
+                pattern = glob_pattern["pattern"]
+                base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
+                _, base_path = parse_uri(base if isinstance(base, str) else base["uri"])
+                ignores = self._get_global_ignore_globs(base_path)
+                file_watchers.append(self._watcher_impl.create(base_path, [pattern], kind, ignores, self))
+        self._dynamic_file_watchers[registration_id] = file_watchers
+
+    def unregister_file_system_watchers(self, registration_id: str) -> None:
+        if file_watchers := self._dynamic_file_watchers.pop(registration_id, None):
+            for file_watcher in file_watchers:
+                file_watcher.destroy()
+
+    def m_window_showDocument(self, params: ShowDocumentParams, request_id: Any) -> None:
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
@@ -2193,8 +2288,7 @@ class Session(TransportCallbacks):
 
     def _invoke_views(self, request: Request, method: str, *args: Any) -> None:
         if request.view:
-            sv = self.session_view_for_view_async(request.view)
-            if sv:
+            if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
         else:
             for sv in self.session_views_async():
@@ -2287,9 +2381,8 @@ class Session(TransportCallbacks):
         for watcher in self._static_file_watchers:
             watcher.destroy()
         self._static_file_watchers = []
-        for watchers in self._dynamic_file_watchers.values():
-            for watcher in watchers:
-                watcher.destroy()
+        for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
+            watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
@@ -2308,8 +2401,7 @@ class Session(TransportCallbacks):
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
-        mgr = self.manager()
-        if mgr:
+        if mgr := self.manager():
             if self._init_callback:
                 self._init_callback(self, True)
                 self._init_callback = None

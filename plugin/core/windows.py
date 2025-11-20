@@ -1,9 +1,15 @@
 from __future__ import annotations
+from ...protocol import DocumentUri
+from ...protocol import LogMessageParams
+from ...protocol import MessageType
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
+from .constants import MESSAGE_TYPE_LEVELS
 from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
@@ -13,10 +19,7 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
-from .protocol import DocumentUri
 from .protocol import Error
-from .protocol import LogMessageParams
-from .protocol import MessageType
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -54,10 +57,6 @@ if TYPE_CHECKING:
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
-
-
-def extract_message(params: Any) -> str:
-    return params.get("message", "???") if isinstance(params, dict) else "???"
 
 
 def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> None:
@@ -163,7 +162,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
                     # debug("listener", listener, "is no longer valid")
-                    return self._dequeue_listener_async()
+                    self._dequeue_listener_async()
+                    return
                 # debug("adding new pending listener", listener)
                 self._listeners.add(listener)
             except IndexError:
@@ -178,8 +178,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 self._sessions.discard(self._new_session)
                 self._new_session.end_async()
             self._new_session = None
-        config = self._needed_config(listener.view)
-        if config:
+        if config := self._needed_config(listener.view):
             # debug("found new config for listener", listener)
             self._new_listener = listener
             self.start_async(config, listener.view)
@@ -269,7 +268,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     # Continue with handling pending listeners
                     self._new_session = None
                     sublime.set_timeout_async(self._dequeue_listener_async)
-                    return self._window.status_message(message)
+                    self._window.status_message(message)
+                    return
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
@@ -336,22 +336,20 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
-        view = self._window.active_view()
-        if view:
+    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
+        if view := self._window.active_view():
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
-    def restart_sessions_async(self, config_name: str | None = None) -> None:
-        self._end_sessions_async(config_name)
+    def restart_sessions_async(self, config_names: list[str]) -> None:
+        self._end_sessions_async(config_names)
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def _end_sessions_async(self, config_name: str | None = None) -> None:
-        sessions = list(self._sessions)
-        for session in sessions:
-            if config_name is None or config_name == session.config.name:
+    def _end_sessions_async(self, config_names: list[str] | None = None) -> None:
+        for session in list(self._sessions):
+            if config_names is None or session.config.name in config_names:
                 session.end_async()
                 self._sessions.discard(session)
 
@@ -421,13 +419,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         if not userprefs().log_debug:
             return
         message_type = params['type']
-        level = {
-            MessageType.Error: "ERROR",
-            MessageType.Warning: "WARNING",
-            MessageType.Info: "INFO",
-            MessageType.Log: "LOG",
-            MessageType.Debug: "DEBUG"
-        }.get(message_type, "?")
+        level = MESSAGE_TYPE_LEVELS[message_type]
         message = params['message']
         print(f"{session.config.name}: {level}: {message}")
         if message_type == MessageType.Error:
@@ -456,8 +448,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: Any) -> None:
-        sublime.status_message(f"{session.config.name}: {extract_message(params)}")
+    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
+        level = MESSAGE_TYPE_LEVELS[params['type']]
+        message = params['message']
+        msg = f"{session.config.name}: {level}: {message}"
+        debug(msg)
+        self.window.status_message(msg)
 
     def on_diagnostics_updated(self) -> None:
         self.total_error_count = 0
@@ -515,8 +511,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     # --- Implements WindowConfigChangeListener ------------------------------------------------------------------------
 
-    def on_configs_changed(self, config_name: str | None = None) -> None:
-        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_name))
+    def on_configs_changed(self, configs: list[ClientConfig]) -> None:
+        config_names = [config.name for config in configs]
+        sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
 
 
 class WindowRegistry(LspSettingsChangeListener):
@@ -543,8 +540,7 @@ class WindowRegistry(LspSettingsChangeListener):
     def lookup(self, window: sublime.Window | None) -> WindowManager | None:
         if not self._enabled or not window or not window.is_valid():
             return None
-        wm = self._windows.get(window.id())
-        if wm:
+        if wm := self._windows.get(window.id()):
             return wm
         workspace = ProjectFolders(window)
         window_config_manager = WindowConfigManager(window, client_configs.all)
@@ -553,14 +549,12 @@ class WindowRegistry(LspSettingsChangeListener):
         return manager
 
     def listener_for_view(self, view: sublime.View) -> AbstractViewListener | None:
-        manager = self.lookup(view.window())
-        if not manager:
-            return None
-        return manager.listener_for_view(view)
+        if manager := self.lookup(view.window()):
+            return manager.listener_for_view(view)
+        return None
 
     def discard(self, window: sublime.Window) -> None:
-        wm = self._windows.pop(window.id(), None)
-        if wm:
+        if wm := self._windows.pop(window.id(), None):
             sublime.set_timeout_async(wm.destroy)
 
     # --- Implements LspSettingsChangeListener -------------------------------------------------------------------------

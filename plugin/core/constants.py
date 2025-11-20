@@ -1,10 +1,13 @@
 from __future__ import annotations
-from .protocol import CodeActionKind
-from .protocol import CompletionItemKind
-from .protocol import DiagnosticSeverity
-from .protocol import DocumentHighlightKind
-from .protocol import SymbolKind
+from ...protocol import CodeActionKind
+from ...protocol import CompletionItemKind
+from ...protocol import DiagnosticSeverity
+from ...protocol import DocumentHighlightKind
+from ...protocol import LanguageKind
+from ...protocol import MessageType
+from ...protocol import SymbolKind
 from .typing import StrEnum
+from os.path import dirname, join
 from typing import Tuple
 import sublime
 
@@ -17,6 +20,16 @@ ST_INSTALLED_PACKAGES_PATH = sublime.installed_packages_path()
 ST_PACKAGES_PATH = sublime.packages_path()
 ST_PLATFORM = sublime.platform()
 ST_VERSION = int(sublime.version())
+ST_STORAGE_PATH = join(dirname(ST_CACHE_PATH), "Package Storage")
+"""
+The "Package Storage" is a way to store server data without influencing the
+behavior of Sublime Text's "catalog". Its path is '$DATA/Package Storage',
+where $DATA means:
+
+- on macOS: ~/Library/Application Support/Sublime Text
+- on Windows: %LocalAppData%/Sublime Text
+- on Linux: ~/.cache/sublime-text
+"""
 
 
 class RegionKey(StrEnum):
@@ -161,6 +174,15 @@ DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
 }
 
 
+MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
+    MessageType.Error: "ERROR",
+    MessageType.Warning: "WARNING",
+    MessageType.Info: "INFO",
+    MessageType.Log: "LOG",
+    MessageType.Debug: "DEBUG"
+}
+
+
 # Symbol scope to kind mapping, based on https://github.com/sublimetext-io/docs.sublimetext.io/issues/30
 SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_KEYWORD: "keyword | storage.modifier | storage.type | keyword.declaration | variable.language | constant.language",  # noqa: E501
@@ -176,6 +198,47 @@ DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
+}
+
+# These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more
+# match any of the entries here, then the rule is that we split the base scope on the ".", and take the second
+# component. The resulting string is assumed to be the language ID. The official list is maintained at
+# https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
+LANGUAGE_IDENTIFIERS: dict[str, str] = {
+    "source.c++": LanguageKind.CPP,
+    "source.coffee": LanguageKind.Coffeescript,
+    "source.cs": LanguageKind.CSharp,
+    "source.dosbatch": LanguageKind.WindowsBat,
+    "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
+    "source.js": LanguageKind.JavaScript,
+    "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
+    "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
+    "source.json.sublime": "jsonc",  # https://github.com/SublimeText/PackageDev
+    "source.jsx": LanguageKind.JavaScriptReact,
+    "source.Kotlin": "kotlin",  # https://github.com/vkostyukov/kotlin-sublime-package
+    "source.modern-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
+    "source.objc": LanguageKind.ObjectiveC,
+    "source.objc++": LanguageKind.ObjectiveCPP,
+    "source.shader": LanguageKind.ShaderLab,  # https://github.com/waqiju/unity_shader_st3
+    "source.shell": LanguageKind.ShellScript,
+    "source.ts": LanguageKind.TypeScript,
+    "source.ts.react": LanguageKind.TypeScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
+    "source.tsx": LanguageKind.TypeScriptReact,
+    "source.unity.unity_shader": LanguageKind.ShaderLab,  # https://github.com/petereichinger/Unity3D-Shader
+    "source.yaml-tmlanguage": LanguageKind.YAML,  # https://github.com/SublimeText/PackageDev
+    "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
+    "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
+    "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
+    "text.html.handlebars": LanguageKind.Handlebars,
+    "text.html.markdown": LanguageKind.Markdown,
+    "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r
+    "text.html.rails": "erb",
+    "text.html.vue": "vue",
+    "text.jinja": LanguageKind.HTML,  # https://github.com/Sublime-Instincts/BetterJinja
+    "text.plain": "plaintext",
+    "text.plist": LanguageKind.XML,  # https://bitbucket.org/fschwehn/sublime_plist
+    "text.tex.latex": LanguageKind.LaTeX,
+    "text.xml.xsl": LanguageKind.XSL,
 }
 
 SEMANTIC_TOKENS_MAP = {
@@ -228,4 +291,5 @@ SEMANTIC_TOKENS_MAP = {
     "regexp": "string.regexp.lsp",
     "operator": "keyword.operator.lsp",
     "decorator": "variable.annotation.lsp",
+    "label": "entity.name.label.lsp",
 }

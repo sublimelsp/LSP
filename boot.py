@@ -56,6 +56,7 @@ from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hierarchy import LspCallHierarchyCommand
 from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.hover import LspCopyTextCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
@@ -102,6 +103,7 @@ __all__ = (
     "LspCollapseTreeItemCommand",
     "LspColorPresentationCommand",
     "LspCommitCompletionWithOppositeInsertMode",
+    "LspCopyTextCommand",
     "LspCopyToClipboardFromBase64Command",
     "LspDisableLanguageServerGloballyCommand",
     "LspDisableLanguageServerInProjectCommand",
@@ -203,7 +205,14 @@ def plugin_loaded() -> None:
     windows.enable()
     _register_all_plugins()
     client_configs.update_configs()
+    # TODO: remove this in the next minor release
+    base_scope_map = sublime.load_settings("language-ids.sublime-settings")
+    if base_scope_map.to_dict():
+        def show_warning():
+            print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")
+            sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")
 
+        sublime.set_timeout(show_warning, 5_000)
 
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
@@ -212,24 +221,23 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
+
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
-    def on_load_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_load_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_load_project_async()
 
-    def on_post_save_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_post_save_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_post_save_project_async()
 
-    def on_new_window_async(self, w: sublime.Window) -> None:
-        sublime.set_timeout(lambda: windows.lookup(w))
+    def on_new_window_async(self, window: sublime.Window) -> None:
+        sublime.set_timeout(lambda: windows.lookup(window))
 
-    def on_pre_close_window(self, w: sublime.Window) -> None:
-        windows.discard(w)
+    def on_pre_close_window(self, window: sublime.Window) -> None:
+        windows.discard(window)
 
     def on_pre_move(self, view: sublime.View) -> None:
         if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628

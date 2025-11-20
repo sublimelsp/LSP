@@ -307,15 +307,6 @@
                   "default": "[\n\t$0\n]\n",
                 }
               },
-              {
-                "caption": "Base Scope to Language ID Mapping",
-                "command": "edit_settings",
-                "args": {
-                  "base_file": "${packages}/LSP/language-ids.sublime-settings",
-                  "user_file": "${packages}/User/language-ids.sublime-settings",
-                  "default": "// SublimeText base scope -> LSP Language ID overrides\n{\n\t// \"source.mylanguage\": \"mylang\"\n\t$0\n}\n"
-                }
-              }
             ]
           }
         ]

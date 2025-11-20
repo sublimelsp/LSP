@@ -1,18 +1,18 @@
 from __future__ import annotations
+from ..protocol import DocumentSymbol
+from ..protocol import DocumentSymbolParams
+from ..protocol import Location
+from ..protocol import Range
+from ..protocol import SymbolInformation
+from ..protocol import SymbolKind
+from ..protocol import SymbolTag
+from ..protocol import WorkspaceSymbol
 from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
-from .core.protocol import DocumentSymbol
-from .core.protocol import DocumentSymbolParams
-from .core.protocol import Location
 from .core.protocol import Point
-from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import SymbolInformation
-from .core.protocol import SymbolKind
-from .core.protocol import SymbolTag
-from .core.protocol import WorkspaceSymbol
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
@@ -91,8 +91,7 @@ def symbol_to_list_input_item(
     deprecated = SymbolTag.Deprecated in (item.get('tags') or []) or item.get('deprecated', False)
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
-    selection_range = item.get('selectionRange')
-    if selection_range:  # Response from textDocument/documentSymbol request
+    if selection_range := item.get('selectionRange'):  # Response from textDocument/documentSymbol request
         item = cast(DocumentSymbol, item)
         detail = item.get('detail')
         if detail:
@@ -102,8 +101,7 @@ def symbol_to_list_input_item(
         value['range'] = selection_range
     elif session_name is None:  # Response from textDocument/documentSymbol request
         item = cast(SymbolInformation, item)
-        container_name = item.get('containerName')
-        if container_name:
+        if container_name := item.get('containerName'):
             details.append(container_name)
         value['range'] = item['location']['range']
     else:  # Response from workspace/symbol request
@@ -111,8 +109,7 @@ def symbol_to_list_input_item(
         details_separator = " > "
         location = item['location']
         details.append(os.path.basename(location['uri']))
-        container_name = item.get('containerName')
-        if container_name:
+        if container_name := item.get('containerName'):
             details.append(container_name)
         if 'range' in location:
             value['location'] = location
@@ -176,14 +173,12 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         if index is None:
             if not self.has_matching_symbols:
                 self.has_matching_symbols = True
-                window = self.view.window()
-                if window:
+                if window := self.view.window():
                     kind_name = SYMBOL_KIND_NAMES.get(cast(SymbolKind, self.kind))
                     window.status_message(f'No symbols of kind "{kind_name}" in this file')
                 return
             self.kind = kind
-            session = self.best_session(self.capability)
-            if session:
+            if session := self.best_session(self.capability):
                 self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
                 params: DocumentSymbolParams = {"textDocument": text_document_identifier(self.view)}
                 session.send_request(
@@ -220,8 +215,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 for item in items:
                     self.items.append(symbol_to_list_input_item(item))
             self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
-            window = self.view.window()
-            if window:
+            if window := self.view.window():
                 self.cached = True
                 window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
 
@@ -282,8 +276,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
         self.last_selected = text
 
     def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
-        kind = args.get('kind')
-        if kind is not None:
+        if (kind := args.get('kind')) is not None:
             return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
 
 
@@ -336,10 +329,8 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     def run(self, symbol: WorkspaceSymbolValue) -> None:
         session_name = symbol['session']
-        session = self.session_by_name(session_name)
-        if session:
-            location = symbol.get('location')
-            if location:
+        if session := self.session_by_name(session_name):
+            if location := symbol.get('location'):
                 session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
             else:
                 session.send_request(
@@ -352,9 +343,8 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
         return None
 
     def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:
-        location = cast(Location, response['location'])
-        session = self.session_by_name(session_name)
-        if session:
+        if session := self.session_by_name(session_name):
+            location = cast(Location, response['location'])
             session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
 
 

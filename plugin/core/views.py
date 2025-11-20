@@ -1,44 +1,45 @@
 from __future__ import annotations
+from ...protocol import CodeAction
+from ...protocol import CodeActionContext
+from ...protocol import CodeActionKind
+from ...protocol import CodeActionParams
+from ...protocol import CodeActionTriggerKind
+from ...protocol import Color
+from ...protocol import ColorInformation
+from ...protocol import Command
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticRelatedInformation
+from ...protocol import DiagnosticSeverity
+from ...protocol import DidChangeTextDocumentParams
+from ...protocol import DidCloseTextDocumentParams
+from ...protocol import DidOpenTextDocumentParams
+from ...protocol import DidSaveTextDocumentParams
+from ...protocol import DocumentColorParams
+from ...protocol import DocumentUri
+from ...protocol import LanguageKind
+from ...protocol import Location
+from ...protocol import LocationLink
+from ...protocol import MarkedString
+from ...protocol import MarkupContent
+from ...protocol import Position
+from ...protocol import Range
+from ...protocol import SelectionRangeParams
+from ...protocol import TextDocumentContentChangeEvent
+from ...protocol import TextDocumentIdentifier
+from ...protocol import TextDocumentItem
+from ...protocol import TextDocumentPositionParams
+from ...protocol import TextDocumentSaveReason
+from ...protocol import VersionedTextDocumentIdentifier
+from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import ST_CACHE_PATH
+from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
 from .css import css as lsp_css
-from .protocol import CodeAction
-from .protocol import CodeActionContext
-from .protocol import CodeActionKind
-from .protocol import CodeActionParams
-from .protocol import CodeActionTriggerKind
-from .protocol import Color
-from .protocol import ColorInformation
-from .protocol import Command
-from .protocol import Diagnostic
-from .protocol import DiagnosticRelatedInformation
-from .protocol import DiagnosticSeverity
-from .protocol import DidChangeTextDocumentParams
-from .protocol import DidCloseTextDocumentParams
-from .protocol import DidOpenTextDocumentParams
-from .protocol import DidSaveTextDocumentParams
-from .protocol import DocumentColorParams
-from .protocol import DocumentUri
-from .protocol import LanguageKind
-from .protocol import Location
-from .protocol import LocationLink
-from .protocol import MarkedString
-from .protocol import MarkupContent
 from .protocol import Notification
 from .protocol import Point
-from .protocol import Position
-from .protocol import Range
 from .protocol import Request
-from .protocol import SelectionRangeParams
-from .protocol import TextDocumentContentChangeEvent
-from .protocol import TextDocumentIdentifier
-from .protocol import TextDocumentItem
-from .protocol import TextDocumentPositionParams
-from .protocol import TextDocumentSaveReason
-from .protocol import VersionedTextDocumentIdentifier
-from .protocol import WillSaveTextDocumentParams
 from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
@@ -95,8 +96,7 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
     '''
-    view = window.find_open_file(file_name)
-    if view:
+    if view := window.find_open_file(file_name):
         # get from buffer
         point = view.text_point(row, 0)
         line = view.substr(view.line(point))
@@ -107,21 +107,9 @@ def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = Tru
     return line.strip() if strip else line
 
 
-def get_storage_path() -> str:
-    """
-    The "Package Storage" is a way to store server data without influencing the behavior of Sublime Text's "catalog".
-    Its path is '$DATA/Package Storage', where $DATA means:
-
-    - on macOS: ~/Library/Application Support/Sublime Text
-    - on Windows: %LocalAppData%/Sublime Text
-    - on Linux: ~/.cache/sublime-text
-    """
-    return os.path.abspath(os.path.join(ST_CACHE_PATH, "..", "Package Storage"))
-
-
 def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables = window.extract_variables()
-    variables["storage_path"] = get_storage_path()
+    variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
     variables["home"] = os.path.expanduser('~')
@@ -594,8 +582,7 @@ def _replace_match(match: Any) -> str:
     special_match = match.group('special')
     if special_match:
         return REPLACEMENT_MAP[special_match]
-    url = match.group('url')
-    if url:
+    if url := match.group('url'):
         return f"<a href='{url}'>{url}</a>"
     return len(match.group('multispace')) * '&nbsp;'
 
@@ -633,6 +620,7 @@ def make_command_link(
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
+
     def run(self, view_id: int, command: str, args: dict[str, Any] | None = None) -> None:
         view = sublime.View(view_id)
         if view.is_valid():
@@ -843,8 +831,11 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
             meta_info += "({})".format(
                 make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
         html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    related_infos = diagnostic.get("relatedInformation")
-    if related_infos:
+    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip().replace(' ', ' ')
+    html += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
+        'lsp_copy_text', {'text': copy_text}
+    )}'>⧉</a>"""
+    if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
@@ -864,3 +855,16 @@ def format_code_actions_for_quick_panel(
         if code_action.get('isPreferred', False):
             selected_index = idx
     return items, selected_index
+
+
+def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
+    """
+    Check if `other_kind` is a sub-kind of `kind`.
+
+    The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.
+    """
+    if kind == other_kind:
+        return True
+    kind_len = len(kind)
+    return len(other_kind) > kind_len and other_kind.startswith(kind + '.')

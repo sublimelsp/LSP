@@ -278,7 +278,6 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.root_path, '/a/c')
 
 
-
 class PatternToGlobTests(unittest.TestCase):
 
     def test_basic_directory_patterns(self):

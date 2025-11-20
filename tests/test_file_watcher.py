@@ -11,9 +11,12 @@ from LSP.protocol import WatchKind
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 import sublime
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import DidChangeWatchedFilesRegistrationOptions
 
 
 def setup_workspace_folder() -> str:
@@ -33,7 +36,7 @@ def setup_workspace_folder() -> str:
 class TestFileWatcher(FileWatcher):
 
     # The list of watchers created by active sessions.
-    _active_watchers: list[TestFileWatcher] = []
+    active_watchers: list[TestFileWatcher] = []
 
     @classmethod
     def create(
@@ -45,7 +48,7 @@ class TestFileWatcher(FileWatcher):
         handler: FileWatcherProtocol
     ) -> TestFileWatcher:
         watcher = TestFileWatcher(root_path, patterns, events, ignores, handler)
-        cls._active_watchers.append(watcher)
+        cls.active_watchers.append(watcher)
         return watcher
 
     def __init__(
@@ -64,7 +67,7 @@ class TestFileWatcher(FileWatcher):
 
     def destroy(self) -> None:
         self.handler = None
-        self._active_watchers.remove(self)
+        self.active_watchers.remove(self)
 
     def trigger_event(self, events: list[FileWatcherEvent]) -> None:
 
@@ -92,7 +95,7 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
         pass
 
     def setUp(self) -> Generator:
-        self.assertEqual(len(TestFileWatcher._active_watchers), 0)
+        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Watchers are only registered when there are workspace folders so add a folder.
         self.folder_root_path = setup_workspace_folder()
         yield from super().setUpClass()
@@ -100,7 +103,7 @@ class FileWatcherDocumentTestCase(TextDocumentTestCase):
 
     def tearDown(self) -> Generator:
         yield from super().tearDownClass()
-        self.assertEqual(len(TestFileWatcher._active_watchers), 0)
+        self.assertEqual(len(TestFileWatcher.active_watchers), 0)
         # Restore original project data.
         window = sublime.active_window()
         window.set_project_data({})
@@ -126,15 +129,15 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
 
     def test_creates_static_watcher(self) -> None:
         # Starting a session should have created a watcher.
-        self.assertEqual(len(TestFileWatcher._active_watchers), 1)
-        watcher = TestFileWatcher._active_watchers[0]
+        self.assertEqual(len(TestFileWatcher.active_watchers), 1)
+        watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.js'])
         self.assertEqual(watcher.events, ['change'])
         self.assertEqual(watcher.ignores, ['.git'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
     def test_handles_file_event(self) -> Generator:
-        watcher = TestFileWatcher._active_watchers[0]
+        watcher = TestFileWatcher.active_watchers[0]
         filepath = join(self.folder_root_path, 'file.js')
         watcher.trigger_event([('change', filepath)])
         sent_notification = yield from self.await_message('workspace/didChangeWatchedFiles')
@@ -165,8 +168,8 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
             ]
         }
         yield self.make_server_do_fake_request('client/registerCapability', registration_params)
-        self.assertEqual(len(TestFileWatcher._active_watchers), 1)
-        watcher = TestFileWatcher._active_watchers[0]
+        self.assertEqual(len(TestFileWatcher.active_watchers), 1)
+        watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.py'])
         self.assertEqual(watcher.events, ['create', 'change', 'delete'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
@@ -182,6 +185,98 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         change2 = sent_notification['changes'][1]
         self.assertEqual(change2['type'], file_watcher_event_type_to_lsp_file_change_type('change'))
         self.assertTrue(change2['uri'].endswith('file.py'))
+
+    def test_aggregates_multiple_registrations_with_common_kind(self) -> Generator:
+        register_options: DidChangeWatchedFilesRegistrationOptions = {
+            'watchers': [
+                {
+                    'globPattern': '*.py',
+                    'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
+                },
+                {
+                    # RelativePattern
+                    'globPattern': {
+                        'baseUri': self.folder_root_path,
+                        'pattern': '*.json'
+                    },
+                    'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
+                },
+                {
+                    # RelativePattern with WorkspaceFolder
+                    'globPattern': {
+                        'baseUri': {
+                            'name': 'foo',
+                            'uri': self.folder_root_path,
+                        },
+                        'pattern': '*.js'
+                    },
+                    'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
+                },
+                {
+                    'globPattern': '*.ts',
+                    'kind': WatchKind.Create | WatchKind.Delete,
+                },
+            ]
+        }
+        registration_params = {
+            'registrations': [
+                {
+                    'id': '111',
+                    'method': 'workspace/didChangeWatchedFiles',
+                    'registerOptions': register_options
+                }
+            ]
+        }
+        yield self.make_server_do_fake_request('client/registerCapability', registration_params)
+        self.assertEqual(len(TestFileWatcher.active_watchers), 2)
+        watcher = TestFileWatcher.active_watchers[0]
+        self.assertEqual(watcher.patterns, ['*.py', '*.json', '*.js'])
+        self.assertEqual(watcher.events, ['create', 'change', 'delete'])
+        self.assertEqual(watcher.root_path, self.folder_root_path)
+        watcher = TestFileWatcher.active_watchers[1]
+        self.assertEqual(watcher.patterns, ['*.ts'])
+        self.assertEqual(watcher.events, ['create', 'delete'])
+        self.assertEqual(watcher.root_path, self.folder_root_path)
+
+    def test_does_not_aggregate_non_matching_base_uris(self) -> Generator:
+        register_options: DidChangeWatchedFilesRegistrationOptions = {
+            'watchers': [
+                {
+                    'globPattern': {
+                        'baseUri': '/a/b',
+                        'pattern': '*.py'
+                    },
+                    'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
+                },
+                {
+                    'globPattern': {
+                        'baseUri': '/a/c',
+                        'pattern': '*.py'
+                    },
+                    'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
+                },
+            ]
+        }
+        registration_params = {
+            'registrations': [
+                {
+                    'id': '111',
+                    'method': 'workspace/didChangeWatchedFiles',
+                    'registerOptions': register_options
+                }
+            ]
+        }
+        yield self.make_server_do_fake_request('client/registerCapability', registration_params)
+        self.assertEqual(len(TestFileWatcher.active_watchers), 2)
+        watcher = TestFileWatcher.active_watchers[0]
+        self.assertEqual(watcher.patterns, ['*.py'])
+        self.assertEqual(watcher.events, ['create', 'change', 'delete'])
+        self.assertEqual(watcher.root_path, '/a/b')
+        watcher = TestFileWatcher.active_watchers[1]
+        self.assertEqual(watcher.patterns, ['*.py'])
+        self.assertEqual(watcher.events, ['create', 'change', 'delete'])
+        self.assertEqual(watcher.root_path, '/a/c')
+
 
 
 class PatternToGlobTests(unittest.TestCase):

@@ -334,8 +334,11 @@ class LspResolveDocsCommand(LspTextCommand):
         if listener := self.get_listener():
             listener.on_documentation_popup_toggle(opened=False)
 
-    def _on_navigate(self, url: str) -> None:
-        webbrowser.open(url)
+    def _on_navigate(self, href: str) -> None:
+        if href.startswith("http"):
+            webbrowser.open(href)
+            return
+        debug('on_navigate unhandled href:', href)
 
 
 class LspCommitCompletionWithOppositeInsertMode(LspTextCommand):

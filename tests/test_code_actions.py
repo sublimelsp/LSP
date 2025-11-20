@@ -348,26 +348,6 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action_ranges = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(code_action_ranges), 0)
 
-    def test_extends_range_to_include_diagnostics(self) -> Generator:
-        self.insert_characters('x diagnostic')
-        yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
-            "textDocument/publishDiagnostics",
-            create_test_diagnostics([
-                ('diagnostic word', range_from_points(Point(0, 2), Point(0, 12))),
-                ('all content', range_from_points(Point(0, 0), Point(0, 12))),
-            ])
-        )
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 5)]})
-        yield 100
-        params = yield from self.await_message('textDocument/codeAction')
-        # Range should be extended to include range of all intersecting diagnostics
-        self.assertEqual(params['range']['start']['line'], 0)
-        self.assertEqual(params['range']['start']['character'], 0)
-        self.assertEqual(params['range']['end']['line'], 0)
-        self.assertEqual(params['range']['end']['character'], 12)
-        self.assertEqual(len(params['context']['diagnostics']), 2)
-
 
 class CodeActionsTestCase(TextDocumentTestCase):
 
@@ -389,7 +369,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         )
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEqual(params['range']['start']['line'], 1)
-        self.assertEqual(params['range']['start']['character'], 0)
+        self.assertEqual(params['range']['start']['character'], 1)
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 1)

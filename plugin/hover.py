@@ -138,13 +138,14 @@ class LspHoverCommand(LspTextCommand):
                 self.request_symbol_hover_async(listener, hover_point)
                 if userprefs().link_highlight_style in ("underline", "none"):
                     self.request_document_link_async(listener, hover_point)
-            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
+            self._diagnostics_by_config = listener.diagnostics_touching_point_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
+                region = sublime.Region(hover_point, hover_point)
                 actions_manager \
-                    .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
+                    .request_for_region_async(self.view, region, self._diagnostics_by_config, manual=False) \
                     .then(lambda results: self._handle_code_actions(listener, hover_point, results))
 
         sublime.set_timeout_async(run_async)

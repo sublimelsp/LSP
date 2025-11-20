@@ -4,6 +4,7 @@ from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherEventType
 from LSP.plugin import FileWatcherProtocol
+from LSP.plugin import parse_uri
 from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.types import ClientConfig
@@ -240,18 +241,20 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
     def test_does_not_aggregate_non_matching_base(self) -> Generator:
+        base_uri_1 = filename_to_uri('/a/b')
+        base_uri_2 = filename_to_uri('/a/c')
         register_options: DidChangeWatchedFilesRegistrationOptions = {
             'watchers': [
                 {
                     'globPattern': {
-                        'baseUri': filename_to_uri('/a/b'),
+                        'baseUri': base_uri_1,
                         'pattern': '*.py'
                     },
                     'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
                 },
                 {
                     'globPattern': {
-                        'baseUri': filename_to_uri('/a/c'),
+                        'baseUri': base_uri_2,
                         'pattern': '*.py'
                     },
                     'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
@@ -272,11 +275,13 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         watcher = TestFileWatcher.active_watchers[0]
         self.assertEqual(watcher.patterns, ['*.py'])
         self.assertEqual(watcher.events, ['create', 'change', 'delete'])
-        self.assertEqual(watcher.root_path, '/a/b')
+        _, base_path_1 = parse_uri(base_uri_1)
+        self.assertEqual(watcher.root_path, base_path_1)
         watcher = TestFileWatcher.active_watchers[1]
         self.assertEqual(watcher.patterns, ['*.py'])
         self.assertEqual(watcher.events, ['create', 'change', 'delete'])
-        self.assertEqual(watcher.root_path, '/a/c')
+        _, base_path_2 = parse_uri(base_uri_2)
+        self.assertEqual(watcher.root_path, base_path_2)
 
 
 class PatternToGlobTests(unittest.TestCase):

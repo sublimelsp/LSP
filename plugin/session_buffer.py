@@ -436,7 +436,7 @@ class SessionBuffer:
         if userprefs().semantic_highlighting:
             self.semantic_tokens.needs_refresh = True
         else:
-            self._clear_semantic_tokens_async()
+            self.clear_semantic_tokens_async()
         for sv in self.session_views:
             sv.on_userprefs_changed_async()
 
@@ -485,6 +485,9 @@ class SessionBuffer:
             return
         phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
+
+    def clear_color_boxes_async(self) -> None:
+        sublime.set_timeout(lambda: self._color_phantoms.update([]))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -783,7 +786,7 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
-    def _clear_semantic_tokens_async(self) -> None:
+    def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
 

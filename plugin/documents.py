@@ -272,10 +272,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 yield sb, sb.diagnostics
 
     def diagnostics_intersecting_region_async(
-        self,
-        region: sublime.Region
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
-        covering = sublime.Region(region.begin(), region.end())
+        self, region: sublime.Region
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         result: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
             intersections: list[Diagnostic] = []
@@ -283,18 +281,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 # Checking against points is inclusive unlike checking whether region intersects another region
                 # which is exclusive (at region end) and we want an inclusive behavior in this case.
                 if region.intersects(candidate) or region.contains(candidate.a) or region.contains(candidate.b):
-                    covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
                 result.append((sb, intersections))
-        return result, covering
+        return result
 
     def diagnostics_touching_point_async(
-        self,
-        pt: int,
-        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
-        covering = sublime.Region(pt, pt)
+        self, pt: int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         result: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
             intersections: list[Diagnostic] = []
@@ -302,11 +296,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if diagnostic_severity(diagnostic) > max_diagnostic_severity_level:
                     continue
                 if candidate.contains(pt):
-                    covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
                 result.append((sb, intersections))
-        return result, covering
+        return result
 
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         self._clear_code_actions_annotation()
@@ -319,15 +312,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._toggle_diagnostics_panel_if_needed_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
-        if userprefs().show_diagnostics_in_view_status:
-            if self._stored_selection:
-                session_buffer_diagnostics, _ = self.diagnostics_touching_point_async(
-                    self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
-                if session_buffer_diagnostics:
-                    for _, diagnostics in session_buffer_diagnostics:
-                        if diag := next(iter(diagnostics), None):
-                            self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
-                            return
+        if userprefs().show_diagnostics_in_view_status and self._stored_selection:
+            session_buffer_diagnostics = self.diagnostics_touching_point_async(
+                self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
+            if session_buffer_diagnostics:
+                for _, diagnostics in session_buffer_diagnostics:
+                    if diag := next(iter(diagnostics), None):
+                        self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
+                        return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
     def session_buffers_async(self, capability: str | None = None) -> list[SessionBuffer]:
@@ -526,7 +518,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
             max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
             if userprefs().diagnostics_gutter_marker:
-                diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))[0]
+                diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))
             elif content:
                 diagnostics_by_session_buffer = self._diagnostics_for_selection
             if content:
@@ -724,9 +716,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions_async(self) -> None:
         if not self._stored_selection:
             return
-        self._diagnostics_for_selection, covering = self.diagnostics_intersecting_async(self._stored_selection[0])
+        region = self._stored_selection[0]
+        self._diagnostics_for_selection = self.diagnostics_intersecting_async(region)
         actions_manager \
-            .request_for_region_async(self.view, covering, self._diagnostics_for_selection, manual=False) \
+            .request_for_region_async(self.view, region, self._diagnostics_for_selection, manual=False) \
             .then(self._on_code_actions)
 
     def _on_code_actions(self, responses: list[CodeActionsByConfigName]) -> None:

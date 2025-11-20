@@ -769,29 +769,24 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def diagnostics_intersecting_region_async(
-        self,
-        region: sublime.Region
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
+        self, region: sublime.Region
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         raise NotImplementedError()
 
     @abstractmethod
     def diagnostics_touching_point_async(
-        self,
-        pt: int,
-        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
+        self, pt: int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         raise NotImplementedError()
 
     def diagnostics_intersecting_async(
-        self,
-        region_or_point: sublime.Region | int
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
+        self, region_or_point: sublime.Region | int
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         if isinstance(region_or_point, int):
             return self.diagnostics_touching_point_async(region_or_point)
-        elif region_or_point.empty():
+        if region_or_point.empty():
             return self.diagnostics_touching_point_async(region_or_point.a)
-        else:
-            return self.diagnostics_intersecting_region_async(region_or_point)
+        return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:

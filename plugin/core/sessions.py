@@ -54,6 +54,7 @@ from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
 from ...protocol import TokenFormat
 from ...protocol import UnregistrationParams
+from ...protocol import WatchKind
 from ...protocol import WindowClientCapabilities
 from ...protocol import WorkDoneProgressBegin
 from ...protocol import WorkDoneProgressCreateParams
@@ -72,7 +73,7 @@ from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
-from .file_watcher import DEFAULT_KIND
+from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
 from .file_watcher import FileWatcherEvent
@@ -2236,20 +2237,24 @@ class Session(TransportCallbacks):
         if not self._watcher_impl:
             return
         self.unregister_file_system_watchers(registration_id)
-        file_watchers: list[FileWatcher] = []
+        # List of patterns aggregated by base path and kind.
+        aggregated_watchers: dict[tuple[str, WatchKind], list[str]] = {}
         for config in watchers:
-            kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
+            kind = config.get("kind") or DEFAULT_WATCH_KIND
             glob_pattern = config["globPattern"]
             if isinstance(glob_pattern, str):
                 for folder in self.get_workspace_folders():
-                    ignores = self._get_global_ignore_globs(folder.path)
-                    file_watchers.append(self._watcher_impl.create(folder.path, [glob_pattern], kind, ignores, self))
+                    aggregated_watchers.setdefault((folder.path, kind), []).append(glob_pattern)
             else:  # RelativePattern
                 pattern = glob_pattern["pattern"]
                 base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
                 _, base_path = parse_uri(base if isinstance(base, str) else base["uri"])
-                ignores = self._get_global_ignore_globs(base_path)
-                file_watchers.append(self._watcher_impl.create(base_path, [pattern], kind, ignores, self))
+                aggregated_watchers.setdefault((base_path, kind), []).append(pattern)
+        file_watchers: list[FileWatcher] = []
+        for (base_path, kind), patterns in aggregated_watchers.items():
+            ignores = self._get_global_ignore_globs(base_path)
+            watcher_kind = lsp_watch_kind_to_file_watcher_event_types(kind)
+            file_watchers.append(self._watcher_impl.create(base_path, patterns, watcher_kind, ignores, self))
         self._dynamic_file_watchers[registration_id] = file_watchers
 
     def unregister_file_system_watchers(self, registration_id: str) -> None:

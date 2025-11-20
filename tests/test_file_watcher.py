@@ -1,4 +1,5 @@
 from __future__ import annotations
+from LSP.plugin import filename_to_uri
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherEventType
@@ -186,7 +187,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(change2['type'], file_watcher_event_type_to_lsp_file_change_type('change'))
         self.assertTrue(change2['uri'].endswith('file.py'))
 
-    def test_aggregates_multiple_registrations_with_common_kind(self) -> Generator:
+    def test_aggregates_multiple_registrations_with_common_kind_and_base(self) -> Generator:
         register_options: DidChangeWatchedFilesRegistrationOptions = {
             'watchers': [
                 {
@@ -196,7 +197,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                 {
                     # RelativePattern
                     'globPattern': {
-                        'baseUri': self.folder_root_path,
+                        'baseUri': filename_to_uri(self.folder_root_path),
                         'pattern': '*.json'
                     },
                     'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
@@ -206,7 +207,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                     'globPattern': {
                         'baseUri': {
                             'name': 'foo',
-                            'uri': self.folder_root_path,
+                            'uri': filename_to_uri(self.folder_root_path),
                         },
                         'pattern': '*.js'
                     },
@@ -238,19 +239,19 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.events, ['create', 'delete'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
-    def test_does_not_aggregate_non_matching_base_uris(self) -> Generator:
+    def test_does_not_aggregate_non_matching_base(self) -> Generator:
         register_options: DidChangeWatchedFilesRegistrationOptions = {
             'watchers': [
                 {
                     'globPattern': {
-                        'baseUri': '/a/b',
+                        'baseUri': filename_to_uri('/a/b'),
                         'pattern': '*.py'
                     },
                     'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,
                 },
                 {
                     'globPattern': {
-                        'baseUri': '/a/c',
+                        'baseUri': filename_to_uri('/a/c'),
                         'pattern': '*.py'
                     },
                     'kind': WatchKind.Create | WatchKind.Change | WatchKind.Delete,

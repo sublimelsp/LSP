@@ -672,12 +672,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point: int,
         language_map: MarkdownLangMap | None
     ) -> None:
-        sighelp = SigHelp.from_lsp(response, language_map)
-        if sighelp:
-            # Render on main thread.
-            sublime.set_timeout(lambda: self._show_sighelp_popup(sighelp, point))
-        elif self._sighelp:
-            self.view.hide_popup()
+        new_sighelp = SigHelp.from_lsp(response, language_map)
+        if not new_sighelp:
+            if self._sighelp:
+                self.view.hide_popup()
+            return
+        # Render on main thread.
+        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, point))
 
     def _show_sighelp_popup(self, sighelp: SigHelp, point: int) -> None:
         content = sighelp.render(self.view)
@@ -687,7 +688,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._sighelp:
             update_lsp_popup(self.view, content)
         else:
-            self._sighelp = sighelp
             show_lsp_popup(
                 self.view,
                 content,
@@ -696,6 +696,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 body_id='lsp-signature-help',
                 on_hide=self._on_sighelp_hide,
                 on_navigate=self._on_sighelp_navigate)
+            self._sighelp = sighelp
 
     def navigate_signature_help(self, forward: bool) -> None:
         if self._sighelp:

@@ -623,7 +623,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def do_signature_help_async(self, manual: bool) -> None:
+    def do_signature_help_async(self, *, manual: bool) -> None:
         session = self._get_signature_help_session()
         if not session or not self._stored_selection:
             return
@@ -634,10 +634,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if session == sb.session:
                     triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
                     break
-        if not manual and not triggers and not self._sighelp:
+        if not manual and not triggers:
             return
         last_char = previous_non_whitespace_char(self.view, pos)
-        if manual or last_char in triggers or self._sighelp:
+        if manual or last_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
             trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
@@ -961,7 +961,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        self.do_signature_help_async(manual=False)
+        self.do_signature_help_async(manual=self._sighelp is not None)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:
         """

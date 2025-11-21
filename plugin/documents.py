@@ -108,13 +108,6 @@ def is_regular_view(v: sublime.View) -> bool:
     return True
 
 
-def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
-    prev = view.substr(pt - 1)
-    if prev.isspace():
-        return view.substr(view.find_by_class(pt, False, ~0) - 1)  # type: ignore
-    return prev
-
-
 class TextChangeListener(sublime_plugin.TextChangeListener):
 
     ids_to_listeners: WeakValueDictionary[int, TextChangeListener] = WeakValueDictionary()
@@ -636,8 +629,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     break
         if not manual and not triggers:
             return
-        last_char = previous_non_whitespace_char(self.view, pos)
-        if manual or last_char in triggers:
+        previous_char = self.view.substr(pos - 1)
+        if manual or previous_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
             trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
@@ -646,7 +639,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 'isRetrigger': self._sighelp is not None,
             }
             if not manual:
-                context_params["triggerCharacter"] = last_char
+                context_params["triggerCharacter"] = previous_char
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
             params: SignatureHelpParams = {

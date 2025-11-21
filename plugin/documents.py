@@ -674,7 +674,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> None:
         new_sighelp = SigHelp.from_lsp(response, language_map)
         if not new_sighelp:
-            if self._sighelp:
+            if self._sighelp and not self.view.match_selector(point, 'meta.function-call.arguments'):
                 self.view.hide_popup()
             return
         # Render on main thread.

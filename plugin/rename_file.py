@@ -3,8 +3,8 @@ from .core.open import open_file_uri
 from .core.protocol import Notification, RenameFilesParams, Request, WorkspaceEdit
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
+from .core.url import filename_to_uri
 from pathlib import Path
-from urllib.parse import urljoin
 import os
 import sublime
 import sublime_plugin
@@ -76,8 +76,8 @@ class LspRenamePathCommand(LspWindowCommand):
             return
         rename_file_params: RenameFilesParams = {
             "files": [{
-                "newUri": urljoin("file:", new_path),
-                "oldUri": urljoin("file:", old_path),
+                "newUri": filename_to_uri(new_path),
+                "oldUri": filename_to_uri(old_path),
             }]
         }
         session = self.session()

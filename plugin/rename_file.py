@@ -86,13 +86,13 @@ class LspRenamePathCommand(LspWindowCommand):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
-                lambda res: self.handle(res, session.config.name, old_path, new_path, rename_file_params, view)
+                lambda res: self._handle_response_async(res, session.config.name, old_path, new_path, rename_file_params, view)
             )
         else:
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params, new_path, view)
 
-    def handle(self, res: WorkspaceEdit | None, session_name: str,
+    def _handle_response_async(self, res: WorkspaceEdit | None, session_name: str,
                old_path: str, new_path: str, rename_file_params: RenameFilesParams, view: sublime.View | None) -> None:
         if session := self.session_by_name(session_name):
             # LSP spec - Apply WorkspaceEdit before the files are renamed

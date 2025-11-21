@@ -64,7 +64,6 @@ class LspRenamePathCommand(LspWindowCommand):
         new_name: str,  # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         old_path: str | None = None,
     ) -> None:
-        session = self.session()
         view = self.window.active_view()
         old_path = old_path or view.file_name() if view else None
         if old_path is None:  # handle renaming buffers
@@ -81,6 +80,7 @@ class LspRenamePathCommand(LspWindowCommand):
                 "oldUri": urljoin("file:", old_path),
             }]
         }
+        session = self.session()
         file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
         if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path, view):
             request = Request.willRenameFiles(rename_file_params)

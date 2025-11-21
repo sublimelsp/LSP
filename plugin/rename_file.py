@@ -11,7 +11,7 @@ import sublime_plugin
 
 
 class LspRenameFromSidebarOverride(LspWindowCommand):
-    def is_enabled(self):
+    def is_enabled(self) -> bool:
         return True
 
     def run(self, paths: list[str] | None = None) -> None:
@@ -46,7 +46,7 @@ class RenamePathInputHandler(sublime_plugin.TextInputHandler):
 class LspRenamePathCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
 
-    def is_enabled(self):
+    def is_enabled(self) -> bool:
         return True
 
     def want_event(self) -> bool:

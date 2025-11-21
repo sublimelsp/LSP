@@ -108,7 +108,7 @@ class LspRenamePathCommand(LspWindowCommand):
             old_regions = [region for region in view.sel()]
             view.close()  # LSP spec - send didClose for the old file
         new_dir = Path(new_path).parent
-        if not os.path.exists(new_dir):
+        if not new_dir.exists():
             os.makedirs(new_dir)
         isdir = os.path.isdir(old_path)
         try:

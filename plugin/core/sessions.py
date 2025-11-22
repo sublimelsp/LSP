@@ -1717,7 +1717,7 @@ class Session(TransportCallbacks):
                 listener = session_view.listener()
                 if not listener:
                     return
-                listener.do_signature_help_async(manual=False)
+                listener.do_signature_help_async(force=True)
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)

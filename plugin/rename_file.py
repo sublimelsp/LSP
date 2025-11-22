@@ -61,21 +61,18 @@ class LspRenamePathCommand(LspWindowCommand):
         old_path = view.file_name() if view else None
         return RenamePathInputHandler(Path(old_path or "").name)
 
-    def run(
-        self,
-        new_name: str,  # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
-        old_path: str | None = None,
-    ) -> None:
+    def run(self, new_name: str, old_path: str | None = None) -> None:
         view = self.window.active_view()
         old_path = old_path or view.file_name() if view else None
         if old_path is None:  # handle renaming buffers
             if view:
                 view.set_name(new_name)
             return
-        new_path = os.path.normpath(Path(old_path).parent / new_name)
-        if os.path.exists(new_path):
-            self.window.status_message('Unable to Rename. Already exists')
-            return
+        # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
+        resolved_new_path = (Path(old_path).parent / new_name).resolve()
+        if resolved_new_path.exists():
+            return self.window.status_message('Unable to Rename. Already exists')
+        new_path = str(resolved_new_path)
         new_path_uri = filename_to_uri(new_path)
         old_path_uri = filename_to_uri(old_path)
         rename_file_params: RenameFilesParams = {

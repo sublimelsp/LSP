@@ -461,18 +461,17 @@ def match_file_operation_filters(
         scheme = file_operation_filter.get('scheme')
         if scheme and uri_scheme != scheme:
             return False
-        if pattern:
-            matches = pattern.get('matches')
-            if matches == FileOperationPatternKind.File and os.path.isdir(file_name):
-                return False
-            if matches == FileOperationPatternKind.Folder and os.path.isfile(file_name):
-                return False
-            options = pattern.get('options', {})
-            flags = GLOBSTAR | BRACE
-            if options.get('ignoreCase', False):
-                flags |= IGNORECASE
-            if not globmatch(file_name, pattern['glob'], flags=flags):
-                return False
+        matches = pattern.get('matches')
+        if matches == FileOperationPatternKind.File and os.path.isdir(file_name):
+            return False
+        if matches == FileOperationPatternKind.Folder and os.path.isfile(file_name):
+            return False
+        options = pattern.get('options', {})
+        flags = GLOBSTAR | BRACE
+        if options.get('ignoreCase', False):
+            flags |= IGNORECASE
+        if not globmatch(file_name, pattern['glob'], flags=flags):
+            return False
         return True
 
     filters = file_operation_options['filters']

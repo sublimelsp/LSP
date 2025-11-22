@@ -569,7 +569,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
+            sublime.set_timeout_async(lambda: self.do_signature_help_async(force=True))
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
@@ -616,29 +616,34 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def do_signature_help_async(self, *, manual: bool) -> None:
+    def do_signature_help_async(self, *, force: bool) -> None:
+        """
+        Trigger signature help request.
+
+        :param force: If `true` triggers signature help explicitily instead on relying on trigger characters.
+        """
         session = self._get_signature_help_session()
         if not session or not self._stored_selection:
             return
         pos = self._stored_selection[0].a
         triggers: list[str] = []
-        if not manual:
+        if not force:
             for sb in self.session_buffers_async():
                 if session == sb.session:
                     triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
                     break
-        if not manual and not triggers:
+        if not force and not triggers:
             return
         previous_char = self.view.substr(pos - 1)
-        if manual or previous_char in triggers:
+        if force or previous_char in triggers:
             self.purge_changes_async()
             position_params = text_document_position_params(self.view, pos)
-            trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
+            trigger_kind = SignatureHelpTriggerKind.Invoked if force else SignatureHelpTriggerKind.TriggerCharacter
             context_params: SignatureHelpContext = {
                 'triggerKind': trigger_kind,
                 'isRetrigger': self._sighelp is not None,
             }
-            if not manual:
+            if not force:
                 context_params["triggerCharacter"] = previous_char
             if self._sighelp:
                 context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
@@ -954,7 +959,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        self.do_signature_help_async(manual=self._sighelp is not None)
+        self.do_signature_help_async(force=self._sighelp is not None)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:
         """

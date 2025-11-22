@@ -807,7 +807,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def do_signature_help_async(self, manual: bool) -> None:
+    def do_signature_help_async(self, *, force: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod

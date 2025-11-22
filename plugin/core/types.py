@@ -456,22 +456,22 @@ def match_file_operation_filters(
     file_operation_options: FileOperationRegistrationOptions, uri: URI
 ) -> bool:
     def matches(file_operation_filter: FileOperationFilter) -> bool:
-        uri_scheme, uri_path = parse_uri(uri)
+        uri_scheme, file_name = parse_uri(uri)
         pattern = file_operation_filter['pattern']
         scheme = file_operation_filter.get('scheme')
         if scheme and uri_scheme != scheme:
             return False
         if pattern:
             matches = pattern.get('matches')
-            if matches == FileOperationPatternKind.File and os.path.isdir(uri_path):
+            if matches == FileOperationPatternKind.File and os.path.isdir(file_name):
                 return False
-            if matches == FileOperationPatternKind.Folder and os.path.isfile(uri_path):
+            if matches == FileOperationPatternKind.Folder and os.path.isfile(file_name):
                 return False
             options = pattern.get('options', {})
             flags = GLOBSTAR | BRACE
             if options.get('ignoreCase', False):
                 flags |= IGNORECASE
-            if not globmatch(uri_path, pattern['glob'], flags=flags):
+            if not globmatch(file_name, pattern['glob'], flags=flags):
                 return False
         return True
 

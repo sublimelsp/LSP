@@ -67,6 +67,7 @@ from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
+from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
@@ -637,6 +638,9 @@ class SessionViewProtocol(Protocol):
     def on_userprefs_changed_async(self) -> None:
         ...
 
+    def get_request_flags(self) -> RequestFlags:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -718,6 +722,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
+        ...
+
+    def remove_all_inlay_hints(self) -> None:
         ...
 
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
@@ -816,6 +823,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
 
@@ -2141,7 +2152,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_semantic_tokens_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                sv.session_buffer.do_semantic_tokens_async(sv.view)
+            else:
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 
@@ -2150,7 +2164,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_inlay_hints_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.INLAY_HINT:
+                sv.session_buffer.do_inlay_hints_async(sv.view)
+            else:
+                sv.session_buffer.set_inlay_hints_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 

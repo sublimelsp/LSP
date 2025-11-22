@@ -20,6 +20,7 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
+from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
@@ -164,7 +165,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
-    color_boxes_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -249,10 +249,24 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session, self._uri)
             if buf := self.view.buffer():
-                text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
-                if text_change_listener:
+                if text_change_listener := TextChangeListener.ids_to_listeners.get(buf.buffer_id):
                     text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
+            # Check whether this session is the new best session for color boxes, inlay hints, and semantic tokens. If
+            # that is the case, remove the color boxes, inlay hints or semantic tokens from the previously best session.
+            request_flags = self.get_request_flags(session)
+            if request_flags & RequestFlags.DOCUMENT_COLOR:
+                for sb in self.session_buffers_async('colorProvider'):
+                    if sb.session != session:
+                        sb.clear_color_boxes_async()
+            if request_flags & RequestFlags.INLAY_HINT:
+                for sb in self.session_buffers_async('inlayHintProvider'):
+                    if sb.session != session:
+                        sb.remove_all_inlay_hints()
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                for sb in self.session_buffers_async('semanticTokensProvider'):
+                    if sb.session != session:
+                        sb.clear_semantic_tokens_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         if removed_session := self._session_views.pop(session.config.name, None):
@@ -356,6 +370,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def get_language_id(self) -> str:
         return self._language_id
 
+    def get_request_flags(self, session: Session) -> RequestFlags:
+        request_flags = RequestFlags.NONE
+        if session == self.session_async('colorProvider', 0):
+            request_flags |= RequestFlags.DOCUMENT_COLOR
+        if session == self.session_async('inlayHintProvider', 0):
+            request_flags |= RequestFlags.INLAY_HINT
+        if session == self.session_async('semanticTokensProvider', 0):
+            request_flags |= RequestFlags.SEMANTIC_TOKENS
+        return request_flags
+
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
@@ -392,10 +416,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if sb.document_diagnostic_needs_refresh:
                 sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
                 sb.do_document_diagnostic_async(self.view, self.view.change_count())
-            if sb.semantic_tokens.needs_refresh:
+            if sb.semantic_tokens.needs_refresh \
+                    and (session_view := sb.session.session_view_for_view_async(self.view)) \
+                    and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
                 sb.set_semantic_tokens_pending_refresh(needs_refresh=False)
                 sb.do_semantic_tokens_async(self.view)
-            if sb.inlay_hints_needs_refresh:
+            if sb.inlay_hints_needs_refresh \
+                    and (session_view := sb.session.session_view_for_view_async(self.view)) \
+                    and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
                 sb.set_inlay_hints_pending_refresh(needs_refresh=False)
                 sb.do_inlay_hints_async(self.view)
 

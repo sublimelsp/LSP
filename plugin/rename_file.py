@@ -1,6 +1,8 @@
 from __future__ import annotations
+from ..protocol import  WorkspaceEdit
+from ..protocol import RenameFilesParams
 from .core.open import open_file_uri
-from .core.protocol import Notification, RenameFilesParams, Request, WorkspaceEdit
+from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri

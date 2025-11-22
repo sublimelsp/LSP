@@ -455,7 +455,7 @@ def match_file_operation_filters(
     file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None
 ) -> bool:
     def matches(file_operation_filter: FileOperationFilter) -> bool:
-        pattern = file_operation_filter.get('pattern')
+        pattern = file_operation_filter['pattern']
         scheme = file_operation_filter.get('scheme')
         if scheme and view:
             uri = view.settings().get("lsp_uri")
@@ -475,7 +475,7 @@ def match_file_operation_filters(
                 return False
         return True
 
-    filters = file_operation_options.get('filters')
+    filters = file_operation_options['filters']
     return any(matches(_filter) for _filter in filters) if filters else True
 
 

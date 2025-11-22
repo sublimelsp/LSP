@@ -71,7 +71,8 @@ class LspRenamePathCommand(LspWindowCommand):
         # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
         if resolved_new_path.exists():
-            return self.window.status_message('Unable to Rename. Already exists')
+            self.window.status_message('Unable to Rename. Already exists')
+            return
         new_path = str(resolved_new_path)
         new_path_uri = filename_to_uri(new_path)
         old_path_uri = filename_to_uri(old_path)

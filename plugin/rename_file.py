@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ..protocol import  WorkspaceEdit
+from ..protocol import WorkspaceEdit
 from ..protocol import RenameFilesParams
 from .core.open import open_file_uri
 from .core.protocol import Notification, Request
@@ -88,21 +88,21 @@ class LspRenamePathCommand(LspWindowCommand):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
-                lambda response: self._handle_response_async(response, session.config.name, old_path, new_path, rename_file_params)
+                lambda response: self._handle_response_async(response, session.config.name,
+                                                             old_path, new_path, rename_file_params)
             )
         else:
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params)
 
     def _handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
-               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
-
-        def on_workspace_edits_applied():
+                               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
+        def on_workspace_edits_applied(_) -> None:
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params)
 
         if (session := self.session_by_name(session_name)) and response:
-            session.apply_workspace_edit_async(response, is_refactoring=True).then(lambda _: on_workspace_edits_applied())
+            session.apply_workspace_edit_async(response, is_refactoring=True).then(on_workspace_edits_applied)
 
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []

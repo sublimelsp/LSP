@@ -98,12 +98,13 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def _handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
-        if session := self.session_by_name(session_name):
-            # LSP spec - Apply WorkspaceEdit before the files are renamed
-            if response:
-                session.apply_workspace_edit_async(response, is_refactoring=True)
+
+        def on_workspace_edits_applied():
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params)
+
+        if (session := self.session_by_name(session_name)) and response:
+            session.apply_workspace_edit_async(response, is_refactoring=True).then(lambda _: on_workspace_edits_applied())
 
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []

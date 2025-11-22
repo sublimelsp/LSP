@@ -71,6 +71,8 @@ from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspHideRenameButtonsCommand
 from .plugin.rename import LspSymbolRenameCommand
+from .plugin.rename_file import LspRenameFromSidebarOverride
+from .plugin.rename_file import LspRenamePathCommand
 from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
@@ -149,6 +151,8 @@ __all__ = (
     "LspSymbolImplementationCommand",
     "LspSymbolReferencesCommand",
     "LspSymbolRenameCommand",
+    "LspRenameFromSidebarOverride",
+    "LspRenamePathCommand",
     "LspSymbolTypeDefinitionCommand",
     "LspToggleCodeLensesCommand",
     "LspToggleHoverPopupsCommand",
@@ -270,6 +274,10 @@ class Listener(sublime_plugin.EventListener):
                     tup[1](None)
                     break
 
+    def on_window_command(self, window: sublime.Window, command_name: str, args: dict) -> tuple[str, dict] | None:
+        if command_name == "rename_path":
+            return ('lsp_rename_from_sidebar_override', args)
+ 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":
             wm = windows.lookup(window)

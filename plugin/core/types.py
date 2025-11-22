@@ -5,6 +5,7 @@ from ...protocol import FileOperationRegistrationOptions
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
+from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
@@ -452,26 +453,25 @@ class DocumentSelector:
 
 
 def match_file_operation_filters(
-    file_operation_options: FileOperationRegistrationOptions, path: str, view: sublime.View | None
+    file_operation_options: FileOperationRegistrationOptions, uri: URI
 ) -> bool:
     def matches(file_operation_filter: FileOperationFilter) -> bool:
+        uri_scheme, uri_path = parse_uri(uri)
         pattern = file_operation_filter['pattern']
         scheme = file_operation_filter.get('scheme')
-        if scheme and view:
-            uri = view.settings().get("lsp_uri")
-            if isinstance(uri, str) and parse_uri(uri)[0] != scheme:
-                return False
+        if scheme and uri_scheme != scheme:
+            return False
         if pattern:
             matches = pattern.get('matches')
-            if matches == FileOperationPatternKind.File and os.path.isdir(path):
+            if matches == FileOperationPatternKind.File and os.path.isdir(uri_path):
                 return False
-            if matches == FileOperationPatternKind.Folder and os.path.isfile(path):
+            if matches == FileOperationPatternKind.Folder and os.path.isfile(uri_path):
                 return False
             options = pattern.get('options', {})
             flags = GLOBSTAR | BRACE
             if options.get('ignoreCase', False):
                 flags |= IGNORECASE
-            if not globmatch(path, pattern['glob'], flags=flags):
+            if not globmatch(uri_path, pattern['glob'], flags=flags):
                 return False
         return True
 

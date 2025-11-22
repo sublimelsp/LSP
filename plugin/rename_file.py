@@ -76,32 +76,34 @@ class LspRenamePathCommand(LspWindowCommand):
         if os.path.exists(new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
+        new_path_uri = filename_to_uri(new_path)
+        old_path_uri = filename_to_uri(old_path)
         rename_file_params: RenameFilesParams = {
             "files": [{
-                "newUri": filename_to_uri(new_path),
-                "oldUri": filename_to_uri(old_path),
+                "newUri": new_path_uri,
+                "oldUri": old_path_uri
             }]
         }
         session = self.session()
         file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
-        if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path, view):
+        if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path_uri):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
-                lambda response: self._handle_response_async(response, session.config.name, old_path, new_path, rename_file_params, view)
+                lambda response: self._handle_response_async(response, session.config.name, old_path, new_path, rename_file_params)
             )
         else:
             self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params, new_path, view)
+            self.notify_did_rename(rename_file_params)
 
     def _handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
-               old_path: str, new_path: str, rename_file_params: RenameFilesParams, view: sublime.View | None) -> None:
+               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
         if session := self.session_by_name(session_name):
             # LSP spec - Apply WorkspaceEdit before the files are renamed
             if response:
                 session.apply_workspace_edit_async(response, is_refactoring=True)
             self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params, new_path, view)
+            self.notify_did_rename(rename_file_params)
 
     def rename_path(self, old_path: str, new_path: str) -> None:
         old_regions: list[sublime.Region] = []
@@ -133,8 +135,9 @@ class LspRenamePathCommand(LspWindowCommand):
             # LSP spec - send didOpen for the new file
             open_file_uri(self.window, new_path).then(restore_regions)
 
-    def notify_did_rename(self, rename_file_params: RenameFilesParams, path: str, view: sublime.View | None):
+    def notify_did_rename(self, rename_file_params: RenameFilesParams):
         for session in self.sessions():
             file_operation_options = session.get_capability('workspace.fileOperations.didRename')
-            if file_operation_options and match_file_operation_filters(file_operation_options, path, view):
+            old_uri = rename_file_params['files'][0]['oldUri']
+            if file_operation_options and match_file_operation_filters(file_operation_options, old_uri):
                 session.send_notification(Notification.didRenameFiles(rename_file_params))

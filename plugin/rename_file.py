@@ -58,7 +58,7 @@ class LspRenamePathCommand(LspWindowCommand):
         if "new_name" in args:
             return None
         view = self.window.active_view()
-        old_path = view.file_name() if view else None
+        old_path = args.get('old_path') or view.file_name() if view else None
         return RenamePathInputHandler(Path(old_path or "").name)
 
     def run(self, new_name: str, old_path: str | None = None) -> None:

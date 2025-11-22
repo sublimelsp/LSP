@@ -26,7 +26,6 @@ from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
-from .core.views import update_lsp_popup
 from typing import Any, Callable, Generator, List, Tuple, Union
 from typing import cast
 from typing_extensions import TypeAlias, TypeGuard
@@ -309,20 +308,20 @@ class LspResolveDocsCommand(LspTextCommand):
         if documentation:
             minihtml_content += documentation
 
-        def run_main() -> None:
+        def run_on_main_thread() -> None:
             if not self.view.is_valid():
                 return
-            if self.view.is_popup_visible():
-                update_lsp_popup(self.view, minihtml_content, md=False)
-            else:
-                show_lsp_popup(
-                    self.view,
-                    minihtml_content,
-                    flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
-                    md=False,
-                    on_navigate=self._on_navigate)
+            show_lsp_popup(
+                self.view,
+                minihtml_content,
+                flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
+                md=False,
+                on_hide=self._on_documentation_close,
+                on_navigate=self._on_navigate)
+            if listener := self.get_listener():
+                listener.on_documentation_popup_toggle(opened=True)
 
-        sublime.set_timeout(run_main)
+        sublime.set_timeout(run_on_main_thread)
 
     def _format_documentation(
         self,
@@ -330,6 +329,10 @@ class LspResolveDocsCommand(LspTextCommand):
         language_map: MarkdownLangMap | None
     ) -> str:
         return minihtml(self.view, content, FORMAT_STRING | FORMAT_MARKUP_CONTENT, language_map)
+
+    def _on_documentation_close(self) -> None:
+        if listener := self.get_listener():
+            listener.on_documentation_popup_toggle(opened=False)
 
     def _on_navigate(self, href: str) -> None:
         if href.startswith("http"):

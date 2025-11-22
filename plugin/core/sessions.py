@@ -814,11 +814,15 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def do_signature_help_async(self, manual: bool) -> None:
+    def do_signature_help_async(self, *, force: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod
     def navigate_signature_help(self, forward: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1724,7 +1728,7 @@ class Session(TransportCallbacks):
                 listener = session_view.listener()
                 if not listener:
                     return
-                listener.do_signature_help_async(manual=False)
+                listener.do_signature_help_async(force=True)
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)

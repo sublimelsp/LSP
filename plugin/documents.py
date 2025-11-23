@@ -59,9 +59,9 @@ from .session_view import SessionView
 from functools import partial
 from functools import wraps
 from os.path import basename
-from typing import Any, Callable, Generator, Iterable, TypeVar
+from typing import Any, Callable, Generator, Iterable, Literal, TypeVar, overload
 from typing import cast
-from typing_extensions import Concatenate, ParamSpec
+from typing_extensions import Concatenate, ParamSpec, override
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -569,7 +569,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(force=True))
+            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.Invoked))
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
@@ -616,53 +616,53 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def do_signature_help_async(self, *, force: bool) -> None:
-        """
-        Trigger signature help request.
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
+        trigger_char: str
+    ) -> None: ...
 
-        :param force: If `true` triggers signature help explicitily instead on relying on trigger characters.
-        """
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
+        trigger_char: None = None
+    ) -> None: ...
+
+    @override
+    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         session = self._get_signature_help_session()
         if not session or not self._stored_selection:
             return
-        pos = self._stored_selection[0].a
-        triggers: list[str] = []
-        if not force:
-            for sb in self.session_buffers_async():
-                if session == sb.session:
-                    triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
-                    break
-        if not force and not triggers:
-            return
-        previous_char = self.view.substr(pos - 1)
-        if force or previous_char in triggers:
-            self.purge_changes_async()
-            position_params = text_document_position_params(self.view, pos)
-            trigger_kind = SignatureHelpTriggerKind.Invoked if force else SignatureHelpTriggerKind.TriggerCharacter
-            context_params: SignatureHelpContext = {
-                'triggerKind': trigger_kind,
-                'isRetrigger': self._sighelp is not None,
-            }
-            if not force:
-                context_params["triggerCharacter"] = previous_char
-            if self._sighelp:
-                context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
-            params: SignatureHelpParams = {
-                "textDocument": position_params["textDocument"],
-                "position": position_params["position"],
-                "context": context_params
-            }
-            language_map = session.markdown_language_id_to_st_syntax_map()
-            request = Request.signatureHelp(params, self.view)
-            session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
+        self.purge_changes_async()
+        position = self._stored_selection[0].a
+        context_params: SignatureHelpContext = {
+            'triggerKind': trigger_kind,
+            'isRetrigger': self._sighelp is not None,
+        }
+        if trigger_kind == SignatureHelpTriggerKind.TriggerCharacter:
+            assert trigger_char
+            context_params["triggerCharacter"] = trigger_char
+        if self._sighelp:
+            context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
+        position_params = text_document_position_params(self.view, position)
+        params: SignatureHelpParams = {
+            "textDocument": position_params["textDocument"],
+            "position": position_params["position"],
+            "context": context_params
+        }
+        language_map = session.markdown_language_id_to_st_syntax_map()
+        request = Request.signatureHelp(params, self.view)
+        session.send_request_async(request, lambda resp: self._on_signature_help(resp, position, language_map))
 
     def _get_signature_help_session(self) -> Session | None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
         # when a language server inserts a snippet completion.
         if not self._stored_selection:
-            return
-        pos = self._stored_selection[0].a
-        return self.session_async("signatureHelpProvider", pos)
+            return None
+        position = self._stored_selection[0].a
+        return self.session_async("signatureHelpProvider", position)
 
     def _on_signature_help(
         self,
@@ -959,7 +959,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        self.do_signature_help_async(force=self._sighelp is not None)
+        if selection := self._stored_selection:
+            if self._sighelp:
+                self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
+            else:
+                session = self._get_signature_help_session()
+                triggers: list[str] = []
+                for sb in self.session_buffers_async():
+                    if session == sb.session:
+                        triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
+                        break
+                if triggers:
+                    previous_char = self.view.substr(selection[0].a - 1)
+                    if previous_char in triggers:
+                        self.do_signature_help_async(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:
         """

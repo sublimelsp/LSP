@@ -47,6 +47,7 @@ from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
+from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
@@ -122,7 +123,7 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum, IntFlag
-from typing import Any, Callable, Generator, List, Protocol, TypeVar
+from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -806,8 +807,22 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_uri(self) -> DocumentUri:
         raise NotImplementedError()
 
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
+        trigger_char: str
+    ) -> None: ...
+
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
+        trigger_char: None = None
+    ) -> None: ...
+
     @abstractmethod
-    def do_signature_help_async(self, *, force: bool) -> None:
+    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -1717,7 +1732,7 @@ class Session(TransportCallbacks):
                 listener = session_view.listener()
                 if not listener:
                     return
-                listener.do_signature_help_async(force=True)
+                listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)

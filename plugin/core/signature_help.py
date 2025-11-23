@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ...protocol import SignatureHelp
+from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SignatureInformation
 from .logging import debug
 from .registry import LspTextCommand
@@ -29,7 +30,7 @@ class LspSignatureHelpShowCommand(LspTextCommand):
 
     def run(self, _: sublime.Edit) -> None:
         if listener := self.get_listener():
-            sublime.set_timeout_async(lambda: listener.do_signature_help_async(force=True))
+            sublime.set_timeout_async(lambda: listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked))
 
 
 class SigHelp:

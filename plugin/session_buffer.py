@@ -20,6 +20,7 @@ from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
+from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.promise import Promise
 from .core.protocol import Request
@@ -157,7 +158,8 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
-        self._check_did_open(view)
+        # set_timeout_async is required to ensure that the SessionView is initialized before running requests
+        sublime.set_timeout_async(lambda: self._check_did_open(view))
 
     @property
     def session(self) -> Session:
@@ -185,10 +187,14 @@ class SessionBuffer:
             self.opened = True
             version = view.change_count()
             self._last_synced_version = version
-            self._do_color_boxes_async(view, version)
+            request_flags = self._get_request_flags(view)
+            if request_flags & RequestFlags.DOCUMENT_COLOR:
+                self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
-            self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
-            self.do_inlay_hints_async(view)
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
+            if request_flags & RequestFlags.INLAY_HINT:
+                self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
@@ -384,17 +390,21 @@ class SessionBuffer:
         if suppress_requests:
             return
         try:
-            self._do_color_boxes_async(view, version)
+            request_flags = self._get_request_flags(view)
+            if request_flags & RequestFlags.DOCUMENT_COLOR:
+                self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
             if self.session.config.diagnostics_mode == "workspace" and \
                     not self.session.workspace_diagnostics_pending_response and \
                     self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
                 self._workspace_diagnostics_debouncer_async.debounce(
                     self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
-            self.do_semantic_tokens_async(view)
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
-            self.do_inlay_hints_async(view)
+            if request_flags & RequestFlags.INLAY_HINT:
+                self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
         except MissingUriError:
             pass
@@ -426,7 +436,7 @@ class SessionBuffer:
         if userprefs().semantic_highlighting:
             self.semantic_tokens.needs_refresh = True
         else:
-            self._clear_semantic_tokens_async()
+            self.clear_semantic_tokens_async()
         for sv in self.session_views:
             sv.on_userprefs_changed_async()
 
@@ -455,6 +465,11 @@ class SessionBuffer:
         self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
+    def _get_request_flags(self, view: sublime.View) -> RequestFlags:
+        if session_view := self.session.session_view_for_view_async(view):
+            return session_view.get_request_flags()
+        return RequestFlags.NONE
+
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
     def _do_color_boxes_async(self, view: sublime.View, version: int) -> None:
@@ -470,6 +485,9 @@ class SessionBuffer:
             return
         phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
+
+    def clear_color_boxes_async(self) -> None:
+        sublime.set_timeout(lambda: self._color_phantoms.update([]))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -768,7 +786,7 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
-    def _clear_semantic_tokens_async(self) -> None:
+    def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
 

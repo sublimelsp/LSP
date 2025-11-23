@@ -7,6 +7,7 @@ from ...protocol import LanguageKind
 from ...protocol import MessageType
 from ...protocol import SymbolKind
 from .typing import StrEnum
+from enum import IntFlag
 from os.path import dirname, join
 from typing import Tuple
 import sublime
@@ -30,6 +31,21 @@ where $DATA means:
 - on Windows: %LocalAppData%/Sublime Text
 - on Linux: ~/.cache/sublime-text
 """
+
+
+class RequestFlags(IntFlag):
+    """
+    A bitflag that indicates how some of the requests are prioritized between the sessions.
+    This is used for multi-session configurations, where the best session is selected for each of the relevant features
+    below and the corresponding request is made only by that one session.
+    """
+    NONE = 0
+    DOCUMENT_COLOR = 1
+    """ textDocument/documentColor """
+    INLAY_HINT = 2
+    """ textDocument/inlayHint """
+    SEMANTIC_TOKENS = 4
+    """ textDocument/semanticTokens """
 
 
 class RegionKey(StrEnum):

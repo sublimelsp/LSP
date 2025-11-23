@@ -7,6 +7,7 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
+from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.protocol import Notification
 from .core.protocol import Request
@@ -263,6 +264,11 @@ class SessionView:
 
     def get_capability_async(self, capability_path: str) -> Any | None:
         return self.session_buffer.get_capability(capability_path)
+
+    def get_request_flags(self) -> RequestFlags:
+        if listener := self.listener():
+            return listener.get_request_flags(self.session)
+        return RequestFlags.NONE
 
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:

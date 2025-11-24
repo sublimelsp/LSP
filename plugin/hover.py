@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentLink
 from ..protocol import Hover
 from ..protocol import Position
@@ -39,7 +40,7 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
-from typing import Sequence, Union
+from typing import cast, Sequence, Union
 from urllib.parse import urlparse
 import html
 import mdpopups
@@ -139,7 +140,7 @@ class LspHoverCommand(LspTextCommand):
                 if userprefs().link_highlight_style in ("underline", "none"):
                     self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config = listener.get_diagnostics_async(
-                hover_point, userprefs().show_diagnostics_severity_level)
+                hover_point, cast('DiagnosticSeverity', userprefs().show_diagnostics_severity_level))
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:

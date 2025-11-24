@@ -60,9 +60,9 @@ from .session_view import SessionView
 from functools import partial
 from functools import wraps
 from os.path import basename
-from typing import Any, Callable, Generator, Iterable, TypeVar
+from typing import Any, Callable, Generator, Iterable, Literal, TypeVar, overload
 from typing import cast
-from typing_extensions import Concatenate, ParamSpec
+from typing_extensions import Concatenate, ParamSpec, override
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -107,13 +107,6 @@ def is_regular_view(v: sublime.View) -> bool:
     if sheet.is_transient():
         return False
     return True
-
-
-def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
-    prev = view.substr(pt - 1)
-    if prev.isspace():
-        return view.substr(view.find_by_class(pt, False, ~0) - 1)  # type: ignore
-    return prev
 
 
 class TextChangeListener(sublime_plugin.TextChangeListener):
@@ -191,6 +184,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
+        self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
         self.hover_provider_count = 0
@@ -243,6 +237,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 return
             self._manager.unregister_listener_async(self)
             sublime.set_timeout(self._reset)
+
+    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
+        self._is_documenation_popup_open = opened
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -592,12 +589,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
+            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
         if not self.view.is_popup_visible():
             return
-        if command_name in ("hide_auto_complete", "move", "commit_completion", "delete_word", "delete_to_mark",
-                            "left_delete", "right_delete"):
-            # hide the popup when `esc` or arrows are pressed
+        if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
+                                                                 "delete_to_mark", "left_delete", "right_delete"):
             self.view.hide_popup()
 
     @requires_session
@@ -640,59 +636,53 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def do_signature_help_async(self, manual: bool) -> None:
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
+        trigger_char: str
+    ) -> None: ...
+
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
+        trigger_char: None = None
+    ) -> None: ...
+
+    @override
+    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         session = self._get_signature_help_session()
         if not session or not self._stored_selection:
             return
-        pos = self._stored_selection[0].a
-        triggers: list[str] = []
-        if not manual:
-            for sb in self.session_buffers_async():
-                if session == sb.session:
-                    triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
-                    break
-        if not manual and not triggers:
-            return
-        last_char = previous_non_whitespace_char(self.view, pos)
-        if manual or last_char in triggers:
-            self.purge_changes_async()
-            position_params = text_document_position_params(self.view, pos)
-            trigger_kind = SignatureHelpTriggerKind.Invoked if manual else SignatureHelpTriggerKind.TriggerCharacter
-            context_params: SignatureHelpContext = {
-                'triggerKind': trigger_kind,
-                'isRetrigger': self._sighelp is not None,
-            }
-            if not manual:
-                context_params["triggerCharacter"] = last_char
-            if self._sighelp:
-                context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
-            params: SignatureHelpParams = {
-                "textDocument": position_params["textDocument"],
-                "position": position_params["position"],
-                "context": context_params
-            }
-            language_map = session.markdown_language_id_to_st_syntax_map()
-            request = Request.signatureHelp(params, self.view)
-            session.send_request_async(request, lambda resp: self._on_signature_help(resp, pos, language_map))
-        elif self._sighelp:
-            if self.view.match_selector(pos, "meta.function-call.arguments"):
-                # Don't force close the signature help popup while the user is typing the parameters.
-                # See also: https://github.com/sublimehq/sublime_text/issues/5518
-                pass
-            else:
-                # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
-                # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
-                # reality there is only one popup per view.
-                self.view.hide_popup()
-                self._sighelp = None
+        self.purge_changes_async()
+        position = self._stored_selection[0].a
+        context_params: SignatureHelpContext = {
+            'triggerKind': trigger_kind,
+            'isRetrigger': self._sighelp is not None,
+        }
+        if trigger_kind == SignatureHelpTriggerKind.TriggerCharacter:
+            assert trigger_char
+            context_params["triggerCharacter"] = trigger_char
+        if self._sighelp:
+            context_params["activeSignatureHelp"] = self._sighelp.active_signature_help()
+        position_params = text_document_position_params(self.view, position)
+        params: SignatureHelpParams = {
+            "textDocument": position_params["textDocument"],
+            "position": position_params["position"],
+            "context": context_params
+        }
+        language_map = session.markdown_language_id_to_st_syntax_map()
+        request = Request.signatureHelp(params, self.view)
+        session.send_request_async(request, lambda resp: self._on_signature_help(resp, position, language_map))
 
     def _get_signature_help_session(self) -> Session | None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
         # when a language server inserts a snippet completion.
         if not self._stored_selection:
-            return
-        pos = self._stored_selection[0].a
-        return self.session_async("signatureHelpProvider", pos)
+            return None
+        position = self._stored_selection[0].a
+        return self.session_async("signatureHelpProvider", position)
 
     def _on_signature_help(
         self,
@@ -700,38 +690,33 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point: int,
         language_map: MarkdownLangMap | None
     ) -> None:
-        self._sighelp = SigHelp.from_lsp(response, language_map)
+        new_sighelp = SigHelp.from_lsp(response, language_map)
+        if not new_sighelp:
+            if self._sighelp and not self.view.match_selector(point, 'meta.function-call.arguments'):
+                self.view.hide_popup()
+            return
+        content = new_sighelp.render(self.view)
+        # Show on main thread.
+        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, point))
+
+    def _show_sighelp_popup(self, sighelp: SigHelp, content: str, point: int) -> None:
         if self._sighelp:
-            content = self._sighelp.render(self.view)
-
-            def render_sighelp_on_main_thread() -> None:
-                if self.view.is_popup_visible():
-                    self._update_sighelp_popup(content)
-                else:
-                    self._show_sighelp_popup(content, point)
-
-            sublime.set_timeout(render_sighelp_on_main_thread)
-
-    def _show_sighelp_popup(self, content: str, point: int) -> None:
-        # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
-        # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
-        # class.
-        show_lsp_popup(
-            self.view,
-            content,
-            flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
-            location=point,
-            body_id='lsp-signature-help',
-            on_hide=self._on_sighelp_hide,
-            on_navigate=self._on_sighelp_navigate)
+            update_lsp_popup(self.view, content)
+        else:
+            show_lsp_popup(
+                self.view,
+                content,
+                flags=sublime.PopupFlags.COOPERATE_WITH_AUTO_COMPLETE,
+                location=point,
+                body_id='lsp-signature-help',
+                on_hide=self._on_sighelp_hide,
+                on_navigate=self._on_sighelp_navigate)
+            self._sighelp = sighelp
 
     def navigate_signature_help(self, forward: bool) -> None:
         if self._sighelp:
             self._sighelp.select_signature(forward)
-            self._update_sighelp_popup(self._sighelp.render(self.view))
-
-    def _update_sighelp_popup(self, content: str) -> None:
-        update_lsp_popup(self.view, content)
+            update_lsp_popup(self.view, self._sighelp.render(self.view))
 
     def _on_sighelp_hide(self) -> None:
         self._sighelp = None
@@ -992,7 +977,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        self.do_signature_help_async(manual=False)
+        if selection := self._stored_selection:
+            if self._sighelp:
+                self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
+            else:
+                session = self._get_signature_help_session()
+                triggers: list[str] = []
+                for sb in self.session_buffers_async():
+                    if session == sb.session:
+                        triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
+                        break
+                if triggers:
+                    previous_char = self.view.substr(selection[0].a - 1)
+                    if previous_char in triggers:
+                        self.do_signature_help_async(SignatureHelpTriggerKind.TriggerCharacter, previous_char)
 
     def _update_stored_selection_async(self) -> tuple[sublime.Region | None, bool]:
         """

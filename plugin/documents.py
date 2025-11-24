@@ -597,7 +597,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in ("next_field", "prev_field") and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.Invoked))
+            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",

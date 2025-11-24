@@ -703,14 +703,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if self._sighelp and not self.view.match_selector(point, 'meta.function-call.arguments'):
                 self.view.hide_popup()
             return
-        # Render on main thread.
-        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, point))
+        content = new_sighelp.render(self.view)
+        # Show on main thread.
+        sublime.set_timeout(lambda: self._show_sighelp_popup(new_sighelp, content, point))
 
-    def _show_sighelp_popup(self, sighelp: SigHelp, point: int) -> None:
-        content = sighelp.render(self.view)
-        # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
-        # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
-        # class.
+    def _show_sighelp_popup(self, sighelp: SigHelp, content: str, point: int) -> None:
         if self._sighelp:
             update_lsp_popup(self.view, content)
         else:

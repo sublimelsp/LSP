@@ -90,7 +90,7 @@ class LspRenamePathCommand(LspWindowCommand):
             request = Request.willRenameFiles(rename_file_params)
             session.send_request(
                 request,
-                lambda response: self._handle_response_async(response, session.config.name,
+                lambda response: self.handle_response_async(response, session.config.name,
                                                              old_path, new_path, rename_file_params)
             )
         else:
@@ -104,7 +104,7 @@ class LspRenamePathCommand(LspWindowCommand):
             return False
         return True
 
-    def _handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
+    def handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
                                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
         def on_workspace_edits_applied(_) -> None:
             self.rename_path(old_path, new_path)

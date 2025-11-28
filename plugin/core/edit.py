@@ -1,7 +1,5 @@
 from __future__ import annotations
 from ...protocol import AnnotatedTextEdit
-from ...protocol import ChangeAnnotation
-from ...protocol import ChangeAnnotationIdentifier
 from ...protocol import Position
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
@@ -18,8 +16,7 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
     changes: WorkspaceChanges = {}
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
-        change_annotations: dict[ChangeAnnotationIdentifier, ChangeAnnotation] = \
-            workspace_edit.get('changeAnnotations', {})
+        change_annotations = workspace_edit.get('changeAnnotations', {})
         for document_change in document_changes:
             if 'kind' in document_change:
                 # TODO: Support resource operations (create/rename/remove)

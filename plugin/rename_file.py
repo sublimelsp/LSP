@@ -68,6 +68,8 @@ class LspRenamePathCommand(LspWindowCommand):
             if view:
                 view.set_name(new_name)
             return
+        if new_name == old_path:
+            return
         # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
         if resolved_new_path.exists():

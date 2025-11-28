@@ -34,7 +34,8 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
         self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
     ) -> None:
         if session := self.session_by_name(session_name):
-            sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, label, is_refactoring))
+            sublime.set_timeout_async(
+                lambda: session.apply_workspace_edit_async(edit, label=label, is_refactoring=is_refactoring))
         else:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
 

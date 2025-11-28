@@ -1924,7 +1924,8 @@ class Session(TransportCallbacks):
         title = code_action['title']
         edit = code_action.get("edit")
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-        promise = self.apply_workspace_edit_async(edit, title, is_refactoring) if edit else Promise.resolve(None)
+        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) if edit else \
+            Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1938,7 +1939,7 @@ class Session(TransportCallbacks):
         return promise
 
     def apply_workspace_edit_async(
-        self, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
+        self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
     ) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
@@ -2161,7 +2162,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {}), params.get('label')) \
+        self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:

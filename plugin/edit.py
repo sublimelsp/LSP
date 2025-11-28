@@ -30,9 +30,11 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyWorkspaceEditCommand(LspWindowCommand):
 
-    def run(self, session_name: str, edit: WorkspaceEdit, is_refactoring: bool = False) -> None:
+    def run(
+        self, session_name: str, edit: WorkspaceEdit, label: str | None = None, is_refactoring: bool = False
+    ) -> None:
         if session := self.session_by_name(session_name):
-            sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, is_refactoring))
+            sublime.set_timeout_async(lambda: session.apply_workspace_edit_async(edit, label, is_refactoring))
         else:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
 
@@ -40,10 +42,14 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     re_placeholder = re.compile(r'\$(0|\{0:([^}]*)\})')
 
+    def description(self, **kwargs: dict[str, Any]) -> str | None:
+        return kwargs.get('description')  # pyright: ignore[reportReturnType]
+
     def run(
         self,
         edit: sublime.Edit,
         changes: list[TextEdit],
+        description: str | None = None,
         required_view_version: int | None = None,
         process_placeholders: bool = False,
     ) -> None:

@@ -1953,11 +1953,11 @@ class Session(TransportCallbacks):
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        for uri, (edits, description, view_version) in changes.items():
+        for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
                 self.open_uri_async(uri)
-                    .then(functools.partial(self._apply_text_edits, edits, description, view_version, uri))
+                    .then(functools.partial(self._apply_text_edits, edits, label, view_version, uri))
                     .then(functools.partial(self._set_view_state, view_state_actions))
             )
         return Promise.all(promises) \
@@ -1967,7 +1967,7 @@ class Session(TransportCallbacks):
     def _apply_text_edits(
         self,
         edits: list[TextEdit],
-        description: str | None,
+        label: str | None,
         view_version: int | None,
         uri: str,
         view: sublime.View | None
@@ -1975,7 +1975,7 @@ class Session(TransportCallbacks):
         if view is None or not view.is_valid():
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
             return None
-        apply_text_edits(view, edits, description=description, required_view_version=view_version)
+        apply_text_edits(view, edits, label=label, required_view_version=view_version)
         return view
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:

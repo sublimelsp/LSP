@@ -56,4 +56,4 @@ class LspColorPresentationCommand(LspTextCommand):
         if index > -1:
             color_pres = self._filtered_response[index]
             text_edit = color_pres.get('textEdit') or {'range': self._range, 'newText': color_pres['label']}
-            apply_text_edits(self.view, [text_edit], required_view_version=self._version)
+            apply_text_edits(self.view, [text_edit], label="Change Color Format", required_view_version=self._version)

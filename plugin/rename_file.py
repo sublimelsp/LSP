@@ -72,10 +72,10 @@ class LspRenamePathCommand(LspWindowCommand):
             return
         # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
-        if resolved_new_path.exists():
+        new_path = str(resolved_new_path)
+        if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
-        new_path = str(resolved_new_path)
         new_path_uri = filename_to_uri(new_path)
         old_path_uri = filename_to_uri(old_path)
         rename_file_params: RenameFilesParams = {
@@ -96,6 +96,13 @@ class LspRenamePathCommand(LspWindowCommand):
         else:
             self.rename_path(old_path, new_path)
             self.notify_did_rename(rename_file_params)
+
+    def is_case_change(self, path_a: str, path_b: str) -> bool:
+        if path_a.lower() != path_b.lower():
+            return False
+        if os.stat(path_a).st_ino != os.stat(path_b).st_ino:
+            return False
+        return True
 
     def _handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
                                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:

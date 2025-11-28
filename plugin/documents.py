@@ -287,9 +287,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     @override
     def get_diagnostics_async(
-        self,
-        location: sublime.Region | int,
-        max_diagnostic_severity_level: DiagnosticSeverity = DiagnosticSeverity.Hint
+        self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         result: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
@@ -321,7 +319,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status and self._stored_selection:
             session_buffer_diagnostics = self.get_diagnostics_async(
-                self._stored_selection[0].b, cast('DiagnosticSeverity', userprefs().show_diagnostics_severity_level))
+                self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
             if session_buffer_diagnostics:
                 for _, diagnostics in session_buffer_diagnostics:
                     if diag := next(iter(diagnostics), None):

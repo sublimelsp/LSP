@@ -777,9 +777,7 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def get_diagnostics_async(
-        self,
-        location: sublime.Region | int,
-        max_diagnostic_severity_level: DiagnosticSeverity = DiagnosticSeverity.Hint
+        self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         raise NotImplementedError()
 

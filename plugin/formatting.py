@@ -203,7 +203,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
                 session.send_request(
-                    request, lambda response: apply_text_edits(self.view, response, label="Format Selections"))
+                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
 
 
 class LspFormatCommand(LspTextCommand):
@@ -218,11 +218,7 @@ class LspFormatCommand(LspTextCommand):
         return self.is_enabled(event, point)
 
     def description(self, **kwargs) -> str:
-        if self._range_formatting_available():
-            if has_single_nonempty_selection(self.view):
-                return "Format Selection"
-            return "Format Selections"
-        return "Format File"
+        return "Format Selection" if self._range_formatting_available() else "Format File"
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         command = 'lsp_format_document_range' if self._range_formatting_available() else 'lsp_format_document'

@@ -94,8 +94,7 @@ class LspRenamePathCommand(LspWindowCommand):
                                                              old_path, new_path, rename_file_params)
             )
         else:
-            self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params)
+            self.rename_path(old_path, new_path, rename_file_params)
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
         if path_a.lower() != path_b.lower():
@@ -107,13 +106,12 @@ class LspRenamePathCommand(LspWindowCommand):
     def handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
                                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
         def on_workspace_edits_applied(_) -> None:
-            self.rename_path(old_path, new_path)
-            self.notify_did_rename(rename_file_params)
+            self.rename_path(old_path, new_path, rename_file_params)
 
         if (session := self.session_by_name(session_name)) and response:
             session.apply_workspace_edit_async(response, is_refactoring=True).then(on_workspace_edits_applied)
 
-    def rename_path(self, old_path: str, new_path: str) -> None:
+    def rename_path(self, old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
         old_regions: list[sublime.Region] = []
         if view := self.window.find_open_file(old_path):
             view.run_command('save', {'async': False})
@@ -125,6 +123,7 @@ class LspRenamePathCommand(LspWindowCommand):
         is_directory = os.path.isdir(old_path)
         try:
             os.rename(old_path, new_path)
+            self.notify_did_rename(rename_file_params)
         except Exception:
             sublime.status_message("Unable to rename")
             return

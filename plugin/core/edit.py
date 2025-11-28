@@ -14,7 +14,7 @@ import sublime
 WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[str], Optional[int]]]
 
 
-def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None) -> WorkspaceChanges:
+def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None) -> WorkspaceChanges:
     changes: WorkspaceChanges = {}
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):

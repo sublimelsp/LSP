@@ -51,7 +51,7 @@ def apply_text_edits(
     view: sublime.View,
     edits: list[TextEdit] | None,
     *,
-    description: str | None = None,
+    label: str | None = None,
     process_placeholders: bool | None = False,
     required_view_version: int | None = None
 ) -> None:
@@ -61,7 +61,7 @@ def apply_text_edits(
         'lsp_apply_document_edit',
         {
             'changes': edits,
-            'description': description,
+            'label': label,
             'process_placeholders': process_placeholders,
             'required_view_version': required_view_version,
         }

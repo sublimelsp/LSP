@@ -44,13 +44,13 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     re_placeholder = re.compile(r'\$(0|\{0:([^}]*)\})')
 
     def description(self, **kwargs: dict[str, Any]) -> str | None:
-        return kwargs.get('description')  # pyright: ignore[reportReturnType]
+        return kwargs.get('label')  # pyright: ignore[reportReturnType]
 
     def run(
         self,
         edit: sublime.Edit,
         changes: list[TextEdit],
-        description: str | None = None,
+        label: str | None = None,
         required_view_version: int | None = None,
         process_placeholders: bool = False,
     ) -> None:

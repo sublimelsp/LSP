@@ -238,7 +238,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         workspace_edit: WorkspaceEdit,
         changes_per_uri: WorkspaceChanges,
-        description: str,
+        label: str,
         total_changes: int,
         file_count: int,
         session_name: str
@@ -306,7 +306,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                         {
                             'session_name': session_name,
                             'edit': workspace_edit,
-                            'description': description,
+                            'label': label,
                             'is_refactoring': True
                         }
                     ],

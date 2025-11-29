@@ -110,7 +110,6 @@ class LspRenamePathCommand(LspWindowCommand):
             new_dir.mkdir()
         try:
             old_path.rename(new_path)
-            self.notify_did_rename(file_rename)
         except Exception:
             sublime.status_message("Unable to rename")
             return
@@ -127,7 +126,9 @@ class LspRenamePathCommand(LspWindowCommand):
                 view.sel().add_all(old_regions)
 
             # LSP spec - send didOpen for the new file
-            open_file_uri(self.window, str(new_path)).then(restore_regions)
+            open_file_uri(self.window, str(new_path)).then(restore_regions) \
+                .then(lambda _: self.notify_did_rename(file_rename))
+
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():

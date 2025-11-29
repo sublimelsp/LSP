@@ -1,13 +1,12 @@
 from __future__ import annotations
+from ..protocol import FileRename
 from ..protocol import WorkspaceEdit
-from ..protocol import RenameFilesParams
 from .core.open import open_file_uri
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
-from .core.url import filename_to_uri
+from .core.url import filename_to_uri, parse_uri
 from pathlib import Path
-import os
 import sublime
 import sublime_plugin
 
@@ -38,7 +37,7 @@ class RenamePathInputHandler(sublime_plugin.TextInputHandler):
         return self.placeholder()
 
     def initial_selection(self) -> list[tuple[int, int]]:
-        name, _ext = os.path.splitext(self.path)
+        name = Path(self.path).stem
         return [(0, len(name))]
 
     def validate(self, path: str) -> bool:
@@ -76,57 +75,51 @@ class LspRenamePathCommand(LspWindowCommand):
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
-        new_path_uri = filename_to_uri(new_path)
-        old_path_uri = filename_to_uri(old_path)
-        rename_file_params: RenameFilesParams = {
-            "files": [{
-                "newUri": new_path_uri,
-                "oldUri": old_path_uri
-            }]
+        file_rename: FileRename = {
+            "newUri": filename_to_uri(new_path),
+            "oldUri": filename_to_uri(old_path)
         }
         session = self.session()
         file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
-        if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path_uri):
+        if session and file_operation_options and match_file_operation_filters(file_operation_options, file_rename['oldUri']):
             session.send_request(
-                Request.willRenameFiles(rename_file_params),
-                lambda response: self.handle_response_async(response, session.config.name,
-                                                            old_path, new_path, rename_file_params)
+                Request.willRenameFiles({'files': [file_rename] }),
+                lambda response: self.handle_response_async(response, session.config.name, file_rename)
             )
         else:
-            self.rename_path(old_path, new_path, rename_file_params)
+            self.rename_path(file_rename)
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
-        return path_a.lower() == path_b.lower() and os.stat(path_a).st_ino == os.stat(path_b).st_ino
+        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
-    def handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
-                               old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
+    def handle_response_async(self, response: WorkspaceEdit | None, session_name: str, file_rename: FileRename) -> None:
         if (session := self.session_by_name(session_name)) and response:
             session.apply_workspace_edit_async(response, is_refactoring=True) \
-                .then(lambda _: self.rename_path(old_path, new_path, rename_file_params))
+                .then(lambda _: self.rename_path(file_rename))
 
-
-    def rename_path(self, old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:
+    def rename_path(self, file_rename: FileRename) -> None:
+        old_path = Path(parse_uri(file_rename['oldUri'])[1])
+        new_path = Path(parse_uri(file_rename['newUri'])[1])
         old_regions: list[sublime.Region] = []
-        if view := self.window.find_open_file(old_path):
+        if view := self.window.find_open_file(str(old_path)):
             view.run_command('save', {'async': False})
             old_regions = list(view.sel())
             view.close()  # LSP spec - send didClose for the old file
-        new_dir = Path(new_path).parent
+        new_dir = new_path.parent
         if not new_dir.exists():
-            os.makedirs(new_dir)
-        is_directory = os.path.isdir(old_path)
+            new_dir.mkdir()
         try:
-            os.rename(old_path, new_path)
-            self.notify_did_rename(rename_file_params)
+            old_path.rename(new_path)
+            self.notify_did_rename(file_rename)
         except Exception:
             sublime.status_message("Unable to rename")
             return
-        if is_directory:
+        if old_path.is_dir():
             for view in self.window.views():
                 file_name = view.file_name()
-                if file_name and file_name.startswith(old_path):
-                    view.retarget(file_name.replace(old_path, new_path))
-        if os.path.isfile(new_path):
+                if file_name and file_name.startswith(str(old_path)):
+                    view.retarget(file_name.replace(str(old_path), str(new_path)))
+        if new_path.is_file():
             def restore_regions(view: sublime.View | None) -> None:
                 if not view:
                     return
@@ -134,11 +127,10 @@ class LspRenamePathCommand(LspWindowCommand):
                 view.sel().add_all(old_regions)
 
             # LSP spec - send didOpen for the new file
-            open_file_uri(self.window, new_path).then(restore_regions)
+            open_file_uri(self.window, str(new_path)).then(restore_regions)
 
-    def notify_did_rename(self, rename_file_params: RenameFilesParams):
+    def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():
             file_operation_options = session.get_capability('workspace.fileOperations.didRename')
-            old_uri = rename_file_params['files'][0]['oldUri']
-            if file_operation_options and match_file_operation_filters(file_operation_options, old_uri):
-                session.send_notification(Notification.didRenameFiles(rename_file_params))
+            if file_operation_options and match_file_operation_filters(file_operation_options, file_rename['oldUri']):
+                session.send_notification(Notification.didRenameFiles({'files': [file_rename] }))

@@ -131,6 +131,6 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():
-            file_operation_options = session.get_capability('workspace.fileOperations.didRename')
-            if file_operation_options and match_file_operation_filters(file_operation_options, file_rename['oldUri']):
+            file_operations = session.get_capability('workspace.fileOperations.didRename')
+            if file_operations and match_file_operation_filters(file_operations, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))

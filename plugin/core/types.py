@@ -1,7 +1,11 @@
 from __future__ import annotations
+from ...protocol import FileOperationFilter
+from ...protocol import FileOperationPatternKind
+from ...protocol import FileOperationRegistrationOptions
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
+from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
@@ -13,6 +17,7 @@ from typing import cast
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
+from wcmatch.glob import IGNORECASE
 import contextlib
 import fnmatch
 import os
@@ -445,6 +450,30 @@ class DocumentSelector:
     def matches(self, view: sublime.View) -> bool:
         """Does this selector match the view? A selector with no filters matches all views."""
         return any(f(view) for f in self.filters) if self.filters else True
+
+
+def match_file_operation_filters(file_operation_options: FileOperationRegistrationOptions, uri: URI) -> bool:
+    def matches(file_operation_filter: FileOperationFilter) -> bool:
+        uri_scheme, file_name = parse_uri(uri)
+        pattern = file_operation_filter['pattern']
+        scheme = file_operation_filter.get('scheme')
+        if scheme and uri_scheme != scheme:
+            return False
+        matches = pattern.get('matches')
+        if matches == FileOperationPatternKind.File and os.path.isdir(file_name):
+            return False
+        if matches == FileOperationPatternKind.Folder and os.path.isfile(file_name):
+            return False
+        options = pattern.get('options', {})
+        flags = GLOBSTAR | BRACE
+        if options.get('ignoreCase', False):
+            flags |= IGNORECASE
+        if not globmatch(file_name, pattern['glob'], flags=flags):
+            return False
+        return True
+
+    filters = file_operation_options['filters']
+    return any(matches(_filter) for _filter in filters) if filters else True
 
 
 # method -> (capability dotted path, optional registration dotted path)

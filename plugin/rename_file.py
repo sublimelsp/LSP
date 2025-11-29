@@ -90,7 +90,7 @@ class LspRenamePathCommand(LspWindowCommand):
             session.send_request(
                 Request.willRenameFiles(rename_file_params),
                 lambda response: self.handle_response_async(response, session.config.name,
-                                                             old_path, new_path, rename_file_params)
+                                                            old_path, new_path, rename_file_params)
             )
         else:
             self.rename_path(old_path, new_path, rename_file_params)

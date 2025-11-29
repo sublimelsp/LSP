@@ -87,9 +87,8 @@ class LspRenamePathCommand(LspWindowCommand):
         session = self.session()
         file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
         if session and file_operation_options and match_file_operation_filters(file_operation_options, old_path_uri):
-            request = Request.willRenameFiles(rename_file_params)
             session.send_request(
-                request,
+                Request.willRenameFiles(rename_file_params),
                 lambda response: self.handle_response_async(response, session.config.name,
                                                              old_path, new_path, rename_file_params)
             )

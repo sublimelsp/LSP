@@ -75,12 +75,12 @@ class LspRenamePathCommand(LspWindowCommand):
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
+        session = self.session()
+        file_operations = session.get_capability('workspace.fileOperations.willRename') if session else None
         file_rename: FileRename = {
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
-        session = self.session()
-        file_operations = session.get_capability('workspace.fileOperations.willRename') if session else None
         if session and file_operations and match_file_operation_filters(file_operations, file_rename['oldUri']):
             session.send_request(
                 Request.willRenameFiles({'files': [file_rename]}),

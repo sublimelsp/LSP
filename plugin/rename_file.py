@@ -93,7 +93,9 @@ class LspRenamePathCommand(LspWindowCommand):
         )]
         promises = [create_request_async(session) for session in sessions]
         if promises:
-            Promise.all(promises).then(lambda responses: self.handle_responses_async(responses, file_rename))
+            sublime.set_timeout_async(
+                lambda: Promise.all(promises).then(lambda responses: self.handle_responses_async(responses, file_rename))
+            )
         else:
             self.rename_path(file_rename)
 

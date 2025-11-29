@@ -2,13 +2,16 @@ from __future__ import annotations
 from ..protocol import FileRename
 from ..protocol import WorkspaceEdit
 from .core.open import open_file_uri
+from .core.promise import Promise
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
+from .core.sessions import Session
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri, parse_uri
 from pathlib import Path
 import sublime
 import sublime_plugin
+import weakref
 
 
 class LspRenameFromSidebarOverride(LspWindowCommand):
@@ -75,27 +78,34 @@ class LspRenamePathCommand(LspWindowCommand):
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
-        session = self.session()
-        file_operations = session.get_capability('workspace.fileOperations.willRename') if session else None
         file_rename: FileRename = {
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
-        if session and file_operations and match_file_operation_filters(file_operations, file_rename['oldUri']):
-            session.send_request(
-                Request.willRenameFiles({'files': [file_rename]}),
-                lambda response: self.handle_response_async(response, session.config.name, file_rename)
-            )
+
+        def create_request_async(session: Session) -> Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]:
+            return session.send_request_task(
+                        Request.willRenameFiles({'files': [file_rename]})
+                   ).then(lambda response: (response, weakref.ref(session)))
+
+        sessions = [session for session in self.sessions() if match_file_operation_filters(
+            session.get_capability('workspace.fileOperations.willRename'), file_rename['oldUri']
+        )]
+        promises = [create_request_async(session) for session in sessions]
+        if promises:
+            Promise.all(promises).then(lambda responses: self.handle_responses_async(responses, file_rename))
         else:
             self.rename_path(file_rename)
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
-    def handle_response_async(self, response: WorkspaceEdit | None, session_name: str, file_rename: FileRename) -> None:
-        if (session := self.session_by_name(session_name)) and response:
-            session.apply_workspace_edit_async(response, is_refactoring=True) \
-                .then(lambda _: self.rename_path(file_rename))
+    def handle_responses_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
+                              file_rename: FileRename) -> None:
+        for response, weak_session in responses:
+            if (session := weak_session()) and response:
+                session.apply_workspace_edit_async(response, is_refactoring=True) \
+                    .then(lambda _: self.rename_path(file_rename))
 
     def rename_path(self, file_rename: FileRename) -> None:
         old_path = Path(parse_uri(file_rename['oldUri'])[1])

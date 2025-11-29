@@ -452,7 +452,10 @@ class DocumentSelector:
         return any(f(view) for f in self.filters) if self.filters else True
 
 
-def match_file_operation_filters(file_operations: FileOperationRegistrationOptions, uri: URI) -> bool:
+def match_file_operation_filters(file_operations: FileOperationRegistrationOptions | None, uri: URI) -> bool:
+    if not file_operations:
+        return False
+
     def matches(file_operation_filter: FileOperationFilter) -> bool:
         uri_scheme, file_name = parse_uri(uri)
         pattern = file_operation_filter['pattern']

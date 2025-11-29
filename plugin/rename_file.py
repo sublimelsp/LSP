@@ -80,10 +80,10 @@ class LspRenamePathCommand(LspWindowCommand):
             "oldUri": filename_to_uri(old_path)
         }
         session = self.session()
-        file_operation_options = session.get_capability('workspace.fileOperations.willRename') if session else None
-        if session and file_operation_options and match_file_operation_filters(file_operation_options, file_rename['oldUri']):
+        file_operations = session.get_capability('workspace.fileOperations.willRename') if session else None
+        if session and file_operations and match_file_operation_filters(file_operations, file_rename['oldUri']):
             session.send_request(
-                Request.willRenameFiles({'files': [file_rename] }),
+                Request.willRenameFiles({'files': [file_rename]}),
                 lambda response: self.handle_response_async(response, session.config.name, file_rename)
             )
         else:
@@ -133,4 +133,4 @@ class LspRenamePathCommand(LspWindowCommand):
         for session in self.sessions():
             file_operation_options = session.get_capability('workspace.fileOperations.didRename')
             if file_operation_options and match_file_operation_filters(file_operation_options, file_rename['oldUri']):
-                session.send_notification(Notification.didRenameFiles({'files': [file_rename] }))
+                session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))

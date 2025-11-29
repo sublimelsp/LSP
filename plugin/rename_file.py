@@ -94,7 +94,7 @@ class LspRenamePathCommand(LspWindowCommand):
         promises = [create_request_async(session) for session in sessions]
         if promises:
             sublime.set_timeout_async(
-                lambda: Promise.all(promises).then(lambda responses: self.handle_responses_async(responses, file_rename))
+                lambda: Promise.all(promises).then(lambda responses: self.handle_rename_async(responses, file_rename))
             )
         else:
             self.rename_path(file_rename)
@@ -102,7 +102,7 @@ class LspRenamePathCommand(LspWindowCommand):
     def is_case_change(self, path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
-    def handle_responses_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
                                file_rename: FileRename) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:

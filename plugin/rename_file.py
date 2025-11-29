@@ -130,7 +130,6 @@ class LspRenamePathCommand(LspWindowCommand):
             open_file_uri(self.window, str(new_path)).then(restore_regions) \
                 .then(lambda _: self.notify_did_rename(file_rename))
 
-
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():
             file_operations = session.get_capability('workspace.fileOperations.didRename')

@@ -101,7 +101,7 @@ class LspRenamePathCommand(LspWindowCommand):
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
     def handle_responses_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
-                              file_rename: FileRename) -> None:
+                               file_rename: FileRename) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
                 session.apply_workspace_edit_async(response, is_refactoring=True) \

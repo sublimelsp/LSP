@@ -96,11 +96,7 @@ class LspRenamePathCommand(LspWindowCommand):
             self.rename_path(old_path, new_path, rename_file_params)
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
-        if path_a.lower() != path_b.lower():
-            return False
-        if os.stat(path_a).st_ino != os.stat(path_b).st_ino:
-            return False
-        return True
+        return path_a.lower() == path_b.lower() and os.stat(path_a).st_ino == os.stat(path_b).st_ino
 
     def handle_response_async(self, response: WorkspaceEdit | None, session_name: str,
                                old_path: str, new_path: str, rename_file_params: RenameFilesParams) -> None:

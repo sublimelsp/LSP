@@ -216,7 +216,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
     def test_sorts_in_application_order2(self):
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
-        (edits, version) = changes[URI]
+        (edits, label, version) = changes[URI]
         self.assertEqual(version, 6)
         parsed_edits = [parse_text_edit(edit) for edit in edits]
         sorted_edits = list(reversed(sort_by_application_order(parsed_edits)))

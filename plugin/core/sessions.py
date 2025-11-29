@@ -47,6 +47,7 @@ from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
+from ...protocol import SignatureHelpTriggerKind
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
@@ -54,6 +55,7 @@ from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
 from ...protocol import TokenFormat
 from ...protocol import UnregistrationParams
+from ...protocol import WatchKind
 from ...protocol import WindowClientCapabilities
 from ...protocol import WorkDoneProgressBegin
 from ...protocol import WorkDoneProgressCreateParams
@@ -66,13 +68,14 @@ from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
+from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
-from .file_watcher import DEFAULT_KIND
+from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
 from .file_watcher import FileWatcherEvent
@@ -121,7 +124,7 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum, IntFlag
-from typing import Any, Callable, Generator, List, Protocol, TypeVar
+from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -500,6 +503,9 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "workspaceEdit": {
             "documentChanges": True,
             "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
+            "changeAnnotationSupport": {
+                "groupsOnLabel": False
+            }
         },
         "workspaceFolders": True,
         "symbol": {
@@ -641,6 +647,9 @@ class SessionViewProtocol(Protocol):
     def on_userprefs_changed_async(self) -> None:
         ...
 
+    def get_request_flags(self) -> RequestFlags:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -724,6 +733,9 @@ class SessionBufferProtocol(Protocol):
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         ...
 
+    def remove_all_inlay_hints(self) -> None:
+        ...
+
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
@@ -773,30 +785,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_intersecting_region_async(
-        self,
-        region: sublime.Region
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
+    def get_diagnostics_async(
+        self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
+    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         raise NotImplementedError()
-
-    @abstractmethod
-    def diagnostics_touching_point_async(
-        self,
-        pt: int,
-        max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
-        raise NotImplementedError()
-
-    def diagnostics_intersecting_async(
-        self,
-        region_or_point: sublime.Region | int
-    ) -> tuple[list[tuple[SessionBufferProtocol, list[Diagnostic]]], sublime.Region]:
-        if isinstance(region_or_point, int):
-            return self.diagnostics_touching_point_async(region_or_point)
-        elif region_or_point.empty():
-            return self.diagnostics_touching_point_async(region_or_point.a)
-        else:
-            return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
@@ -810,8 +802,22 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_uri(self) -> DocumentUri:
         raise NotImplementedError()
 
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.TriggerCharacter],
+        trigger_char: str
+    ) -> None: ...
+
+    @overload
+    def do_signature_help_async(
+        self,
+        trigger_kind: Literal[SignatureHelpTriggerKind.Invoked, SignatureHelpTriggerKind.ContentChange],
+        trigger_char: None = None
+    ) -> None: ...
+
     @abstractmethod
-    def do_signature_help_async(self, manual: bool) -> None:
+    def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -819,7 +825,15 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def on_documentation_popup_toggle(self, *, opened: bool) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
 
@@ -1717,7 +1731,7 @@ class Session(TransportCallbacks):
                 listener = session_view.listener()
                 if not listener:
                     return
-                listener.do_signature_help_async(manual=False)
+                listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
@@ -1897,9 +1911,11 @@ class Session(TransportCallbacks):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
+        title = code_action['title']
         edit = code_action.get("edit")
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-        promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
+        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) if edit else \
+            Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1912,23 +1928,26 @@ class Session(TransportCallbacks):
                                                                is_refactoring=is_refactoring))
         return promise
 
-    def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
+    def apply_workspace_edit_async(
+        self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
+    ) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        for uri, (edits, view_version) in changes.items():
+        for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
-                self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
+                self.open_uri_async(uri)
+                    .then(functools.partial(self._apply_text_edits, edits, label, view_version, uri))
                     .then(functools.partial(self._set_view_state, view_state_actions))
             )
         return Promise.all(promises) \
@@ -1936,12 +1955,17 @@ class Session(TransportCallbacks):
             .then(lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
-        self, edits: list[TextEdit], view_version: int | None, uri: str, view: sublime.View | None
+        self,
+        edits: list[TextEdit],
+        label: str | None,
+        view_version: int | None,
+        uri: str,
+        view: sublime.View | None
     ) -> sublime.View | None:
         if view is None or not view.is_valid():
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
             return None
-        apply_text_edits(view, edits, required_view_version=view_version)
+        apply_text_edits(view, edits, label=label, required_view_version=view_version)
         return view
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
@@ -2128,7 +2152,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {})) \
+        self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
@@ -2145,7 +2169,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_semantic_tokens_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                sv.session_buffer.do_semantic_tokens_async(sv.view)
+            else:
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 
@@ -2154,7 +2181,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_inlay_hints_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.INLAY_HINT:
+                sv.session_buffer.do_inlay_hints_async(sv.view)
+            else:
+                sv.session_buffer.set_inlay_hints_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 
@@ -2241,20 +2271,24 @@ class Session(TransportCallbacks):
         if not self._watcher_impl:
             return
         self.unregister_file_system_watchers(registration_id)
-        file_watchers: list[FileWatcher] = []
+        # List of patterns aggregated by base path and kind.
+        aggregated_watchers: dict[tuple[str, WatchKind], list[str]] = {}
         for config in watchers:
-            kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
+            kind = config.get("kind") or DEFAULT_WATCH_KIND
             glob_pattern = config["globPattern"]
             if isinstance(glob_pattern, str):
                 for folder in self.get_workspace_folders():
-                    ignores = self._get_global_ignore_globs(folder.path)
-                    file_watchers.append(self._watcher_impl.create(folder.path, [glob_pattern], kind, ignores, self))
+                    aggregated_watchers.setdefault((folder.path, kind), []).append(glob_pattern)
             else:  # RelativePattern
                 pattern = glob_pattern["pattern"]
                 base = glob_pattern["baseUri"]  # URI or WorkspaceFolder
                 _, base_path = parse_uri(base if isinstance(base, str) else base["uri"])
-                ignores = self._get_global_ignore_globs(base_path)
-                file_watchers.append(self._watcher_impl.create(base_path, [pattern], kind, ignores, self))
+                aggregated_watchers.setdefault((base_path, kind), []).append(pattern)
+        file_watchers: list[FileWatcher] = []
+        for (base_path, kind), patterns in aggregated_watchers.items():
+            ignores = self._get_global_ignore_globs(base_path)
+            watcher_kind = lsp_watch_kind_to_file_watcher_event_types(kind)
+            file_watchers.append(self._watcher_impl.create(base_path, patterns, watcher_kind, ignores, self))
         self._dynamic_file_watchers[registration_id] = file_watchers
 
     def unregister_file_system_watchers(self, registration_id: str) -> None:

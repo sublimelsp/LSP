@@ -503,6 +503,9 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "workspaceEdit": {
             "documentChanges": True,
             "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
+            "changeAnnotationSupport": {
+                "groupsOnLabel": False
+            }
         },
         "workspaceFolders": True,
         "symbol": {
@@ -1903,9 +1906,11 @@ class Session(TransportCallbacks):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message(f"Failed to apply code action: {code_action}")
             return Promise.resolve(None)
+        title = code_action['title']
         edit = code_action.get("edit")
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-        promise = self.apply_workspace_edit_async(edit, is_refactoring) if edit else Promise.resolve(None)
+        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) if edit else \
+            Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1918,23 +1923,26 @@ class Session(TransportCallbacks):
                                                                is_refactoring=is_refactoring))
         return promise
 
-    def apply_workspace_edit_async(self, edit: WorkspaceEdit, is_refactoring: bool = False) -> Promise[None]:
+    def apply_workspace_edit_async(
+        self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
+    ) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit), is_refactoring)
+        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        for uri, (edits, view_version) in changes.items():
+        for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
-                self.open_uri_async(uri).then(functools.partial(self._apply_text_edits, edits, view_version, uri))
+                self.open_uri_async(uri)
+                    .then(functools.partial(self._apply_text_edits, edits, label, view_version, uri))
                     .then(functools.partial(self._set_view_state, view_state_actions))
             )
         return Promise.all(promises) \
@@ -1942,12 +1950,17 @@ class Session(TransportCallbacks):
             .then(lambda _: self._set_focused_sheet(active_sheet))
 
     def _apply_text_edits(
-        self, edits: list[TextEdit], view_version: int | None, uri: str, view: sublime.View | None
+        self,
+        edits: list[TextEdit],
+        label: str | None,
+        view_version: int | None,
+        uri: str,
+        view: sublime.View | None
     ) -> sublime.View | None:
         if view is None or not view.is_valid():
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
             return None
-        apply_text_edits(view, edits, required_view_version=view_version)
+        apply_text_edits(view, edits, label=label, required_view_version=view_version)
         return view
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
@@ -2134,7 +2147,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {})) \
+        self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:

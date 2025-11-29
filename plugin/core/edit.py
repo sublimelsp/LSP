@@ -9,13 +9,14 @@ from typing import Dict, List, Optional, Tuple, Union
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[str], Optional[int]]]
 
 
-def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
+def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None) -> WorkspaceChanges:
     changes: WorkspaceChanges = {}
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
+        change_annotations = workspace_edit.get('changeAnnotations', {})
         for document_change in document_changes:
             if 'kind' in document_change:
                 # TODO: Support resource operations (create/rename/remove)
@@ -29,12 +30,16 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit) -> WorkspaceChanges:
                 if 'snippet' in edit:
                     debug('Ignoring unsupported SnippetTextEdit')
                     continue
-                changes.setdefault(uri, ([], version))[0].append(edit)
+                description = change_annotations[id_]['label'] if (id_ := edit.get('annotationId')) else label
+                # Note that if the WorkspaceEdit contains multiple AnnotatedTextEdit with different labels for the same
+                # URI, we only show the first label in the undo menu, because all edits are combined into a single
+                # buffer modification in the lsp_apply_document_edit command.
+                changes.setdefault(uri, ([], description, version))[0].append(edit)
     else:
         raw_changes = workspace_edit.get('changes')
         if isinstance(raw_changes, dict):
             for uri, edits in raw_changes.items():
-                changes[uri] = (edits, None)
+                changes[uri] = (edits, label, None)
     return changes
 
 
@@ -46,6 +51,7 @@ def apply_text_edits(
     view: sublime.View,
     edits: list[TextEdit] | None,
     *,
+    label: str | None = None,
     process_placeholders: bool | None = False,
     required_view_version: int | None = None
 ) -> None:
@@ -55,6 +61,7 @@ def apply_text_edits(
         'lsp_apply_document_edit',
         {
             'changes': edits,
+            'label': label,
             'process_placeholders': process_placeholders,
             'required_view_version': required_view_version,
         }

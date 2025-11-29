@@ -78,7 +78,7 @@ class WillSaveWaitTask(SaveTask):
 
     def _on_response(self, response: FormatResponse) -> None:
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_text_edits(self._task_runner.view, response)
+            apply_text_edits(self._task_runner.view, response, label="Format on Save")
         sublime.set_timeout_async(self._handle_next_session_async)
 
 
@@ -102,7 +102,7 @@ class FormattingTask(SaveTask):
 
     def _on_response(self, response: FormatResponse) -> None:
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_text_edits(self._task_runner.view, response)
+            apply_text_edits(self._task_runner.view, response, label="Format on Save")
         sublime.set_timeout_async(self._on_complete)
 
 
@@ -143,7 +143,7 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     def on_result(self, result: FormatResponse) -> None:
         if result and not isinstance(result, Error):
-            apply_text_edits(self.view, result)
+            apply_text_edits(self.view, result, label="Format File")
 
     def select_formatter(self, base_scope: str, session_names: list[str]) -> None:
         if window := self.view.window():
@@ -197,11 +197,13 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             selection = first_selection_region(self.view)
             if session and selection is not None:
                 request = text_document_range_formatting(self.view, selection)
-                session.send_request(request, lambda response: apply_text_edits(self.view, response))
+                session.send_request(
+                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
-                session.send_request(request, lambda response: apply_text_edits(self.view, response))
+                session.send_request(
+                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
 
 
 class LspFormatCommand(LspTextCommand):
@@ -216,11 +218,7 @@ class LspFormatCommand(LspTextCommand):
         return self.is_enabled(event, point)
 
     def description(self, **kwargs) -> str:
-        if self._range_formatting_available():
-            if has_single_nonempty_selection(self.view):
-                return "Format Selection"
-            return "Format Selections"
-        return "Format File"
+        return "Format Selection" if self._range_formatting_available() else "Format File"
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         command = 'lsp_format_document_range' if self._range_formatting_available() else 'lsp_format_document'

@@ -83,7 +83,7 @@ class LspInlayHintClickCommand(LspTextCommand):
             return
         for sb in session.session_buffers_async():
             sb.remove_inlay_hint_phantom(phantom_uuid)
-        apply_text_edits(self.view, text_edits)
+        apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
 
     def handle_label_part_command(self, session_name: str, label_part: InlayHintLabelPart | None = None) -> None:
         if not label_part:

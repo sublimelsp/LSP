@@ -106,6 +106,7 @@ class LspRenamePathCommand(LspWindowCommand):
             old_regions = list(view.sel())
             view.close()  # LSP spec - send didClose for the old file
         new_dir = new_path.parent
+        old_path_is_dir = old_path.is_dir()
         if not new_dir.exists():
             new_dir.mkdir()
         try:
@@ -113,7 +114,7 @@ class LspRenamePathCommand(LspWindowCommand):
         except Exception:
             sublime.status_message("Unable to rename")
             return
-        if old_path.is_dir():
+        if old_path_is_dir:
             for view in self.window.views():
                 file_name = view.file_name()
                 if file_name and file_name.startswith(str(old_path)):

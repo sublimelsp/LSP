@@ -306,7 +306,7 @@ class LspCodeActionsCommand(LspTextCommand):
         listener = windows.listener_for_view(view)
         if not listener:
             return
-        session_buffer_diagnostics = listener.diagnostics_intersecting_async(region)
+        session_buffer_diagnostics = listener.get_diagnostics_async(region)
         actions_manager \
             .request_for_region_async(view, region, session_buffer_diagnostics, only_kinds, manual=True) \
             .then(lambda actions: sublime.set_timeout(lambda: self._handle_code_actions(actions)))

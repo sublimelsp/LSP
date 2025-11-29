@@ -138,7 +138,7 @@ class LspHoverCommand(LspTextCommand):
                 self.request_symbol_hover_async(listener, hover_point)
                 if userprefs().link_highlight_style in ("underline", "none"):
                     self.request_document_link_async(listener, hover_point)
-            self._diagnostics_by_config = listener.diagnostics_touching_point_async(
+            self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)

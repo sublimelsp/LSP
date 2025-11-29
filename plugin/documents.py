@@ -282,31 +282,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if sb.has_latest_diagnostics() or allow_stale:
                 yield sb, sb.diagnostics
 
-    def diagnostics_intersecting_region_async(
-        self, region: sublime.Region
+    @override
+    def get_diagnostics_async(
+        self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
         result: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
         for sb, diagnostics in self._diagnostics_async():
             intersections: list[Diagnostic] = []
-            for diagnostic, candidate in diagnostics:
-                # Checking against points is inclusive unlike checking whether region intersects another region
-                # which is exclusive (at region end) and we want an inclusive behavior in this case.
-                if region.intersects(candidate) or region.contains(candidate.a) or region.contains(candidate.b):
-                    intersections.append(diagnostic)
-            if intersections:
-                result.append((sb, intersections))
-        return result
-
-    def diagnostics_touching_point_async(
-        self, pt: int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
-    ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
-        result: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
-        for sb, diagnostics in self._diagnostics_async():
-            intersections: list[Diagnostic] = []
-            for diagnostic, candidate in diagnostics:
+            for diagnostic, region in diagnostics:
                 if diagnostic_severity(diagnostic) > max_diagnostic_severity_level:
                     continue
-                if candidate.contains(pt):
+                if isinstance(location, int) or location.empty():
+                    if region.contains(location if isinstance(location, int) else location.a):
+                        intersections.append(diagnostic)
+                elif location.intersects(region) or location.contains(region.a) or location.contains(region.b):
+                    # Checking against points is inclusive unlike checking whether region intersects another region
+                    # which is exclusive (at region end) and we want an inclusive behavior in this case.
                     intersections.append(diagnostic)
             if intersections:
                 result.append((sb, intersections))
@@ -324,7 +315,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status and self._stored_selection:
-            session_buffer_diagnostics = self.diagnostics_touching_point_async(
+            session_buffer_diagnostics = self.get_diagnostics_async(
                 self._stored_selection[0].b, userprefs().show_diagnostics_severity_level)
             if session_buffer_diagnostics:
                 for _, diagnostics in session_buffer_diagnostics:
@@ -543,7 +534,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
             max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
             if userprefs().diagnostics_gutter_marker:
-                diagnostics_by_session_buffer = self.diagnostics_intersecting_async(self.view.line(point))
+                diagnostics_by_session_buffer = self.get_diagnostics_async(self.view.line(point))
             elif content:
                 diagnostics_by_session_buffer = self._diagnostics_for_selection
             if content:
@@ -733,7 +724,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not self._stored_selection:
             return
         region = self._stored_selection[0]
-        self._diagnostics_for_selection = self.diagnostics_intersecting_async(region)
+        self._diagnostics_for_selection = self.get_diagnostics_async(region)
         actions_manager \
             .request_for_region_async(self.view, region, self._diagnostics_for_selection, manual=False) \
             .then(self._on_code_actions)

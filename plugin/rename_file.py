@@ -88,10 +88,10 @@ class LspRenamePathCommand(LspWindowCommand):
                         Request.willRenameFiles({'files': [file_rename]})
                    ).then(lambda response: (response, weakref.ref(session)))
 
-        sessions = [session for session in self.sessions() if match_file_operation_filters(
-            session.get_capability('workspace.fileOperations.willRename'), file_rename['oldUri']
-        )]
-        promises = [create_request_async(session) for session in sessions]
+        promises = [
+            create_request_async(session) for session in self.sessions()
+            if match_file_operation_filters(
+                session.get_capability('workspace.fileOperations.willRename'), file_rename['oldUri'])]
         if promises:
             sublime.set_timeout_async(
                 lambda: Promise.all(promises).then(lambda responses: self.handle_rename_async(responses, file_rename))

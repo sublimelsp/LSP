@@ -83,13 +83,13 @@ class LspRenamePathCommand(LspWindowCommand):
             "oldUri": filename_to_uri(old_path)
         }
 
-        def create_request_async(session: Session) -> Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]:
+        def create_request(session: Session) -> Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]:
             return session.send_request_task(
                         Request.willRenameFiles({'files': [file_rename]})
                    ).then(lambda response: (response, weakref.ref(session)))
 
         promises = [
-            create_request_async(session) for session in self.sessions()
+            create_request(session) for session in self.sessions()
             if match_file_operation_filters(
                 session.get_capability('workspace.fileOperations.willRename'), file_rename['oldUri'])]
         if promises:

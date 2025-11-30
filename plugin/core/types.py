@@ -471,9 +471,7 @@ def match_file_operation_filters(file_operations: FileOperationRegistrationOptio
         flags = GLOBSTAR | BRACE
         if options.get('ignoreCase', False):
             flags |= IGNORECASE
-        if not globmatch(file_name, pattern['glob'], flags=flags):
-            return False
-        return True
+        return globmatch(file_name, pattern['glob'], flags=flags)
 
     return any(matches(_filter) for _filter in file_operations['filters'])
 

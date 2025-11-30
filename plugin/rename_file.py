@@ -9,9 +9,13 @@ from .core.sessions import Session
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri, parse_uri
 from pathlib import Path
+from typing import TYPE_CHECKING
 import sublime
 import sublime_plugin
 import weakref
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class LspRenameFromSidebarOverride(LspWindowCommand):
@@ -85,22 +89,20 @@ class LspRenamePathCommand(LspWindowCommand):
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
-
-        def create_request(session: Session) -> Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]:
-            return session.send_request_task(
-                        Request.willRenameFiles({'files': [file_rename]})
-                   ).then(lambda response: (response, weakref.ref(session)))
-
-        promises = [
-            create_request(session) for session in self.sessions()
-            if match_file_operation_filters(
-                session.get_capability('workspace.fileOperations.willRename'), file_rename['oldUri'])]
+        promises = list(self.create_will_rename_requests_async(file_rename))
         if promises:
-            sublime.set_timeout_async(
-                lambda: Promise.all(promises).then(lambda responses: self.handle_rename_async(responses, file_rename))
-            )
+            Promise.all(promises).then(lambda responses: self.handle_rename_async(responses, file_rename))
         else:
             self.rename_path(file_rename)
+
+    def create_will_rename_requests_async(
+        self, file_rename: FileRename
+    ) -> Generator[Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]]:
+        for session in self.sessions():
+            filters = session.get_capability('workspace.fileOperations.willRename.filters') or []
+            if match_file_operation_filters(filters, file_rename['oldUri']):
+                yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
+                    .then(lambda response: (response, weakref.ref(session)))
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
@@ -147,6 +149,6 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():
-            file_operations = session.get_capability('workspace.fileOperations.didRename')
-            if file_operations and match_file_operation_filters(file_operations, file_rename['oldUri']):
+            filters = session.get_capability('workspace.fileOperations.didRename.filters') or []
+            if filters and match_file_operation_filters(filters, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))

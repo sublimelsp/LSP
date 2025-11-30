@@ -1,7 +1,6 @@
 from __future__ import annotations
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
-from ...protocol import FileOperationRegistrationOptions
 from ...protocol import ServerCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextDocumentSyncOptions
@@ -452,10 +451,7 @@ class DocumentSelector:
         return any(f(view) for f in self.filters) if self.filters else True
 
 
-def match_file_operation_filters(file_operations: FileOperationRegistrationOptions | None, uri: URI) -> bool:
-    if not file_operations:
-        return False
-
+def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -> bool:
     def matches(file_operation_filter: FileOperationFilter) -> bool:
         uri_scheme, file_name = parse_uri(uri)
         pattern = file_operation_filter['pattern']
@@ -473,7 +469,7 @@ def match_file_operation_filters(file_operations: FileOperationRegistrationOptio
             flags |= IGNORECASE
         return globmatch(file_name, pattern['glob'], flags=flags)
 
-    return any(matches(_filter) for _filter in file_operations['filters'])
+    return any(matches(_filter) for _filter in filters)
 
 
 # method -> (capability dotted path, optional registration dotted path)

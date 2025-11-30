@@ -78,6 +78,9 @@ class LspRenamePathCommand(LspWindowCommand):
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to Rename. Already exists')
             return
+        sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
+
+    def run_async(self, old_path: str, new_path: str) -> None:
         file_rename: FileRename = {
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)

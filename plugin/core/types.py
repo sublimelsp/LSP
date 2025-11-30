@@ -463,9 +463,9 @@ def match_file_operation_filters(file_operations: FileOperationRegistrationOptio
         if scheme and uri_scheme != scheme:
             return False
         matches = pattern.get('matches')
-        if matches == FileOperationPatternKind.File and os.path.isdir(file_name):
+        if matches == FileOperationPatternKind.File and not os.path.isfile(file_name):
             return False
-        if matches == FileOperationPatternKind.Folder and os.path.isfile(file_name):
+        if matches == FileOperationPatternKind.Folder and not os.path.isdir(file_name):
             return False
         options = pattern.get('options', {})
         flags = GLOBSTAR | BRACE

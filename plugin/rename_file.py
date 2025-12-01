@@ -113,11 +113,10 @@ class LspRenamePathCommand(LspWindowCommand):
         promises: list[Promise[Any]] = []
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                promises.append(session.apply_workspace_edit_async(response, is_refactoring=True)
-                                .then(lambda _: self.rename_path(file_rename)))
-        Promise.all(promises).then(lambda _:  self.notify_did_rename(file_rename))
+                promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
+        Promise.all(promises).then(lambda _:  self.rename_path(file_rename))
 
-    def rename_path(self, file_rename: FileRename) -> Promise[Any]:
+    def rename_path(self, file_rename: FileRename) -> None:
         old_path = Path(parse_uri(file_rename['oldUri'])[1])
         new_path = Path(parse_uri(file_rename['newUri'])[1])
         old_regions: list[sublime.Region] = []
@@ -133,7 +132,7 @@ class LspRenamePathCommand(LspWindowCommand):
             old_path.rename(new_path)
         except Exception:
             sublime.status_message("Unable to rename")
-            return Promise.resolve(None)
+            return
         if old_path_is_dir:
             for view in self.window.views():
                 file_name = view.file_name()
@@ -146,8 +145,8 @@ class LspRenamePathCommand(LspWindowCommand):
                 view.sel().clear()
                 view.sel().add_all(old_regions)
             # LSP spec - send didOpen for the new file
-            return open_file_uri(self.window, str(new_path)).then(restore_regions)
-        return Promise.resolve(None)
+            open_file_uri(self.window, str(new_path)).then(restore_regions)
+        self.notify_did_rename(file_rename)
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():

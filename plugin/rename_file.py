@@ -17,6 +17,8 @@ import weakref
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    FileName = str
+    Group = tuple[int, int]
 
 
 class LspRenameFromSidebarOverrideCommand(LspWindowCommand):
@@ -119,33 +121,33 @@ class LspRenamePathCommand(LspWindowCommand):
     def rename_path(self, file_rename: FileRename) -> None:
         old_path = Path(parse_uri(file_rename['oldUri'])[1])
         new_path = Path(parse_uri(file_rename['newUri'])[1])
-        old_regions: list[sublime.Region] = []
-        if view := self.window.find_open_file(str(old_path)):
-            view.run_command('save', {'async': False})
-            old_regions = list(view.sel())
-            view.close()  # LSP spec - send didClose for the old file
-        new_dir = new_path.parent
-        if not new_dir.exists():
+        restore_files: list[tuple[FileName, Group, list[sublime.Region]]] = []
+        for view in self.window.views():
+            if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
+                new_file_name = file_name.replace(str(old_path), str(new_path))
+                restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
+                view.run_command('save', {'async': False})
+                view.close()  # LSP spec - send didClose for the old file
+        if (new_dir := new_path.parent) and not new_dir.exists():
             new_dir.mkdir(parents=True)
-        old_path_is_dir = old_path.is_dir()
         try:
             old_path.rename(new_path)
         except Exception:
             sublime.status_message("Unable to rename")
             return
-        if old_path_is_dir:
-            for view in self.window.views():
-                file_name = view.file_name()
-                if file_name and file_name.startswith(str(old_path)):
-                    view.retarget(file_name.replace(str(old_path), str(new_path)))
-        if new_path.is_file():
-            def restore_regions(view: sublime.View | None) -> None:
-                if not view:
-                    return
+
+        def restore_view(selection: list[sublime.Region], group_index: Group, view: sublime.View | None) -> None:
+            if not view:
+                return
+            self.window.set_view_index(view, group_index[0], group_index[1])
+            if selection:
                 view.sel().clear()
-                view.sel().add_all(old_regions)
+                view.sel().add_all(selection)
+
+        for file_name, group_index, selection in restore_files:
             # LSP spec - send didOpen for the new file
-            open_file_uri(self.window, str(new_path)).then(restore_regions)
+            open_file_uri(self.window, file_name, group=group_index[0]) \
+                .then(partial(restore_view, selection, group_index))
         self.notify_did_rename(file_rename)
 
     def notify_did_rename(self, file_rename: FileRename):

@@ -5,22 +5,18 @@ from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
+from .core.sessions import Session
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri, parse_uri
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import sublime
 import sublime_plugin
 import weakref
 
 if TYPE_CHECKING:
-    from .core.sessions import Session
     from collections.abc import Generator
-
-
-def is_case_change(path_a: str, path_b: str) -> bool:
-    return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
 
 class LspRenameFromSidebarOverrideCommand(LspWindowCommand):
@@ -84,7 +80,7 @@ class LspRenamePathCommand(LspWindowCommand):
         # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
         new_path = str(resolved_new_path)
-        if resolved_new_path.exists() and not is_case_change(old_path, new_path):
+        if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Unable to rename - target already exists')
             return
         sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
@@ -94,10 +90,11 @@ class LspRenamePathCommand(LspWindowCommand):
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
-        Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
-            .then(lambda responses: self.handle_rename_async(responses)) \
-            .then(lambda _: self.rename_path(file_rename)) \
-            .then(lambda success: self.notify_did_rename(file_rename) if success else None)
+        promises = list(self.create_will_rename_requests_async(file_rename))
+        if promises:
+            Promise.all(promises).then(lambda responses: self.handle_rename_async(responses, file_rename))
+        else:
+            self.rename_path(file_rename)
 
     def create_will_rename_requests_async(
         self, file_rename: FileRename
@@ -108,14 +105,18 @@ class LspRenamePathCommand(LspWindowCommand):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise:
-        promises: list[Promise] = []
+    def is_case_change(self, path_a: str, path_b: str) -> bool:
+        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
+
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
+                            file_rename: FileRename) -> None:
+        promises: list[Promise[Any]] = []
         for response, weak_session in responses:
             if (session := weak_session()) and response:
                 promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
-        return Promise.all(promises)
+        Promise.all(promises).then(lambda _:  self.rename_path(file_rename))
 
-    def rename_path(self, file_rename: FileRename) -> Promise[bool]:
+    def rename_path(self, file_rename: FileRename) -> None:
         old_path = Path(parse_uri(file_rename['oldUri'])[1])
         new_path = Path(parse_uri(file_rename['newUri'])[1])
         old_regions: list[sublime.Region] = []
@@ -131,7 +132,7 @@ class LspRenamePathCommand(LspWindowCommand):
             old_path.rename(new_path)
         except Exception:
             sublime.status_message("Unable to rename")
-            return Promise.resolve(False)
+            return
         if old_path_is_dir:
             for view in self.window.views():
                 file_name = view.file_name()
@@ -144,8 +145,8 @@ class LspRenamePathCommand(LspWindowCommand):
                 view.sel().clear()
                 view.sel().add_all(old_regions)
             # LSP spec - send didOpen for the new file
-            return open_file_uri(self.window, str(new_path)).then(restore_regions).then(lambda _: Promise.resolve(True))
-        return Promise.resolve(True)
+            open_file_uri(self.window, str(new_path)).then(restore_regions)
+        self.notify_did_rename(file_rename)
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():

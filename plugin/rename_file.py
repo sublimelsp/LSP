@@ -8,6 +8,7 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri, parse_uri
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 import sublime
@@ -102,7 +103,7 @@ class LspRenamePathCommand(LspWindowCommand):
             filters = session.get_capability('workspace.fileOperations.willRename.filters') or []
             if match_file_operation_filters(filters, file_rename['oldUri']):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
-                    .then(lambda response: (response, weakref.ref(session)))
+                    .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
     def is_case_change(self, path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino

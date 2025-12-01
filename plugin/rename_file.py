@@ -125,7 +125,7 @@ class LspRenamePathCommand(LspWindowCommand):
             view.close()  # LSP spec - send didClose for the old file
         new_dir = new_path.parent
         if not new_dir.exists():
-            new_dir.mkdir()
+            new_dir.mkdir(parents=True)
         old_path_is_dir = old_path.is_dir()
         try:
             old_path.rename(new_path)

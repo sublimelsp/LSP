@@ -444,19 +444,15 @@ class SessionBuffer:
     def some_view(self) -> sublime.View | None:
         if not self.session_views:
             return None
-        view: sublime.View | None = None
         # Prefer active view if possible
         active_view = self.session.window.active_view()
         for sv in self.session_views:
             if sv.view == active_view and sv.view.is_valid():
-                view = active_view
-                break
-        else:
-            for sv in self.session_views:
-                if sv.view.is_valid():
-                    view = sv.view
-                    break
-        return view
+                return active_view
+        for sv in self.session_views:
+            if sv.view.is_valid():
+                return sv.view
+        return None
 
     def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
         """

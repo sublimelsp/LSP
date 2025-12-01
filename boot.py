@@ -71,7 +71,7 @@ from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspHideRenameButtonsCommand
 from .plugin.rename import LspSymbolRenameCommand
-from .plugin.rename_file import LspRenameFromSidebarOverride
+from .plugin.rename_file import LspRenameFromSidebarOverrideCommand
 from .plugin.rename_file import LspRenamePathCommand
 from .plugin.save_command import LspSaveAllCommand
 from .plugin.save_command import LspSaveCommand
@@ -151,7 +151,7 @@ __all__ = (
     "LspSymbolImplementationCommand",
     "LspSymbolReferencesCommand",
     "LspSymbolRenameCommand",
-    "LspRenameFromSidebarOverride",
+    "LspRenameFromSidebarOverrideCommand",
     "LspRenamePathCommand",
     "LspSymbolTypeDefinitionCommand",
     "LspToggleCodeLensesCommand",

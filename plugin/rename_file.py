@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class LspRenameFromSidebarOverride(LspWindowCommand):
+class LspRenameFromSidebarOverrideCommand(LspWindowCommand):
     def is_enabled(self) -> bool:
         return True
 

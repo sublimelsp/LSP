@@ -158,6 +158,8 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
+        # set_timeout_async is required to ensure that the SessionView is initialized before running requests
+        sublime.set_timeout_async(lambda: self._check_did_open(view))
 
     @property
     def session(self) -> Session:
@@ -174,9 +176,6 @@ class SessionBuffer:
     @property
     def last_synced_version(self) -> int:
         return self._last_synced_version
-
-    def on_session_view_initialized(self, view: sublime.View) -> None:
-        self._check_did_open(view)
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
@@ -447,12 +446,10 @@ class SessionBuffer:
         # Prefer active view if possible
         active_view = self.session.window.active_view()
         for sv in self.session_views:
-            if sv.view == active_view and sv.view.is_valid():
+            if sv.view == active_view:
                 return active_view
         for sv in self.session_views:
-            if sv.view.is_valid():
-                return sv.view
-        return None
+            return sv.view
 
     def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
         """

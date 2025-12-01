@@ -249,8 +249,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if buf := self.view.buffer():
                 if text_change_listener := TextChangeListener.ids_to_listeners.get(buf.buffer_id):
                     text_change_listener.view_listeners.add(self)
-            self.view.settings().set("lsp_active", True)
             session_view.on_initialized()
+            self.view.settings().set("lsp_active", True)
             # Check whether this session is the new best session for color boxes, inlay hints, and semantic tokens. If
             # that is the case, remove the color boxes, inlay hints or semantic tokens from the previously best session.
             request_flags = self.get_request_flags(session)

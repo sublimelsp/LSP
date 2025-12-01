@@ -104,6 +104,9 @@ class SessionView:
         if listener := self.listener():
             listener.on_diagnostics_updated_async(False)
 
+    def on_initialized(self) -> None:
+        self.session_buffer.on_session_view_initialized(self._view)
+
     @property
     def session(self) -> Session:
         return self._session

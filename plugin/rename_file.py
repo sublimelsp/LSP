@@ -81,7 +81,7 @@ class LspRenamePathCommand(LspWindowCommand):
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
         new_path = str(resolved_new_path)
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
-            self.window.status_message('Unable to Rename. Already exists')
+            self.window.status_message('Unable to rename - target already exists')
             return
         sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
 

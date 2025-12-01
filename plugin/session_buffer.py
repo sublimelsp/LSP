@@ -451,7 +451,7 @@ class SessionBuffer:
             if sv.view == active_view:
                 view = active_view
                 break
-        if not view:
+        else:
             for sv in self.session_views:
                 view = sv.view
                 break

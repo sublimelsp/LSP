@@ -772,6 +772,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def trigger_on_pre_save_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
         raise NotImplementedError()
 
@@ -829,10 +833,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def get_request_flags(self, session: Session) -> RequestFlags:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def trigger_on_pre_save_async(self) -> None:
         raise NotImplementedError()
 
 

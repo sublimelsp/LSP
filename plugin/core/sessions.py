@@ -831,6 +831,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
+    @abstractmethod
+    def trigger_on_pre_save_async(self) -> None:
+        raise NotImplementedError()
+
 
 class AbstractPlugin(metaclass=ABCMeta):
     """

@@ -678,7 +678,8 @@ class SessionBufferProtocol(Protocol):
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: dict[str, Any]
+        options: dict[str, Any],
+        suppress_requests: bool
     ) -> None:
         ...
 
@@ -1315,12 +1316,12 @@ class _RegistrationData:
         for sb in self.session_buffers:
             sb.unregister_capability_async(self.registration_id, self.capability_path, self.registration_path)
 
-    def check_applicable(self, sb: SessionBufferProtocol) -> None:
+    def check_applicable(self, sb: SessionBufferProtocol, *, suppress_requests: bool = False) -> None:
         for sv in sb.session_views:
             if self.selector.matches(sv.view):
                 self.session_buffers.add(sb)
                 sb.register_capability_async(
-                    self.registration_id, self.capability_path, self.registration_path, self.options)
+                    self.registration_id, self.capability_path, self.registration_path, self.options, suppress_requests)
                 return
 
 
@@ -1443,7 +1444,7 @@ class Session(TransportCallbacks):
     def register_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.add(sb)
         for data in self._registrations.values():
-            data.check_applicable(sb)
+            data.check_applicable(sb, suppress_requests=True)
         if uri := sb.get_uri():
             diagnostics = self.diagnostics.diagnostics_by_document_uri(uri)
             if diagnostics:

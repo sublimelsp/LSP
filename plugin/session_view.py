@@ -89,9 +89,11 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            for request_id, data in self._active_requests.items():
-                if data.request.view and data.request.view.id() == self.view.id():
-                    self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            # cancel_request_async() triggers modification of the self._active_requests so make a copy.
+            active_requests = self._active_requests.copy()
+            for request_id, data in active_requests.items():
+                if data.request.view:
+                    self.session.cancel_request_async(request_id, ignore_response=True)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
@@ -358,6 +360,9 @@ class SessionView:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)
 
     def on_request_finished_async(self, request_id: int) -> None:
+        self._active_requests.pop(request_id, None)
+
+    def on_request_canceled_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)
 
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:

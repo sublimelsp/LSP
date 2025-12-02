@@ -2481,8 +2481,8 @@ class Session(TransportCallbacks):
         return (promise, request_id)
 
     def cancel_request_async(self, request_id: int, *, ignore_response: bool = True) -> None:
-        self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
         if request_id in self._response_handlers:
+            self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             request, _, _ = self._response_handlers[request_id]
             self._invoke_views(request, "on_request_canceled_async", request_id)
             if ignore_response:

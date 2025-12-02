@@ -9,7 +9,6 @@ from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.sessions import AbstractViewListener
@@ -93,7 +92,7 @@ class SessionView:
             active_requests = self._active_requests.copy()
             for request_id, data in active_requests.items():
                 if data.request.view:
-                    self.session.cancel_request_async(request_id, ignore_response=True)
+                    self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):

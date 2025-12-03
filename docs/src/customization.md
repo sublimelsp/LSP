@@ -103,7 +103,7 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
 | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) | scope | fallback scope |
-| ----- | ------------------ |
+| --- | --- | --- |
 | namespace | `meta.semantic-token.namespace` | `variable.other.namespace` |
 | type | `meta.semantic-token.type` | `storage.type` |
 | class | `meta.semantic-token.class` | `storage.type.class` |

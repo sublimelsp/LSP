@@ -319,5 +319,6 @@ class ResolvedCodeLens(TypedDict):
     command: Command
     uses_cached_command: NotRequired[bool]
 
+
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range

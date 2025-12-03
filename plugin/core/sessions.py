@@ -224,13 +224,6 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
-        """
-        Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_session(self, config_name: str, file_path: str) -> Session | None:
         """
         Gets the session by name and file path.

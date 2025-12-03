@@ -79,6 +79,9 @@ The following tables give an overview of the scope names used by LSP.
 !!! note
     Semantic highlighting is disabled by default. To enable it, set `"semantic_highlighting": true` in your LSP user settings.
 
+!!! warning
+    There are several known limitations when semantic highlighting is used. In particular, there are visible artifacts on lines with semantic highlighting if the `"highlight_line"` setting is enabled, and italic and bold font styles are suppressed for regions with semantic highlighting.
+
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
     Language servers that support semantic highlighting are for example *clangd* and *rust-analyzer*.
 
@@ -147,6 +150,10 @@ To target tokens with one modifier, use the scope `meta.semantic-token.<token-ty
 Currently, semantic tokens with more than one modifier cannot be styled reliably.
 
 If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via regular syntax highlighting.
+
+!!! note
+    The presence of rules for custom token types is cached and therefore color scheme modifications might not take effect immediately.
+    Semantic highlighting for custom token types should work after switching the active color scheme and then editing the document.
 
 ### Document Highlights
 

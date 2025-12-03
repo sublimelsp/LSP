@@ -255,10 +255,11 @@ class QueryCompletionsTask:
         self._cancel_pending_requests_async()
 
     def _cancel_pending_requests_async(self) -> None:
-        for request_id, weak_session in self._pending_completion_requests.items():
+        pending_requests = self._pending_completion_requests.copy()
+        self._pending_completion_requests.clear()
+        for request_id, weak_session in pending_requests.items():
             if session := weak_session():
                 session.cancel_request_async(request_id)
-        self._pending_completion_requests.clear()
 
     def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: sublime.AutoCompleteFlags) -> None:
         if not self._resolved:

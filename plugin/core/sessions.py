@@ -2484,8 +2484,8 @@ class Session(TransportCallbacks):
     def cancel_request_async(self, request_id: int) -> None:
         if request_id in self._response_handlers:
             self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            request, _, on_error = self._response_handlers[request_id]
-            on_error({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
+            request, _, error_handler = self._response_handlers[request_id]
+            error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
             self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 

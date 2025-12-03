@@ -54,12 +54,8 @@ class SaveTask(metaclass=ABCMeta):
             self._on_done()
 
     def _purge_changes_async(self) -> None:
-        # Supermassive hack that will go away later.
-        listeners = sublime_plugin.view_event_listeners.get(self._task_runner.view.id(), [])
-        for listener in listeners:
-            if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes_async()  # type: ignore
-                break
+        if listener := self._task_runner.get_listener():
+            listener.purge_changes_async()
 
 
 class SaveTasksRunner:
@@ -127,12 +123,8 @@ class LspSaveCommand(LspTextCommand):
         self._save_tasks_runner.run()
 
     def _trigger_on_pre_save_async(self) -> None:
-        # Supermassive hack that will go away later.
-        listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
-        for listener in listeners:
-            if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.trigger_on_pre_save_async()  # type: ignore
-                break
+        if listener := self.get_listener():
+            listener.trigger_on_pre_save_async()
 
     def _on_tasks_completed(self, kwargs: dict[str, Any]) -> None:
         self._save_tasks_runner = None

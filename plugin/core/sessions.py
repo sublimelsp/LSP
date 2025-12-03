@@ -224,13 +224,6 @@ class Manager(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
-        """
-        Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_session(self, config_name: str, file_path: str) -> Session | None:
         """
         Gets the session by name and file path.
@@ -719,6 +712,9 @@ class SessionBufferProtocol(Protocol):
     def get_semantic_tokens(self) -> list[Any]:
         ...
 
+    def evaluate_supported_custom_tokens(self, view: sublime.View) -> None:
+        ...
+
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         ...
 
@@ -769,6 +765,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def purge_changes_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def trigger_on_pre_save_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod

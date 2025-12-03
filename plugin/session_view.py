@@ -91,7 +91,7 @@ class SessionView:
             # cancel_request_async() triggers modification of _active_requests so make a copy.
             active_requests = self._active_requests.copy()
             for request_id, data in active_requests.items():
-                if data.request.view:
+                if data.request.view and not data.canceled:
                     self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
@@ -362,7 +362,9 @@ class SessionView:
         self._active_requests.pop(request_id, None)
 
     def on_request_canceled_async(self, request_id: int) -> None:
-        self._active_requests.pop(request_id, None)
+        active_request = self._active_requests.get(request_id)
+        if active_request:
+            active_request.on_request_canceled_async()
 
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         if request := self._active_requests.get(request_id, None):

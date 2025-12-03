@@ -19,6 +19,7 @@ class ActiveRequest:
         self.weaksv = ref(sv)
         self.request_id = request_id
         self.request = request
+        self.canceled = False
         self.progress: ProgressReporter | None = None
         # `request.progress` is either a boolean or a string. If it's a boolean, then that signals that the server does
         # not support client-initiated progress. However, for some requests we still want to notify some kind of
@@ -44,6 +45,11 @@ class ActiveRequest:
 
             sublime.set_timeout_async(show, 200)
 
+    def on_request_canceled_async(self) -> None:
+        self.canceled = True
+        if self.progress:
+            self.progress = None
+
     def _start_progress_reporter_async(
         self,
         title: str,
@@ -61,6 +67,8 @@ class ActiveRequest:
             return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
     def update_progress_async(self, params: dict[str, Any]) -> None:
+        if self.canceled:
+            return
         value = params['value']
         kind = value['kind']
         message = value.get("message")

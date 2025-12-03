@@ -22,6 +22,7 @@ from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.promise import Promise
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
@@ -148,6 +149,7 @@ class SessionBuffer:
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys: dict[str, int] = {}
+        self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
@@ -158,6 +160,7 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
+        self.evaluate_supported_custom_tokens(view)
 
     @property
     def session(self) -> Session:
@@ -741,20 +744,11 @@ class SessionBuffer:
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self.session.decode_semantic_token(
                 types_legend, modifiers_legend, token_type_encoded, token_modifiers_encoded)
-            if scope is None:
-                # We can still use the meta scope and draw highlighting regions for custom token types if there is a
-                # color scheme rule for this particular token type.
-                # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
-                # customizations in the color scheme for the scopes of custom token types would require a restart of
-                # Sublime Text to take effect.
-                token_general_style = view.style_for_scope("meta.semantic-token")
-                token_type_style = view.style_for_scope(f"meta.semantic-token.{token_type.lower()}")
-                if token_general_style["source_line"] != token_type_style["source_line"] or \
-                        token_general_style["source_column"] != token_type_style["source_column"]:
-                    if token_modifiers:
-                        scope = f"meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
-                    else:
-                        scope = f"meta.semantic-token.{token_type.lower()}.lsp"
+            if scope is None and token_type in self._supported_custom_tokens:
+                if token_modifiers:
+                    scope = f'meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp'
+                else:
+                    scope = f'meta.semantic-token.{token_type.lower()}.lsp'
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
@@ -794,6 +788,24 @@ class SessionBuffer:
     def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
+
+    def evaluate_supported_custom_tokens(self, view: sublime.View) -> None:
+        """ Check which of the custom token types from this server are supported by the color scheme. """
+        self._supported_custom_tokens.clear()
+        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if not token_types:
+            return
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        source_line = token_general_style['source_line']
+        source_column = token_general_style['source_column']
+        for token_type in token_types:
+            if token_type in SEMANTIC_TOKENS_MAP:
+                continue
+            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
+            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
+                # If the source location for this token type differs from the generic semantic tokens rule, it means
+                # that there is a specific rule in the color scheme for this token type.
+                self._supported_custom_tokens.add(token_type)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 

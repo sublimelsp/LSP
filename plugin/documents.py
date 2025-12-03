@@ -173,16 +173,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if this is not None:
                 this._on_settings_object_changed()
 
+        settings = view.settings()
         self._uri = ''  # assumed to never be falsey
-        self._current_syntax = self.view.settings().get("syntax")
-        existing_uri = view.settings().get("lsp_uri")
+        self._current_syntax = settings.get("syntax")
+        existing_uri = settings.get("lsp_uri")
         if isinstance(existing_uri, str):
             self._uri = existing_uri
         else:
             self.set_uri(view_to_uri(view))
+        self._current_color_scheme = settings.get('color_scheme')
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._registration = SettingsRegistration(view.settings(), on_change=on_change)
+        self._registration = SettingsRegistration(settings, on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
@@ -1052,8 +1054,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout_async(clear_async)
 
     def _on_settings_object_changed(self) -> None:
-        new_syntax = self.view.settings().get("syntax")
-        new_uri = self.view.settings().get("lsp_uri")
+        settings = self.view.settings()
+        new_syntax = settings.get("syntax")
+        new_uri = settings.get("lsp_uri")
         something_changed = False
         if new_syntax != self._current_syntax:
             self._current_syntax = new_syntax
@@ -1063,6 +1066,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             something_changed = True
         if something_changed:
             self._reset()
+        elif settings.get('color_scheme') != self._current_color_scheme:
+            for session_buffer in self.session_buffers_async():
+                session_buffer.evaluate_supported_custom_tokens(self.view)
 
     def __repr__(self) -> str:
         return f"ViewListener({self.view.id()})"

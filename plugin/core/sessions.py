@@ -1337,7 +1337,7 @@ class Session(TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None] | None]] = {}
+        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None]]] = {}
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -2451,6 +2451,7 @@ class Session(TransportCallbacks):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if request.partial_results and isinstance(request.params, dict):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:
@@ -2480,13 +2481,13 @@ class Session(TransportCallbacks):
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)
 
-    def cancel_request_async(self, request_id: int, *, ignore_response: bool = True) -> None:
+    def cancel_request_async(self, request_id: int) -> None:
         if request_id in self._response_handlers:
             self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            request, _, _ = self._response_handlers[request_id]
+            request, _, on_error = self._response_handlers[request_id]
+            on_error(Error.from_lsp({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"}))
             self._invoke_views(request, "on_request_canceled_async", request_id)
-            if ignore_response:
-                self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
+            self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification) -> None:
         if self._plugin:

@@ -102,39 +102,39 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 
 Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
-| scope | [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) |
+| [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) | scope | fallback scope |
 | ----- | ------------------ |
-| `meta.semantic-token.namespace` | namespace |
-| `meta.semantic-token.type` | type |
-| `meta.semantic-token.class` | class |
-| `meta.semantic-token.enum` | enum |
-| `meta.semantic-token.interface` | interface |
-| `meta.semantic-token.struct` | struct |
-| `meta.semantic-token.typeparameter` | typeParameter |
-| `meta.semantic-token.parameter` | parameter |
-| `meta.semantic-token.variable` | variable |
-| `meta.semantic-token.property` | property |
-| `meta.semantic-token.enummember` | enumMember |
-| `meta.semantic-token.event` | event |
-| `meta.semantic-token.function` | function |
-| `meta.semantic-token.method` | method |
-| `meta.semantic-token.macro` | macro |
-| `meta.semantic-token.keyword` | keyword |
-| `meta.semantic-token.modifier` | modifier |
-| `meta.semantic-token.comment` | comment |
-| `meta.semantic-token.string` | string |
-| `meta.semantic-token.number` | number |
-| `meta.semantic-token.regexp` | regexp |
-| `meta.semantic-token.operator` | operator |
-| `meta.semantic-token.decorator` | decorator |
-| `meta.semantic-token.label` | label |
+| namespace | `meta.semantic-token.namespace` | `variable.other.namespace` |
+| type | `meta.semantic-token.type` | `storage.type` |
+| class | `meta.semantic-token.class` | `storage.type.class` |
+| enum | `meta.semantic-token.enum` | `variable.other.enum` |
+| interface | `meta.semantic-token.interface` | `entity.other.inherited-class` |
+| struct | `meta.semantic-token.struct` | `storage.type.struct` |
+| typeParameter | `meta.semantic-token.typeparameter` | `variable.parameter.generic` |
+| parameter | `meta.semantic-token.parameter` | `variable.parameter` |
+| variable | `meta.semantic-token.variable` | `variable.other` |
+| property | `meta.semantic-token.property` | `variable.other.property` |
+| enumMember | `meta.semantic-token.enummember` | `constant.other.enum` |
+| event | `meta.semantic-token.event` | `entity.name.function` |
+| function | `meta.semantic-token.function` | `variable.function` |
+| method | `meta.semantic-token.method` | `variable.function` |
+| macro | `meta.semantic-token.macro` | `variable.macro` |
+| keyword | `meta.semantic-token.keyword` | `keyword` |
+| modifier | `meta.semantic-token.modifier` | `storage.modifier` |
+| comment | `meta.semantic-token.comment` | `comment` |
+| string | `meta.semantic-token.string` | `string` |
+| number | `meta.semantic-token.number` | `constant.numeric` |
+| regexp | `meta.semantic-token.regexp` | `string.regexp` |
+| operator | `meta.semantic-token.operator` | `keyword.operator` |
+| decorator | `meta.semantic-token.decorator` | `variable.annotation` |
+| label | `meta.semantic-token.label` | `entity.name.label` |
 
-By default, LSP will assign scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the scopes specified above, the latter will take precedence.
+By default, LSP will assign fallback scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the `meta.semantic-token.*` scopes that are specified above, the latter will take precedence. The fallback scopes can differ if the tokens have additional [token modifiers](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers).
 
 Language servers can also add their custom token types, which are not defined in the protocol.
 An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
 The keys of this mapping should be the token types and values should be the corresponding scopes.
-Semantic tokens with exactly one [token modifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers) can be addressed by appending the modifier after a dot.
+Semantic tokens with exactly one token modifier can be addressed by appending the modifier after a dot.
 
 ```jsonc
 {

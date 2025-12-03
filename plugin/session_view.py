@@ -88,9 +88,7 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
-            # cancel_request_async() triggers modification of _active_requests so make a copy.
-            active_requests = self._active_requests.copy()
-            for request_id, data in active_requests.items():
+            for request_id, data in self._active_requests.items():
                 if data.request.view and not data.canceled:
                     self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)

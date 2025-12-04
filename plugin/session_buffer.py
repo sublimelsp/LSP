@@ -263,7 +263,8 @@ class SessionBuffer:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: dict[str, Any]
+        options: dict[str, Any],
+        suppress_requests: bool
     ) -> None:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
         view: sublime.View | None = None
@@ -275,9 +276,11 @@ class SessionBuffer:
             if capability_path.startswith("textDocumentSync."):
                 self._check_did_open(view)
             elif capability_path.startswith("diagnosticProvider"):
-                self.do_document_diagnostic_async(view, view.change_count())
+                if not suppress_requests:
+                    self.do_document_diagnostic_async(view, view.change_count())
             elif capability_path.startswith("codeLensProvider"):
-                self.do_code_lenses_async(view)
+                if not suppress_requests:
+                    self.do_code_lenses_async(view)
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()

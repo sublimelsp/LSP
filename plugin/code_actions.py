@@ -270,6 +270,7 @@ class CodeActionOnSaveTask(SaveTask):
         # set_timeout_async ensures that view changes get a chance to get reported and trigger "didChange".
         Promise.all(tasks).then(lambda _: sublime.set_timeout_async(continuation))
 
+
 LspSaveCommand.register_task(CodeActionOnSaveTask)
 
 

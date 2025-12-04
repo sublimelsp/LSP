@@ -203,7 +203,7 @@ class QueryCompletionsTask:
         return promise.then(lambda response: self._on_completion_response_async(response, request_id, weak_session))
 
     def _on_completion_response_async(
-        self, response: CompletionResponse, request_id: int, weak_session: weakref.ref[Session]
+        self, response: CompletionResponse | Error, request_id: int, weak_session: weakref.ref[Session]
     ) -> ResolvedCompletions:
         self._pending_completion_requests.pop(request_id, None)
         return (response, weak_session)
@@ -255,10 +255,10 @@ class QueryCompletionsTask:
         self._cancel_pending_requests_async()
 
     def _cancel_pending_requests_async(self) -> None:
-        for request_id, weak_session in self._pending_completion_requests.items():
+        # Iterate a copy of the dictionary since keys are popped on canceling.
+        for request_id, weak_session in self._pending_completion_requests.copy().items():
             if session := weak_session():
-                session.cancel_request(request_id, False)
-        self._pending_completion_requests.clear()
+                session.cancel_request_async(request_id)
 
     def _resolve_task_async(self, completions: list[sublime.CompletionItem], flags: sublime.AutoCompleteFlags) -> None:
         if not self._resolved:

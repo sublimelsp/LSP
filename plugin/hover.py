@@ -182,7 +182,7 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
-        link_promises: list[Promise[DocumentLink]] = []
+        link_promises: list[Promise[DocumentLink | None]] = []
         for sv in listener.session_views_async():
             if not sv.has_capability_async("documentLinkProvider"):
                 continue
@@ -194,19 +194,22 @@ class LspHoverCommand(LspTextCommand):
             elif sv.has_capability_async("documentLinkProvider.resolveProvider"):
                 link_promises.append(
                     sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view))
-                    .then(lambda link: self._on_resolved_link(sv.session_buffer, link))
-                )
+                    .then(partial(self._on_resolved_link, sv.session_buffer)))
         if link_promises:
             Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
 
-    def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> DocumentLink:
+    def _on_resolved_link(
+        self, session_buffer: SessionBufferProtocol, link: DocumentLink | Error
+    ) -> DocumentLink | None:
+        if isinstance(link, Error):
+            return None
         session_buffer.update_document_link(link)
         return link
 
     def _on_all_document_links_resolved(
-        self, listener: AbstractViewListener, point: int, links: list[DocumentLink]
+        self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
     ) -> None:
-        self._document_links = links
+        self._document_links = list(filter(None, links))
         self.show_hover(listener, point, only_diagnostics=False)
 
     def _handle_code_actions(

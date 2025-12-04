@@ -354,10 +354,10 @@ class SessionBuffer:
 
     def _cancel_pending_requests_async(self) -> None:
         if self._document_diagnostic_pending_request:
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
             self._document_diagnostic_pending_request = None
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
 
     def on_revert_async(self, view: sublime.View) -> None:
@@ -554,7 +554,7 @@ class SessionBuffer:
         if self._document_diagnostic_pending_request:
             if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
@@ -666,7 +666,7 @@ class SessionBuffer:
         if not self._semantic_highlighting_supported_by_color_scheme:
             return
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
@@ -871,7 +871,7 @@ class SessionBuffer:
             if sv.view == view:
                 for request_id, data in sv.active_requests.items():
                     if data.request.method == 'codeLens/resolve':
-                        self.session.cancel_request(request_id)
+                        self.session.cancel_request_async(request_id)
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))

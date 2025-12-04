@@ -181,7 +181,7 @@ class Error(Exception):
         self.data = data
 
     @classmethod
-    def from_lsp(cls, params: Any) -> Error:
+    def from_lsp(cls, params: ResponseError) -> Error:
         return Error(params["code"], params["message"], params.get("data"))
 
     def to_lsp(self) -> dict[str, Any]:
@@ -308,18 +308,17 @@ class Point:
         }
 
 
-ResponseError = TypedDict('ResponseError', {
-    'code': int,
-    'message': str,
-    'data': NotRequired['LSPAny']
-})
+class ResponseError(TypedDict):
+    code: int
+    message: str
+    data: NotRequired['LSPAny']
 
 
-ResolvedCodeLens = TypedDict('ResolvedCodeLens', {
-    'range': Range,
-    'command': Command,
-    'uses_cached_command': NotRequired[bool]
-})
+class ResolvedCodeLens(TypedDict):
+    range: Range
+    command: Command
+    uses_cached_command: NotRequired[bool]
+
 
 # Temporary for backward compatibility with LSP packages.
 RangeLsp = Range

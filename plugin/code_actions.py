@@ -145,7 +145,7 @@ class CodeActionsManager:
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
-                task: Promise[list[CodeActionOrCommand] | None] = session.send_request_task(request)
+                task: Promise[list[CodeActionOrCommand] | None | Error] = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \

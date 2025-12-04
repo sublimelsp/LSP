@@ -1338,7 +1338,7 @@ class Session(TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None] | None]] = {}
+        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None]]] = {}
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -2450,6 +2450,7 @@ class Session(TransportCallbacks):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if request.partial_results and isinstance(request.params, dict):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:
@@ -2479,10 +2480,12 @@ class Session(TransportCallbacks):
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)
 
-    def cancel_request(self, request_id: int, ignore_response: bool = True) -> None:
-        self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-        if ignore_response and request_id in self._response_handlers:
-            request, _, _ = self._response_handlers[request_id]
+    def cancel_request_async(self, request_id: int) -> None:
+        if request_id in self._response_handlers:
+            self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            request, _, error_handler = self._response_handlers[request_id]
+            error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
+            self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification) -> None:
@@ -2526,8 +2529,7 @@ class Session(TransportCallbacks):
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:
-                    tup = (handler, result, req_id, "request", method)
-                    return tup
+                    return (handler, result, req_id, "request", method)
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
@@ -2568,20 +2570,15 @@ class Session(TransportCallbacks):
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
 
-    def response_handler(
-        self,
-        response_id: int,
-        response: dict[str, Any]
-    ) -> tuple[Callable | None, str | None, Any, bool]:
-        request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
-        if not request:
+    def response_handler(self, response_id: int, response: dict[str, Any]) -> tuple[Callable, str | None, Any, bool]:
+        matching_handler = self._response_handlers.pop(response_id)
+        if not matching_handler:
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
+        request, handler, error_handler = matching_handler
         self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
             return (handler, request.method, response["result"], False)
-        if not error_handler:
-            error_handler = print_to_status_bar
         if "result" not in response and "error" in response:
             error = response["error"]
         else:

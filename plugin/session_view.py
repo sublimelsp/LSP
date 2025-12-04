@@ -9,7 +9,6 @@ from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.sessions import AbstractViewListener
@@ -90,8 +89,8 @@ class SessionView:
         # in unregistering ourselves from the session.
         if not self.session.exiting:
             for request_id, data in self._active_requests.items():
-                if data.request.view and data.request.view.id() == self.view.id():
-                    self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+                if data.request.view and not data.canceled:
+                    self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
@@ -359,6 +358,10 @@ class SessionView:
 
     def on_request_finished_async(self, request_id: int) -> None:
         self._active_requests.pop(request_id, None)
+
+    def on_request_canceled_async(self, request_id: int) -> None:
+        if active_request := self._active_requests.get(request_id):
+            active_request.on_request_canceled_async()
 
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:
         if request := self._active_requests.get(request_id, None):

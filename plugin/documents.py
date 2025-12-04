@@ -1068,7 +1068,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._reset()
         elif settings.get('color_scheme') != self._current_color_scheme:
             for session_buffer in self.session_buffers_async():
-                session_buffer.evaluate_supported_custom_tokens(self.view)
+                session_buffer.evaluate_semantic_tokens_color_scheme_support(self.view)
 
     def __repr__(self) -> str:
         return f"ViewListener({self.view.id()})"

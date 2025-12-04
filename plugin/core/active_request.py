@@ -47,8 +47,7 @@ class ActiveRequest:
 
     def on_request_canceled_async(self) -> None:
         self.canceled = True
-        if self.progress:
-            self.progress = None
+        self.progress = None
 
     def _start_progress_reporter_async(
         self,

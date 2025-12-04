@@ -255,9 +255,8 @@ class QueryCompletionsTask:
         self._cancel_pending_requests_async()
 
     def _cancel_pending_requests_async(self) -> None:
-        pending_requests = self._pending_completion_requests.copy()
-        self._pending_completion_requests.clear()
-        for request_id, weak_session in pending_requests.items():
+        # Iterate a copy of the dictionary since keys are popped on canceling.
+        for request_id, weak_session in self._pending_completion_requests.copy().items():
             if session := weak_session():
                 session.cancel_request_async(request_id)
 

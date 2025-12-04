@@ -266,9 +266,9 @@ class CodeActionOnSaveTask(SaveTask):
             tasks.extend([
                 session.run_code_action_async(action, progress=False, view=view) for action in code_actions
             ])
+        continuation = partial(self._process_next_request, request_iterator)
         # set_timeout_async ensures that view changes get a chance to get reported and trigger "didChange".
-        Promise.all(tasks) \
-            .then(lambda _: sublime.set_timeout_async(partial(self._process_next_request, request_iterator)))
+        Promise.all(tasks).then(lambda _: sublime.set_timeout_async(continuation))
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)
 

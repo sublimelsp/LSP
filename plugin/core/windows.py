@@ -199,17 +199,6 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
 
-    def sessions(self, view: sublime.View, capability: str | None = None) -> Generator[Session, None, None]:
-        inside_workspace = self._workspace.contains(view)
-        sessions = list(self._sessions)
-        uri = view.settings().get("lsp_uri")
-        if not isinstance(uri, str):
-            return
-        scheme = parse_uri(uri)[0]
-        for session in sessions:
-            if session.can_handle(view, scheme, capability, inside_workspace):
-                yield session
-
     def get_session(self, config_name: str, file_path: str) -> Session | None:
         return self._find_session(config_name, file_path)
 

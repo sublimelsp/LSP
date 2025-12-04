@@ -149,6 +149,7 @@ class SessionBuffer:
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys: dict[str, int] = {}
+        self._semantic_highlighting_supported_by_color_scheme = False
         self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
@@ -160,7 +161,7 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
-        self.evaluate_supported_custom_tokens(view)
+        self.evaluate_semantic_tokens_color_scheme_support(view)
 
     @property
     def session(self) -> Session:
@@ -662,8 +663,7 @@ class SessionBuffer:
             return
         if not self.has_capability("semanticTokensProvider"):
             return
-        # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
-        if "background" not in view.style_for_scope("meta.semantic-token"):
+        if not self._semantic_highlighting_supported_by_color_scheme:
             return
         if self.semantic_tokens.pending_response:
             self.session.cancel_request(self.semantic_tokens.pending_response)
@@ -792,13 +792,20 @@ class SessionBuffer:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
 
-    def evaluate_supported_custom_tokens(self, view: sublime.View) -> None:
-        """ Check which of the custom token types from this server are supported by the color scheme. """
+    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
+        """
+        Check whether semantic highlighting is supported by the color scheme and which of the custom token types from
+        this server are supported.
+        """
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
         self._supported_custom_tokens.clear()
+        if not self._semantic_highlighting_supported_by_color_scheme:
+            self.clear_semantic_tokens_async()
+            return
         token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
         if not token_types:
             return
-        token_general_style = view.style_for_scope('meta.semantic-token')
         source_line = token_general_style['source_line']
         source_column = token_general_style['source_column']
         for token_type in token_types:

@@ -713,7 +713,7 @@ class SessionBufferProtocol(Protocol):
     def get_semantic_tokens(self) -> list[Any]:
         ...
 
-    def evaluate_supported_custom_tokens(self, view: sublime.View) -> None:
+    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
         ...
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:

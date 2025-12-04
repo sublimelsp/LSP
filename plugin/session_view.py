@@ -360,8 +360,7 @@ class SessionView:
         self._active_requests.pop(request_id, None)
 
     def on_request_canceled_async(self, request_id: int) -> None:
-        active_request = self._active_requests.get(request_id)
-        if active_request:
+        if active_request := self._active_requests.get(request_id):
             active_request.on_request_canceled_async()
 
     def on_request_progress(self, request_id: int, params: dict[str, Any]) -> None:

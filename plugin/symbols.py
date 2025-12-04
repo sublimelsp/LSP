@@ -375,7 +375,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         Promise.all(promises).then(partial(self._on_all_responses, change_count))
 
     def _handle_response_async(
-        self, session_name: str, response: list[SymbolInformation | WorkspaceSymbol] | Error | None
+        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
     ) -> list[sublime.ListInputItem]:
         if response and not isinstance(response, Error):
             return [

@@ -145,7 +145,7 @@ class CodeActionsManager:
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
-                task: Promise[list[CodeActionOrCommand] | None] = session.send_request_task(request)
+                task: Promise[list[CodeActionOrCommand] | None | Error] = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \
@@ -266,7 +266,9 @@ class CodeActionOnSaveTask(SaveTask):
             tasks.extend([
                 session.run_code_action_async(action, progress=False, view=view) for action in code_actions
             ])
-        Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
+        continuation = partial(self._process_next_request, request_iterator)
+        # set_timeout_async ensures that view changes get a chance to get reported and trigger "didChange".
+        Promise.all(tasks).then(lambda _: sublime.set_timeout_async(continuation))
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)

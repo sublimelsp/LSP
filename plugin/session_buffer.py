@@ -22,6 +22,7 @@ from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.promise import Promise
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
@@ -148,6 +149,8 @@ class SessionBuffer:
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys: dict[str, int] = {}
+        self._semantic_highlighting_supported_by_color_scheme = False
+        self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
@@ -158,6 +161,7 @@ class SessionBuffer:
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
+        self.evaluate_semantic_tokens_color_scheme_support(view)
 
     @property
     def session(self) -> Session:
@@ -260,7 +264,8 @@ class SessionBuffer:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: dict[str, Any]
+        options: dict[str, Any],
+        suppress_requests: bool
     ) -> None:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
         view: sublime.View | None = None
@@ -272,9 +277,11 @@ class SessionBuffer:
             if capability_path.startswith("textDocumentSync."):
                 self._check_did_open(view)
             elif capability_path.startswith("diagnosticProvider"):
-                self.do_document_diagnostic_async(view, view.change_count())
+                if not suppress_requests:
+                    self.do_document_diagnostic_async(view, view.change_count())
             elif capability_path.startswith("codeLensProvider"):
-                self.do_code_lenses_async(view)
+                if not suppress_requests:
+                    self.do_code_lenses_async(view)
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
@@ -347,10 +354,10 @@ class SessionBuffer:
 
     def _cancel_pending_requests_async(self) -> None:
         if self._document_diagnostic_pending_request:
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
             self._document_diagnostic_pending_request = None
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
 
     def on_revert_async(self, view: sublime.View) -> None:
@@ -540,12 +547,14 @@ class SessionBuffer:
             return
         if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
-        if version < view.change_count() or version == self._diagnostics_version:
+        if version < view.change_count():
+            return
+        if version == self._diagnostics_version and not forced_update:
             return
         if self._document_diagnostic_pending_request:
             if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
@@ -654,11 +663,10 @@ class SessionBuffer:
             return
         if not self.has_capability("semanticTokensProvider"):
             return
-        # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
-        if "background" not in view.style_for_scope("meta.semantic-token"):
+        if not self._semantic_highlighting_supported_by_color_scheme:
             return
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
@@ -739,20 +747,11 @@ class SessionBuffer:
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self.session.decode_semantic_token(
                 types_legend, modifiers_legend, token_type_encoded, token_modifiers_encoded)
-            if scope is None:
-                # We can still use the meta scope and draw highlighting regions for custom token types if there is a
-                # color scheme rule for this particular token type.
-                # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
-                # customizations in the color scheme for the scopes of custom token types would require a restart of
-                # Sublime Text to take effect.
-                token_general_style = view.style_for_scope("meta.semantic-token")
-                token_type_style = view.style_for_scope(f"meta.semantic-token.{token_type.lower()}")
-                if token_general_style["source_line"] != token_type_style["source_line"] or \
-                        token_general_style["source_column"] != token_type_style["source_column"]:
-                    if token_modifiers:
-                        scope = f"meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
-                    else:
-                        scope = f"meta.semantic-token.{token_type.lower()}.lsp"
+            if scope is None and token_type in self._supported_custom_tokens:
+                if token_modifiers:
+                    scope = f'meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp'
+                else:
+                    scope = f'meta.semantic-token.{token_type.lower()}.lsp'
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
@@ -792,6 +791,31 @@ class SessionBuffer:
     def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
+
+    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
+        """
+        Check whether semantic highlighting is supported by the color scheme and which of the custom token types from
+        this server are supported.
+        """
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
+        self._supported_custom_tokens.clear()
+        if not self._semantic_highlighting_supported_by_color_scheme:
+            self.clear_semantic_tokens_async()
+            return
+        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if not token_types:
+            return
+        source_line = token_general_style['source_line']
+        source_column = token_general_style['source_column']
+        for token_type in token_types:
+            if token_type in SEMANTIC_TOKENS_MAP:
+                continue
+            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
+            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
+                # If the source location for this token type differs from the generic semantic tokens rule, it means
+                # that there is a specific rule in the color scheme for this token type.
+                self._supported_custom_tokens.add(token_type)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
@@ -847,7 +871,7 @@ class SessionBuffer:
             if sv.view == view:
                 for request_id, data in sv.active_requests.items():
                     if data.request.method == 'codeLens/resolve':
-                        self.session.cancel_request(request_id)
+                        self.session.cancel_request_async(request_id)
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))

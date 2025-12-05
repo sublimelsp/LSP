@@ -11,6 +11,7 @@ from .core.constants import SYMBOL_KINDS
 from .core.input_handlers import DynamicListInputHandler
 from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import LspTextCommand
@@ -19,10 +20,10 @@ from .core.sessions import print_to_status_bar
 from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import text_document_identifier
+from functools import partial
 from typing import Any, List, TypedDict
 from typing import cast
 from typing_extensions import NotRequired, TypeGuard
-import functools
 import os
 import sublime
 import sublime_plugin
@@ -335,7 +336,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
             else:
                 session.send_request(
                     Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
-                    functools.partial(self._on_resolved_symbol_async, session_name))
+                    partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:
         if 'symbol' not in args:
@@ -366,17 +367,22 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
             return
         change_count = self.input_view.change_count()
         self.command = cast(LspWindowCommand, self.command)
-        promises: list[Promise[list[sublime.ListInputItem]]] = []
-        for session in self.command.sessions():
-            promises.append(
-                session.send_request_task(Request.workspaceSymbol({"query": text}))
-                    .then(functools.partial(self._handle_response_async, session.config.name)))
-        Promise.all(promises).then(functools.partial(self._on_all_responses, change_count))
+        promises: list[Promise[list[sublime.ListInputItem]]] = [
+            session.send_request_task(Request.workspaceSymbol({"query": text}))
+            .then(partial(self._handle_response_async, session.config.name))
+            for session in self.command.sessions()
+        ]
+        Promise.all(promises).then(partial(self._on_all_responses, change_count))
 
     def _handle_response_async(
-        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | None
+        self, session_name: str, response: list[SymbolInformation] | list[WorkspaceSymbol] | Error | None
     ) -> list[sublime.ListInputItem]:
-        return [symbol_to_list_input_item(item, session_name=session_name) for item in response] if response else []
+        if response and not isinstance(response, Error):
+            return [
+                symbol_to_list_input_item(item, session_name=session_name)
+                for item in response
+            ]
+        return []
 
     def _on_all_responses(self, change_count: int, item_lists: list[list[sublime.ListInputItem]]) -> None:
         if self.input_view and self.input_view.change_count() == change_count:

@@ -1960,7 +1960,7 @@ class Session(TransportCallbacks):
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
             return Promise.resolve(None)
         return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
-            .then(lambda _: Promise.resolve(view))
+            .then(lambda _: view)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """

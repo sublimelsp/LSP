@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from ..protocol import WorkspaceEdit
     from .core.sessions import Session
     from collections.abc import Generator
-    FileName = str
-    Group = tuple[int, int]
 
 
 class LspRenameFromSidebarOverrideCommand(LspWindowCommand):
@@ -119,7 +117,7 @@ class LspRenamePathCommand(LspWindowCommand):
     def rename_path(self, file_rename: FileRename) -> Promise[bool]:
         old_path = Path(parse_uri(file_rename['oldUri'])[1])
         new_path = Path(parse_uri(file_rename['newUri'])[1])
-        restore_files: list[tuple[FileName, Group, list[sublime.Region]]] = []
+        restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
         for view in self.window.views():
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
                 new_file_name = file_name.replace(str(old_path), str(new_path))
@@ -134,7 +132,7 @@ class LspRenamePathCommand(LspWindowCommand):
             sublime.status_message("Unable to rename")
             return Promise.resolve(False)
 
-        def restore_view(selection: list[sublime.Region], group_index: Group, view: sublime.View | None) -> None:
+        def restore_view(selection: list[sublime.Region], group_index: tuple[int, int], view: sublime.View | None) -> None:
             if not view:
                 return
             self.window.set_view_index(view, group_index[0], group_index[1])

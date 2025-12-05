@@ -133,17 +133,9 @@ class LspRenamePathCommand(LspWindowCommand):
             sublime.status_message("Unable to rename")
             return Promise.resolve(False)
 
-        def restore_view(selection: list[sublime.Region], group_index: tuple[int, int], view: sublime.View | None) -> None:
-            if not view:
-                return
-            self.window.set_view_index(view, group_index[0], group_index[1])
-            if selection:
-                view.sel().clear()
-                view.sel().add_all(selection)
-
         return Promise.all([
             open_file_uri(self.window, file_name, group=group_index[0])
-            .then(partial(restore_view, selection, group_index))
+            .then(partial(self.restore_view, selection, group_index))
             for file_name, group_index, selection in restore_files
         ]).then(lambda _: True)
 
@@ -152,3 +144,11 @@ class LspRenamePathCommand(LspWindowCommand):
             filters = session.get_capability('workspace.fileOperations.didRename.filters') or []
             if filters and match_file_operation_filters(filters, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))
+
+    def restore_view(self, selection: list[sublime.Region], group_index: tuple[int, int], view: sublime.View | None) -> None:
+        if not view:
+            return
+        self.window.set_view_index(view, group_index[0], group_index[1])
+        if selection:
+            view.sel().clear()
+            view.sel().add_all(selection)

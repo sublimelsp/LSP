@@ -197,13 +197,17 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             selection = first_selection_region(self.view)
             if session and selection is not None:
                 request = text_document_range_formatting(self.view, selection)
-                session.send_request(
-                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
+                session.send_request_task(request).then(self._handle_response_async)
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
-                session.send_request(
-                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
+                session.send_request_task(request).then(self._handle_response_async)
+
+    def _handle_response_async(self, response: list[TextEdit] | Error | None) -> None:
+        if isinstance(response, Error):
+            sublime.status_message(f'Failed formatting - {response}')
+            return
+        apply_text_edits(self.view, response, label="Format Selection")
 
 
 class LspFormatCommand(LspTextCommand):

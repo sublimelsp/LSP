@@ -120,7 +120,7 @@ class LspRenamePathCommand(LspWindowCommand):
         restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
         for view in self.window.views():
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
-                new_file_name = file_name.replace(str(old_path), str(new_path))
+                new_file_name = file_name.replace(str(old_path), str(new_path), 1)
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
                 view.run_command('save', {'async': False})
                 view.close()  # LSP spec - send didClose for the old file

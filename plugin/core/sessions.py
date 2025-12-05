@@ -1955,12 +1955,12 @@ class Session(TransportCallbacks):
         view_version: int | None,
         uri: str,
         view: sublime.View | None
-    ) -> sublime.View | None:
+    ) -> Promise[sublime.View | None]:
         if view is None or not view.is_valid():
             print(f'LSP: ignoring edits due to no view for uri: {uri}')
-            return None
-        apply_text_edits(view, edits, label=label, required_view_version=view_version)
-        return view
+            return Promise.resolve(None)
+        return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
+            .then(lambda _: Promise.resolve(view))
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -1995,18 +1995,25 @@ class Session(TransportCallbacks):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> None:
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> Promise[None]:
+        promise = Promise.resolve(None)
         if not view:
-            return
+            return promise
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
-        if should_close and not view.is_dirty():
-            if view != self.window.active_view():
-                self.window.focus_view(view)
-            self.window.run_command('close')
+            # Allow async thread to process save notifications before method returns.
+            promise = Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
+
+        def handle_close() -> None:
+            if should_close and not view.is_dirty():
+                if view != self.window.active_view():
+                    self.window.focus_view(view)
+                self.window.run_command('close')
+
+        return promise.then(lambda _: handle_close())
 
     def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):

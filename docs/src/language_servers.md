@@ -238,8 +238,9 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 ## Helm
 
 1. Install [helm-ls](https://github.com/mrjosh/helm-ls).
-2. (Optional & recommended) Install [yaml-language-server](https://github.com/mrjosh/helm-ls?tab=readme-ov-file#integration-with-yaml-language-server).
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"helm-ls"` client configuration to the `"clients"`:
+2. Install the [Yaml​Pipelines](https://packagecontrol.io/packages/YamlPipelines) package from Package Control for syntax highlighting.
+3. (Optional & recommended) Install [yaml-language-server](https://github.com/mrjosh/helm-ls?tab=readme-ov-file#integration-with-yaml-language-server).
+4. Open `Preferences > Package Settings > LSP > Settings` and add the `"helm-ls"` client configuration to the `"clients"`:
 
     ```jsonc
     {
@@ -247,7 +248,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
             "helm-ls": {
                 "enabled": true,
                 "command": ["helm_ls", "serve"],
-                "selector": "source.yaml.go", // Requires ST 4181+. Use `source.yaml` otherwise.
+                "selector": "source.yaml.helm"
             },
         },
     }
@@ -646,7 +647,7 @@ There are multiple options:
             "ruby": {
                 "enabled": true,
                 "command": ["solargraph", "stdio"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
                 "initializationOptions": {
                     "diagnostics": true
                 }
@@ -678,7 +679,7 @@ There are multiple options:
             "sorbet": {
                 "enabled": true,
                 "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman", "."],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
             }
         }
     }
@@ -722,7 +723,7 @@ There are multiple options:
             "ruby-lsp": {
                 "enabled": true,
                 "command": ["ruby-lsp"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby | text.html.rails",
                 "initializationOptions": {
                     "enabledFeatures": {
                         "diagnostics": true
@@ -750,7 +751,7 @@ There are multiple options:
             "steep": {
                 "enabled": true,
                 "command": ["steep", "langserver"],
-                "selector": "source.ruby | text.html.ruby",
+                "selector": "source.ruby",
             }
         }
     }
@@ -845,6 +846,25 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
     }
     ```
 
+## SQL
+
+### PostgreSQL
+
+1. Install the [Postgres Language Server](https://pg-language-server.com/latest/manual_installation/).
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"postgres-language-server"` client configuration to the `"clients"`:
+
+    ```jsonc
+        "clients": {
+            "postgres-language-server": {
+                "enabled": true,
+                "command": ["/path/to/postgres-language-server", "lsp-proxy"],
+                "selector": "source.sql.psql",
+            }
+        }
+    ```
+
+!!! info "Ensure that the PostgreSQL syntax is applied to the relevant files by selecting `View > Syntax > SQL > PostgreSQL`"
+
 ## Stylelint
 
 Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).
@@ -900,7 +920,7 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
         "clients": {
             "jag": {
                 "enabled": true,
-                "command": ["jag" "lsp"],
+                "command": ["jag", "lsp"],
                 "selector": "source.toit"
             }
         }
@@ -917,116 +937,7 @@ See [Javascript/TypeScript](#javascripttypescript).
 
 ## Typst
 
-1. Install the [Typst](https://packagecontrol.io/packages/Typst) package from Package Control for syntax highlighting.
-2. Optional: to enable auto-completions for the relevant situations in Typst files, adjust Sublime's `"auto_complete_selector"` and/or `"auto_complete_triggers"` setting (`Preferences > Settings`); for example
-
-    ```jsonc
-    {
-        "auto_complete_triggers":
-        [
-            {"selector": "text.html, text.xml", "characters": "<"},
-            {"selector": "punctuation.accessor", "rhs_empty": true},
-            {"selector": "text.typst", "characters": "#", "rhs_empty": true},
-        ],
-    }
-    ```
-
-There are 2 available languages servers.
-
-### Tinymist
-
-This server has more features, like go to definition, rename, etc.
-
-1. Install [tinymist](https://github.com/Myriad-Dreamin/tinymist).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"tinymist"` client configuration to the `"clients"`:
-
-    ```jsonc
-    {
-        "clients": {
-            "tinymist": {
-                "enabled": true,
-                "command": ["path/to/tinymist"],  // adjust this path according to your platform/setup
-                "selector": "text.typst",
-                // you can provide some initialization options:
-                "initializationOptions": {
-                    "exportPdf": "never",
-                    "typstExtraArgs": [],
-                },
-            }
-        }
-    }
-    ```
-
-3. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
-
-    <!-- how to call: see https://github.com/Myriad-Dreamin/tinymist/blob/main/editors/vscode/src/extension.ts -->
-    ```jsonc title="Packages/User/Default.sublime-commands"
-    [
-        // ...
-        {
-            "caption": "tinymist - Pin the main file to the currently opened document",
-            "command": "lsp_execute",
-            "args": {
-                "session_name": "tinymist",
-                "command_name": "tinymist.pinMain",
-                "command_args": ["${file}"]
-            }
-        },
-        {
-            "caption": "tinymist - Unpin the main file",
-            "command": "lsp_execute",
-            "args": {
-                "session_name": "tinymist",
-                "command_name": "tinymist.pinMain",
-                "command_args": [null]
-            }
-        },
-    ]
-    ```
-
-### Typst-lsp
-
-1. Install [typst-lsp](https://github.com/nvarner/typst-lsp/releases).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"typst-lsp"` client configuration to the `"clients"`:
-
-    ```jsonc
-    {
-        "clients": {
-            "typst-lsp": {
-                "enabled": true,
-                "command": ["path/to/typst-lsp"],  // adjust this path according to your platform/setup
-                "selector": "text.typst"
-            }
-        }
-    }
-    ```
-
-3. Optional: to enable some useful commands provided by language server, add the following to the `*.sublime-commands`:
-
-    <!-- how to call: see https://github.com/nvarner/typst-lsp/blob/master/editors/vscode/src/extension.ts -->
-    ```jsonc title="Packages/User/Default.sublime-commands"
-    [
-        // ...
-        {
-            "caption": "typst-lsp - Pin the main file to the currently opened document",
-            "command": "lsp_execute",
-            "args": {
-                "session_name": "typst-lsp",
-                "command_name": "typst-lsp.doPinMain",
-                "command_args": ["${file_uri}"]
-            }
-        },
-        {
-            "caption": "typst-lsp - Unpin the main file",
-            "command": "lsp_execute",
-            "args": {
-                "session_name": "typst-lsp",
-                "command_name": "typst-lsp.doPinMain",
-                "command_args": ["detached"]
-            }
-        },
-    ]
-    ```
+Follow installation instructions on [LSP-Tinymist](https://github.com/sublimelsp/LSP-Tinymist).
 
 ## Vue
 

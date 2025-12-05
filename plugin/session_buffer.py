@@ -1,25 +1,32 @@
 from __future__ import annotations
+from ..protocol import CodeLens
+from ..protocol import ColorInformation
+from ..protocol import Diagnostic
+from ..protocol import DocumentDiagnosticParams
+from ..protocol import DocumentDiagnosticReport
+from ..protocol import DocumentDiagnosticReportKind
+from ..protocol import DocumentLink
+from ..protocol import DocumentUri
+from ..protocol import FullDocumentDiagnosticReport
+from ..protocol import InlayHint
+from ..protocol import InlayHintParams
+from ..protocol import LSPErrorCodes
+from ..protocol import SemanticTokensDeltaParams
+from ..protocol import SemanticTokensParams
+from ..protocol import SemanticTokensRangeParams
+from ..protocol import TextDocumentSaveReason
+from ..protocol import TextDocumentSyncKind
+from .code_lens import CodeLensCache
+from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
+from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
-from .core.protocol import ColorInformation
-from .core.protocol import Diagnostic
-from .core.protocol import DocumentDiagnosticParams
-from .core.protocol import DocumentDiagnosticReport
-from .core.protocol import DocumentDiagnosticReportKind
-from .core.protocol import DocumentLink
-from .core.protocol import DocumentUri
-from .core.protocol import FullDocumentDiagnosticReport
-from .core.protocol import InlayHint
-from .core.protocol import InlayHintParams
-from .core.protocol import LSPErrorCodes
+from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.promise import Promise
 from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
-from .core.protocol import SemanticTokensDeltaParams
-from .core.protocol import SemanticTokensParams
-from .core.protocol import SemanticTokensRangeParams
-from .core.protocol import TextDocumentSaveReason
-from .core.protocol import TextDocumentSyncKind
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -51,6 +58,7 @@ from typing import cast
 from typing_extensions import TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
+import itertools
 import sublime
 import time
 
@@ -126,7 +134,7 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
-        self.diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
+        self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostics_version = -1
         self.diagnostics_flags = 0
@@ -141,12 +149,19 @@ class SessionBuffer:
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
         self._semantic_region_keys: dict[str, int] = {}
+        self._semantic_highlighting_supported_by_color_scheme = False
+        self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
         self.inlay_hints_needs_refresh = False
+        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
-        self._check_did_open(view)
+        self._code_lenses = CodeLensCache()
+        self._dynamically_registered_commands: dict[str, list[str]] = {}
+        self._supported_commands: set[str] = set()
+        self._update_supported_commands()
+        self.evaluate_semantic_tokens_color_scheme_support(view)
 
     @property
     def session(self) -> Session:
@@ -157,9 +172,15 @@ class SessionBuffer:
         return self._session_views
 
     @property
-    def version(self) -> int | None:
-        view = self.some_view()
-        return view.change_count() if view else None
+    def diagnostics(self) -> list[tuple[Diagnostic, sublime.Region]]:
+        return self._diagnostics
+
+    @property
+    def last_synced_version(self) -> int:
+        return self._last_synced_version
+
+    def on_session_view_initialized(self, view: sublime.View) -> None:
+        self._check_did_open(view)
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
@@ -171,10 +192,15 @@ class SessionBuffer:
             self.opened = True
             version = view.change_count()
             self._last_synced_version = version
-            self._do_color_boxes_async(view, version)
+            request_flags = self._get_request_flags(view)
+            if request_flags & RequestFlags.DOCUMENT_COLOR:
+                self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
-            self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
-            self.do_inlay_hints_async(view)
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
+            if request_flags & RequestFlags.INLAY_HINT:
+                self.do_inlay_hints_async(view)
+            self.do_code_lenses_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
@@ -197,8 +223,7 @@ class SessionBuffer:
 
     def get_view_in_group(self, group: int) -> sublime.View:
         for sv in self.session_views:
-            view = sv.get_view_for_group(group)
-            if view:
+            if view := sv.get_view_for_group(group):
                 return view
         return next(iter(self.session_views)).view
 
@@ -212,6 +237,7 @@ class SessionBuffer:
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
+        sv.handle_code_lenses_async(self._filter_supported_code_lenses())
 
     def remove_session_view(self, sv: SessionViewProtocol) -> None:
         self._clear_semantic_token_regions(sv.view)
@@ -223,8 +249,7 @@ class SessionBuffer:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
             self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        wm = self.session.manager()
-        if wm:
+        if wm := self.session.manager():
             wm.on_diagnostics_updated()
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -239,7 +264,8 @@ class SessionBuffer:
         registration_id: str,
         capability_path: str,
         registration_path: str,
-        options: dict[str, Any]
+        options: dict[str, Any],
+        suppress_requests: bool
     ) -> None:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
         view: sublime.View | None = None
@@ -251,7 +277,14 @@ class SessionBuffer:
             if capability_path.startswith("textDocumentSync."):
                 self._check_did_open(view)
             elif capability_path.startswith("diagnosticProvider"):
-                self.do_document_diagnostic_async(view, view.change_count())
+                if not suppress_requests:
+                    self.do_document_diagnostic_async(view, view.change_count())
+            elif capability_path.startswith("codeLensProvider"):
+                if not suppress_requests:
+                    self.do_code_lenses_async(view)
+            elif capability_path == "executeCommandProvider":
+                self._dynamically_registered_commands[registration_id] = options['commands']
+                self._update_supported_commands()
 
     def unregister_capability_async(
         self,
@@ -264,6 +297,9 @@ class SessionBuffer:
             return
         for sv in self.session_views:
             sv.on_capability_removed_async(registration_id, discarded)
+        if capability_path == "executeCommandProvider":
+            self._dynamically_registered_commands.pop(registration_id)
+            self._update_supported_commands()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -318,10 +354,10 @@ class SessionBuffer:
 
     def _cancel_pending_requests_async(self) -> None:
         if self._document_diagnostic_pending_request:
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
             self._document_diagnostic_pending_request = None
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
 
     def on_revert_async(self, view: sublime.View) -> None:
@@ -362,17 +398,22 @@ class SessionBuffer:
         if suppress_requests:
             return
         try:
-            self._do_color_boxes_async(view, version)
+            request_flags = self._get_request_flags(view)
+            if request_flags & RequestFlags.DOCUMENT_COLOR:
+                self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
             if self.session.config.diagnostics_mode == "workspace" and \
                     not self.session.workspace_diagnostics_pending_response and \
                     self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
                 self._workspace_diagnostics_debouncer_async.debounce(
                     self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
-            self.do_semantic_tokens_async(view)
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
-            self.do_inlay_hints_async(view)
+            if request_flags & RequestFlags.INLAY_HINT:
+                self.do_inlay_hints_async(view)
+            self.do_code_lenses_async(view)
         except MissingUriError:
             pass
 
@@ -403,7 +444,7 @@ class SessionBuffer:
         if userprefs().semantic_highlighting:
             self.semantic_tokens.needs_refresh = True
         else:
-            self._clear_semantic_tokens_async()
+            self.clear_semantic_tokens_async()
         for sv in self.session_views:
             sv.on_userprefs_changed_async()
 
@@ -413,21 +454,31 @@ class SessionBuffer:
         # Prefer active view if possible
         active_view = self.session.window.active_view()
         for sv in self.session_views:
-            if sv.view == active_view:
+            if sv.view == active_view and sv.view.is_valid():
                 return active_view
         for sv in self.session_views:
-            return sv.view
+            if sv.view.is_valid():
+                return sv.view
+        return None
 
     def _if_view_unchanged(self, f: Callable[[sublime.View, Any], None], version: int) -> CallableWithOptionalArguments:
         """
         Ensures that the view is at the same version when we were called, before calling the `f` function.
         """
         def handler(*args: Any) -> None:
-            view = self.some_view()
-            if view and view.change_count() == version:
+            if (view := self.some_view()) and view.change_count() == version:
                 f(view, *args)
 
         return handler
+
+    def _update_supported_commands(self) -> None:
+        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
+
+    def _get_request_flags(self, view: sublime.View) -> RequestFlags:
+        if session_view := self.session.session_view_for_view_async(view):
+            return session_view.get_request_flags()
+        return RequestFlags.NONE
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
@@ -444,6 +495,9 @@ class SessionBuffer:
             return
         phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
+
+    def clear_color_boxes_async(self) -> None:
+        sublime.set_timeout(lambda: self._color_phantoms.update([]))
 
     # --- textDocument/documentLink ------------------------------------------------------------------------------------
 
@@ -475,8 +529,7 @@ class SessionBuffer:
         for link in self._document_links:
             if range_to_region(link["range"], view).contains(point):
                 return link
-        else:
-            return None
+        return None
 
     def update_document_link(self, new_link: DocumentLink) -> None:
         new_link_range = new_link["range"]
@@ -488,25 +541,20 @@ class SessionBuffer:
 
     # --- textDocument/diagnostic --------------------------------------------------------------------------------------
 
-    def do_document_diagnostic_async(
-        self, view: sublime.View, version: int | None = None, forced_update: bool = False
-    ) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = False) -> None:
         mgr = self.session.manager()
         if not mgr or not self.has_capability("diagnosticProvider"):
             return
         if mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
-        change_count = view.change_count()
-        if version is None:
-            version = change_count
-        elif version < change_count:
+        if version < view.change_count():
             return
-        if version == self._diagnostics_version:
+        if version == self._diagnostics_version and not forced_update:
             return
         if self._document_diagnostic_pending_request:
             if self._document_diagnostic_pending_request.version == version and not forced_update:
                 return
-            self.session.cancel_request(self._document_diagnostic_pending_request.request_id)
+            self.session.cancel_request_async(self._document_diagnostic_pending_request.request_id)
         params: DocumentDiagnosticParams = {'textDocument': text_document_identifier(view)}
         identifier = self.get_capability("diagnosticProvider.identifier")
         if identifier:
@@ -532,8 +580,7 @@ class SessionBuffer:
                 {'uri': self._last_known_uri, 'diagnostics': response['items']})
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
-                sb = self.session.get_session_buffer_for_uri_async(uri)
-                if sb:
+                if sb := self.session.get_session_buffer_for_uri_async(uri):
                     cast(SessionBuffer, sb)._apply_document_diagnostic_async(
                         None, cast(DocumentDiagnosticReport, diagnostic_report))
 
@@ -553,15 +600,12 @@ class SessionBuffer:
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         view = self.some_view()
         if view is None:
             return
-        change_count = view.change_count()
-        if version is None:
-            version = change_count
-        if version != change_count:
+        if version != view.change_count():
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
@@ -574,8 +618,7 @@ class SessionBuffer:
             if data is None:
                 data = DiagnosticSeverityData(severity)
                 data_per_severity[key] = data
-            tags = diagnostic.get('tags', [])
-            if tags:
+            if tags := diagnostic.get('tags', []):
                 for tag in tags:
                     data.regions_with_tag.setdefault(tag, []).append(region)
             else:
@@ -585,7 +628,7 @@ class SessionBuffer:
 
         def present() -> None:
             self._diagnostics_version = diagnostics_version
-            self.diagnostics = diagnostics
+            self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
                 sv.present_diagnostics_async(sv in visible_session_views)
@@ -609,10 +652,9 @@ class SessionBuffer:
                 )
 
     def has_latest_diagnostics(self) -> bool:
-        view = self.some_view()
-        if view is None:
-            return False
-        return self._diagnostics_version == view.change_count()
+        if view := self.some_view():
+            return self._diagnostics_version == view.change_count()
+        return False
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
@@ -621,11 +663,10 @@ class SessionBuffer:
             return
         if not self.has_capability("semanticTokensProvider"):
             return
-        # semantic highlighting requires a special rule in the color scheme for the View.add_regions workaround
-        if "background" not in view.style_for_scope("meta.semantic-token"):
+        if not self._semantic_highlighting_supported_by_color_scheme:
             return
         if self.semantic_tokens.pending_response:
-            self.session.cancel_request(self.semantic_tokens.pending_response)
+            self.session.cancel_request_async(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
         params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
@@ -706,20 +747,11 @@ class SessionBuffer:
             prev_col_utf16 = col_utf16
             token_type, token_modifiers, scope = self.session.decode_semantic_token(
                 types_legend, modifiers_legend, token_type_encoded, token_modifiers_encoded)
-            if scope is None:
-                # We can still use the meta scope and draw highlighting regions for custom token types if there is a
-                # color scheme rule for this particular token type.
-                # This logic should not be cached (in the decode_semantic_token method) because otherwise new user
-                # customizations in the color scheme for the scopes of custom token types would require a restart of
-                # Sublime Text to take effect.
-                token_general_style = view.style_for_scope("meta.semantic-token")
-                token_type_style = view.style_for_scope(f"meta.semantic-token.{token_type.lower()}")
-                if token_general_style["source_line"] != token_type_style["source_line"] or \
-                        token_general_style["source_column"] != token_type_style["source_column"]:
-                    if token_modifiers:
-                        scope = f"meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
-                    else:
-                        scope = f"meta.semantic-token.{token_type.lower()}.lsp"
+            if scope is None and token_type in self._supported_custom_tokens:
+                if token_modifiers:
+                    scope = f'meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp'
+                else:
+                    scope = f'meta.semantic-token.{token_type.lower()}.lsp'
             self.semantic_tokens.tokens.append(SemanticToken(r, token_type, token_modifiers))
             if scope:
                 scope_regions.setdefault(self._get_semantic_region_key_for_scope(scope), (scope, []))[1].append(r)
@@ -756,9 +788,34 @@ class SessionBuffer:
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
-    def _clear_semantic_tokens_async(self) -> None:
+    def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
+
+    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
+        """
+        Check whether semantic highlighting is supported by the color scheme and which of the custom token types from
+        this server are supported.
+        """
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
+        self._supported_custom_tokens.clear()
+        if not self._semantic_highlighting_supported_by_color_scheme:
+            self.clear_semantic_tokens_async()
+            return
+        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if not token_types:
+            return
+        source_line = token_general_style['source_line']
+        source_column = token_general_style['source_column']
+        for token_type in token_types:
+            if token_type in SEMANTIC_TOKENS_MAP:
+                continue
+            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
+            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
+                # If the source location for this token type differs from the generic semantic tokens rule, it means
+                # that there is a specific rule in the color scheme for this token type.
+                self._supported_custom_tokens.add(token_type)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 
@@ -802,6 +859,60 @@ class SessionBuffer:
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
+
+    def do_code_lenses_async(self, view: sublime.View) -> None:
+        if not self.has_capability('codeLensProvider'):
+            return
+        if not LspToggleCodeLensesCommand.are_enabled(view.window()):
+            return
+        for sv in self.session_views:
+            if sv.view == view:
+                for request_id, data in sv.active_requests.items():
+                    if data.request.method == 'codeLens/resolve':
+                        self.session.cancel_request_async(request_id)
+                break
+        request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
+        self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
+
+    def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
+        self._code_lenses.handle_response_async(response or [])
+        self.resolve_visible_code_lenses_async(view)
+
+    def resolve_visible_code_lenses_async(self, view: sublime.View) -> None:
+        promises: list[Promise[None]] = []
+        if self.has_capability('codeLensProvider.resolveProvider'):
+            for code_lens in self._code_lenses.unresolved_visible_code_lenses(view):
+                request = Request('codeLens/resolve', code_lens.data, view)
+                promise = self.session.send_request_task(request).then(code_lens.on_resolve)
+                promises.append(promise)
+        Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
+
+    def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
+        code_lenses = self._code_lenses.code_lenses_with_command()
+        if self.session.uses_plugin():
+            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # commands here as well?
+            return code_lenses
+        else:
+            supported_code_lenses: list[ResolvedCodeLens] = []
+            # Filter out CodeLenses with commands that are not handled directly by the language server
+            for code_lens in code_lenses:
+                command_name = code_lens['command']['command']
+                if command_name in self._supported_commands:
+                    supported_code_lenses.append(code_lens)
+                else:
+                    self.session.check_log_unsupported_command(command_name)
+            return supported_code_lenses
+
+    def _on_visible_code_lenses_resolved_async(self) -> None:
+        supported_code_lenses = self._filter_supported_code_lenses()
+        for sv in self.session_views:
+            sv.handle_code_lenses_async(supported_code_lenses)
+
+    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+        self.code_lenses_needs_refresh = needs_refresh
 
     # ------------------------------------------------------------------------------------------------------------------
 

@@ -57,6 +57,7 @@ from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hierarchy import LspCallHierarchyCommand
 from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.hover import LspCopyTextCommand
 from .plugin.hover import LspHoverCommand
 from .plugin.hover import LspToggleHoverPopupsCommand
 from .plugin.inlay_hint import LspInlayHintClickCommand
@@ -102,6 +103,7 @@ __all__ = (
     "LspCollapseTreeItemCommand",
     "LspColorPresentationCommand",
     "LspCommitCompletionWithOppositeInsertMode",
+    "LspCopyTextCommand",
     "LspCopyToClipboardFromBase64Command",
     "LspDisableLanguageServerGloballyCommand",
     "LspDisableLanguageServerInProjectCommand",
@@ -217,24 +219,23 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
+
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
-    def on_load_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_load_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_load_project_async()
 
-    def on_post_save_project_async(self, w: sublime.Window) -> None:
-        manager = windows.lookup(w)
-        if manager:
+    def on_post_save_project_async(self, window: sublime.Window) -> None:
+        if manager := windows.lookup(window):
             manager.on_post_save_project_async()
 
-    def on_new_window_async(self, w: sublime.Window) -> None:
-        sublime.set_timeout(lambda: windows.lookup(w))
+    def on_new_window_async(self, window: sublime.Window) -> None:
+        sublime.set_timeout(lambda: windows.lookup(window))
 
-    def on_pre_close_window(self, w: sublime.Window) -> None:
-        windows.discard(w)
+    def on_pre_close_window(self, window: sublime.Window) -> None:
+        windows.discard(window)
 
     def on_pre_move(self, view: sublime.View) -> None:
         if ST_VERSION < 4184:  # https://github.com/sublimehq/sublime_text/issues/4630#issuecomment-2502781628
@@ -263,7 +264,7 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in opening_files.keys():
+        for fn in opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
                 tup = opening_files.pop(fn, None)
                 if tup:

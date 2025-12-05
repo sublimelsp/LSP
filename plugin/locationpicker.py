@@ -1,11 +1,11 @@
 from __future__ import annotations
+from ..protocol import DocumentUri
+from ..protocol import Location
+from ..protocol import LocationLink
+from ..protocol import Position
 from .core.constants import ST_PACKAGES_PATH
 from .core.constants import SublimeKind
 from .core.logging import debug
-from .core.protocol import DocumentUri
-from .core.protocol import Location
-from .core.protocol import LocationLink
-from .core.protocol import Position
 from .core.sessions import Session
 from .core.views import get_uri_and_position_from_location
 from .core.views import location_to_human_readable
@@ -121,8 +121,7 @@ class LocationPicker:
             if uri.startswith(("file:", "res:")):
                 flags = sublime.NewFileFlags.ENCODED_POSITION
                 if not self._side_by_side:
-                    view = open_basic_file(session, uri, position, flags)
-                    if not view:
+                    if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
                 sublime.set_timeout_async(
@@ -158,10 +157,9 @@ class LocationPicker:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
             else:
                 flags |= sublime.NewFileFlags.TRANSIENT
-            view = open_basic_file(session, uri, position, flags, self._window.active_group())
             # Don't overwrite self._highlighted_view if resource uri can't preview, so that side-by-side view will still
             # be closed upon canceling
-            if view:
+            if view := open_basic_file(session, uri, position, flags, self._window.active_group()):
                 self._highlighted_view = view
         else:
             # TODO: Preview for other uri schemes?

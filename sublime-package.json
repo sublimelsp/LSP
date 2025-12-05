@@ -621,8 +621,8 @@
                 "phantom"
               ],
               "enumDescriptions": [
-                "Show code lens to right as a clickable greenish annotation.",
-                "Show code lens as a phantom."
+                "Show code lenses as annotations on the right.",
+                "Show code lenses as phantoms between lines."
               ],
               "default": "annotation",
               "markdownDescription": "Where to show `\"code lens\"`."

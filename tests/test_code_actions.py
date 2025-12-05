@@ -1,12 +1,14 @@
 from __future__ import annotations
 from copy import deepcopy
-from LSP.plugin.code_actions import get_matching_on_save_kinds, kinds_include_kind
+from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
-from LSP.plugin.core.protocol import Point, Range
+from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.documents import DocumentSyncListener
+from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
+from LSP.plugin.documents import DocumentSyncListener
+from LSP.protocol import Range
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 from typing import Any, Generator
@@ -254,16 +256,15 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 
     def test_kind_matching(self) -> None:
         # Positive
-        self.assertTrue(kinds_include_kind(['a'], 'a.b'))
-        self.assertTrue(kinds_include_kind(['a.b'], 'a.b'))
-        self.assertTrue(kinds_include_kind(['a.b', 'b'], 'b.c'))
+        self.assertTrue(kind_contains_other_kind('a', 'a.b'))
+        self.assertTrue(kind_contains_other_kind('a.b', 'a.b'))
         # Negative
-        self.assertFalse(kinds_include_kind(['a'], 'b.a'))
-        self.assertFalse(kinds_include_kind(['a.b'], 'b'))
-        self.assertFalse(kinds_include_kind(['a.b'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa.b'], 'a'))
-        self.assertFalse(kinds_include_kind(['aa.b'], 'b'))
+        self.assertFalse(kind_contains_other_kind('a', 'b.a'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'b'))
+        self.assertFalse(kind_contains_other_kind('a.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'a'))
+        self.assertFalse(kind_contains_other_kind('aa.b', 'b'))
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):
@@ -347,26 +348,6 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action_ranges = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(code_action_ranges), 0)
 
-    def test_extends_range_to_include_diagnostics(self) -> Generator:
-        self.insert_characters('x diagnostic')
-        yield from self.await_message("textDocument/didChange")
-        yield from self.await_client_notification(
-            "textDocument/publishDiagnostics",
-            create_test_diagnostics([
-                ('diagnostic word', range_from_points(Point(0, 2), Point(0, 12))),
-                ('all content', range_from_points(Point(0, 0), Point(0, 12))),
-            ])
-        )
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 5)]})
-        yield 100
-        params = yield from self.await_message('textDocument/codeAction')
-        # Range should be extended to include range of all intersecting diagnostics
-        self.assertEqual(params['range']['start']['line'], 0)
-        self.assertEqual(params['range']['start']['character'], 0)
-        self.assertEqual(params['range']['end']['line'], 0)
-        self.assertEqual(params['range']['end']['character'], 12)
-        self.assertEqual(len(params['context']['diagnostics']), 2)
-
 
 class CodeActionsTestCase(TextDocumentTestCase):
 
@@ -388,7 +369,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         )
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEqual(params['range']['start']['line'], 1)
-        self.assertEqual(params['range']['start']['character'], 0)
+        self.assertEqual(params['range']['start']['character'], 1)
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 1)

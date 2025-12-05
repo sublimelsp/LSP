@@ -1,11 +1,11 @@
 from __future__ import annotations
-from .protocol import FileChangeType
-from .protocol import WatchKind
+from ...protocol import FileChangeType
+from ...protocol import WatchKind
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Literal, Protocol, Tuple, Union
 
-DEFAULT_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
+DEFAULT_WATCH_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 
 FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
 FilePath = str

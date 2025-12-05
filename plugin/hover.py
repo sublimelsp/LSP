@@ -1,4 +1,9 @@
 from __future__ import annotations
+from ..protocol import Diagnostic
+from ..protocol import DocumentLink
+from ..protocol import Hover
+from ..protocol import Position
+from ..protocol import Range
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
@@ -9,12 +14,7 @@ from .core.open import lsp_range_from_uri_fragment
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.promise import Promise
-from .core.protocol import Diagnostic
-from .core.protocol import DocumentLink
 from .core.protocol import Error
-from .core.protocol import Hover
-from .core.protocol import Position
-from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
@@ -138,13 +138,14 @@ class LspHoverCommand(LspTextCommand):
                 self.request_symbol_hover_async(listener, hover_point)
                 if userprefs().link_highlight_style in ("underline", "none"):
                     self.request_document_link_async(listener, hover_point)
-            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(
+            self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
             if not only_diagnostics and userprefs().show_code_actions_in_hover:
+                region = sublime.Region(hover_point, hover_point)
                 actions_manager \
-                    .request_for_region_async(self.view, covering, self._diagnostics_by_config, manual=False) \
+                    .request_for_region_async(self.view, region, self._diagnostics_by_config, manual=False) \
                     .then(lambda results: self._handle_code_actions(listener, hover_point, results))
 
         sublime.set_timeout_async(run_async)
@@ -181,32 +182,34 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
-        link_promises: list[Promise[DocumentLink]] = []
+        link_promises: list[Promise[DocumentLink | None]] = []
         for sv in listener.session_views_async():
             if not sv.has_capability_async("documentLinkProvider"):
                 continue
             link = sv.session_buffer.get_document_link_at_point(sv.view, point)
             if link is None:
                 continue
-            target = link.get("target")
-            if target:
+            if link.get("target"):
                 link_promises.append(Promise.resolve(link))
             elif sv.has_capability_async("documentLinkProvider.resolveProvider"):
                 link_promises.append(
                     sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view))
-                    .then(lambda link: self._on_resolved_link(sv.session_buffer, link))
-                )
+                    .then(partial(self._on_resolved_link, sv.session_buffer)))
         if link_promises:
             Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
 
-    def _on_resolved_link(self, session_buffer: SessionBufferProtocol, link: DocumentLink) -> DocumentLink:
+    def _on_resolved_link(
+        self, session_buffer: SessionBufferProtocol, link: DocumentLink | Error
+    ) -> DocumentLink | None:
+        if isinstance(link, Error):
+            return None
         session_buffer.update_document_link(link)
         return link
 
     def _on_all_document_links_resolved(
-        self, listener: AbstractViewListener, point: int, links: list[DocumentLink]
+        self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
     ) -> None:
-        self._document_links = links
+        self._document_links = list(filter(None, links))
         self.show_hover(listener, point, only_diagnostics=False)
 
     def _handle_code_actions(
@@ -259,7 +262,7 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []
+        contents: list[str] = []
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
@@ -268,11 +271,9 @@ class LspHoverCommand(LspTextCommand):
 
     def hover_range(self) -> sublime.Region | None:
         for hover, _ in self._hover_responses:
-            hover_range = hover.get('range')
-            if hover_range:
+            if hover_range := hover.get('range'):
                 return range_to_region(hover_range, self.view)
-        else:
-            return None
+        return None
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
@@ -330,16 +331,14 @@ class LspHoverCommand(LspTextCommand):
         if href.startswith("subl:"):
             pass
         elif href.startswith("file:"):
-            window = self.view.window()
-            if window:
+            if window := self.view.window():
                 open_file_uri(window, href)
         elif href.startswith('code-actions:'):
             self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
             _, config_name = href.split(":")
             actions = next(actions for name, actions in self._actions_by_config if name == config_name)
             if len(actions) > 1:
-                window = self.view.window()
-                if window:
+                if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
                         map(lambda action: (config_name, action), actions))
                     window.show_quick_panel(
@@ -350,8 +349,7 @@ class LspHoverCommand(LspTextCommand):
             else:
                 self.handle_code_action_select(config_name, actions, 0)
         elif href == "quick-panel:DocumentLink":
-            window = self.view.window()
-            if window:
+            if window := self.view.window():
                 targets = [link["target"] for link in self._document_links]  # pyright: ignore
 
                 def on_select(targets: list[str], idx: int) -> None:
@@ -362,8 +360,7 @@ class LspHoverCommand(LspTextCommand):
                     [parse_uri(target)[1] for target in targets], partial(on_select, targets), placeholder="Open Link")
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
-            session = self.session_by_name(session_name)
-            if session:
+            if session := self.session_by_name(session_name):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
@@ -377,8 +374,7 @@ class LspHoverCommand(LspTextCommand):
             return
 
         def run_async() -> None:
-            session = self.session_by_name(config_name)
-            if session:
+            if session := self.session_by_name(config_name):
                 session.run_code_action_async(actions[index], progress=True, view=self.view)
 
         sublime.set_timeout_async(run_async)
@@ -393,8 +389,7 @@ class LspHoverCommand(LspTextCommand):
 class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
 
     def is_enabled(self) -> bool:
-        view = self.window.active_view()
-        if view:
+        if view := self.window.active_view():
             return self._has_hover_provider(view)
         return False
 
@@ -411,12 +406,17 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
         return listener.hover_provider_count > 0 if listener else False
 
     def _update_views_async(self, enable: bool) -> None:
-        window_manager = windows.lookup(self.window)
-        if not window_manager:
-            return
-        for session in window_manager.get_sessions():
-            for session_view in session.session_views_async():
-                if enable:
-                    session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
-                else:
-                    session_view.reset_show_definitions()
+        if window_manager := windows.lookup(self.window):
+            for session in window_manager.get_sessions():
+                for session_view in session.session_views_async():
+                    if enable:
+                        session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
+                    else:
+                        session_view.reset_show_definitions()
+
+
+class LspCopyTextCommand(sublime_plugin.WindowCommand):
+    def run(self, text: str) -> None:
+        sublime.set_clipboard(text)
+        text_length = len(text)
+        self.window.status_message(f"Copied {text_length} characters")

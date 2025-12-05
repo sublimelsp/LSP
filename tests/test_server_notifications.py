@@ -1,8 +1,8 @@
 from __future__ import annotations
-from LSP.plugin.core.protocol import DiagnosticSeverity
-from LSP.plugin.core.protocol import DiagnosticTag
-from LSP.plugin.core.protocol import PublishDiagnosticsParams
 from LSP.plugin.core.url import filename_to_uri
+from LSP.protocol import DiagnosticSeverity
+from LSP.protocol import DiagnosticTag
+from LSP.protocol import PublishDiagnosticsParams
 from setup import TextDocumentTestCase
 from typing import Generator
 import sublime
@@ -12,6 +12,7 @@ class ServerNotifications(TextDocumentTestCase):
 
     def test_publish_diagnostics(self) -> Generator:
         self.insert_characters("a b c\n")
+        yield from self.await_message('textDocument/didChange')
         params: PublishDiagnosticsParams = {
             'uri': filename_to_uri(self.view.file_name() or ''),
             'diagnostics': [

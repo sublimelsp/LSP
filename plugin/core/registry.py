@@ -1,7 +1,7 @@
 from __future__ import annotations
-from .protocol import Diagnostic
-from .protocol import Location
-from .protocol import LocationLink
+from ...protocol import Diagnostic
+from ...protocol import Location
+from ...protocol import LocationLink
 from .sessions import AbstractViewListener
 from .sessions import Session
 from .views import first_selection_region
@@ -68,20 +68,19 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
             return session
-        else:
-            return None
+        return None
 
     def sessions(self) -> Generator[Session, None, None]:
         wm = windows.lookup(self.window)
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if self.session_name and session.config.name != self.session_name:
                 continue
@@ -92,12 +91,11 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
         if not wm:
             return None
         for session in wm.get_sessions():
-            if self.capability and not session.has_capability(self.capability):
+            if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue
             if session.config.name == session_name:
                 return session
-        else:
-            return None
+        return None
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -147,8 +145,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
         target = name if name else self.session_name
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             for sv in listener.session_views_async():
                 if sv.session.config.name == target:
                     if capability_path is None or sv.has_capability_async(capability_path):
@@ -158,8 +155,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return None
 
     def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             for sv in listener.session_views_async():
                 if capability_path is None or sv.has_capability_async(capability_path):
                     yield sv.session
@@ -179,8 +175,7 @@ class LspOpenLocationCommand(LspWindowCommand):
         event: dict | None = None
     ) -> None:
         if event:
-            modifier_keys = event.get('modifier_keys')
-            if modifier_keys:
+            if modifier_keys := event.get('modifier_keys'):
                 if 'primary' in modifier_keys:
                     flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
                 elif 'shift' in modifier_keys:
@@ -193,8 +188,7 @@ class LspOpenLocationCommand(LspWindowCommand):
     def _run_async(
         self, location: Location | LocationLink, session_name: str | None, flags: sublime.NewFileFlags, group: int
     ) -> None:
-        session = self.session_by_name(session_name) if session_name else self.session()
-        if session:
+        if session := self.session_by_name(session_name) if session_name else self.session():
             session.open_location_async(location, flags, group) \
                 .then(lambda view: self._handle_continuation(location, view is not None))
 

@@ -1,13 +1,13 @@
 from __future__ import annotations
+from ..protocol import PrepareRenameParams
+from ..protocol import PrepareRenameResult
+from ..protocol import Range
+from ..protocol import RenameParams
+from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
-from .core.protocol import PrepareRenameParams
-from .core.protocol import PrepareRenameResult
-from .core.protocol import Range
-from .core.protocol import RenameParams
 from .core.protocol import Request
-from .core.protocol import WorkspaceEdit
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -158,14 +158,13 @@ class LspSymbolRenameCommand(LspTextCommand):
         event: dict | None = None,
         point: int | None = None
     ) -> None:
-        listener = self.get_listener()
-        if listener:
+        if listener := self.get_listener():
             listener.purge_changes_async()
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:
             if location is not None and new_name:
-                self._do_rename(location, new_name, session)
+                self._do_rename(location, placeholder, new_name, session)
                 return
             # Trigger InputHandler manually.
             raise TypeError("required positional argument")
@@ -180,7 +179,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         return self.session_by_name(session_name, PREPARE_RENAME_CAPABILITY) if session_name \
             else self.best_session(PREPARE_RENAME_CAPABILITY, point)
 
-    def _do_rename(self, position: int, new_name: str, preferred_session: Session | None) -> None:
+    def _do_rename(self, position: int, old_name: str, new_name: str, preferred_session: Session | None) -> None:
         session = preferred_session or self.best_session(self.capability, position)
         if not session:
             return
@@ -191,12 +190,12 @@ class LspSymbolRenameCommand(LspTextCommand):
             "newName": new_name,
         }
         request = Request.rename(params, self.view, progress=True)
-        session.send_request(request, partial(self._on_rename_result_async, session))
+        session.send_request(request, partial(self._on_rename_result_async, session, f"Rename {old_name} → {new_name}"))
 
-    def _on_rename_result_async(self, session: Session, response: WorkspaceEdit | None) -> None:
+    def _on_rename_result_async(self, session: Session, label: str, response: WorkspaceEdit | None) -> None:
         if not response:
             return session.window.status_message('Nothing to rename')
-        changes = parse_workspace_edit(response)
+        changes = parse_workspace_edit(response, label)
         file_count = len(changes.keys())
         if file_count == 1:
             session.apply_parsed_workspace_edits(changes, True)
@@ -207,7 +206,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if choice == sublime.DialogResult.YES:
             session.apply_parsed_workspace_edits(changes, True)
         elif choice == sublime.DialogResult.NO:
-            self._render_rename_panel(response, changes, total_changes, file_count, session.config.name)
+            self._render_rename_panel(response, changes, label, total_changes, file_count, session.config.name)
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
@@ -239,6 +238,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         self,
         workspace_edit: WorkspaceEdit,
         changes_per_uri: WorkspaceChanges,
+        label: str,
         total_changes: int,
         file_count: int,
         session_name: str
@@ -258,7 +258,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         to_render.append(header_lines)
         reference_document.append(header_lines)
         ROWCOL_PREFIX = " {:>4}:{:<4} {}"
-        for uri, (changes, _) in changes_per_uri.items():
+        for uri, (changes, _, _) in changes_per_uri.items():
             scheme, file = parse_uri(uri)
             filename_line = '{}:'.format(self._get_relative_path(file) if scheme == 'file' else uri)
             to_render.append(filename_line)
@@ -303,7 +303,12 @@ class LspSymbolRenameCommand(LspTextCommand):
                 'commands': [
                     [
                         'lsp_apply_workspace_edit',
-                        {'session_name': session_name, 'edit': workspace_edit, 'is_refactoring': True}
+                        {
+                            'session_name': session_name,
+                            'edit': workspace_edit,
+                            'label': label,
+                            'is_refactoring': True
+                        }
                     ],
                     [
                         'hide_panel',
@@ -323,6 +328,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
+
     def want_event(self) -> bool:
         return False
 

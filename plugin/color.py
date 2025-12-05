@@ -1,8 +1,8 @@
 from __future__ import annotations
+from ..protocol import ColorInformation
+from ..protocol import ColorPresentation
+from ..protocol import ColorPresentationParams
 from .core.edit import apply_text_edits
-from .core.protocol import ColorInformation
-from .core.protocol import ColorPresentation
-from .core.protocol import ColorPresentationParams
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.views import range_to_region
@@ -15,8 +15,7 @@ class LspColorPresentationCommand(LspTextCommand):
     capability = 'colorProvider'
 
     def run(self, edit: sublime.Edit, color_information: ColorInformation) -> None:
-        session = self.best_session(self.capability)
-        if session:
+        if session := self.best_session(self.capability):
             self._version = self.view.change_count()
             self._range = color_information['range']
             params: ColorPresentationParams = {
@@ -41,8 +40,7 @@ class LspColorPresentationCommand(LspTextCommand):
         self._filtered_response: list[ColorPresentation] = []
         for item in response:
             # Filter out items that would apply no change
-            text_edit = item.get('textEdit')
-            if text_edit:
+            if text_edit := item.get('textEdit'):
                 if text_edit['range'] == self._range and text_edit['newText'] == old_text:
                     continue
             elif item['label'] == old_text:
@@ -58,4 +56,4 @@ class LspColorPresentationCommand(LspTextCommand):
         if index > -1:
             color_pres = self._filtered_response[index]
             text_edit = color_pres.get('textEdit') or {'range': self._range, 'newText': color_pres['label']}
-            apply_text_edits(self.view, [text_edit], required_view_version=self._version)
+            apply_text_edits(self.view, [text_edit], label="Change Color Format", required_view_version=self._version)

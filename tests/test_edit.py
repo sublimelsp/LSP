@@ -1,12 +1,12 @@
 from __future__ import annotations
 from LSP.plugin import apply_text_edits
 from LSP.plugin.core.edit import parse_workspace_edit
-from LSP.plugin.core.protocol import TextDocumentEdit, TextEdit, WorkspaceEdit
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.edit import _parse_text_edit as parse_text_edit
 from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.edit import temporary_setting
+from LSP.protocol import TextDocumentEdit, TextEdit, WorkspaceEdit
 from setup import TextDocumentTestCase
 from test_protocol import LSP_RANGE
 import sublime
@@ -216,7 +216,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
     def test_sorts_in_application_order2(self):
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
-        (edits, version) = changes[URI]
+        (edits, label, version) = changes[URI]
         self.assertEqual(version, 6)
         parsed_edits = [parse_text_edit(edit) for edit in edits]
         sorted_edits = list(reversed(sort_by_application_order(parsed_edits)))

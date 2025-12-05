@@ -1,4 +1,8 @@
 from __future__ import annotations
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentUri
+from ..protocol import Location
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.diagnostics_storage import is_severity_included
 from .core.diagnostics_storage import ParsedUri
@@ -6,10 +10,6 @@ from .core.input_handlers import PreselectedListInputHandler
 from .core.paths import project_base_dir
 from .core.paths import project_path
 from .core.paths import simple_project_path
-from .core.protocol import Diagnostic
-from .core.protocol import DiagnosticSeverity
-from .core.protocol import DocumentUri
-from .core.protocol import Location
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -117,8 +117,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
                 severities_per_path.setdefault(parsed_uri, []).append(severity)
                 if parsed_uri not in self.first_locations:
                     severities_per_path.move_to_end(parsed_uri)
-                    diagnostics = session.diagnostics.diagnostics_by_parsed_uri(parsed_uri)
-                    if diagnostics:
+                    if diagnostics := session.diagnostics.diagnostics_by_parsed_uri(parsed_uri):
                         self.first_locations[parsed_uri] = session, diagnostic_location(parsed_uri, diagnostics[0])
         # build items
         list_items = list()
@@ -154,8 +153,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
 
     def cancel(self) -> None:
         if self._preview is not None:
-            sheet = self._preview.sheet()
-            if sheet and sheet.is_transient():
+            if (sheet := self._preview.sheet()) and sheet.is_transient():
                 self._preview.close()
         self.window.focus_view(self.view)
 
@@ -232,8 +230,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
 
     def cancel(self) -> None:
         if self._preview is not None:
-            sheet = self._preview.sheet()
-            if sheet and sheet.is_transient():
+            if (sheet := self._preview.sheet()) and sheet.is_transient():
                 self._preview.close()
         self.window.focus_view(self.view)
 

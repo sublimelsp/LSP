@@ -1,17 +1,17 @@
 from __future__ import annotations
+from ..protocol import CallHierarchyIncomingCall
+from ..protocol import CallHierarchyItem
+from ..protocol import CallHierarchyOutgoingCall
+from ..protocol import CallHierarchyPrepareParams
+from ..protocol import Range
+from ..protocol import TextDocumentPositionParams
+from ..protocol import TypeHierarchyItem
+from ..protocol import TypeHierarchyPrepareParams
 from .core.constants import SYMBOL_KINDS
 from .core.paths import simple_path
 from .core.promise import Promise
-from .core.protocol import CallHierarchyIncomingCall
-from .core.protocol import CallHierarchyItem
-from .core.protocol import CallHierarchyOutgoingCall
-from .core.protocol import CallHierarchyPrepareParams
 from .core.protocol import Error
-from .core.protocol import Range
 from .core.protocol import Request
-from .core.protocol import TextDocumentPositionParams
-from .core.protocol import TypeHierarchyItem
-from .core.protocol import TypeHierarchyPrepareParams
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
@@ -57,10 +57,9 @@ class HierarchyDataProvider(TreeDataProvider):
     def get_children(self, element: HierarchyItemWrapper | None) -> Promise[list[HierarchyItemWrapper]]:
         if element is None:
             return Promise.resolve(self.root_elements)
-        session = self.weaksession()
-        if not session:
-            return Promise.resolve([])
-        return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
+        if session := self.weaksession():
+            return session.send_request_task(self.request({'item': element['item']})).then(self.request_handler)
+        return Promise.resolve([])
 
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']

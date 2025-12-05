@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/client_configuration/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/commands/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/customization/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/features/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/keyboard_shortcuts/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/language_servers/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://sublimelsp.github.io/LSP/troubleshooting/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+</urlset>

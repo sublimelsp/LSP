@@ -1,0 +1,1272 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://sublimelsp.github.io/LSP/customization/">
+      
+      
+        <link rel="prev" href="../keyboard_shortcuts/">
+      
+      
+        <link rel="next" href="../client_configuration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../images/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Customization - LSP for Sublime Text</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#keyboard-shortcuts-key-bindings" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="LSP for Sublime Text" class="md-header__button md-logo" aria-label="LSP for Sublime Text" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LSP for Sublime Text
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Customization
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="LSP for Sublime Text" class="md-nav__button md-logo" aria-label="LSP for Sublime Text" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    LSP for Sublime Text
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Language Servers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keyboard_shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keyboard Shortcuts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customization
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#keyboard-shortcuts-key-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keyboard shortcuts (key bindings)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mouse-map-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mouse map configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hover-popups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hover popups
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inlay-hints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inlay Hints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-scheme-customizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color scheme customizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Color scheme customizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#semantic-highlighting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Highlighting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#document-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Document Highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hover-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hover Highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signature-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Help
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Annotations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#keyboard-shortcuts-key-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keyboard shortcuts (key bindings)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mouse-map-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mouse map configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hover-popups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hover popups
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inlay-hints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inlay Hints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-scheme-customizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color scheme customizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Color scheme customizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#semantic-highlighting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Highlighting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#document-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Document Highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hover-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hover Highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signature-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Help
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Annotations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Customization</h1>
+
+<h2 id="keyboard-shortcuts-key-bindings">Keyboard shortcuts (key bindings)<a class="headerlink" href="#keyboard-shortcuts-key-bindings" title="Permanent link">#</a></h2>
+<p>LSP's key bindings can be edited from the <code>Preferences: LSP Key Bindings</code> command in the Command Palette. Many of the default key bindings (visible in the left view) are disabled to avoid conflicts with default or user key bindings. To enable those, copy them to your user key bindings on the right, un-comment, and pick the key shortcut of your choice. Check also the overview of available <a href="../keyboard_shortcuts/">Keyboard Shortcuts</a>.</p>
+<p>If you want to create a new key binding that is different from the ones that are already included, you might want to make it active only when there is a language server with a specific <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP capability</a> (refer to the <code>ServerCapabilities</code> structure in that link) running. In that case, you can make use of the <code>lsp.session_with_capability</code> context. For example, the following key binding overrides <code>ctrl+r</code> to use LSP's symbol provider but only when the current view has a language server with the <code>documentSymbolProvider</code> capability and we're in a javascript or a typescript file:</p>
+<div class="highlight"><span class="filename">Packages/User/Default.sublime-keymap</span><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lsp_document_symbols&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;keys&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="s2">&quot;ctrl+r&quot;</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lsp.session_with_capability&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;operator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;operand&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;documentSymbolProvider&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;selector&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;operator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;operand&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;source.ts, source.js&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">},</span>
+</code></pre></div>
+<p>Generally, you should not need to restrict your key bindings to specific scopes and just rely on checking the capability context.</p>
+<h2 id="mouse-map-configuration">Mouse map configuration<a class="headerlink" href="#mouse-map-configuration" title="Permanent link">#</a></h2>
+<p>If you want to bind some action to a mouse, select <code>Preferences / Mouse Bindings</code> from the main menu and edit the file on the righthand side.</p>
+<p>Here is an example of a mouse binding that triggers LSP's "go to symbol definition" command on pressing the <kbd>ctrl</kbd>+<kbd>left click</kbd>:</p>
+<div class="highlight"><span class="filename">Packages/User/Default.sublime-mousemap</span><pre><span></span><code><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;modifiers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ctrl&quot;</span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;press_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;drag_select&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lsp_symbol_definition&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<h2 id="hover-popups">Hover popups<a class="headerlink" href="#hover-popups" title="Permanent link">#</a></h2>
+<p>LSP uses <a href="https://github.com/facelessuser/sublime-markdown-popups">mdpopups</a> to display the popup.
+You can override its style by creating a <code>Packages/User/mdpopups.css</code> file.
+In particular, to get the same font in the popup as your <code>"font_face"</code> setting in <code>Packages/User/Preferences.sublime-settings</code>, add</p>
+<div class="highlight"><span class="filename">Packages/User/mdpopups.css</span><pre><span></span><code><span class="nt">html</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nv">--mdpopups-font-mono</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your desired font face&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>See the <a href="http://facelessuser.github.io/sublime-markdown-popups/">mdpopups documentation</a> for more details.</p>
+<h2 id="inlay-hints">Inlay Hints<a class="headerlink" href="#inlay-hints" title="Permanent link">#</a></h2>
+<p>The styles for inlay hints are defined in the <a href="https://github.com/sublimelsp/LSP/blob/main/inlay_hints.css"><code>inlay_hints.css</code></a> file in the root directory of the LSP package.
+If you would like to adjust the inlay hints style, you can create an <a href="https://www.sublimetext.com/docs/packages.html#overriding-files-from-a-zipped-package">override</a> for this file (a restart of Sublime Text is required to apply the changes).
+But be aware that by doing this, you might miss out on future changes in this file, in case of updates in a new release of the LSP package.
+So consider using a package like <a href="https://packagecontrol.io/packages/OverrideAudit">OverrideAudit</a> to get a notification when that happens.</p>
+<h2 id="color-scheme-customizations">Color scheme customizations<a class="headerlink" href="#color-scheme-customizations" title="Permanent link">#</a></h2>
+<p>Some features use TextMate scopes to control the colors (underline, background or text color) of styled regions in a document or popup.
+Colors can be customized by adding a rule for these scopes into your color scheme.
+There is an example in the <a href="https://www.sublimetext.com/docs/color_schemes.html#customization">official ST documentation</a> which explains how to do that.</p>
+<p>The following tables give an overview of the scope names used by LSP.</p>
+<h3 id="semantic-highlighting">Semantic Highlighting<a class="headerlink" href="#semantic-highlighting" title="Permanent link">#</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Semantic highlighting is disabled by default. To enable it, set <code>"semantic_highlighting": true</code> in your LSP user settings.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>There are several known limitations when semantic highlighting is used. For instance, there are visible artifacts on lines with semantic highlighting if the <code>"highlight_line"</code> setting is enabled, and italic and bold font styles are suppressed for regions with semantic highlighting.</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">This feature is only available if the server has the <em>semanticTokensProvider</em> capability.</p>
+<p>Language servers that support semantic highlighting are for example <em>clangd</em> and <em>rust-analyzer</em>.</p>
+</div>
+<p>In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
+LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
+If you use a custom color scheme, select <code>UI: Customize Color Scheme</code> from the Command Palette and add for example the following code:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;rules&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;meta.semantic-token&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;background&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#00000101&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:</p>
+<table>
+<thead>
+<tr>
+<th><a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes">Semantic Token Type</a></th>
+<th>scope</th>
+<th>fallback scopes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>namespace</td>
+<td><code>meta.semantic-token.namespace</code></td>
+<td><code>variable.other.namespace</code><br><code>entity.name.namespace</code></td>
+</tr>
+<tr>
+<td>type</td>
+<td><code>meta.semantic-token.type</code></td>
+<td><code>storage.type</code><br><code>entity.name.type</code><br><code>support.type</code></td>
+</tr>
+<tr>
+<td>class</td>
+<td><code>meta.semantic-token.class</code></td>
+<td><code>storage.type.class</code><br><code>entity.name.class</code><br><code>support.class</code></td>
+</tr>
+<tr>
+<td>enum</td>
+<td><code>meta.semantic-token.enum</code></td>
+<td><code>variable.other.enum</code><br><code>entity.name.enum</code></td>
+</tr>
+<tr>
+<td>interface</td>
+<td><code>meta.semantic-token.interface</code></td>
+<td><code>entity.other.inherited-class</code><br><code>entity.name.interface</code></td>
+</tr>
+<tr>
+<td>struct</td>
+<td><code>meta.semantic-token.struct</code></td>
+<td><code>storage.type.struct</code><br><code>entity.name.struct</code><br><code>support.struct</code></td>
+</tr>
+<tr>
+<td>typeParameter</td>
+<td><code>meta.semantic-token.typeparameter</code></td>
+<td><code>variable.parameter.generic</code></td>
+</tr>
+<tr>
+<td>parameter</td>
+<td><code>meta.semantic-token.parameter</code></td>
+<td><code>variable.parameter</code></td>
+</tr>
+<tr>
+<td>variable</td>
+<td><code>meta.semantic-token.variable</code></td>
+<td><code>variable.other</code><br><code>variable.other.constant</code></td>
+</tr>
+<tr>
+<td>property</td>
+<td><code>meta.semantic-token.property</code></td>
+<td><code>variable.other.property</code></td>
+</tr>
+<tr>
+<td>enumMember</td>
+<td><code>meta.semantic-token.enummember</code></td>
+<td><code>constant.other.enum</code></td>
+</tr>
+<tr>
+<td>event</td>
+<td><code>meta.semantic-token.event</code></td>
+<td><code>entity.name.function</code></td>
+</tr>
+<tr>
+<td>function</td>
+<td><code>meta.semantic-token.function</code></td>
+<td><code>variable.function</code><br><code>entity.name.function</code><br><code>support.function.builtin</code></td>
+</tr>
+<tr>
+<td>method</td>
+<td><code>meta.semantic-token.method</code></td>
+<td><code>variable.function</code><br><code>entity.name.function</code><br><code>support.function.builtin</code></td>
+</tr>
+<tr>
+<td>macro</td>
+<td><code>meta.semantic-token.macro</code></td>
+<td><code>variable.macro</code><br><code>entity.name.macro</code><br><code>support.macro</code></td>
+</tr>
+<tr>
+<td>keyword</td>
+<td><code>meta.semantic-token.keyword</code></td>
+<td><code>keyword</code></td>
+</tr>
+<tr>
+<td>modifier</td>
+<td><code>meta.semantic-token.modifier</code></td>
+<td><code>storage.modifier</code></td>
+</tr>
+<tr>
+<td>comment</td>
+<td><code>meta.semantic-token.comment</code></td>
+<td><code>comment</code><br><code>comment.block.documentation</code></td>
+</tr>
+<tr>
+<td>string</td>
+<td><code>meta.semantic-token.string</code></td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td>number</td>
+<td><code>meta.semantic-token.number</code></td>
+<td><code>constant.numeric</code></td>
+</tr>
+<tr>
+<td>regexp</td>
+<td><code>meta.semantic-token.regexp</code></td>
+<td><code>string.regexp</code></td>
+</tr>
+<tr>
+<td>operator</td>
+<td><code>meta.semantic-token.operator</code></td>
+<td><code>keyword.operator</code></td>
+</tr>
+<tr>
+<td>decorator</td>
+<td><code>meta.semantic-token.decorator</code></td>
+<td><code>variable.annotation</code></td>
+</tr>
+<tr>
+<td>label</td>
+<td><code>meta.semantic-token.label</code></td>
+<td><code>entity.name.label</code></td>
+</tr>
+</tbody>
+</table>
+<p>By default, LSP will assign fallback scopes based on the <a href="https://www.sublimetext.com/docs/scope_naming.html">scope naming guideline</a> to each of these token types, but if you define color scheme rules for the <code>meta.semantic-token.*</code> scopes that are specified above, the latter will take precedence. The fallback scopes can depend on additional <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers">token modifiers</a>.</p>
+<p>Language servers can also add their custom token types, which are not defined in the protocol.
+An "LSP-*" helper package (or user) can provide a <code>semantic_tokens</code> mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.
+The keys of this mapping should be the token types and values should be the corresponding scopes.
+Semantic tokens with exactly one token modifier can be addressed by appending the modifier after a dot.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;semantic_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;magicFunction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;support.function.builtin&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;selfParameter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;variable.language&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;type.defaultLibrary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;storage.type.builtin&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The color for custom token types can also be adjusted via a color scheme rule for the scope <code>meta.semantic-token.&lt;token-type&gt;</code>, where <code>&lt;token-type&gt;</code> is the name of the custom token type, but with all letters lowercased (similar to the listed scopes in the table above).
+To target tokens with one modifier, use the scope <code>meta.semantic-token.&lt;token-type&gt;.&lt;token-modifier&gt;</code> (all lowercase).
+Currently, semantic tokens with more than one modifier cannot be styled reliably.</p>
+<p>If neither a scope for a custom token type is defined, nor a color scheme rule for this token type exists, then it will only be highlighted via regular syntax highlighting.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The presence of rules for custom token types is cached and therefore color scheme modifications might not take effect immediately.
+Semantic highlighting for custom token types should work after switching the active color scheme and then editing the document.</p>
+</div>
+<h3 id="document-highlights">Document Highlights<a class="headerlink" href="#document-highlights" title="Permanent link">#</a></h3>
+<div class="admonition info">
+<p class="admonition-title">This feature is only available if the server has the <em>documentHighlightProvider</em> capability.</p>
+<p>Highlights other occurrences of the symbol at a given cursor position.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>DocumentHighlightKind</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markup.highlight.text.lsp</code></td>
+<td>Text</td>
+<td>A textual occurrence</td>
+</tr>
+<tr>
+<td><code>markup.highlight.read.lsp</code></td>
+<td>Read</td>
+<td>Read-access of a symbol, like reading a variable</td>
+</tr>
+<tr>
+<td><code>markup.highlight.write.lsp</code></td>
+<td>Write</td>
+<td>Write-access of a symbol, like writing to a variable</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <code>document_highlight_style</code> is set to "background" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.</p>
+</div>
+<h3 id="hover-highlights">Hover Highlights<a class="headerlink" href="#hover-highlights" title="Permanent link">#</a></h3>
+<p>Allows to highlight the word or range for which a hover popup is shown (disabled by default).</p>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markup.highlight.hover.lsp</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <code>hover_highlight_style</code> is set to "background" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule.</p>
+</div>
+<h3 id="diagnostics">Diagnostics<a class="headerlink" href="#diagnostics" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>DiagnosticSeverity</th>
+<th>description</th>
+<th>drawn as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markup.error.lsp</code></td>
+<td>Error</td>
+<td>Reports an error</td>
+<td>Squiggly underlines</td>
+</tr>
+<tr>
+<td><code>markup.warning.lsp</code></td>
+<td>Warning</td>
+<td>Reports a warning</td>
+<td>Squiggly underlines</td>
+</tr>
+<tr>
+<td><code>markup.info.lsp</code></td>
+<td>Information</td>
+<td>Reports an information</td>
+<td>Stippled underlines</td>
+</tr>
+<tr>
+<td><code>markup.info.hint.lsp</code></td>
+<td>Hint</td>
+<td>Reports a hint</td>
+<td>Stippled underlines</td>
+</tr>
+</tbody>
+</table>
+<p>When the region of the diagnostic spans more than one line, the diagnostic is always drawn as a box.</p>
+<p>Diagnostics will also optionally include the following scopes:</p>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>diagnostic tag name</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markup.unnecessary.lsp</code></td>
+<td>Unnecessary</td>
+<td>Unused or unnecessary code</td>
+</tr>
+<tr>
+<td><code>markup.deprecated.lsp</code></td>
+<td>Deprecated</td>
+<td>Deprecated or obsolete code</td>
+</tr>
+</tbody>
+</table>
+<p>Those scopes can be used to, for example, gray out the text color of unused code, if the server supports that.</p>
+<p>For example, to add a custom rule for <code>Mariana</code> color scheme, select <code>UI: Customize Color Scheme</code> from the Command Palette and add the following rule:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;rules&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;markup.unnecessary.lsp&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;foreground&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;color(rgb(255, 255, 255) alpha(0.4))&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;background&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#00000101&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The color scheme rule only works if the "background" color is (marginally) different from the original color scheme background.</p>
+<h3 id="signature-help">Signature Help<a class="headerlink" href="#signature-help" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entity.name.function.sighelp.lsp</code></td>
+<td>Function name in the signature help popup</td>
+</tr>
+<tr>
+<td><code>variable.parameter.sighelp.lsp</code></td>
+<td>Function argument in the signature help popup</td>
+</tr>
+<tr>
+<td><code>variable.parameter.sighelp.active.lsp</code></td>
+<td>Function argument which is currently highlighted in the signature help popup</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If there is no special rule for the active parameter in the color scheme, it will be rendered with bold and underlined font style.
+But if the color scheme defines a different <code>"foreground"</code> color for the active parameter, the style follows the <code>"font_style"</code> property from the color scheme rule.</p>
+</div>
+<h3 id="annotations">Annotations<a class="headerlink" href="#annotations" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markup.accent.codelens.lsp</code></td>
+<td>Accent color for code lens annotations</td>
+</tr>
+<tr>
+<td><code>markup.accent.codeaction.lsp</code></td>
+<td>Accent color for code action annotations</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/TZ5WN8t" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.tooltips", "navigation.top"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../js/redirect.js"></script>
+      
+    
+  </body>
+</html>

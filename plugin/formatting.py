@@ -203,7 +203,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def _handle_response_async(self, response: FormatResponse) -> None:
         if isinstance(response, Error):
-            sublime.status_message(f'Failed formatting - {response}')
+            sublime.status_message(Formatting error: {response}')
             return
         apply_text_edits(self.view, response, label="Format Selection")
 

@@ -66,20 +66,17 @@ class WillSaveWaitTask(SaveTask):
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
             self._purge_changes_async()
-            self._will_save_wait_until_async(session)
+            view = self._task_runner.view
+            session.send_request_task(will_save_wait_until(view, reason=TextDocumentSaveReason.Manual)) \
+                .then(self._on_response_async)
         else:
             self._on_complete()
 
-    def _will_save_wait_until_async(self, session: Session) -> None:
-        session.send_request_async(
-            will_save_wait_until(self._task_runner.view, reason=TextDocumentSaveReason.Manual),
-            self._on_response,
-            lambda error: self._on_response(None))
-
-    def _on_response(self, response: FormatResponse) -> None:
+    def _on_response_async(self, response: FormatResponse | Error) -> None:
+        promise: Promise[None] = Promise.resolve(None)
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_text_edits(self._task_runner.view, response, label="Format on Save")
-        sublime.set_timeout_async(self._handle_next_session_async)
+            promise = apply_text_edits(self._task_runner.view, response, label="Format on Save")
+        promise.then(lambda _: self._handle_next_session_async())
 
 
 class FormattingTask(SaveTask):

@@ -201,7 +201,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                 request = text_document_ranges_formatting(self.view)
                 session.send_request_task(request).then(self._handle_response_async)
 
-    def _handle_response_async(self, response: list[TextEdit] | Error | None) -> None:
+    def _handle_response_async(self, response: FormatResponse) -> None:
         if isinstance(response, Error):
             sublime.status_message(f'Failed formatting - {response}')
             return

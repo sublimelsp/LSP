@@ -122,7 +122,8 @@ class LspRenamePathCommand(LspWindowCommand):
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
                 new_file_name = file_name.replace(str(old_path), str(new_path), 1)
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
-                view.run_command('save', {'async': False})
+                if view.is_dirty():
+                    view.run_command('save', {'async': False})
                 view.close()  # LSP spec - send didClose for the old file
         if (new_dir := new_path.parent) and not new_dir.exists():
             new_dir.mkdir(parents=True)

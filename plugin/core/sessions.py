@@ -2010,8 +2010,7 @@ class Session(TransportCallbacks):
         def handle_close() -> None:
             if should_close and not view.is_dirty():
                 if view != self.window.active_view():
-                    self.window.focus_view(view)
-                self.window.run_command('close')
+                    view.close()
 
         return promise.then(lambda _: handle_close())
 

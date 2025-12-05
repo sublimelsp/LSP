@@ -148,7 +148,7 @@ class LspRenamePathCommand(LspWindowCommand):
             for file_name, group_index, selection in restore_files
         ]).then(lambda _: True)
 
-    def notify_did_rename(self, file_rename: FileRename):
+    def notify_did_rename(self, file_rename: FileRename) -> None:
         for session in self.sessions():
             filters = session.get_capability('workspace.fileOperations.didRename.filters') or []
             if filters and match_file_operation_filters(filters, file_rename['oldUri']):

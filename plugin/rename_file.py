@@ -142,12 +142,11 @@ class LspRenamePathCommand(LspWindowCommand):
                 view.sel().clear()
                 view.sel().add_all(selection)
 
-        promises: list[Promise] = []
-        for file_name, group_index, selection in restore_files:
-            # LSP spec - send didOpen for the new file
-            promises.append(open_file_uri(self.window, file_name, group=group_index[0])
-                .then(partial(restore_view, selection, group_index)))
-        return Promise.all(promises).then(lambda _: True)
+        return Promise.all([
+            open_file_uri(self.window, file_name, group=group_index[0]) \
+                .then(partial(restore_view, selection, group_index))
+            for file_name, group_index, selection in restore_files
+        ]).then(lambda _: True)
 
     def notify_did_rename(self, file_rename: FileRename):
         for session in self.sessions():

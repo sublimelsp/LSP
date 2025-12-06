@@ -1933,6 +1933,20 @@ class Session(TransportCallbacks):
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
+        def handle_view(
+            edits: list[TextEdit],
+            label: str | None,
+            view_version: int | None,
+            uri: str,
+            view_state_actions: ViewStateActions,
+            view: sublime.View | None,
+        ) -> Promise[None]:
+            if view is None:
+                print(f'LSP: ignoring edits due to no view for uri: {uri}')
+                return Promise.resolve(None)
+            return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
+                .then(lambda view: self._set_view_state(view_state_actions, view))
+
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
@@ -1940,27 +1954,12 @@ class Session(TransportCallbacks):
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
-                self.open_uri_async(uri)
-                    .then(functools.partial(self._apply_text_edits, edits, label, view_version, uri))
-                    .then(functools.partial(self._set_view_state, view_state_actions))
+                self.open_uri_async(uri) \
+                    .then(functools.partial(handle_view, edits, label, view_version, uri, view_state_actions))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
             .then(lambda _: self._set_focused_sheet(active_sheet))
-
-    def _apply_text_edits(
-        self,
-        edits: list[TextEdit],
-        label: str | None,
-        view_version: int | None,
-        uri: str,
-        view: sublime.View | None
-    ) -> Promise[sublime.View | None]:
-        if view is None or not view.is_valid():
-            print(f'LSP: ignoring edits due to no view for uri: {uri}')
-            return Promise.resolve(None)
-        return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
-            .then(lambda _: view)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -1995,10 +1994,8 @@ class Session(TransportCallbacks):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> Promise[None]:
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> Promise[None]:
         promise = Promise.resolve(None)
-        if not view:
-            return promise
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():

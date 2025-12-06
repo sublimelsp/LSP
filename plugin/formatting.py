@@ -66,20 +66,17 @@ class WillSaveWaitTask(SaveTask):
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
             self._purge_changes_async()
-            self._will_save_wait_until_async(session)
+            view = self._task_runner.view
+            session.send_request_task(will_save_wait_until(view, reason=TextDocumentSaveReason.Manual)) \
+                .then(self._on_response_async)
         else:
             self._on_complete()
 
-    def _will_save_wait_until_async(self, session: Session) -> None:
-        session.send_request_async(
-            will_save_wait_until(self._task_runner.view, reason=TextDocumentSaveReason.Manual),
-            self._on_response,
-            lambda error: self._on_response(None))
-
-    def _on_response(self, response: FormatResponse) -> None:
+    def _on_response_async(self, response: FormatResponse) -> None:
+        promise: Promise[None] = Promise.resolve(None)
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_text_edits(self._task_runner.view, response, label="Format on Save")
-        sublime.set_timeout_async(self._handle_next_session_async)
+            promise.then(lambda _: apply_text_edits(self._task_runner.view, response, label="Format on Save"))
+        promise.then(lambda _: self._handle_next_session_async())
 
 
 class FormattingTask(SaveTask):
@@ -98,12 +95,13 @@ class FormattingTask(SaveTask):
             return
         base_scope = syntax.scope
         formatter = get_formatter(self._task_runner.view.window(), base_scope)
-        format_document(self._task_runner, formatter).then(self._on_response)
+        format_document(self._task_runner, formatter).then(self._on_response_async)
 
-    def _on_response(self, response: FormatResponse) -> None:
+    def _on_response_async(self, response: FormatResponse) -> None:
+        promise: Promise[None] = Promise.resolve(None)
         if response and not isinstance(response, Error) and not self._cancelled:
-            apply_text_edits(self._task_runner.view, response, label="Format on Save")
-        sublime.set_timeout_async(self._on_complete)
+            promise.then(lambda _: apply_text_edits(self._task_runner.view, response, label="Format on Save"))
+        promise.then(lambda _: self._on_complete())
 
 
 LspSaveCommand.register_task(WillSaveWaitTask)
@@ -135,13 +133,13 @@ class LspFormatDocumentCommand(LspTextCommand):
             if formatter:
                 session = self.session_by_name(formatter, self.capability)
                 if session:
-                    session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
+                    session.send_request_task(text_document_formatting(self.view)).then(self.on_result_async)
                     return
             self.select_formatter(base_scope, session_names)
         else:
-            format_document(self).then(self.on_result)
+            format_document(self).then(self.on_result_async)
 
-    def on_result(self, result: FormatResponse) -> None:
+    def on_result_async(self, result: FormatResponse) -> None:
         if result and not isinstance(result, Error):
             apply_text_edits(self.view, result, label="Format File")
 
@@ -172,7 +170,7 @@ class LspFormatDocumentCommand(LspTextCommand):
         if session := self.session_by_name(session_name, self.capability):
             if listener := self.get_listener():
                 listener.purge_changes_async()
-            session.send_request_task(text_document_formatting(self.view)).then(self.on_result)
+            session.send_request_task(text_document_formatting(self.view)).then(self.on_result_async)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -197,13 +195,17 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
             selection = first_selection_region(self.view)
             if session and selection is not None:
                 request = text_document_range_formatting(self.view, selection)
-                session.send_request(
-                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
+                session.send_request_task(request).then(self._handle_response_async)
         elif self.view.has_non_empty_selection_region():
             if session := self.best_session('documentRangeFormattingProvider.rangesSupport'):
                 request = text_document_ranges_formatting(self.view)
-                session.send_request(
-                    request, lambda response: apply_text_edits(self.view, response, label="Format Selection"))
+                session.send_request_task(request).then(self._handle_response_async)
+
+    def _handle_response_async(self, response: FormatResponse) -> None:
+        if isinstance(response, Error):
+            sublime.status_message(f'Formatting error: {response}')
+            return
+        apply_text_edits(self.view, response, label="Format Selection")
 
 
 class LspFormatCommand(LspTextCommand):

@@ -75,7 +75,7 @@ class WillSaveWaitTask(SaveTask):
     def _on_response_async(self, response: FormatResponse) -> None:
         promise: Promise[None] = Promise.resolve(None)
         if response and not isinstance(response, Error) and not self._cancelled:
-            promise = apply_text_edits(self._task_runner.view, response, label="Format on Save")
+            promise.then(lambda _: apply_text_edits(self._task_runner.view, response, label="Format on Save"))
         promise.then(lambda _: self._handle_next_session_async())
 
 
@@ -100,7 +100,7 @@ class FormattingTask(SaveTask):
     def _on_response_async(self, response: FormatResponse) -> None:
         promise: Promise[None] = Promise.resolve(None)
         if response and not isinstance(response, Error) and not self._cancelled:
-            promise = apply_text_edits(self._task_runner.view, response, label="Format on Save")
+            promise.then(lambda _: apply_text_edits(self._task_runner.view, response, label="Format on Save"))
         promise.then(lambda _: self._on_complete())
 
 

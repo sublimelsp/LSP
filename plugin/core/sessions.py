@@ -1954,7 +1954,7 @@ class Session(TransportCallbacks):
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
-                self.open_uri_async(uri) \
+                self.open_uri_async(uri)
                     .then(functools.partial(handle_view, edits, label, view_version, uri, view_state_actions))
             )
         return Promise.all(promises) \

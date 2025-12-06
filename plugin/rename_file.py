@@ -92,7 +92,7 @@ class LspRenamePathCommand(LspWindowCommand):
         }
         Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
             .then(lambda responses: self.handle_rename_async(responses)) \
-            .then(lambda _: self.rename_path(file_rename)) \
+            .then(lambda _: self.rename_path(old_path, new_path)) \
             .then(lambda success: self.notify_did_rename(file_rename) if success else None)
 
     def create_will_rename_requests_async(
@@ -114,9 +114,9 @@ class LspRenamePathCommand(LspWindowCommand):
                 promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
         return Promise.all(promises)
 
-    def rename_path(self, file_rename: FileRename) -> Promise[bool]:
-        old_path = Path(parse_uri(file_rename['oldUri'])[1])
-        new_path = Path(parse_uri(file_rename['newUri'])[1])
+    def rename_path(self, old: str, new: str) -> Promise[bool]:
+        old_path = Path(old)
+        new_path = Path(new)
         restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
         for view in self.window.views():
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):

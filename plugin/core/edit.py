@@ -4,6 +4,7 @@ from ...protocol import Position
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
 from .logging import debug
+from .promise import Promise
 from .protocol import UINT_MAX
 from typing import Dict, List, Optional, Tuple, Union
 import sublime
@@ -54,9 +55,12 @@ def apply_text_edits(
     label: str | None = None,
     process_placeholders: bool | None = False,
     required_view_version: int | None = None
-) -> None:
+) -> Promise[sublime.View | None]:
     if not edits:
-        return
+        return Promise.resolve(view)
+    if not view.is_valid():
+        print('LSP: ignoring edits due to view not being open')
+        return Promise.resolve(None)
     view.run_command(
         'lsp_apply_document_edit',
         {
@@ -66,3 +70,6 @@ def apply_text_edits(
             'required_view_version': required_view_version,
         }
     )
+    # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
+    # thread, and that we’ve received view changes in the asynchronous thread.
+    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))

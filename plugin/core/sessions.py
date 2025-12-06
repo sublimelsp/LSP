@@ -2001,7 +2001,7 @@ class Session(TransportCallbacks):
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
-            # Allow async thread to process save notifications before method returns.
+            # Allow async thread to process save notifications before closing the file or the method returns.
             promise = Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
 
         def handle_close() -> None:

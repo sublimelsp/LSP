@@ -55,9 +55,9 @@ def apply_text_edits(
     label: str | None = None,
     process_placeholders: bool | None = False,
     required_view_version: int | None = None
-) -> Promise[sublime.View]:
+) -> Promise[sublime.View | None]:
     if not edits:
-        return Promise.resolve(view)
+        return Promise.resolve(None)
     if not view.is_valid():
         print('LSP: ignoring edits due to view not being open')
         return Promise.resolve(view)
@@ -72,4 +72,4 @@ def apply_text_edits(
     )
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we’ve received view changes in the asynchronous thread.
-    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view)))
+    return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))

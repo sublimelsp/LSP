@@ -1945,7 +1945,7 @@ class Session(TransportCallbacks):
                 print(f'LSP: ignoring edits due to no view for uri: {uri}')
                 return Promise.resolve(None)
             return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
-                .then(lambda view: self._set_view_state(view_state_actions, view))
+                .then(lambda view: self._set_view_state(view_state_actions, view) if view else None)
 
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()

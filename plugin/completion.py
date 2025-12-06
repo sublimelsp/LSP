@@ -366,7 +366,8 @@ class LspSelectCompletionCommand(LspTextCommand):
             and self.session_by_name(session_name, 'completionProvider.resolveProvider')
         if want_to_resolve:
             if flags & sublime.CompletionItemFlags.KEEP_PREFIX:
-                sublime.set_timeout_async(lambda: self._resolve_async(session_name, item) \
+                sublime.set_timeout_async(
+                    lambda: self._resolve_async(session_name, item)
                     .then(lambda item: self._apply_completion(session_name, item, reverse_insert_mode)))
             else:
                 # When ST removes the prefix, we can't resolve the completion first because we want to avoid flicker due
@@ -374,7 +375,8 @@ class LspSelectCompletionCommand(LspTextCommand):
                 # resolving should happen before applying any changes to the document, otherwise server might fail to
                 # resolve completion.
                 self._apply_completion(session_name, item, reverse_insert_mode)
-                sublime.set_timeout_async(lambda: self._resolve_async(session_name, item) \
+                sublime.set_timeout_async(
+                    lambda: self._resolve_async(session_name, item)
                     .then(lambda item: LspApplyCompletionCommand.apply_additional_text_edits(self.view, item)))
         else:
             self._apply_completion(session_name, item, reverse_insert_mode)

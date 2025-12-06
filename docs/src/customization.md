@@ -80,7 +80,7 @@ The following tables give an overview of the scope names used by LSP.
     Semantic highlighting is disabled by default. To enable it, set `"semantic_highlighting": true` in your LSP user settings.
 
 !!! warning
-    There are several known limitations when semantic highlighting is used. In particular, there are visible artifacts on lines with semantic highlighting if the `"highlight_line"` setting is enabled, and italic and bold font styles are suppressed for regions with semantic highlighting.
+    There are several known limitations when semantic highlighting is used. For instance, there are visible artifacts on lines with semantic highlighting if the `"highlight_line"` setting is enabled, and italic and bold font styles are suppressed for regions with semantic highlighting.
 
 !!! info "This feature is only available if the server has the *semanticTokensProvider* capability."
     Language servers that support semantic highlighting are for example *clangd* and *rust-analyzer*.
@@ -102,26 +102,26 @@ If you use a custom color scheme, select `UI: Customize Color Scheme` from the C
 
 Furthermore, it is possible to adjust the colors for semantic tokens by applying a foreground color to the individual token types:
 
-| [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) | scope | fallback scope |
+| [Semantic Token Type](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenTypes) | scope | fallback scopes |
 | --- | --- | --- |
-| namespace | `meta.semantic-token.namespace` | `variable.other.namespace` |
-| type | `meta.semantic-token.type` | `storage.type` |
-| class | `meta.semantic-token.class` | `storage.type.class` |
-| enum | `meta.semantic-token.enum` | `variable.other.enum` |
-| interface | `meta.semantic-token.interface` | `entity.other.inherited-class` |
-| struct | `meta.semantic-token.struct` | `storage.type.struct` |
+| namespace | `meta.semantic-token.namespace` | `variable.other.namespace`<br>`entity.name.namespace` |
+| type | `meta.semantic-token.type` | `storage.type`<br>`entity.name.type`<br>`support.type` |
+| class | `meta.semantic-token.class` | `storage.type.class`<br>`entity.name.class`<br>`support.class` |
+| enum | `meta.semantic-token.enum` | `variable.other.enum`<br>`entity.name.enum` |
+| interface | `meta.semantic-token.interface` | `entity.other.inherited-class`<br>`entity.name.interface` |
+| struct | `meta.semantic-token.struct` | `storage.type.struct`<br>`entity.name.struct`<br>`support.struct` |
 | typeParameter | `meta.semantic-token.typeparameter` | `variable.parameter.generic` |
 | parameter | `meta.semantic-token.parameter` | `variable.parameter` |
-| variable | `meta.semantic-token.variable` | `variable.other` |
+| variable | `meta.semantic-token.variable` | `variable.other`<br>`variable.other.constant` |
 | property | `meta.semantic-token.property` | `variable.other.property` |
 | enumMember | `meta.semantic-token.enummember` | `constant.other.enum` |
 | event | `meta.semantic-token.event` | `entity.name.function` |
-| function | `meta.semantic-token.function` | `variable.function` |
-| method | `meta.semantic-token.method` | `variable.function` |
-| macro | `meta.semantic-token.macro` | `variable.macro` |
+| function | `meta.semantic-token.function` | `variable.function`<br>`entity.name.function`<br>`support.function.builtin` |
+| method | `meta.semantic-token.method` | `variable.function`<br>`entity.name.function`<br>`support.function.builtin` |
+| macro | `meta.semantic-token.macro` | `variable.macro`<br>`entity.name.macro`<br>`support.macro` |
 | keyword | `meta.semantic-token.keyword` | `keyword` |
 | modifier | `meta.semantic-token.modifier` | `storage.modifier` |
-| comment | `meta.semantic-token.comment` | `comment` |
+| comment | `meta.semantic-token.comment` | `comment`<br>`comment.block.documentation` |
 | string | `meta.semantic-token.string` | `string` |
 | number | `meta.semantic-token.number` | `constant.numeric` |
 | regexp | `meta.semantic-token.regexp` | `string.regexp` |
@@ -129,7 +129,7 @@ Furthermore, it is possible to adjust the colors for semantic tokens by applying
 | decorator | `meta.semantic-token.decorator` | `variable.annotation` |
 | label | `meta.semantic-token.label` | `entity.name.label` |
 
-By default, LSP will assign fallback scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the `meta.semantic-token.*` scopes that are specified above, the latter will take precedence. The fallback scopes can differ if the tokens have additional [token modifiers](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers).
+By default, LSP will assign fallback scopes based on the [scope naming guideline](https://www.sublimetext.com/docs/scope_naming.html) to each of these token types, but if you define color scheme rules for the `meta.semantic-token.*` scopes that are specified above, the latter will take precedence. The fallback scopes can depend on additional [token modifiers](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers).
 
 Language servers can also add their custom token types, which are not defined in the protocol.
 An "LSP-\*" helper package (or user) can provide a `semantic_tokens` mapping in the server configuration for such additional token types, or to override the scopes used for the predefined tokens from the table above.

@@ -57,10 +57,10 @@ def apply_text_edits(
     required_view_version: int | None = None
 ) -> Promise[sublime.View | None]:
     if not edits:
-        return Promise.resolve(None)
+        return Promise.resolve(view)
     if not view.is_valid():
         print('LSP: ignoring edits due to view not being open')
-        return Promise.resolve(view)
+        return Promise.resolve(None)
     view.run_command(
         'lsp_apply_document_edit',
         {

@@ -1938,6 +1938,20 @@ class Session(TransportCallbacks):
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
     def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
+        def handle_view(
+            edits: list[TextEdit],
+            label: str | None,
+            view_version: int | None,
+            uri: str,
+            view_state_actions: ViewStateActions,
+            view: sublime.View | None,
+        ) -> Promise[None]:
+            if view is None:
+                print(f'LSP: ignoring edits due to no view for uri: {uri}')
+                return Promise.resolve(None)
+            return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
+                .then(lambda view: self._set_view_state(view_state_actions, view) if view else None)
+
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
@@ -1946,26 +1960,11 @@ class Session(TransportCallbacks):
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
                 self.open_uri_async(uri)
-                    .then(functools.partial(self._apply_text_edits, edits, label, view_version, uri))
-                    .then(functools.partial(self._set_view_state, view_state_actions))
+                    .then(functools.partial(handle_view, edits, label, view_version, uri, view_state_actions))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
             .then(lambda _: self._set_focused_sheet(active_sheet))
-
-    def _apply_text_edits(
-        self,
-        edits: list[TextEdit],
-        label: str | None,
-        view_version: int | None,
-        uri: str,
-        view: sublime.View | None
-    ) -> sublime.View | None:
-        if view is None or not view.is_valid():
-            print(f'LSP: ignoring edits due to no view for uri: {uri}')
-            return None
-        apply_text_edits(view, edits, label=label, required_view_version=view_version)
-        return view
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -2000,18 +1999,21 @@ class Session(TransportCallbacks):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View | None) -> None:
-        if not view:
-            return
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> Promise[None]:
+        promise = Promise.resolve(None)
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
             # The save operation must be blocking in case the tab should be closed afterwards
             view.run_command('save', {'async': not should_close, 'quiet': True})
-        if should_close and not view.is_dirty():
-            if view != self.window.active_view():
-                self.window.focus_view(view)
-            self.window.run_command('close')
+            # Allow async thread to process save notifications before closing the file or the method returns.
+            promise = Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(None)))
+
+        def handle_close() -> None:
+            if should_close and not view.is_dirty():
+                view.close()
+
+        return promise.then(lambda _: handle_close())
 
     def _set_selected_sheets(self, sheets: list[sublime.Sheet]) -> None:
         if len(sheets) > 1 and len(self.window.selected_sheets()) != len(sheets):

@@ -132,7 +132,6 @@ class LspRenamePathCommand(LspWindowCommand):
         except Exception as error:
             sublime.status_message(f"Rename error: {error}")
             return Promise.resolve(False)
-
         return Promise.all([
             open_file_uri(self.window, file_name, group=group[0]).then(partial(self.restore_view, selection, group))
             for file_name, group_index, selection in restore_files

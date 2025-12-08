@@ -4,7 +4,7 @@ from .core.promise import Promise
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
-from .core.url import filename_to_uri, parse_uri
+from .core.url import filename_to_uri
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING

@@ -75,11 +75,11 @@ class LspRenamePathCommand(LspWindowCommand):
             if view:
                 view.set_name(new_name)
             return
-        if new_name == old_path:
-            return
         # new_name can be: FILE_NAME.xy OR ./FILE_NAME.xy OR ../../FILE_NAME.xy
         resolved_new_path = (Path(old_path).parent / new_name).resolve()
         new_path = str(resolved_new_path)
+        if new_path == old_path:
+            return
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Rename error: Target already exists')
             return

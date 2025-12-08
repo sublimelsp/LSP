@@ -145,11 +145,11 @@ class LspRenamePathCommand(LspWindowCommand):
             if filters and match_file_operation_filters(filters, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))
 
-    def restore_view(self, selection: list[sublime.Region],
-                     group_index: tuple[int, int], view: sublime.View | None) -> None:
+    def restore_view(self, selection: list[sublime.Region], group: tuple[int, int], view: sublime.View | None) -> None:
         if not view:
             return
-        self.window.set_view_index(view, group_index[0], group_index[1])
+        group_index, tab_index = group
+        self.window.set_view_index(view, group_index, tab_index)
         if selection:
             view.sel().clear()
             view.sel().add_all(selection)

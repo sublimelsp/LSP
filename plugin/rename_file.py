@@ -129,8 +129,8 @@ class LspRenamePathCommand(LspWindowCommand):
             new_dir.mkdir(parents=True)
         try:
             old_path.rename(new_path)
-        except Exception:
-            sublime.status_message("Unable to rename")
+        except Exception as error:
+            sublime.status_message(f"Unable to rename: {error}")
             return Promise.resolve(False)
 
         return Promise.all([

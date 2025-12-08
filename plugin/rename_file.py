@@ -134,7 +134,7 @@ class LspRenamePathCommand(LspWindowCommand):
             return Promise.resolve(False)
         return Promise.all([
             open_file_uri(self.window, file_name, group=group[0]).then(partial(self.restore_view, selection, group))
-            for file_name, group_index, selection in restore_files
+            for file_name, group, selection in restore_files
         ]).then(lambda _: True)
 
     def notify_did_rename(self, file_rename: FileRename) -> None:

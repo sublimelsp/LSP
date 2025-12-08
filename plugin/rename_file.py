@@ -118,9 +118,13 @@ class LspRenamePathCommand(LspWindowCommand):
         old_path = Path(old)
         new_path = Path(new)
         restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
+        active_view = self.window.active_view()
+        last_active_view: str | None = active_view.file_name() if active_view else None
         for view in reversed(self.window.views()):
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
                 new_file_name = file_name.replace(str(old_path), str(new_path), 1)
+                if view == active_view:
+                    last_active_view = new_file_name
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
                 if view.is_dirty():
                     view.run_command('save', {'async': False})
@@ -135,13 +139,17 @@ class LspRenamePathCommand(LspWindowCommand):
         return Promise.all([
             open_file_uri(self.window, file_name, group=group[0]).then(partial(self.restore_view, selection, group))
             for file_name, group, selection in reversed(restore_files)
-        ]).then(lambda _: True)
+        ]).then(lambda _: self.focus_view(last_active_view)).then(lambda _: True)
 
     def notify_did_rename(self, file_rename: FileRename) -> None:
         for session in self.sessions():
             filters = session.get_capability('workspace.fileOperations.didRename.filters') or []
             if filters and match_file_operation_filters(filters, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))
+
+    def focus_view(self, path: str | None) -> None:
+        if path and (view := self.window.find_open_file(path)):
+            self.window.focus_view(view)
 
     def restore_view(self, selection: list[sublime.Region], group: tuple[int, int], view: sublime.View | None) -> None:
         if not view:

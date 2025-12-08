@@ -118,7 +118,7 @@ class LspRenamePathCommand(LspWindowCommand):
         old_path = Path(old)
         new_path = Path(new)
         restore_files: list[tuple[str, tuple[int, int], list[sublime.Region]]] = []
-        for view in self.window.views():
+        for view in reversed(self.window.views()):
             if (file_name := view.file_name()) and file_name.startswith(str(old_path)):
                 new_file_name = file_name.replace(str(old_path), str(new_path), 1)
                 restore_files.append((new_file_name, self.window.get_view_index(view), list(view.sel())))
@@ -134,7 +134,7 @@ class LspRenamePathCommand(LspWindowCommand):
             return Promise.resolve(False)
         return Promise.all([
             open_file_uri(self.window, file_name, group=group[0]).then(partial(self.restore_view, selection, group))
-            for file_name, group, selection in restore_files
+            for file_name, group, selection in reversed(restore_files)
         ]).then(lambda _: True)
 
     def notify_did_rename(self, file_rename: FileRename) -> None:

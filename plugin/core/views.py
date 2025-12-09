@@ -31,7 +31,7 @@ from ...protocol import TextDocumentPositionParams
 from ...protocol import TextDocumentSaveReason
 from ...protocol import VersionedTextDocumentIdentifier
 from ...protocol import WillSaveTextDocumentParams
-from .constants import CODE_ACTION_KINDS
+from .constants import CODE_ACTION_KINDS, MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
@@ -537,9 +537,10 @@ def minihtml(
     if is_plain_text:
         return f"<p>{text2html(result)}</p>" if result else ''
     else:
-        frontmatter = {
+        frontmatter: dict[str, Any] = {
             "allow_code_wrap": True,
-            "markdown_extensions": [
+            "markdown_parser": "marko" if MARKO_MD_PARSER_VERSION else "markdown",
+            "markdown_extensions": ["gfm"] if MARKO_MD_PARSER_VERSION else [
                 "markdown.extensions.admonition",
                 {
                     "pymdownx.magiclink": {
@@ -554,8 +555,6 @@ def minihtml(
         }
         if isinstance(language_id_map, dict):
             frontmatter["language_map"] = language_id_map
-        # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)
         return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
 
 

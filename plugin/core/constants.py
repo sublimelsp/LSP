@@ -12,6 +12,11 @@ from os.path import dirname, join
 from typing import Tuple
 import sublime
 
+try:
+    from mdpopups.marko import __version__ as marko_version  # pyright: ignore[reportMissingImports]
+except ImportError:
+    marko_version = None
+
 
 SublimeKind = Tuple[int, str, str]
 
@@ -31,6 +36,7 @@ where $DATA means:
 - on Windows: %LocalAppData%/Sublime Text
 - on Linux: ~/.cache/sublime-text
 """
+MARKO_MD_PARSER_VERSION = marko_version
 
 
 class RequestFlags(IntFlag):

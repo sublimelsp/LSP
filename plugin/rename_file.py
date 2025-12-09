@@ -85,6 +85,9 @@ class LspRenamePathCommand(LspWindowCommand):
             return
         sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
 
+    def is_case_change(self, path_a: str, path_b: str) -> bool:
+        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
+
     def run_async(self, old_path: str, new_path: str) -> None:
         file_rename: FileRename = {
             "newUri": filename_to_uri(new_path),
@@ -103,9 +106,6 @@ class LspRenamePathCommand(LspWindowCommand):
             if match_file_operation_filters(filters, file_rename['oldUri']):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
-
-    def is_case_change(self, path_a: str, path_b: str) -> bool:
-        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
     def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise:
         promises: list[Promise] = []
@@ -147,10 +147,6 @@ class LspRenamePathCommand(LspWindowCommand):
             if filters and match_file_operation_filters(filters, file_rename['oldUri']):
                 session.send_notification(Notification.didRenameFiles({'files': [file_rename]}))
 
-    def focus_view(self, path: str | None) -> None:
-        if path and (view := self.window.find_open_file(path)):
-            self.window.focus_view(view)
-
     def restore_view(self, selection: list[sublime.Region], group: tuple[int, int], view: sublime.View | None) -> None:
         if not view:
             return
@@ -159,3 +155,7 @@ class LspRenamePathCommand(LspWindowCommand):
         if selection:
             view.sel().clear()
             view.sel().add_all(selection)
+
+    def focus_view(self, path: str | None) -> None:
+        if path and (view := self.window.find_open_file(path)):
+            self.window.focus_view(view)

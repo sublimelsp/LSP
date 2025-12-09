@@ -1,19 +1,11 @@
 from __future__ import annotations
 from .core.registry import LspTextCommand
-from typing import Any, List
+from typing import Any, List, Tuple
 from typing import cast
 import sublime
 import os
 
-
-class SemanticToken:
-
-    __slots__ = ("region", "type", "modifiers")
-
-    def __init__(self, region: sublime.Region, type: str, modifiers: list[str]):
-        self.region = region
-        self.type = type
-        self.modifiers = modifiers
+SemanticTokensInfo = List[Tuple[str, str, str]]
 
 
 def copy(view: sublime.View, text: str) -> None:
@@ -38,49 +30,39 @@ class LspShowScopeNameCommand(LspTextCommand):
         scope = self.view.scope_name(point).rstrip()
         scope_list = scope.replace(' ', '<br>')
         stack = self.view.context_backtrace(point)
-        token_type, token_modifiers = self._get_semantic_info(point)
+        semantic_info = self._get_semantic_info(point)
         if isinstance(stack, list) and len(stack) > 0 and not isinstance(stack[0], str):
             self._render_with_fancy_stackframes(
                 scope,
                 scope_list,
                 cast(List[sublime.ContextStackFrame], stack),
-                token_type,
-                token_modifiers
+                semantic_info,
             )
         else:
             self._render_with_plain_string_stackframes(
                 scope,
                 scope_list,
                 cast(List[str], stack),
-                token_type,
-                token_modifiers
+                semantic_info
             )
 
-    def _get_semantic_info(self, point: int) -> tuple[str, str]:
-        session_buffer = None
-        if session := self.best_session('semanticTokensProvider'):
+    def _get_semantic_info(self, point: int) -> SemanticTokensInfo:
+        info: SemanticTokensInfo = []
+        for session in self.sessions('semanticTokensProvider'):
             for sv in session.session_views_async():
                 if self.view == sv.view:
-                    session_buffer = sv.session_buffer
-                    break
-        token_type = '-'
-        token_modifiers = '-'
-        if session_buffer:
-            for token in session_buffer.get_semantic_tokens():
-                if token.region.contains(point) and point < token.region.end():
-                    token_type = token.type
-                    if token.modifiers:
-                        token_modifiers = ', '.join(token.modifiers)
-                    break
-        return token_type, token_modifiers
+                    for token in sv.session_buffer.get_semantic_tokens():
+                        if token.region.contains(point) and point < token.region.end():
+                            token_modifiers = ', '.join(token.modifiers) if token.modifiers else '-'
+                            info.append((token.type, token_modifiers, session.config.name))
+        return info
 
     def _render_with_plain_string_stackframes(
         self,
         scope: str,
         scope_list: str,
         stack: list[str],
-        token_type: str,
-        token_modifiers: str
+        semantic_info: SemanticTokensInfo,
     ) -> None:
         backtrace = ''
         digits_len = 1
@@ -96,6 +78,10 @@ class LspShowScopeNameCommand(LspTextCommand):
             if backtrace:
                 backtrace += '\n'
             backtrace += f'<div>{nums}{ctx}</div>'
+
+        semantic_tokens_html = ''
+        for info in semantic_info:
+            semantic_tokens_html += f'<p>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a>'
 
         html = """
             <body id=show-scope>
@@ -131,9 +117,9 @@ class LspShowScopeNameCommand(LspTextCommand):
                 %s
                 <br>
                 <h1>Semantic Token</h1>
-                <p>Type: %s<br>Modifiers: %s</p>
+                %s
             </body>
-        """ % (digits_len, scope, scope_list, backtrace, token_type, token_modifiers)
+        """ % (digits_len, scope, scope_list, backtrace, semantic_info)
 
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=lambda x: copy(self.view, x))
 
@@ -142,8 +128,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         scope: str,
         scope_list: str,
         stack: list[Any],
-        token_type: str,
-        token_modifiers: str
+        semantic_info: SemanticTokensInfo,
     ) -> None:
         backtrace = ''
         digits_len = 1
@@ -175,6 +160,10 @@ class LspShowScopeNameCommand(LspTextCommand):
             if backtrace:
                 backtrace += '\n'
             backtrace += f'<div>{nums}{ctx}{link}</div>'
+
+        semantic_tokens_html = ''
+        for info in semantic_info:
+            semantic_tokens_html += f'<p>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a>'
 
         html = """
             <body id=show-scope>
@@ -210,9 +199,9 @@ class LspShowScopeNameCommand(LspTextCommand):
                 %s
                 <br>
                 <h1>Semantic Token</h1>
-                <p>Type: %s<br>Modifiers: %s</p>
+                %s
             </body>
-        """ % (digits_len, scope, scope_list, backtrace, token_type, token_modifiers)
+        """ % (digits_len, scope, scope_list, backtrace, semantic_tokens_html)
 
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=self.on_navigate)
 

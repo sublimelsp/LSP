@@ -138,6 +138,7 @@ import os
 import sublime
 import weakref
 
+
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
 

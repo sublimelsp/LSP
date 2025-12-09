@@ -64,13 +64,15 @@ class LspRenamePathCommand(LspWindowCommand):
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             return None
-        view = self.window.active_view()
-        old_path = args.get('old_path') or view.file_name() if view else None
+        old_path = args.get('old_path')
+        if old_path is None and (view := self.window.active_view()):
+            old_path = view.file_name()
         return RenamePathInputHandler(Path(old_path or "").name)
 
     def run(self, new_name: str, old_path: str | None = None) -> None:
         view = self.window.active_view()
-        old_path = old_path or view.file_name() if view else None
+        if old_path is None and view:
+            old_path = view.file_name()
         if old_path is None:  # handle renaming buffers
             if view:
                 view.set_name(new_name)

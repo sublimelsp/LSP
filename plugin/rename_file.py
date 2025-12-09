@@ -85,7 +85,8 @@ class LspRenamePathCommand(LspWindowCommand):
             return
         sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
 
-    def is_case_change(self, path_a: str, path_b: str) -> bool:
+    @staticmethod
+    def is_case_change(path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
     def run_async(self, old_path: str, new_path: str) -> None:

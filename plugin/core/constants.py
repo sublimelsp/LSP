@@ -36,7 +36,7 @@ where $DATA means:
 - on Windows: %LocalAppData%/Sublime Text
 - on Linux: ~/.cache/sublime-text
 """
-MARKO_MD_PARSER_VERSION = marko_version
+MARKO_MD_PARSER_VERSION: str | None = marko_version
 
 
 class RequestFlags(IntFlag):

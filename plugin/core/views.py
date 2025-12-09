@@ -31,7 +31,8 @@ from ...protocol import TextDocumentPositionParams
 from ...protocol import TextDocumentSaveReason
 from ...protocol import VersionedTextDocumentIdentifier
 from ...protocol import WillSaveTextDocumentParams
-from .constants import CODE_ACTION_KINDS, MARKO_MD_PARSER_VERSION
+from .constants import CODE_ACTION_KINDS
+from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES

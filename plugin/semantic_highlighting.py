@@ -81,7 +81,7 @@ class LspShowScopeNameCommand(LspTextCommand):
 
         semantic_tokens_html = ''
         for info in semantic_info:
-            semantic_tokens_html += f'<p>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a>'
+            semantic_tokens_html += f'<div>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a></div>'
 
         html = """
             <body id=show-scope>
@@ -163,7 +163,7 @@ class LspShowScopeNameCommand(LspTextCommand):
 
         semantic_tokens_html = ''
         for info in semantic_info:
-            semantic_tokens_html += f'<p>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a>'
+            semantic_tokens_html += f'<div>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a></div>'
 
         html = """
             <body id=show-scope>

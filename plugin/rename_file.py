@@ -19,34 +19,21 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class LspRenameFromSidebarOverrideCommand(LspWindowCommand):
-    def is_enabled(self) -> bool:
-        return True
-
-    def run(self, paths: list[str] | None = None) -> None:
-        old_path = paths[0] if paths else None
-        if old_path:
-            self.window.run_command('lsp_rename_path', {
-                "old_path": old_path
-            })
-
-
 class RenamePathInputHandler(sublime_plugin.TextInputHandler):
     def __init__(self, path: str) -> None:
-        self.path = path
+        self.path = Path(path)
 
     def name(self) -> str:
         return "new_name"
 
     def placeholder(self) -> str:
-        return self.path
+        return self.path.name
 
     def initial_text(self) -> str:
         return self.placeholder()
 
     def initial_selection(self) -> list[tuple[int, int]]:
-        name = Path(self.path).stem
-        return [(0, len(name))]
+        return [(0, len(self.path.stem))]
 
     def validate(self, path: str) -> bool:
         return len(path) > 0
@@ -64,12 +51,14 @@ class LspRenamePathCommand(LspWindowCommand):
     def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             return None
-        old_path = args.get('old_path')
-        if old_path is None and (view := self.window.active_view()):
-            old_path = view.file_name()
-        return RenamePathInputHandler(Path(old_path or "").name)
+        if paths := args.get('paths'):  # command was called from side bar context menu
+            return RenamePathInputHandler(paths[0])
+        if (view := self.window.active_view()) and (file_name := view.file_name()):
+            return RenamePathInputHandler(file_name)
+        return RenamePathInputHandler("")
 
-    def run(self, new_name: str, old_path: str | None = None) -> None:
+    def run(self, new_name: str, paths: list[str] | None = None) -> None:
+        old_path = paths[0] if paths else None
         view = self.window.active_view()
         if old_path is None and view:
             old_path = view.file_name()

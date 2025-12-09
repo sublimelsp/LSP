@@ -116,10 +116,10 @@ class LspShowScopeNameCommand(LspTextCommand):
                 <h1>Context Backtrace</h1>
                 %s
                 <br>
-                <h1>Semantic Token</h1>
+                <h1>Semantic Tokens</h1>
                 %s
             </body>
-        """ % (digits_len, scope, scope_list, backtrace, semantic_info)
+        """ % (digits_len, scope, scope_list, backtrace, semantic_info or '-')
 
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=lambda x: copy(self.view, x))
 
@@ -198,10 +198,10 @@ class LspShowScopeNameCommand(LspTextCommand):
                 <h1>Context Backtrace</h1>
                 %s
                 <br>
-                <h1>Semantic Token</h1>
+                <h1>Semantic Tokens</h1>
                 %s
             </body>
-        """ % (digits_len, scope, scope_list, backtrace, semantic_tokens_html)
+        """ % (digits_len, scope, scope_list, backtrace, semantic_tokens_html or '-')
 
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=self.on_navigate)
 

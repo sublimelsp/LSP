@@ -21,6 +21,7 @@ from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
+from .plugin.core.registry import LspCheckApplicableCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
@@ -94,6 +95,7 @@ __all__ = (
     "LspApplyDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
     "LspCallHierarchyCommand",
+    "LspCheckApplicableCommand",
     "LspClearLogPanelCommand",
     "LspClearPanelCommand",
     "LspCodeActionsCommand",

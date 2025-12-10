@@ -537,26 +537,30 @@ def minihtml(
             result = f"```{language}\n{value}\n```\n"
     if is_plain_text:
         return f"<p>{text2html(result)}</p>" if result else ''
+    frontmatter: dict[str, Any] = {
+        "allow_code_wrap": True,
+    }
+    if MARKO_MD_PARSER_VERSION:
+        frontmatter["markdown_parser"] = "marko"
+        frontmatter["markdown_extensions"] = ["gfm"]
     else:
-        frontmatter: dict[str, Any] = {
-            "allow_code_wrap": True,
-            "markdown_parser": "marko" if MARKO_MD_PARSER_VERSION else "markdown",
-            "markdown_extensions": ["gfm"] if MARKO_MD_PARSER_VERSION else [
-                "markdown.extensions.admonition",
-                {
-                    "pymdownx.magiclink": {
-                        # links are displayed without the initial ftp://, http://, https://, or ftps://.
-                        "hide_protocol": True,
-                        # GitHub, Bitbucket, and GitLab commit, pull, and issue links are are rendered in a shorthand
-                        # syntax.
-                        "repo_url_shortener": True
-                    }
+        frontmatter["markdown_extensions"] = [
+            "markdown.extensions.admonition",
+            {
+                "pymdownx.magiclink": {
+                    # links are displayed without the initial ftp://, http://, https://, or ftps://.
+                    "hide_protocol": True,
+                    # GitHub, Bitbucket, and GitLab commit, pull, and issue links are are rendered in a shorthand
+                    # syntax.
+                    "repo_url_shortener": True
                 }
-            ]
-        }
-        if isinstance(language_id_map, dict):
-            frontmatter["language_map"] = language_id_map
-        return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
+            }
+        ]
+        # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)
+    if isinstance(language_id_map, dict):
+        frontmatter["language_map"] = language_id_map
+    return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
 
 
 REPLACEMENT_MAP = {

@@ -1,11 +1,44 @@
 from __future__ import annotations
 from .core.registry import LspTextCommand
-from typing import Any, List, Tuple
+from typing import Any, Callable, List, Tuple
 from typing import cast
 import sublime
 import os
 
 SemanticTokensInfo = List[Tuple[str, str, str]]
+
+
+POPUP_CSS = '''
+h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0 0 0.5em 0;
+    font-family: system;
+}
+p {
+    margin-top: 0;
+}
+a {
+    font-weight: normal;
+    font-style: italic;
+    padding-left: 1em;
+    font-size: 1.0rem;
+}
+span.nums {
+    display: inline-block;
+    text-align: right;
+    width: %dem;
+    color: color(var(--foreground) a(0.8))
+}
+span.context {
+    padding-left: 0.5em;
+}
+.session-name {
+    color: color(var(--foreground) alpha(0.6));
+    font-style: italic;
+    padding-left: 1em;
+}
+'''
 
 
 def copy(view: sublime.View, text: str) -> None:
@@ -70,59 +103,14 @@ class LspShowScopeNameCommand(LspTextCommand):
         for i, ctx in enumerate(reversed(stack)):
             digits = '%s' % (i + 1)
             digits_len = max(len(digits), digits_len)
-            nums = '<span class=nums>%s.</span>' % digits
-
+            nums = f'<span class=nums>{digits}.</span>'
             if ctx.startswith("anonymous context "):
-                ctx = '<em>%s</em>' % ctx
-            ctx = '<span class=context>%s</span>' % ctx
-
+                ctx = f'<em>{ctx}</em>'
+            ctx = f'<span class=context>{ctx}</span>'
             if backtrace:
                 backtrace += '\n'
             backtrace += f'<div>{nums}{ctx}</div>'
-
-        semantic_tokens_html = ''
-        for info in semantic_info:
-            semantic_tokens_html += f'<div>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a></div>'
-
-        html = """
-            <body id=show-scope>
-                <style>
-                    h1 {
-                        font-size: 1.1rem;
-                        font-weight: 500;
-                        margin: 0 0 0.5em 0;
-                        font-family: system;
-                    }
-                    p {
-                        margin-top: 0;
-                    }
-                    a {
-                        font-weight: normal;
-                        font-style: italic;
-                        padding-left: 1em;
-                        font-size: 1.0rem;
-                    }
-                    span.nums {
-                        display: inline-block;
-                        text-align: right;
-                        width: %dem;
-                        color: color(var(--foreground) a(0.8))
-                    }
-                    span.context {
-                        padding-left: 0.5em;
-                    }
-                </style>
-                <h1>Scope Name <a href="%s">Copy</a></h1>
-                <p>%s</p>
-                <h1>Context Backtrace</h1>
-                %s
-                <br>
-                <h1>Semantic Tokens</h1>
-                %s
-            </body>
-        """ % (digits_len, scope, scope_list, backtrace, semantic_info or '-')
-
-        self.view.show_popup(html, max_width=512, max_height=512, on_navigate=lambda x: copy(self.view, x))
+        self._show_popup(digits_len, scope, scope_list, backtrace, semantic_info, lambda x: copy(self.view, x))
 
     def _render_with_fancy_stackframes(
         self,
@@ -136,20 +124,17 @@ class LspShowScopeNameCommand(LspTextCommand):
         for i, frame in enumerate(reversed(stack)):
             digits = '%s' % (i + 1)
             digits_len = max(len(digits), digits_len)
-            nums = '<span class=nums>%s.</span>' % digits
-
+            nums = f'<span class=nums>{digits}.</span>'
             if frame.context_name.startswith("anonymous context "):
-                context_name = '<em>%s</em>' % frame.context_name
+                context_name = f'<em>{frame.context_name}</em>'
             else:
                 context_name = frame.context_name
-            ctx = '<span class=context>%s</span>' % context_name
-
+            ctx = f'<span class=context>{context_name}</span>'
             resource_path = frame.source_file
             display_path = os.path.splitext(frame.source_file)[0]
             if resource_path.startswith('Packages/'):
                 resource_path = '${packages}/' + resource_path[9:]
                 display_path = display_path[9:]
-
             if frame.source_location[0] > 0:
                 href = '%s:%d:%d' % (resource_path, frame.source_location[0], frame.source_location[1])
                 location = '%s:%d:%d' % (display_path, frame.source_location[0], frame.source_location[1])
@@ -157,54 +142,41 @@ class LspShowScopeNameCommand(LspTextCommand):
                 href = resource_path
                 location = display_path
             link = f'<a href="o:{href}">{location}</a>'
-
             if backtrace:
                 backtrace += '\n'
             backtrace += f'<div>{nums}{ctx}{link}</div>'
+        self._show_popup(digits_len, scope, scope_list, backtrace, semantic_info, self.on_navigate)
 
-        semantic_tokens_html = ''
+    def _show_popup(
+        self,
+        digits_len: int,
+        scope: str,
+        scope_list: str,
+        backtrace: str,
+        semantic_info: SemanticTokensInfo,
+        on_navigate: Callable[[str], None]
+    ) -> None:
+        semantic_info_html = ''
         for info in semantic_info:
-            semantic_tokens_html += f'<div>Type: {info[0]}, Modifiers: {info[1]} <a>{info[2]}</a></div>'
-
-        html = """
+            semantic_info_html += f"""
+                <div>Type: {info[0]}, Modifiers: {info[1]} <span class="session-name">{info[2]}</span></div>
+            """
+        css = POPUP_CSS % digits_len
+        html = f"""
             <body id=show-scope>
                 <style>
-                    h1 {
-                        font-size: 1.1rem;
-                        font-weight: 500;
-                        margin: 0 0 0.5em 0;
-                        font-family: system;
-                    }
-                    p {
-                        margin-top: 0;
-                    }
-                    a {
-                        font-weight: normal;
-                        font-style: italic;
-                        padding-left: 1em;
-                        font-size: 1.0rem;
-                    }
-                    span.nums {
-                        display: inline-block;
-                        text-align: right;
-                        width: %dem;
-                        color: color(var(--foreground) a(0.8))
-                    }
-                    span.context {
-                        padding-left: 0.5em;
-                    }
+                    {css}
                 </style>
-                <h1>Scope Name <a href="c:%s">Copy</a></h1>
-                <p>%s</p>
+                <h1>Scope Name <a href="c:{scope}">Copy</a></h1>
+                <p>{scope_list}</p>
                 <h1>Context Backtrace</h1>
-                %s
+                {backtrace}
                 <br>
                 <h1>Semantic Tokens</h1>
-                %s
+                {semantic_info_html or '-'}
             </body>
-        """ % (digits_len, scope, scope_list, backtrace, semantic_tokens_html or '-')
-
-        self.view.show_popup(html, max_width=512, max_height=512, on_navigate=self.on_navigate)
+        """
+        self.view.show_popup(html, max_width=512, max_height=512, on_navigate=on_navigate)
 
     def on_navigate(self, link: str) -> None:
         if link.startswith('o:'):

@@ -361,7 +361,10 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         line(f' - command\n{self.json_dump(config.command)}')
         line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
         line(f' - selector\n{self.code_block(config.selector)}')
-        line(f' - priority_selector\n{self.code_block(config.priority_selector)}')
+        priority_selector = self.code_block(config.priority_selector) \
+            if isinstance(config.priority_selector, str) \
+            else self.json_dump(config.priority_selector)
+        line(f' - priority_selector\n{priority_selector}')
         line(' - init_options')
         line(self.json_dump(config.init_options.get()))
         line(' - settings')

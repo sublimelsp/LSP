@@ -21,14 +21,17 @@ import sublime_plugin
 windows = WindowRegistry()
 
 
-def best_session(view: sublime.View, sessions: Iterable[Session], point: int | None = None) -> Session | None:
+def best_session(
+    view: sublime.View, sessions: Iterable[Session], capability_path: str | None = None, point: int | None = None
+) -> Session | None:
     if point is None:
         try:
             point = view.sel()[0].b
         except IndexError:
             return None
     try:
-        return max(sessions, key=lambda s: view.score_selector(point, s.config.priority_selector))
+        return max(sessions,
+                   key=lambda s: view.score_selector(point, s.config.priority_selector_for_capability(capability_path)))
     except ValueError:
         return None
 

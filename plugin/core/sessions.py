@@ -917,12 +917,12 @@ class AbstractPlugin(metaclass=ABCMeta):
 
         The default implementation checks whether the URI scheme and the syntax scope match against the schemes and
         selector from the settings file. You can override this method for example to dynamically evaluate the applicable
-        selector, or to ignore certain views even when those would match the static config. Please not that no document
+        selector, or to ignore certain views even when those would match the static config. Please note that no document
         syncronization messages (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to
         the server for ignored views.
 
         This method is called when the view gets opened. To manually trigger this method again, run the
-        'lsp_check_applicable' TextCommand for the given view and with a 'session_name' keyword argument.
+        `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
 
         :param      view:             The view
         :param      config:           The config

@@ -35,6 +35,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
+from .core.types import SemanticToken
 from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
@@ -51,7 +52,6 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
-from .semantic_highlighting import SemanticToken
 from functools import partial
 from typing import Any, Callable, Iterable, List, Protocol
 from typing import cast
@@ -196,8 +196,7 @@ class SessionBuffer:
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
-            if request_flags & RequestFlags.SEMANTIC_TOKENS:
-                self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
+            self.do_semantic_tokens_async(view, view.size() > HUGE_FILE_SIZE)
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
@@ -407,8 +406,7 @@ class SessionBuffer:
                     self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
                 self._workspace_diagnostics_debouncer_async.debounce(
                     self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
-            if request_flags & RequestFlags.SEMANTIC_TOKENS:
-                self.do_semantic_tokens_async(view)
+            self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:

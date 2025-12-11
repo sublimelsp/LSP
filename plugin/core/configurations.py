@@ -38,8 +38,8 @@ class WindowConfigManager:
     def add_change_listener(self, listener: WindowConfigChangeListener) -> None:
         self._change_listeners.add(listener)
 
-    def get_config(self, name: str) -> ClientConfig | None:
-        return self.all.get(name)
+    def get_config(self, config_name: str) -> ClientConfig | None:
+        return self.all.get(config_name)
 
     def get_configs(self) -> list[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)

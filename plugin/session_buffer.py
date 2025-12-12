@@ -791,9 +791,6 @@ class SessionBuffer:
     def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
-        if self.semantic_tokens.pending_response:
-            self.session.cancel_request_async(self.semantic_tokens.pending_response)
-        self.semantic_tokens = SemanticTokensData()
 
     def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
         """

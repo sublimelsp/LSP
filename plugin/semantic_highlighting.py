@@ -5,7 +5,7 @@ from typing import cast
 import sublime
 import os
 
-SemanticTokensInfo = List[Tuple[str, str, str]]
+SemanticTokensInfo = Tuple[str, str, str]
 
 
 POPUP_CSS = '''
@@ -79,25 +79,22 @@ class LspShowScopeNameCommand(LspTextCommand):
                 semantic_info
             )
 
-    def _get_semantic_info(self, point: int) -> SemanticTokensInfo:
-        info: SemanticTokensInfo = []
-        for session in self.sessions('semanticTokensProvider'):
+    def _get_semantic_info(self, point: int) -> SemanticTokensInfo | None:
+        if session := self.best_session('semanticTokensProvider'):
             for sv in session.session_views_async():
                 if self.view == sv.view:
                     for token in sv.session_buffer.get_semantic_tokens():
                         if token.region.contains(point) and point < token.region.end():
                             token_modifiers = ', '.join(token.modifiers) if token.modifiers else '-'
-                            info.append((token.type, token_modifiers, session.config.name))
-                            break
+                            return (token.type, token_modifiers, session.config.name)
                     break
-        return info
 
     def _render_with_plain_string_stackframes(
         self,
         scope: str,
         scope_list: str,
         stack: list[str],
-        semantic_info: SemanticTokensInfo,
+        semantic_info: SemanticTokensInfo | None,
     ) -> None:
         backtrace = ''
         digits_len = 1
@@ -118,7 +115,7 @@ class LspShowScopeNameCommand(LspTextCommand):
         scope: str,
         scope_list: str,
         stack: list[Any],
-        semantic_info: SemanticTokensInfo,
+        semantic_info: SemanticTokensInfo | None,
     ) -> None:
         backtrace = ''
         digits_len = 1
@@ -154,13 +151,16 @@ class LspShowScopeNameCommand(LspTextCommand):
         scope: str,
         scope_list: str,
         backtrace: str,
-        semantic_info: SemanticTokensInfo,
+        semantic_info: SemanticTokensInfo | None,
         on_navigate: Callable[[str], None]
     ) -> None:
-        semantic_info_html = ''
-        for info in semantic_info:
-            semantic_info_html += f"""
-                <div>Type: {info[0]}, Modifiers: {info[1]} <span class="session-name">{info[2]}</span></div>
+        semantic_token_html = ''
+        if semantic_info:
+            semantic_token_html = f"""
+                <br>
+                <h1>Semantic Token <span class="session-name">{semantic_info[2]}</span></h1>
+                <div>Type: {semantic_info[0]}</div>
+                <div>Modifiers: {semantic_info[1]}</div>
             """
         css = POPUP_CSS % digits_len
         html = f"""
@@ -172,9 +172,7 @@ class LspShowScopeNameCommand(LspTextCommand):
                 <p>{scope_list}</p>
                 <h1>Context Backtrace</h1>
                 {backtrace}
-                <br>
-                <h1>Semantic Tokens</h1>
-                {semantic_info_html or '-'}
+                {semantic_token_html}
             </body>
         """
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=on_navigate)

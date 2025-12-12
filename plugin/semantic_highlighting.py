@@ -154,11 +154,11 @@ class LspShowScopeNameCommand(LspTextCommand):
         semantic_info: SemanticTokensInfo | None,
         on_navigate: Callable[[str], None]
     ) -> None:
-        semantic_info_html = ''
+        semantic_token_html = ''
         if semantic_info:
-            semantic_info_html = f"""
+            semantic_token_html = f"""
                 <br>
-                <h1>Semantic Tokens <span class="session-name">{semantic_info[2]}</span></h1>
+                <h1>Semantic Token <span class="session-name">{semantic_info[2]}</span></h1>
                 <div>Type: {semantic_info[0]}</div>
                 <div>Modifiers: {semantic_info[1]}</div>
             """
@@ -172,7 +172,7 @@ class LspShowScopeNameCommand(LspTextCommand):
                 <p>{scope_list}</p>
                 <h1>Context Backtrace</h1>
                 {backtrace}
-                {semantic_info_html}
+                {semantic_token_html}
             </body>
         """
         self.view.show_popup(html, max_width=512, max_height=512, on_navigate=on_navigate)

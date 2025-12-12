@@ -69,6 +69,7 @@ from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
 from .constants import RequestFlags
+from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
@@ -305,9 +306,14 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         },
         # https://microsoft.github.io/language-server-protocol/specification#markupContent
         "markdown": {
+            # https://github.com/frostming/marko
+            "parser": "marko",
+            "version": MARKO_MD_PARSER_VERSION
+        } if MARKO_MD_PARSER_VERSION else {
             # https://python-markdown.github.io
             "parser": "Python-Markdown",
-            "version": mdpopups.markdown.__version__  # type: ignore
+            "version": mdpopups.markdown.__version__  # pyright: ignore[reportAttributeAccessIssue]
+
         }
     }
     text_document_capabilities: TextDocumentClientCapabilities = {

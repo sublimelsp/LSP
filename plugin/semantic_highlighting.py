@@ -80,7 +80,7 @@ class LspShowScopeNameCommand(LspTextCommand):
             )
 
     def _get_semantic_info(self, point: int) -> SemanticTokensInfo | None:
-        if session := self.best_session('semanticTokensProvider'):
+        if session := self.best_session('semanticTokensProvider', 0):
             for sv in session.session_views_async():
                 if self.view == sv.view:
                     for token in sv.session_buffer.get_semantic_tokens():

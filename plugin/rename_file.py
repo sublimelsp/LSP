@@ -104,6 +104,7 @@ class LspRenamePathCommand(LspWindowCommand):
         for response, weak_session in responses:
             if (session := weak_session()) and response:
                 promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
+                break
         return Promise.all(promises)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:

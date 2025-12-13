@@ -99,13 +99,11 @@ class LspRenamePathCommand(LspWindowCommand):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise:
-        promises: list[Promise] = []
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise[None]:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
-                break
-        return Promise.all(promises)
+                return session.apply_workspace_edit_async(response, is_refactoring=True)
+        return Promise.resolve(None)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:
         old_path = Path(old)

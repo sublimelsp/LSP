@@ -69,6 +69,7 @@ from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from .collections import DottedDict
 from .constants import RequestFlags
+from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .diagnostics_storage import DiagnosticsStorage
@@ -107,6 +108,7 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
+from .types import SemanticToken
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
@@ -304,9 +306,14 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         },
         # https://microsoft.github.io/language-server-protocol/specification#markupContent
         "markdown": {
+            # https://github.com/frostming/marko
+            "parser": "marko",
+            "version": MARKO_MD_PARSER_VERSION
+        } if MARKO_MD_PARSER_VERSION else {
             # https://python-markdown.github.io
             "parser": "Python-Markdown",
-            "version": mdpopups.markdown.__version__  # type: ignore
+            "version": mdpopups.markdown.__version__  # pyright: ignore[reportAttributeAccessIssue]
+
         }
     }
     text_document_capabilities: TextDocumentClientCapabilities = {
@@ -715,7 +722,7 @@ class SessionBufferProtocol(Protocol):
     def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = ...) -> None:
         ...
 
-    def get_semantic_tokens(self) -> list[Any]:
+    def get_semantic_tokens(self) -> list[SemanticToken]:
         ...
 
     def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
@@ -2170,10 +2177,7 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                sv.session_buffer.do_semantic_tokens_async(sv.view)
-            else:
-                sv.session_buffer.set_semantic_tokens_pending_refresh()
+            sv.session_buffer.do_semantic_tokens_async(sv.view)
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 

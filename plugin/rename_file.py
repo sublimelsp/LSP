@@ -10,10 +10,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 import sublime
 import sublime_plugin
+import weakref
 
 if TYPE_CHECKING:
     from ..protocol import FileRename
     from ..protocol import WorkspaceEdit
+    from .core.sessions import Session
+    from collections.abc import Generator
 
 
 class RenamePathInputHandler(sublime_plugin.TextInputHandler):
@@ -82,24 +85,27 @@ class LspRenamePathCommand(LspWindowCommand):
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
-        self.create_will_rename_request_async(file_rename) \
-            .then(self.handle_rename_async) \
+        Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
+            .then(lambda responses: self.handle_rename_async(responses)) \
             .then(lambda _: self.rename_path(old_path, new_path)) \
             .then(lambda success: self.notify_did_rename(file_rename) if success else None)
 
-    def create_will_rename_request_async(
+    def create_will_rename_requests_async(
         self, file_rename: FileRename
-    ) -> Promise[WorkspaceEdit | None]:
-        if session := self.session():
+    ) -> Generator[Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]]:
+        for session in self.sessions():
             filters = session.get_capability('workspace.fileOperations.willRename.filters') or []
             if match_file_operation_filters(filters, file_rename['oldUri']):
-                return session.send_request_task(Request.willRenameFiles({'files': [file_rename]}))
-        return Promise.resolve(None)
+                yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
+                    .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
-    def handle_rename_async(self, response: WorkspaceEdit | None) -> Promise[None]:
-        if (session := self.session()) and response:
-            return session.apply_workspace_edit_async(response, is_refactoring=True)
-        return Promise.resolve(None)
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise:
+        promises: list[Promise] = []
+        for response, weak_session in responses:
+            if (session := weak_session()) and response:
+                promises.append(session.apply_workspace_edit_async(response, is_refactoring=True))
+                break
+        return Promise.all(promises)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:
         old_path = Path(old)

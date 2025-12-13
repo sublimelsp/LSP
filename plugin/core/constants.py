@@ -50,6 +50,8 @@ class RequestFlags(IntFlag):
     """ textDocument/documentColor """
     INLAY_HINT = 2
     """ textDocument/inlayHint """
+    SEMANTIC_TOKENS = 4
+    """ textDocument/semanticTokens """
 
 
 class RegionKey(StrEnum):

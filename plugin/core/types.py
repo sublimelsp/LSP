@@ -381,6 +381,16 @@ class Settings:
             return [None] * 4  # default styling
 
 
+class SemanticToken:
+
+    __slots__ = ("modifiers", "region", "type")
+
+    def __init__(self, region: sublime.Region, type: str, modifiers: list[str]):
+        self.modifiers = modifiers
+        self.region = region
+        self.type = type
+
+
 class ClientStates:
     STARTING = 0
     READY = 1

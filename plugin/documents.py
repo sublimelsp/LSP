@@ -268,6 +268,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 for sb in self.session_buffers_async('semanticTokensProvider'):
                     if sb.session != session:
                         sb.clear_semantic_tokens_async()
+                        if request_id := sb.semantic_tokens.pending_response:
+                            sb.session.cancel_request_async(request_id)
+                            sb.semantic_tokens.pending_response = None
 
     def on_session_shutdown_async(self, session: Session) -> None:
         if removed_session := self._session_views.pop(session.config.name, None):

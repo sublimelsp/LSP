@@ -35,6 +35,7 @@ from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
+from .core.types import SemanticToken
 from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
@@ -51,7 +52,6 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .inlay_hint import inlay_hint_to_phantom
-from .semantic_highlighting import SemanticToken
 from functools import partial
 from typing import Any, Callable, Iterable, List, Protocol
 from typing import cast

@@ -234,7 +234,7 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
         sublime.set_timeout_async(lambda: self._run_async(session_name))
 
     def _run_async(self, session_name: str) -> None:
-        if wm := windows.lookup(self.view.window()):
+        if (wm := windows.lookup(self.view.window())) and (listener := windows.listener_for_view(self.view)):
             config = wm.get_config_manager().get_config(session_name)
             if not config:
                 debug(f'Configuration with name {session_name} does not exist')
@@ -244,13 +244,15 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
             if session := wm.get_session(session_name, self.view.file_name() or ''):
                 session_view = session.session_view_for_view_async(self.view)
                 if is_applicable and not session_view:
-                    if listener := windows.listener_for_view(self.view):
-                        listener.on_session_initialized_async(session)
+                    listener.on_session_initialized_async(session)
                 elif not is_applicable and session_view:
                     session.shutdown_session_view_async(session_view)
-            # FIXME starting a new session this way doesn't work correctly
-            # elif is_applicable:
-            #     wm.start_async(config, self.view)
+            elif is_applicable:
+                wm.start_async(config, self.view)
+                if wm._new_session:
+                    wm._sessions.add(wm._new_session)
+                    listener.on_session_initialized_async(wm._new_session)
+                    wm._new_session = None
 
 
 def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:

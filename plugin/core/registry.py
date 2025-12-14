@@ -234,10 +234,14 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
         sublime.set_timeout_async(lambda: self._run_async(session_name))
 
     def _run_async(self, session_name: str) -> None:
-        if (wm := windows.lookup(self.view.window())) and (listener := windows.listener_for_view(self.view)):
+        if wm := windows.lookup(self.view.window()):
             config = wm.get_config_manager().get_config(session_name)
             if not config:
                 debug(f'Configuration with name {session_name} does not exist')
+                return
+            listener = windows.listener_for_view(self.view)
+            if not listener:
+                debug(f'No listener for view {self.view}')
                 return
             scheme, _ = parse_uri(uri_from_view(self.view))
             is_applicable = config.match_view(self.view, scheme)

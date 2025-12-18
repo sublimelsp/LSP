@@ -1962,8 +1962,8 @@ class Session(TransportCallbacks):
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        total_changes = sum(map(lambda val: len(val[0]), changes.values()))
-        files = len(changes)
+        total_changes = sum(map(lambda value: len(value[0]), changes.values()))
+        file_count = len(changes)
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
@@ -1973,7 +1973,7 @@ class Session(TransportCallbacks):
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
             .then(lambda _: self._set_focused_sheet(active_sheet)) \
-            .then(lambda _: (total_changes, files))
+            .then(lambda _: (total_changes, file_count))
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """

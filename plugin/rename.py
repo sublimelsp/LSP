@@ -200,7 +200,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if file_count == 1:
             session.apply_parsed_workspace_edits(changes, True)
             return
-        total_changes = sum(map(lambda val: len(val[0]), changes.values()))
+        total_changes = sum(map(lambda value: len(value[0]), changes.values()))
         message = f"Replace {total_changes} occurrences across {file_count} files?"
         choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
         if choice == sublime.DialogResult.YES:

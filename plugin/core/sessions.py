@@ -1962,7 +1962,7 @@ class Session(TransportCallbacks):
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        total_changes = sum(map(lambda value: len(value[0]), changes.values()))
+        total_changes = sum(len(value[0]) for value in changes.values())
         file_count = len(changes)
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)

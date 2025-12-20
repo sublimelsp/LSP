@@ -76,6 +76,7 @@ from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
+from .edit import WorkspaceEditSummary
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -1931,18 +1932,17 @@ class Session(TransportCallbacks):
 
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> Promise[tuple[int, int]]:
+    ) -> Promise[WorkspaceEditSummary]:
         """
         Apply a WorkspaceEdit, and return a promise that resolves on the async thread again after the edits have been
-        applied. The resolved promise contains the total number of changes and the number of affected files in the
-        WorkspaceEdit.
+        applied. The resolved promise contains a summary of the changes in the WorkspaceEdit.
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
     def apply_parsed_workspace_edits(
         self, changes: WorkspaceChanges, is_refactoring: bool = False
-    ) -> Promise[tuple[int, int]]:
+    ) -> Promise[WorkspaceEditSummary]:
 
         def handle_view(
             edits: list[TextEdit],
@@ -1962,8 +1962,10 @@ class Session(TransportCallbacks):
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
-        total_changes = sum(len(value[0]) for value in changes.values())
-        file_count = len(changes)
+        summary: WorkspaceEditSummary = {
+            'total_changes': sum(len(value[0]) for value in changes.values()),
+            'file_count': len(changes)
+        }
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
@@ -1973,7 +1975,7 @@ class Session(TransportCallbacks):
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
             .then(lambda _: self._set_focused_sheet(active_sheet)) \
-            .then(lambda _: (total_changes, file_count))
+            .then(lambda _: summary)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """

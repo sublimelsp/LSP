@@ -6,7 +6,8 @@ from ...protocol import WorkspaceEdit
 from .logging import debug
 from .promise import Promise
 from .protocol import UINT_MAX
-from typing import Dict, List, NotRequired, Optional, Tuple, TypedDict, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
+from typing_extensions import NotRequired
 import sublime
 
 

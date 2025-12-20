@@ -6,11 +6,20 @@ from ...protocol import WorkspaceEdit
 from .logging import debug
 from .promise import Promise
 from .protocol import UINT_MAX
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
+from typing_extensions import NotRequired
 import sublime
 
 
 WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[str], Optional[int]]]
+
+
+class WorkspaceEditSummary(TypedDict):
+    total_changes: int
+    edited_files: int
+    created_files: NotRequired[int]
+    renamed_files: NotRequired[int]
+    deleted_files: NotRequired[int]
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None) -> WorkspaceChanges:

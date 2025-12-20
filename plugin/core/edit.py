@@ -16,7 +16,7 @@ WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Opt
 
 class WorkspaceEditSummary(TypedDict):
     total_changes: int
-    file_count: int
+    updated_files: int
     created_files: NotRequired[int]
     renamed_files: NotRequired[int]
     deleted_files: NotRequired[int]

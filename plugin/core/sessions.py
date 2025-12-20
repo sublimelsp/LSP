@@ -1964,7 +1964,7 @@ class Session(TransportCallbacks):
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         summary: WorkspaceEditSummary = {
             'total_changes': sum(len(value[0]) for value in changes.values()),
-            'file_count': len(changes)
+            'updated_files': len(changes)
         }
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)

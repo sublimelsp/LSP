@@ -264,6 +264,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 for sb in self.session_buffers_async('inlayHintProvider'):
                     if sb.session != session:
                         sb.remove_all_inlay_hints()
+            if request_flags & RequestFlags.SEMANTIC_TOKENS:
+                for sb in self.session_buffers_async('semanticTokensProvider'):
+                    if sb.session != session:
+                        sb.clear_semantic_tokens_async()
+                        if request_id := sb.semantic_tokens.pending_response:
+                            sb.session.cancel_request_async(request_id)
+                            sb.semantic_tokens.pending_response = None
 
     def on_session_shutdown_async(self, session: Session) -> None:
         if removed_session := self._session_views.pop(session.config.name, None):
@@ -356,6 +363,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             request_flags |= RequestFlags.DOCUMENT_COLOR
         if session == self.session_async('inlayHintProvider', 0):
             request_flags |= RequestFlags.INLAY_HINT
+        if session == self.session_async('semanticTokensProvider', 0):
+            request_flags |= RequestFlags.SEMANTIC_TOKENS
         return request_flags
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
@@ -394,7 +403,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if sb.document_diagnostic_needs_refresh:
                 sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
                 sb.do_document_diagnostic_async(self.view, self.view.change_count())
-            if sb.semantic_tokens.needs_refresh:
+            if sb.semantic_tokens.needs_refresh \
+                    and (session_view := sb.session.session_view_for_view_async(self.view)) \
+                    and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
                 sb.set_semantic_tokens_pending_refresh(needs_refresh=False)
                 sb.do_semantic_tokens_async(self.view)
             if sb.inlay_hints_needs_refresh \

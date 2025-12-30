@@ -76,6 +76,7 @@ from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
+from .edit import WorkspaceEditSummary
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -1715,7 +1716,7 @@ class Session(TransportCallbacks):
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise:
+    ) -> Promise[None]:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             task: PackagedTask[None] = Promise.packaged_task()
@@ -1920,8 +1921,8 @@ class Session(TransportCallbacks):
         title = code_action['title']
         edit = code_action.get("edit")
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) if edit else \
-            Promise.resolve(None)
+        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) \
+            .then(lambda _: None) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1936,15 +1937,18 @@ class Session(TransportCallbacks):
 
     def apply_workspace_edit_async(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> Promise[None]:
+    ) -> Promise[WorkspaceEditSummary]:
         """
-        Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
-        applied.
+        Apply a WorkspaceEdit, and return a promise that resolves on the async thread again after the edits have been
+        applied. The resolved promise contains a summary of the changes in the WorkspaceEdit.
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
         return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
-    def apply_parsed_workspace_edits(self, changes: WorkspaceChanges, is_refactoring: bool = False) -> Promise[None]:
+    def apply_parsed_workspace_edits(
+        self, changes: WorkspaceChanges, is_refactoring: bool = False
+    ) -> Promise[WorkspaceEditSummary]:
+
         def handle_view(
             edits: list[TextEdit],
             label: str | None,
@@ -1963,6 +1967,10 @@ class Session(TransportCallbacks):
         selected_sheets = self.window.selected_sheets()
         promises: list[Promise[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
+        summary: WorkspaceEditSummary = {
+            'total_changes': sum(len(value[0]) for value in changes.values()),
+            'edited_files': len(changes)
+        }
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
@@ -1971,7 +1979,8 @@ class Session(TransportCallbacks):
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
-            .then(lambda _: self._set_focused_sheet(active_sheet))
+            .then(lambda _: self._set_focused_sheet(active_sheet)) \
+            .then(lambda _: summary)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -2177,7 +2186,10 @@ class Session(TransportCallbacks):
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
-            sv.session_buffer.do_semantic_tokens_async(sv.view)
+            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                sv.session_buffer.do_semantic_tokens_async(sv.view)
+            else:
+                sv.session_buffer.set_semantic_tokens_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 

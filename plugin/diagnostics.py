@@ -1,12 +1,102 @@
 from __future__ import annotations
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticOptions
+from ..protocol import DiagnosticRegistrationOptions
 from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentUri
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.constants import REGIONS_INITIALIZE_FLAGS
+from .core.protocol import Point
 from .core.settings import userprefs
+from .core.types import DocumentSelector_
+from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
+from functools import lru_cache
+from typing import Union
+import itertools
 import sublime
+
+
+DiagnosticsIdentifier = Union[str, None]
+
+
+class DiagnosticsStorage:
+
+    def __init__(self) -> None:
+        self._providers: dict[str | None, DiagnosticOptions | DiagnosticRegistrationOptions] = {}
+        self._identifiers: set[DiagnosticsIdentifier] = set()
+        self._workspace_diagnostics_identifiers: set[DiagnosticsIdentifier] = set()
+        self._diagnostics: dict[DocumentUri, dict[DiagnosticsIdentifier, list[Diagnostic]]] = {}
+        self.token_identifier_map: dict[str, DiagnosticsIdentifier] = {}  # maps identifiers to partial result tokens
+
+    @lru_cache
+    def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
+        return set(
+            diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
+            if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
+        )
+
+    @property
+    def workspace_diagnostics_identifiers(self) -> set[DiagnosticsIdentifier]:
+        return self._workspace_diagnostics_identifiers
+
+    def _update_identifiers(self) -> None:
+        self._identifiers = set(options.get('identifier') for options in self._providers.values())
+        self._workspace_diagnostics_identifiers = set(
+            options.get('identifier') for options in self._providers.values() if options['workspaceDiagnostics']
+        )
+        self.get_identifiers.cache_clear()
+
+    def register_provider(
+        self, registration_id: str | None, options: DiagnosticOptions | DiagnosticRegistrationOptions
+    ) -> None:
+        # Note that the registration ID can be None when using static registration, in which case the provider cannot be
+        # unregistered later.
+        self._providers[registration_id] = options
+        self._update_identifiers()
+
+    def unregister_provider(self, registration_id: str) -> None:
+        self._providers.pop(registration_id)
+        self._update_identifiers()
+
+    def set_diagnostics(
+        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, diagnostics: list[Diagnostic]
+    ) -> None:
+        if identifier is not None and identifier not in self._identifiers:
+            raise ValueError(f'diagnostic stream with identifier {identifier} must be registered first')
+        normalized_uri = normalize_uri(uri)
+        self._diagnostics.setdefault(normalized_uri, {})[identifier] = diagnostics
+
+    def _sorted_diagnostics_for_uri(self, uri: DocumentUri, max_severity: int) -> list[Diagnostic]:
+        return sorted(
+            (
+                diagnostic for diagnostic
+                in itertools.chain.from_iterable(self._diagnostics.get(uri, {}).values())
+                if diagnostic_severity(diagnostic) <= max_severity
+            ),
+            key=lambda diagnostic: (Point.from_lsp(diagnostic['range']['start']), diagnostic_severity(diagnostic))
+        )
+
+    def get_diagnostics(self, max_severity: int = DiagnosticSeverity.Hint) -> dict[DocumentUri, list[Diagnostic]]:
+        return {uri: self._sorted_diagnostics_for_uri(uri, max_severity) for uri in self._diagnostics}
+
+    def get_diagnostics_for_uri(
+        self, uri: DocumentUri, max_severity: int = DiagnosticSeverity.Hint
+    ) -> list[Diagnostic]:
+        return self._sorted_diagnostics_for_uri(normalize_uri(uri), max_severity)
+
+    def total_errors_and_warnings(self) -> tuple[int, int]:
+        total_errors = 0
+        total_warnings = 0
+        for diagnostics in self._diagnostics.values():
+            for diagnostic in itertools.chain.from_iterable(diagnostics.values()):
+                severity = diagnostic_severity(diagnostic)
+                if severity == DiagnosticSeverity.Error:
+                    total_errors += 1
+                elif severity == DiagnosticSeverity.Warning:
+                    total_warnings += 1
+        return total_errors, total_warnings
 
 
 class DiagnosticsAnnotationsView:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ...protocol import Diagnostic
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
 from ...protocol import MessageType
@@ -10,7 +11,6 @@ from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .diagnostics_storage import is_severity_included
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
@@ -39,7 +39,6 @@ from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from collections import deque
-from collections import OrderedDict
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
@@ -448,7 +447,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self.total_error_count = 0
         self.total_warning_count = 0
         for session in self._sessions:
-            local_errors, local_warnings = session.diagnostics.sum_total_errors_and_warnings_async()
+            local_errors, local_warnings = session.diagnostics.total_errors_and_warnings()
             self.total_error_count += local_errors
             self.total_warning_count += local_warnings
         for listener in list(self._listeners):
@@ -461,18 +460,16 @@ class WindowManager(Manager, WindowConfigChangeListener):
         prephantoms: list[tuple[int, int, str, str]] = []
         row = 0
         max_severity = userprefs().diagnostics_panel_include_severity_level
-        contributions: OrderedDict[str, list[tuple[str, int | None, str | None, str | None]]] = OrderedDict()
+        contributions: dict[DocumentUri, list[Diagnostic]] = {}
         for session in self._sessions:
-            for (_, path), contribution in session.diagnostics.filter_map_diagnostics_async(
-                    is_severity_included(max_severity), lambda _, diagnostic: format_diagnostic_for_panel(diagnostic)):
-                seen = path in contributions
-                contributions.setdefault(path, []).extend(contribution)
-                if not seen:
-                    contributions.move_to_end(path)
-        for path, contribution in contributions.items():
+            for uri, diagnostics in session.diagnostics.get_diagnostics(max_severity).items():
+                contributions.setdefault(uri, []).extend(diagnostics)
+        for uri, diagnostics in contributions.items():
+            _, path = parse_uri(uri)
             to_render.append(f"{path}:")
             row += 1
-            for content, offset, code, href in contribution:
+            for diagnostic in diagnostics:
+                content, offset, code, href = format_diagnostic_for_panel(diagnostic)
                 to_render.append(content)
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))

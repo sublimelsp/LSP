@@ -9,6 +9,7 @@ from ...protocol import CompletionItemTag
 from ...protocol import ConfigurationItem
 from ...protocol import ConfigurationParams
 from ...protocol import Diagnostic
+from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
 from ...protocol import DiagnosticTag
@@ -67,12 +68,13 @@ from ...protocol import WorkspaceDiagnosticReport
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
+from ..diagnostics import DiagnosticsIdentifier
+from ..diagnostics import DiagnosticsStorage
 from .collections import DottedDict
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
-from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
@@ -107,7 +109,7 @@ from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
-from .types import DocumentSelector
+from .types import DocumentSelector_
 from .types import method_to_capability
 from .types import SemanticToken
 from .types import SettingsRegistration
@@ -1321,7 +1323,7 @@ class _RegistrationData:
         document_selector = options.pop("documentSelector", None)
         if not isinstance(document_selector, list):
             document_selector = []
-        self.selector = DocumentSelector(document_selector)
+        self.selector = DocumentSelector_(document_selector)
         self.options = options
         self.session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
 
@@ -1359,8 +1361,9 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self.diagnostics_result_ids: dict[DocumentUri, str | None] = {}
-        self.workspace_diagnostics_pending_response: int | None = None
+        self._diagnostic_providers: dict[str | None, DiagnosticOptions] = {}
+        self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
+        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._init_callback: InitCallback | None = None
@@ -1458,7 +1461,7 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb, suppress_requests=True)
-        if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.diagnostics_by_document_uri(uri)):
+        if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.get_diagnostics_for_uri(uri)):
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
@@ -1548,6 +1551,9 @@ class Session(TransportCallbacks):
             return None
         return self.capabilities.get(capability)
 
+    def get_diagnostic_identifiers(self) -> set[str | None]:
+        return set(diagnostic_options.get('identifier') for diagnostic_options in self._diagnostic_providers.values())
+
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()
 
@@ -1635,9 +1641,12 @@ class Session(TransportCallbacks):
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
     def _handle_initialize_success(self, result: InitializeResult) -> None:
-        self.capabilities.assign(result.get('capabilities', dict()))
+        capabilities = result['capabilities']
+        self.capabilities.assign(capabilities)
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
+        if diagnostic_options := capabilities.get('diagnosticProvider'):
+            self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
@@ -2074,27 +2083,39 @@ class Session(TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
-        if self.workspace_diagnostics_pending_response:
-            # The server is probably leaving the request open intentionally, in order to continuously stream updates via
-            # $/progress notifications.
-            return
+        for identifier in self.diagnostics.workspace_diagnostics_identifiers:
+            if self.workspace_diagnostics_pending_responses[identifier]:
+                # The server is probably leaving the request open intentionally, in order to continuously stream updates
+                # via $/progress notifications.
+                continue
+            self._do_workspace_diagnostics_async(identifier)
+
+    def _do_workspace_diagnostics_async(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
-            {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
-            if result_id is not None
+            {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
+            if id_ == identifier and result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        if identifier := self.get_capability("diagnosticProvider.identifier"):
+        if identifier is not None:
             params['identifier'] = identifier
-        self.workspace_diagnostics_pending_response = self.send_request_async(
+        partial_result_token = _PARTIAL_RESULT_PROGRESS_PREFIX + str(self.request_id + 1)
+        self.diagnostics.token_identifier_map[partial_result_token] = identifier
+        self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
             Request.workspaceDiagnostic(params),
-            self._on_workspace_diagnostics_async,
-            self._on_workspace_diagnostics_error_async)
+            functools.partial(self._on_workspace_diagnostics_async, partial_result_token),
+            functools.partial(self._on_workspace_diagnostics_error_async, partial_result_token)
+        )
 
     def _on_workspace_diagnostics_async(
-        self, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
+        self,
+        partial_result_token: str,
+        response: WorkspaceDiagnosticReport,
+        reset_pending_response: bool = True
     ) -> None:
+        identifier = self.diagnostics.token_identifier_map[partial_result_token]
         if reset_pending_response:
-            self.workspace_diagnostics_pending_response = None
+            self.workspace_diagnostics_pending_responses[identifier] = None
+            self.diagnostics.token_identifier_map.pop(partial_result_token)
         if not response['items']:
             return
         window = sublime.active_window()
@@ -2120,11 +2141,12 @@ class Session(TransportCallbacks):
                 sb = self.get_session_buffer_for_uri_async(uri)
                 if sb and sb.last_synced_version != version:
                     continue
-            self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
+            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
+                self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
 
-    def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
+    def _on_workspace_diagnostics_error_async(self, partial_result_token: str, error: ResponseError) -> None:
+        identifier = self.diagnostics.token_identifier_map.pop(partial_result_token)
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
@@ -2133,12 +2155,12 @@ class Session(TransportCallbacks):
                 # infinite cycles of cancel -> retrigger, in case the server is busy.
 
                 def _retrigger_request() -> None:
-                    self.workspace_diagnostics_pending_response = None
-                    self.do_workspace_diagnostics_async()
+                    self.workspace_diagnostics_pending_responses[identifier] = None
+                    self._do_workspace_diagnostics_async(identifier)
 
                 sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
                 return
-        self.workspace_diagnostics_pending_response = None
+        self.workspace_diagnostics_pending_responses[identifier] = None
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
@@ -2219,20 +2241,31 @@ class Session(TransportCallbacks):
 
     def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
+        self.handle_diagnostics(params['uri'], None, params.get('version'), params['diagnostics'])
+
+    def handle_diagnostics(
+        self, uri: DocumentUri, identifier: str | None, version: int | None, diagnostics: list[Diagnostic]
+    ) -> None:
         mgr = self.manager()
         if not mgr:
             return
-        uri = params["uri"]
         reason = mgr.should_ignore_diagnostics(uri, self.config)
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        diagnostics = params["diagnostics"]
-        self.diagnostics.add_diagnostics_async(uri, diagnostics)
+        session_buffer = self.get_session_buffer_for_uri_async(uri)
+        if session_buffer and version is not None and version != session_buffer.last_synced_version:
+            # The diagnostics version is only relevant for PublishDiagnosticsParams which can be pushed by the server at
+            # any time, but not for the pull diagnostics.
+            debug(f"ignoring diagnostics for {uri} due to outdated version {version}")
+            return
+        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
-        if sb := self.get_session_buffer_for_uri_async(uri):
-            version = params.get('version', sb.last_synced_version)
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
+        if session_buffer:
+            if version is None:
+                version = session_buffer.last_synced_version
+            self._publish_diagnostics_to_session_buffer_async(
+                session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""
@@ -2241,12 +2274,15 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(registration["method"])
             if self.config.is_disabled_capability(capability_path):
                 continue
-            debug(f"{self.config.name}: registering capability:", capability_path)
             options = registration.get("registerOptions")
             if not isinstance(options, dict):
                 options = {}
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
             registration_id = registration["id"]
+            if capability_path == 'diagnosticProvider':
+                self.diagnostics.register_provider(registration_id, cast(DiagnosticOptions, options))
+                continue
+            debug(f"{self.config.name}: registering capability:", capability_path)
             data = _RegistrationData(registration_id, capability_path, registration_path, options)
             self._registrations[registration_id] = data
             if data.selector:
@@ -2274,6 +2310,9 @@ class Session(TransportCallbacks):
         for unregistration in unregistrations:
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
+            if capability_path == 'diagnosticProvider':
+                self.diagnostics.unregister_provider(registration_id)
+                continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
             if capability_path == "didChangeWatchedFilesProvider":
@@ -2366,8 +2405,8 @@ class Session(TransportCallbacks):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
-                self._on_workspace_diagnostics_async(
-                    cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
+                workspace_diagnostic_report = cast(WorkspaceDiagnosticReport, value)
+                self._on_workspace_diagnostics_async(token, workspace_diagnostic_report, reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress

@@ -127,12 +127,6 @@
     // Goto Diagnostic
     // {
     //     "keys": ["f8"],
-    //     "command": "lsp_goto_diagnostic",
-    //     "args": {"uri": "$view_uri"}
-    // },
-    // Goto Diagnostic in Project
-    // {
-    //     "keys": ["shift+f8"],
     //     "command": "lsp_goto_diagnostic"
     // },
     // Jump to next Diagnostic in Tab

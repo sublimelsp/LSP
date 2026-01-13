@@ -525,6 +525,11 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "codeLens": {
             "refreshSupport": True
         },
+        "fileOperations": {
+            "dynamicRegistration": True,
+            "willRename": True,
+            "didRename": True
+        },
         "inlayHint": {
             "refreshSupport": True
         },

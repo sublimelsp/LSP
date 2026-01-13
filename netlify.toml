@@ -1,7 +1,7 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration
 
 [build]
-  environment = { PYTHON_VERSION = "3.13", MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES = "none" }
+  environment = { PYTHON_VERSION = "3.13", MISE_IDIOMATIC_VERSION_FILE_ENABLE_TOOLS = "[]" }
   base    = "docs/"
   publish = "site/"
   command = "make build"

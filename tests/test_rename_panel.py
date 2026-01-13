@@ -1,5 +1,5 @@
 from __future__ import annotations
-from LSP.plugin.rename import utf16_to_code_points
+from LSP.plugin.edit import utf16_to_code_points
 import unittest
 
 

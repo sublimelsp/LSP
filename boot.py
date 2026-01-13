@@ -42,6 +42,7 @@ from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.edit import LspApplyWorkspaceEditCommand
+from .plugin.edit import LspHideWorkspaceEditButtonsCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.folding_range import LspFoldAllCommand
 from .plugin.folding_range import LspFoldCommand
@@ -69,7 +70,6 @@ from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.panels import LspUpdateLogPanelCommand
 from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
-from .plugin.rename import LspHideRenameButtonsCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.rename_file import LspRenamePathCommand
 from .plugin.save_command import LspSaveAllCommand
@@ -120,7 +120,7 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
-    "LspHideRenameButtonsCommand",
+    "LspHideWorkspaceEditButtonsCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",

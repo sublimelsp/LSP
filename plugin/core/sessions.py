@@ -1980,7 +1980,12 @@ class Session(TransportCallbacks):
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
             .then(lambda _: self._set_focused_sheet(active_sheet)) \
+            .then(lambda _: self.show_summary(summary)) \
             .then(lambda _: summary)
+
+    def show_summary(self, summary: WorkspaceEditSummary):
+        message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
+        sublime.set_timeout(lambda: self.window.status_message(message), 300)
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """

@@ -4,87 +4,26 @@ from ..protocol import PrepareRenameResult
 from ..protocol import Range
 from ..protocol import RenameParams
 from ..protocol import WorkspaceEdit
-from .core.edit import parse_range
-from .core.edit import parse_workspace_edit
-from .core.edit import WorkspaceChanges
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.registry import windows
 from .core.sessions import Session
-from .core.url import parse_uri
-from .core.views import get_line
 from .core.views import range_to_region
 from .core.views import text_document_position_params
+from .edit import prompt_for_workspace_edits
 from functools import partial
 from typing import Any
 from typing import cast
 from typing_extensions import TypeGuard
-import os
 import sublime
 import sublime_plugin
 
-
-BUTTONS_TEMPLATE = """
-<style>
-    html {{
-        background-color: transparent;
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
-    }}
-    a {{
-        line-height: 1.6rem;
-        padding-left: 0.6rem;
-        padding-right: 0.6rem;
-        border-width: 1px;
-        border-style: solid;
-        border-color: #fff4;
-        border-radius: 4px;
-        color: #cccccc;
-        background-color: #3f3f3f;
-        text-decoration: none;
-    }}
-    html.light a {{
-        border-color: #000a;
-        color: white;
-        background-color: #636363;
-    }}
-    a.primary, html.light a.primary {{
-        background-color: color(var(--accent) min-contrast(white 6.0));
-    }}
-</style>
-<body id='lsp-buttons'>
-    <a href='{apply}' class='primary'>Apply</a>&nbsp;
-    <a href='{discard}'>Discard</a>
-</body>"""
-
-DISCARD_COMMAND_URL = sublime.command_url('chain', {
-    'commands': [
-        ['hide_panel', {}],
-        ['lsp_hide_rename_buttons', {}]
-    ]
-})
 
 PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
 
 
 def is_range_response(result: PrepareRenameResult) -> TypeGuard[Range]:
     return 'start' in result
-
-
-def utf16_to_code_points(s: str, col: int) -> int:
-    """Convert a position from UTF-16 code units to Unicode code points, usable for string slicing."""
-    utf16_len = 0
-    idx = 0
-    for idx, c in enumerate(s):
-        if utf16_len >= col:
-            if utf16_len > col:  # If col is in the middle of a character (emoji), don't advance to the next code point
-                idx -= 1
-            break
-        utf16_len += 1 if ord(c) < 65536 else 2
-    else:
-        idx += 1  # get_line function trims the trailing '\n'
-    return idx
 
 
 # The flow of this command is fairly complicated so it deserves some documentation.
@@ -195,18 +134,7 @@ class LspSymbolRenameCommand(LspTextCommand):
     def _on_rename_result_async(self, session: Session, label: str, response: WorkspaceEdit | None) -> None:
         if not response:
             return session.window.status_message('Nothing to rename')
-        changes = parse_workspace_edit(response, label)
-        file_count = len(changes)
-        if file_count == 1:
-            session.apply_parsed_workspace_edits(changes, True)
-            return
-        total_changes = sum(len(value[0]) for value in changes.values())
-        message = f"Replace {total_changes} occurrences across {file_count} files?"
-        choice = sublime.yes_no_cancel_dialog(message, "Replace", "Preview", title="Rename")
-        if choice == sublime.DialogResult.YES:
-            session.apply_parsed_workspace_edits(changes, True)
-        elif choice == sublime.DialogResult.NO:
-            self._render_rename_panel(response, changes, label, total_changes, file_count, session.config.name)
+        prompt_for_workspace_edits(session, response, label=label)
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:
@@ -226,105 +154,6 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _on_prepare_error(self, error: Any) -> None:
         sublime.error_message("Rename error: {}".format(error["message"]))
-
-    def _get_relative_path(self, file_path: str) -> str:
-        wm = windows.lookup(self.view.window())
-        if not wm:
-            return file_path
-        base_dir = wm.get_project_path(file_path)
-        return os.path.relpath(file_path, base_dir) if base_dir else file_path
-
-    def _render_rename_panel(
-        self,
-        workspace_edit: WorkspaceEdit,
-        changes_per_uri: WorkspaceChanges,
-        label: str,
-        total_changes: int,
-        file_count: int,
-        session_name: str
-    ) -> None:
-        wm = windows.lookup(self.view.window())
-        if not wm:
-            return
-        pm = wm.panel_manager
-        if not pm:
-            return
-        panel = pm.ensure_rename_panel()
-        if not panel:
-            return
-        to_render: list[str] = []
-        reference_document: list[str] = []
-        header_lines = f"{total_changes} changes across {file_count} files.\n"
-        to_render.append(header_lines)
-        reference_document.append(header_lines)
-        ROWCOL_PREFIX = " {:>4}:{:<4} {}"
-        for uri, (changes, _, _) in changes_per_uri.items():
-            scheme, file = parse_uri(uri)
-            filename_line = '{}:'.format(self._get_relative_path(file) if scheme == 'file' else uri)
-            to_render.append(filename_line)
-            reference_document.append(filename_line)
-            for edit in changes:
-                start_row, start_col_utf16 = parse_range(edit['range']['start'])
-                line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
-                    '<no preview available>'
-                start_col = utf16_to_code_points(line_content, start_col_utf16)
-                original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
-                reference_document.append(original_line)
-                if scheme == "file" and line_content:
-                    end_row, end_col_utf16 = parse_range(edit['range']['end'])
-                    new_text_rows = edit['newText'].split('\n')
-                    new_line_content = line_content[:start_col] + new_text_rows[0]
-                    if start_row == end_row and len(new_text_rows) == 1:
-                        end_col = start_col if end_col_utf16 <= start_col_utf16 else \
-                            utf16_to_code_points(line_content, end_col_utf16)
-                        if end_col < len(line_content):
-                            new_line_content += line_content[end_col:]
-                    to_render.append(
-                        ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
-                else:
-                    to_render.append(original_line)
-        characters = "\n".join(to_render)
-        base_dir = wm.get_project_path(self.view.file_name() or "")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.run_command("lsp_clear_panel")
-        wm.window.run_command("show_panel", {"panel": "output.rename"})
-        panel.run_command('append', {
-            'characters': characters,
-            'force': True,
-            'scroll_to_end': False
-        })
-        panel.set_reference_document("\n".join(reference_document))
-        selection = panel.sel()
-        selection.add(sublime.Region(0, panel.size()))
-        panel.run_command('toggle_inline_diff')
-        selection.clear()
-        BUTTONS_HTML = BUTTONS_TEMPLATE.format(
-            apply=sublime.command_url('chain', {
-                'commands': [
-                    [
-                        'lsp_apply_workspace_edit',
-                        {
-                            'session_name': session_name,
-                            'edit': workspace_edit,
-                            'label': label,
-                            'is_refactoring': True
-                        }
-                    ],
-                    [
-                        'hide_panel',
-                        {}
-                    ],
-                    [
-                        'lsp_hide_rename_buttons',
-                        {}
-                    ]
-                ]
-            }),
-            discard=DISCARD_COMMAND_URL
-        )
-        pm.update_rename_panel_buttons([
-            sublime.Phantom(sublime.Region(len(to_render[0]) - 1), BUTTONS_HTML, sublime.PhantomLayout.BLOCK)
-        ])
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -347,13 +176,3 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
 
     def validate(self, name: str) -> bool:
         return len(name) > 0
-
-
-class LspHideRenameButtonsCommand(sublime_plugin.WindowCommand):
-
-    def run(self) -> None:
-        wm = windows.lookup(self.window)
-        if not wm:
-            return
-        if wm.panel_manager:
-            wm.panel_manager.update_rename_panel_buttons([])

@@ -6,7 +6,7 @@ install:
 	pip install zensical
 
 build:
-	zensical build
+	zensical build --clean
 
 clean:
 	rm -rf site

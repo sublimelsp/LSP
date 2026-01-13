@@ -7,7 +7,7 @@ from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import sublime
 import sublime_plugin
 import weakref
@@ -99,11 +99,10 @@ class LspRenamePathCommand(LspWindowCommand):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise[None]:
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise[Any]:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                session.apply_workspace_edit_async(response, is_refactoring=True)
-                return Promise.resolve(None)
+                return session.apply_workspace_edit_async(response, is_refactoring=True)
         return Promise.resolve(None)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:

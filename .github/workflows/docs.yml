@@ -6,10 +6,6 @@ on:
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 jobs:
   deploy:
     environment:

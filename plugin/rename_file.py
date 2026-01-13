@@ -113,7 +113,7 @@ class LspRenamePathCommand(LspWindowCommand):
         for response, weak_session in responses:
             if (session := weak_session()) and response:
                 return prompt_for_workspace_edits(session, response, label=label, accept_command=rename_command)
-        # rename file if no WorkspaceEdit was returend
+        # Ensure file rename even if all WorkspaceEdit responses are empty
         self.window.run_command(*rename_command)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:

@@ -6,12 +6,12 @@ on:
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 jobs:
   deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

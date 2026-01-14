@@ -6,9 +6,6 @@ on:
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
-  pull_request:
-    branches:
-      - main
 jobs:
   deploy:
     permissions:

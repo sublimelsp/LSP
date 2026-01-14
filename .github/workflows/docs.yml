@@ -8,13 +8,26 @@ on:
       - "docs/**"
 jobs:
   deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.x
       - run: |
           cd docs
-          make install
-          make deploy
+          pip install zensical
+          zensical build --clean
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/site
+      - uses: actions/deploy-pages@v4
+        id: deployment

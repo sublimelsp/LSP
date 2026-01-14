@@ -3,13 +3,10 @@
 .PHONY: clean
 
 install:
-	pip install mkdocs mkdocs-material mkdocs-redirects
+	pip install zensical
 
 build:
-	mkdocs build
-
-deploy:
-	mkdocs gh-deploy --force
+	zensical build --clean
 
 clean:
 	rm -rf site

@@ -1,3 +1,1 @@
-mkdocs==1.6.1
-mkdocs-material==9.7.0
-mkdocs-redirects==1.2.2
+zensical==0.0.15

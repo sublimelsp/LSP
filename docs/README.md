@@ -1,21 +1,17 @@
-# Welcome to MkDocs
+# Welcome to Zensical
 
 Install:
- - MkDocs - https://www.mkdocs.org/#installing-mkdocs
- - Material Theme - https://squidfunk.github.io/mkdocs-material/getting-started/#installation
- - mkdocs-redirects - https://github.com/mkdocs/mkdocs-redirects
+ - Zensical - https://zensical.org/docs/get-started/
 
 ```sh
-pip install mkdocs mkdocs-material mkdocs-redirects
+pip install zensical
 ```
-
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
 ## Commands
 
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+* `zensical serve` - Start the live-reloading docs server.
+* `zensical build` - Build the documentation site.
+* `zensical --help` - Print help message and exit.
 
 ## Project layout
 
@@ -24,10 +20,3 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
 
-Useful links:
-
-- Material for MkDocs
-https://squidfunk.github.io/mkdocs-material/
-
-- Admonitions (tip, warning, info boxes)
-https://squidfunk.github.io/mkdocs-material/reference/admonitions/

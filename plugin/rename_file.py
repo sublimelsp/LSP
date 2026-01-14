@@ -102,8 +102,7 @@ class LspRenamePathCommand(LspWindowCommand):
     def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise[None]:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                session.apply_workspace_edit_async(response, is_refactoring=True)
-                return Promise.resolve(None)
+                return session.apply_workspace_edit_async(response, is_refactoring=True).then(lambda _: None)
         return Promise.resolve(None)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:

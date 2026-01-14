@@ -1983,7 +1983,7 @@ class Session(TransportCallbacks):
             .then(lambda _: self.show_summary(summary)) \
             .then(lambda _: summary)
 
-    def show_summary(self, summary: WorkspaceEditSummary):
+    def show_summary(self, summary: WorkspaceEditSummary) -> None:
         message = f"Applied {summary['total_changes']} changes in {summary['edited_files']} files"
         sublime.set_timeout(lambda: self.window.status_message(message), 300)
 

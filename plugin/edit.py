@@ -6,13 +6,14 @@ from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
 from .core.logging import debug
 from .core.panels import PanelName
+from .core.promise import Promise
 from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
 from .core.views import get_line
 from .core.windows import WindowManager
 from contextlib import contextmanager
-from typing import Any, Generator, Iterable, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Generator, Iterable, Tuple, TYPE_CHECKING
 import operator
 import os
 import re
@@ -22,6 +23,9 @@ if TYPE_CHECKING:
     from .core.sessions import Session
 
 TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
+
+# Workspace edit panel resolvers keyed on Window ID.
+g_workspace_edit_panel_resolvers: dict[int, Callable[[bool], None]] = {}
 
 
 @contextmanager
@@ -151,27 +155,21 @@ def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> list[TextEdi
     return list(sorted(changes, key=operator.itemgetter(0)))
 
 
-def prompt_for_workspace_edits(
-    session: Session, response: WorkspaceEdit, label: str, accept_command: tuple[str, dict] | None = None,
-) -> None:
+def prompt_for_workspace_edits(session: Session, response: WorkspaceEdit, label: str) -> Promise[bool]:
     changes = parse_workspace_edit(response, label)
     file_count = len(changes)
-
-    def apply_changes() -> None:
-        session.apply_parsed_workspace_edits(changes, True) \
-            .then(lambda _: session.window.run_command(*(accept_command or ('noop', {}))))
-
     if file_count <= 1:
-        apply_changes()
-        return
+        return Promise.resolve(True)
     total_changes = sum(len(value[0]) for value in changes.values())
     message = f"Apply {total_changes} changes across {file_count} files?"
     choice = sublime.yes_no_cancel_dialog(message, "Rename", "Preview", title=label)
     if choice == sublime.DialogResult.YES:
-        apply_changes()
-        return
+        return Promise.resolve(True)
     if choice == sublime.DialogResult.NO:
-        _render_workspace_edit_panel(session, response, changes, label, total_changes, file_count, accept_command)
+        promise, resolve = Promise[bool].packaged_task()
+        _render_workspace_edit_panel(session, changes, label, total_changes, file_count, resolve)
+        return promise
+    return Promise.resolve(False)
 
 
 BUTTONS_TEMPLATE = """
@@ -207,22 +205,14 @@ BUTTONS_TEMPLATE = """
     <a href='{discard}'>Discard</a>
 </body>"""
 
-DISCARD_COMMAND_URL = sublime.command_url('chain', {
-    'commands': [
-        ['hide_panel', {}],
-        ['lsp_hide_workspace_edit_buttons', {}]
-    ]
-})
-
 
 def _render_workspace_edit_panel(
     session: Session,
-    workspace_edit: WorkspaceEdit,
     changes_per_uri: WorkspaceChanges,
     label: str,
     total_changes: int,
     file_count: int,
-    accept_command: tuple[str, dict] | None = None
+    on_done: Callable[[bool], None]
 ) -> None:
     def _get_relative_path(wm: WindowManager, file_path: str) -> str:
         base_dir = wm.get_project_path(file_path)
@@ -230,12 +220,15 @@ def _render_workspace_edit_panel(
 
     wm = windows.lookup(session.window)
     if not wm:
+        on_done(False)
         return
     pm = wm.panel_manager
     if not pm:
+        on_done(False)
         return
     panel = pm.ensure_workspace_edit_panel()
     if not panel:
+        on_done(False)
         return
     to_render: list[str] = []
     reference_document: list[str] = []
@@ -274,6 +267,8 @@ def _render_workspace_edit_panel(
         panel.settings().set("result_base_dir", base_dir)
     characters = "\n".join(to_render)
     panel.run_command("lsp_clear_panel")
+    # Ensure window's potential unresolved panel is concluded.
+    wm.window.run_command('lsp_conclude_workspace_edit_panel', {'window_id': wm.window.id(), 'accept': False})
     wm.window.run_command("show_panel", {"panel": f"output.{PanelName.WorkspaceEdit}"})
     panel.run_command('append', {
         'characters': characters,
@@ -288,33 +283,29 @@ def _render_workspace_edit_panel(
         panel.run_command('toggle_inline_diff')
         panel.settings().set('workspace_edit.is_inline_diff_active', True)
     selection.clear()
-    BUTTONS_HTML = BUTTONS_TEMPLATE.format(
+    g_workspace_edit_panel_resolvers[wm.window.id()] = on_done
+    buttons_html = BUTTONS_TEMPLATE.format(
         apply=sublime.command_url('chain', {
             'commands': [
-                [
-                    'lsp_apply_workspace_edit',
-                    {
-                        'session_name': session.config.name,
-                        'edit': workspace_edit,
-                        'label': label,
-                        'is_refactoring': True
-                    }
-                ],
-                [
-                    'hide_panel',
-                    {}
-                ],
-                [
-                    'lsp_hide_workspace_edit_buttons',
-                    {}
-                ],
-                accept_command if accept_command else []
+                ['hide_panel', {}],
+                ['lsp_conclude_workspace_edit_panel', {
+                    'window_id': wm.window.id(),
+                    'accept': True
+                }]
             ]
         }),
-        discard=DISCARD_COMMAND_URL
+        discard=sublime.command_url('chain', {
+            'commands': [
+                ['hide_panel', {}],
+                ['lsp_conclude_workspace_edit_panel', {
+                    'window_id': wm.window.id(),
+                    'accept': False
+                }]
+            ]
+        })
     )
     pm.update_workspace_edit_panel_buttons([
-        sublime.Phantom(sublime.Region(len(to_render[0]) - 1), BUTTONS_HTML, sublime.PhantomLayout.BLOCK)
+        sublime.Phantom(sublime.Region(len(to_render[0]) - 1), buttons_html, sublime.PhantomLayout.BLOCK)
     ])
 
 
@@ -333,11 +324,11 @@ def utf16_to_code_points(s: str, col: int) -> int:
     return idx
 
 
-class LspHideWorkspaceEditButtonsCommand(sublime_plugin.WindowCommand):
+class LspConcludeWorkspaceEditPanelCommand(sublime_plugin.WindowCommand):
 
-    def run(self) -> None:
-        wm = windows.lookup(self.window)
-        if not wm:
-            return
-        if wm.panel_manager:
+    def run(self, window_id: int, accept: bool) -> None:
+        resolver = g_workspace_edit_panel_resolvers.pop(window_id, None)
+        if resolver:
+            resolver(accept)
+        if (wm := windows.lookup(self.window)) and wm.panel_manager:
             wm.panel_manager.update_workspace_edit_panel_buttons([])

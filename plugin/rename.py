@@ -17,6 +17,7 @@ from typing import cast
 from typing_extensions import TypeGuard
 import sublime
 import sublime_plugin
+import weakref
 
 
 PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
@@ -133,8 +134,16 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def _on_rename_result_async(self, session: Session, label: str, response: WorkspaceEdit | None) -> None:
         if not response:
-            return session.window.status_message('Nothing to rename')
-        prompt_for_workspace_edits(session, response, label=label)
+            session.window.status_message('Nothing to rename')
+            return
+        prompt_for_workspace_edits(session, response, label=label) \
+            .then(partial(self.on_prompt_for_workspace_edits_concluded, weakref.ref(session), response))
+
+    def on_prompt_for_workspace_edits_concluded(
+        self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
+    ) -> None:
+        if accepted and (session := weak_session()):
+            session.apply_workspace_edit_async(response, is_refactoring=True)
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:

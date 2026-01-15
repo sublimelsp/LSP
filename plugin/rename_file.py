@@ -50,6 +50,10 @@ class LspRenamePathInputArgs(TypedDict):
 class LspRenamePathCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
 
+    @staticmethod
+    def is_case_change(path_a: str, path_b: str) -> bool:
+        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
+
     def is_enabled(self) -> bool:
         return True
 
@@ -87,13 +91,13 @@ class LspRenamePathCommand(LspWindowCommand):
             "oldUri": filename_to_uri(old_path)
         }
         if prompt_workspace_edits:
-            rename_command: tuple[str, dict[str, Any]] = ("lsp_rename_path", {
+            rename_command_args: dict[str, Any] = {
                 "paths": [old_path],
                 "new_name": new_path,
                 "prompt_workspace_edits": False
-            })
+            }
             label = f"Rename {Path(old_path).name} -> {new_name}"
-            sublime.set_timeout_async(lambda: self.prompt_rename_async(file_rename, label, rename_command))
+            sublime.set_timeout_async(lambda: self.prompt_rename_async(file_rename, label, rename_command_args))
             return
         self.rename_path(old_path, new_name).then(lambda success: self.on_rename_path(success, file_rename))
 
@@ -101,15 +105,9 @@ class LspRenamePathCommand(LspWindowCommand):
         if success:
             self.notify_did_rename(file_rename)
 
-    @staticmethod
-    def is_case_change(path_a: str, path_b: str) -> bool:
-        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
-
-    def prompt_rename_async(
-        self, file_rename: FileRename, label: str, rename_command: tuple[str, dict[str, Any]]
-    ) -> None:
+    def prompt_rename_async(self, file_rename: FileRename, label: str, rename_command_args: dict[str, Any]) -> None:
         Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
-            .then(lambda responses: self.handle_rename_async(responses, label, rename_command))
+            .then(lambda responses: self.handle_rename_async(responses, label, rename_command_args))
 
     def create_will_rename_requests_async(
         self, file_rename: FileRename
@@ -121,12 +119,22 @@ class LspRenamePathCommand(LspWindowCommand):
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
     def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
-                            label: str, rename_command: tuple[str, dict[str, Any]]) -> None:
+                            label: str, rename_command_args: dict[str, Any]) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                return prompt_for_workspace_edits(session, response, label=label, accept_command=rename_command)
+                prompt_for_workspace_edits(session, response, label=label) \
+                    .then(partial(self.on_prompt_for_workspace_edits_concluded, weak_session, response, label)) \
+                    .then(lambda _: self.window.run_command('lsp_rename_path', rename_command_args))
+                return
         # Ensure file rename even if all WorkspaceEdit responses are empty
-        self.window.run_command(*rename_command)
+        self.window.run_command('lsp_rename_path', rename_command_args)
+
+    def on_prompt_for_workspace_edits_concluded(
+        self, weak_session: weakref.ref[Session], response: WorkspaceEdit, label: str, accepted: bool,
+    ) -> Promise[None]:
+        if accepted and (session := weak_session()):
+            return session.apply_workspace_edit_async(response, label=label, is_refactoring=True).then(lambda _: None)
+        return Promise.resolve(None)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:
         old_path = Path(old)

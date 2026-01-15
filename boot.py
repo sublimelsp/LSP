@@ -42,7 +42,7 @@ from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.edit import LspApplyWorkspaceEditCommand
-from .plugin.edit import LspHideWorkspaceEditButtonsCommand
+from .plugin.edit import LspConcludeWorkspaceEditPanelCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.folding_range import LspFoldAllCommand
 from .plugin.folding_range import LspFoldCommand
@@ -102,6 +102,7 @@ __all__ = (
     "LspCollapseTreeItemCommand",
     "LspColorPresentationCommand",
     "LspCommitCompletionWithOppositeInsertMode",
+    "LspConcludeWorkspaceEditPanelCommand",
     "LspCopyTextCommand",
     "LspCopyToClipboardFromBase64Command",
     "LspDisableLanguageServerGloballyCommand",
@@ -120,7 +121,6 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
-    "LspHideWorkspaceEditButtonsCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",

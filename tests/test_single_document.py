@@ -391,7 +391,7 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
             ]
         })
         yield from self.await_message('textDocument/didChange')
-        # yield from self.await_message('textDocument/didSave')  # TODO why is this not sent?
+        yield from self.await_message('textDocument/didSave')
         yield from self.await_message('textDocument/didClose')
 
 

@@ -1,11 +1,11 @@
 from __future__ import annotations
-from .edit import prompt_for_workspace_edits
 from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
+from .edit import prompt_for_workspace_edits
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict

@@ -8,7 +8,8 @@ from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
+from typing_extensions import NotRequired
 import sublime
 import sublime_plugin
 import weakref

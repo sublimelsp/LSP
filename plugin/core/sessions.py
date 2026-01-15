@@ -1716,10 +1716,10 @@ class Session(TransportCallbacks):
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise[None]:
+    ) -> Promise[LSPAny | Error]:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task: PackagedTask[None] = Promise.packaged_task()
+            task: PackagedTask[LSPAny | Error] = Promise.packaged_task()
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
@@ -1765,7 +1765,7 @@ class Session(TransportCallbacks):
 
     def run_code_action_async(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> Promise:
+    ) -> Promise[None]:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast(Command, code_action)
@@ -1775,7 +1775,8 @@ class Session(TransportCallbacks):
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
             is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
+            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring) \
+                .then(lambda _: None)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1931,8 +1932,10 @@ class Session(TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise.then(lambda _: self.execute_command(execute_command, progress=False, view=view,
-                                                               is_refactoring=is_refactoring))
+            return promise \
+                .then(lambda _: self.execute_command(execute_command, progress=False, view=view,
+                                                     is_refactoring=is_refactoring)) \
+                .then(lambda _: None)
         return promise
 
     def apply_workspace_edit_async(

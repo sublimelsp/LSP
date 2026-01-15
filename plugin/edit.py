@@ -162,12 +162,14 @@ def prompt_for_workspace_edits(
             .then(lambda _: session.window.run_command(*(accept_command or ('noop', {}))))
 
     if file_count <= 1:
-        return apply_changes()
+        apply_changes()
+        return
     total_changes = sum(len(value[0]) for value in changes.values())
     message = f"Apply {total_changes} changes across {file_count} files?"
     choice = sublime.yes_no_cancel_dialog(message, "Rename", "Preview", title=label)
     if choice == sublime.DialogResult.YES:
-        return apply_changes()
+        apply_changes()
+        return
     if choice == sublime.DialogResult.NO:
         _render_workspace_edit_panel(session, response, changes, label, total_changes, file_count, accept_command)
 

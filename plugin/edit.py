@@ -27,6 +27,39 @@ TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
 # Workspace edit panel resolvers keyed on Window ID.
 g_workspace_edit_panel_resolvers: dict[int, Callable[[bool], None]] = {}
 
+BUTTONS_TEMPLATE = """
+<style>
+    html {{
+        background-color: transparent;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }}
+    a {{
+        line-height: 1.6rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #fff4;
+        border-radius: 4px;
+        color: #cccccc;
+        background-color: #3f3f3f;
+        text-decoration: none;
+    }}
+    html.light a {{
+        border-color: #000a;
+        color: white;
+        background-color: #636363;
+    }}
+    a.primary, html.light a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
+    }}
+</style>
+<body id='lsp-buttons'>
+    <a href='{apply}' class='primary'>Apply</a>&nbsp;
+    <a href='{discard}'>Discard</a>
+</body>"""
+
 
 @contextmanager
 def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generator[None, None, None]:
@@ -170,40 +203,6 @@ def prompt_for_workspace_edits(session: Session, response: WorkspaceEdit, label:
         _render_workspace_edit_panel(session, changes, label, total_changes, file_count, resolve)
         return promise
     return Promise.resolve(False)
-
-
-BUTTONS_TEMPLATE = """
-<style>
-    html {{
-        background-color: transparent;
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
-    }}
-    a {{
-        line-height: 1.6rem;
-        padding-left: 0.6rem;
-        padding-right: 0.6rem;
-        border-width: 1px;
-        border-style: solid;
-        border-color: #fff4;
-        border-radius: 4px;
-        color: #cccccc;
-        background-color: #3f3f3f;
-        text-decoration: none;
-    }}
-    html.light a {{
-        border-color: #000a;
-        color: white;
-        background-color: #636363;
-    }}
-    a.primary, html.light a.primary {{
-        background-color: color(var(--accent) min-contrast(white 6.0));
-    }}
-</style>
-<body id='lsp-buttons'>
-    <a href='{apply}' class='primary'>Apply</a>&nbsp;
-    <a href='{discard}'>Discard</a>
-</body>"""
 
 
 def _render_workspace_edit_panel(

@@ -125,18 +125,19 @@ class LspRenamePathCommand(LspWindowCommand):
             if (session := weak_session()) and response:
                 prompt_for_workspace_edits(session, response, label=label) \
                     .then(partial(self.on_prompt_for_workspace_edits_concluded, weak_session, response, label)) \
-                    .then(lambda _: self.window.run_command('lsp_rename_path', rename_command_args))
+                    .then(lambda accepted: accepted and self.window.run_command('lsp_rename_path', rename_command_args))
                 return
         # Ensure file rename even if all WorkspaceEdit responses are empty
         self.window.run_command('lsp_rename_path', rename_command_args)
 
     def on_prompt_for_workspace_edits_concluded(
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, label: str, accepted: bool,
-    ) -> Promise[None]:
+    ) -> Promise[bool]:
         if accepted and (session := weak_session()):
             return session.apply_workspace_edit_async(response, label=label, is_refactoring=True) \
-                .then(lambda summary: show_summary_message(session.window, summary))
-        return Promise.resolve(None)
+                .then(lambda summary: show_summary_message(session.window, summary)) \
+                .then(lambda _: accepted)
+        return Promise.resolve(False)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:
         old_path = Path(old)

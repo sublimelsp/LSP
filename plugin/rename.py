@@ -4,6 +4,7 @@ from ..protocol import PrepareRenameResult
 from ..protocol import Range
 from ..protocol import RenameParams
 from ..protocol import WorkspaceEdit
+from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
@@ -143,7 +144,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, accepted: bool
     ) -> None:
         if accepted and (session := weak_session()):
-            session.apply_workspace_edit_async(response, is_refactoring=True)
+            session.apply_workspace_edit_async(response, is_refactoring=True) \
+                .then(lambda summary: show_summary_message(session.window, summary))
 
     def _on_prepare_result(self, pos: int, session_name: str | None, response: PrepareRenameResult | None) -> None:
         if response is None:

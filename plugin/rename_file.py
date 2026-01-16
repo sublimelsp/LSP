@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .core.edit import show_summary_message
 from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Notification, Request
@@ -133,7 +134,8 @@ class LspRenamePathCommand(LspWindowCommand):
         self, weak_session: weakref.ref[Session], response: WorkspaceEdit, label: str, accepted: bool,
     ) -> Promise[None]:
         if accepted and (session := weak_session()):
-            return session.apply_workspace_edit_async(response, label=label, is_refactoring=True).then(lambda _: None)
+            return session.apply_workspace_edit_async(response, label=label, is_refactoring=True) \
+                .then(lambda summary: show_summary_message(session.window, summary))
         return Promise.resolve(None)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:

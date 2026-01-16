@@ -1,5 +1,6 @@
 from __future__ import annotations
-from ...protocol import ApplyWorkspaceEditParams
+from ...protocol import ApplyWorkspaceEditParams, CreateFile, DeleteFile, RenameFile
+from ...protocol import ResourceOperationKind
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
@@ -506,7 +507,12 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
-            }
+            },
+            "resourceOperations": cast(List[ResourceOperationKind], [
+                ResourceOperationKind.Create.value,
+                ResourceOperationKind.Rename.value,
+                ResourceOperationKind.Delete.value
+            ])
         },
         "workspaceFolders": True,
         "symbol": {
@@ -1953,7 +1959,7 @@ class Session(TransportCallbacks):
     ) -> Promise[WorkspaceEditSummary]:
 
         def handle_view(
-            edits: list[TextEdit],
+            edits: list[TextEdit | CreateFile | RenameFile | DeleteFile],
             label: str | None,
             view_version: int | None,
             uri: str,

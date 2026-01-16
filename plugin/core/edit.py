@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ...protocol import AnnotatedTextEdit
+from ...protocol import AnnotatedTextEdit, CreateFile, DeleteFile, RenameFile
 from ...protocol import Position
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
@@ -11,7 +11,7 @@ from typing_extensions import NotRequired
 import sublime
 
 
-WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[str], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, CreateFile, RenameFile, DeleteFile]], Optional[str], Optional[int]]]
 
 
 class WorkspaceEditSummary(TypedDict):
@@ -29,8 +29,8 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
         change_annotations = workspace_edit.get('changeAnnotations', {})
         for document_change in document_changes:
             if 'kind' in document_change:
-                # TODO: Support resource operations (create/rename/remove)
-                debug('Ignoring unsupported "resourceOperations" edit type')
+                uri = document_change.get('oldUri') if document_change['kind'] == 'rename' else document_change.get('uri')
+                changes.setdefault(uri, ([], document_change.get('annotationId', label), None))[0].append(document_change)
                 continue
             text_document = document_change["textDocument"]
             uri = text_document['uri']
@@ -59,7 +59,7 @@ def parse_range(range: Position) -> tuple[int, int]:
 
 def apply_text_edits(
     view: sublime.View,
-    edits: list[TextEdit] | None,
+    edits:  list[TextEdit] | list[TextEdit | CreateFile | RenameFile | DeleteFile] | None,
     *,
     label: str | None = None,
     process_placeholders: bool | None = False,

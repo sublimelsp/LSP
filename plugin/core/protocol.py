@@ -270,6 +270,10 @@ class Notification:
         return Notification("workspace/didChangeWorkspaceFolders", params)
 
     @classmethod
+    def didCreateFiles(cls, params: CreateFilesParams) -> Notification:
+        return Notification("workspace/didCreateFiles", params)
+
+    @classmethod
     def exit(cls) -> Notification:
         return Notification("exit")
 

@@ -1,9 +1,16 @@
 from __future__ import annotations
-from ..protocol import TextEdit
+from ast import Delete, List
+from pathlib import Path
+import shutil
+
+from .core.protocol import Notification
+
+from .core.url import parse_uri
+from ..protocol import CreateFile, CreateFilesParams, DeleteFile, RenameFile, TextEdit
 from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
 from .core.logging import debug
-from .core.registry import LspWindowCommand
+from .core.registry import LspTextCommand, LspWindowCommand
 from contextlib import contextmanager
 from typing import Any, Generator, Iterable, Tuple
 import operator
@@ -40,8 +47,11 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
 
 
-class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
+class LspApplyDocumentEditCommand(LspTextCommand):
     re_placeholder = re.compile(r'\$(0|\{0:([^}]*)\})')
+
+    def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
+        return True
 
     def description(self, **kwargs: dict[str, Any]) -> str | None:
         return kwargs.get('label')  # pyright: ignore[reportReturnType]
@@ -49,7 +59,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(
         self,
         edit: sublime.Edit,
-        changes: list[TextEdit],
+        changes: list[TextEdit | CreateFile | RenameFile | DeleteFile],
         label: str | None = None,
         required_view_version: int | None = None,
         process_placeholders: bool = False,
@@ -62,11 +72,81 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         if required_view_version is not None and required_view_version != view_version:
             print('LSP: ignoring edit due to non-matching document version')
             return
-        edits = [_parse_text_edit(change) for change in changes or []]
+
+        edits: list[TextEditTuple | CreateFile | RenameFile | DeleteFile] = []
+        for change in changes:
+            if 'kind' in change:
+                edits.append(change)
+                continue
+            edits.append(_parse_text_edit(change))
         with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
             last_row, _ = self.view.rowcol_utf16(self.view.size())
             placeholder_region_count = 0
-            for start, end, replacement in reversed(_sort_by_application_order(edits)):
+            for e in edits:
+                if not isinstance(e, tuple):
+                    try:
+                        if e['kind'] == 'create':
+                            options = e.get('options', {})
+                            _, file_name = parse_uri(e['uri'])
+                            new_file = Path(file_name)
+                            if new_file.exists():
+                                if options.get('overwrite'):
+                                    # Delete existing file/folder to "overwrite"
+                                    if new_file.is_dir():
+                                        shutil.rmtree(new_file)
+                                    else:
+                                        new_file.unlink()
+                                elif options.get('ignoreIfExists'):
+                                    continue
+                                else:
+                                    raise FileExistsError(f"File already exists: {new_file}")
+                            # Ensure parent directories exist
+                            new_file.parent.mkdir(parents=True, exist_ok=True)
+                            new_file.touch()
+                            params: CreateFilesParams = {
+                                'files': [{'uri': e['uri']}]
+                            }
+                            print('ee', list(self.sessions()))
+                            for s in self.sessions():
+                                print('ovde')
+                                s.send_notification(Notification.didCreateFiles(params))
+                        elif e['kind'] == 'rename':
+                            options = e.get('options', {})
+                            _, old_path_str = parse_uri(e['oldUri'])
+                            _, new_path_str = parse_uri(e['newUri'])
+                            old_path, new_path = Path(old_path_str), Path(new_path_str)
+                            if new_path.exists():
+                                if options.get('overwrite'):
+                                    if new_path.is_dir():
+                                        shutil.rmtree(new_path)
+                                    else:
+                                        new_path.unlink()
+                                elif options.get('ignoreIfExists'):
+                                    continue
+                                else:
+                                    raise FileExistsError(f"Target already exists: {new_path}")
+                            if old_path.exists():
+                                old_path.rename(new_path)
+                        elif e['kind'] == 'delete':
+                            options = e.get('options', {})
+                            _, path_str = parse_uri(e['uri'])
+                            delete_path = Path(path_str)
+                            if not delete_path.exists():
+                                if options.get('ignoreIfNotExists'):
+                                    continue
+                                else:
+                                    raise FileNotFoundError(f"File not found: {delete_path}")
+                            if delete_path.is_dir():
+                                if options.get('recursive'):
+                                    shutil.rmtree(delete_path)
+                                else:
+                                    delete_path.rmdir()  # Fails if directory is not empty
+                            else:
+                                delete_path.unlink()
+                    except Exception as e:
+                        self.view.window().status_message(str(e))
+                    continue
+                start, end, replacement = e
                 placeholder_region: tuple[tuple[int, int], tuple[int, int]] | None = None
                 if process_placeholders and replacement:
                     if parsed := self.parse_snippet(replacement):

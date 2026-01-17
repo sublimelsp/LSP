@@ -2240,7 +2240,7 @@ class Session(TransportCallbacks):
         self.handle_diagnostics(params['uri'], None, params.get('version'), params['diagnostics'])
 
     def handle_diagnostics(
-        self, uri: DocumentUri, identifier: str | None, version: int | None, diagnostics: list[Diagnostic]
+        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
     ) -> None:
         mgr = self.manager()
         if not mgr:

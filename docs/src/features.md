@@ -130,6 +130,8 @@ Some language servers provide _global_ rename functionality as well. This packag
 
 Some language servers support updating imports on file rename.
 
+<video src="https://github.com/user-attachments/assets/573ebf9e-61b3-4db5-bef8-8e597126bead" controls></video>
+
 ## Code Actions
 
 [Example GIF 1](https://user-images.githubusercontent.com/6579999/128551838-293d8cae-55b6-41e8-aea6-eb6b2b81e4ff.gif)

@@ -1361,7 +1361,6 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self._diagnostic_providers: dict[str | None, DiagnosticOptions] = {}
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
@@ -1550,9 +1549,6 @@ class Session(TransportCallbacks):
         if self.config.is_disabled_capability(capability):
             return None
         return self.capabilities.get(capability)
-
-    def get_diagnostic_identifiers(self) -> set[str | None]:
-        return set(diagnostic_options.get('identifier') for diagnostic_options in self._diagnostic_providers.values())
 
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open()

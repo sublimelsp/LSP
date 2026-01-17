@@ -2,8 +2,10 @@ from __future__ import annotations
 from ...protocol import Diagnostic
 from ...protocol import Location
 from ...protocol import LocationLink
+from .logging import debug
 from .sessions import AbstractViewListener
 from .sessions import Session
+from .url import parse_uri
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
 from .views import MissingUriError
@@ -12,7 +14,7 @@ from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
-from typing import Any, Generator, Iterable
+from typing import Generator, Iterable
 import operator
 import sublime
 import sublime_plugin
@@ -201,7 +203,7 @@ class LspOpenLocationCommand(LspWindowCommand):
 
 class LspRestartServerCommand(LspTextCommand):
 
-    def run(self, edit: Any, config_name: str | None = None) -> None:
+    def run(self, edit: sublime.Edit, config_name: str | None = None) -> None:
         wm = windows.lookup(self.view.window())
         if not wm:
             return
@@ -224,6 +226,37 @@ class LspRestartServerCommand(LspTextCommand):
             wm.restart_sessions_async([self._config_names[index]])
 
         sublime.set_timeout_async(run_async)
+
+
+class LspCheckApplicableCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit: sublime.Edit, session_name: str) -> None:
+        sublime.set_timeout_async(lambda: self._run_async(session_name))
+
+    def _run_async(self, session_name: str) -> None:
+        if wm := windows.lookup(self.view.window()):
+            config = wm.get_config_manager().get_config(session_name)
+            if not config:
+                debug(f'Configuration with name {session_name} does not exist')
+                return
+            listener = windows.listener_for_view(self.view)
+            if not listener:
+                debug(f'No listener for view {self.view}')
+                return
+            scheme, _ = parse_uri(uri_from_view(self.view))
+            is_applicable = config.match_view(self.view, scheme)
+            if session := wm.get_session(session_name, self.view.file_name() or ''):
+                session_view = session.session_view_for_view_async(self.view)
+                if is_applicable and not session_view:
+                    listener.on_session_initialized_async(session)
+                elif not is_applicable and session_view:
+                    session.shutdown_session_view_async(session_view)
+            elif is_applicable:
+                wm.start_async(config, self.view)
+                if wm._new_session:
+                    wm._sessions.add(wm._new_session)
+                    listener.on_session_initialized_async(wm._new_session)
+                    wm._new_session = None
 
 
 def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:

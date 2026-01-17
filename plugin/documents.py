@@ -225,7 +225,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._cleanup()
         self._setup()
         # But this has to run on the async thread again
+        sublime.set_timeout_async(self._clear_diagnostics_identifiers_cache_async)
         sublime.set_timeout_async(self.on_activated_async)
+
+    def _clear_diagnostics_identifiers_cache_async(self) -> None:
+        for session in self.sessions_async():
+            session.diagnostics.get_identifiers.cache_clear()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 

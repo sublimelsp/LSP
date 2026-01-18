@@ -48,11 +48,11 @@ from .plugin.folding_range import LspFoldCommand
 from .plugin.formatting import LspFormatCommand
 from .plugin.formatting import LspFormatDocumentCommand
 from .plugin.formatting import LspFormatDocumentRangeCommand
+from .plugin.goto import LspGotoDiagnosticCommand
 from .plugin.goto import LspSymbolDeclarationCommand
 from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
-from .plugin.goto_diagnostic import LspGotoDiagnosticCommand
 from .plugin.hierarchy import LspCallHierarchyCommand
 from .plugin.hierarchy import LspHierarchyToggleCommand
 from .plugin.hierarchy import LspTypeHierarchyCommand

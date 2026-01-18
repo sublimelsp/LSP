@@ -17,8 +17,7 @@ Refer to the [Customization section](customization.md#keyboard-shortcuts-key-bin
 | Format Selection | unbound | `lsp_format_document_range`
 | Goto Declaration | unbound | `lsp_symbol_declaration`
 | Goto Definition | unbound<br>suggested: <kbd>f12</kbd> | `lsp_symbol_definition`
-| Goto Diagnostic | unbound<br>suggested: <kbd>f8</kbd> | `lsp_goto_diagnostic`<br>With args: `{"uri": "$view_uri"}`.
-| Goto Diagnostic in Project | unbound<br>suggested: <kbd>shift</kbd> <kbd>f8</kbd> | `lsp_goto_diagnostic`
+| Goto Diagnostic | unbound<br>suggested: <kbd>f8</kbd> | `lsp_goto_diagnostic`.
 | Goto Implementation | unbound | `lsp_symbol_implementation`
 | Goto Symbol in Project | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>shift</kbd> <kbd>r</kbd> | `lsp_workspace_symbols`
 | Goto Symbol | unbound<br>suggested: <kbd>ctrl</kbd> <kbd>r</kbd> | `lsp_document_symbols`

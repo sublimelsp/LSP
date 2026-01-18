@@ -52,6 +52,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
+from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from functools import partial
 from typing import Any, Callable, Iterable, List
@@ -553,7 +554,7 @@ class SessionBuffer:
             return
         if version < view.change_count():
             return
-        for identifier in self.session.diagnostics.get_identifiers(view):
+        for identifier in get_diagnostics_identifiers(self.session, view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
 
     def _do_document_diagnostic_async(

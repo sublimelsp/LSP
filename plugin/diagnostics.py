@@ -13,12 +13,22 @@ from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
 from functools import lru_cache
+from typing import TYPE_CHECKING
 from typing import Union
 import itertools
 import sublime
 
 
+if TYPE_CHECKING:
+    from .core.sessions import Session
+
+
 DiagnosticsIdentifier = Union[str, None]
+
+
+@lru_cache
+def get_diagnostics_identifiers(session: Session, view: sublime.View) -> set[DiagnosticsIdentifier]:
+    return session.diagnostics.get_identifiers(view)
 
 
 class DiagnosticsStorage:
@@ -30,7 +40,6 @@ class DiagnosticsStorage:
         self._diagnostics: dict[DocumentUri, dict[DiagnosticsIdentifier, list[Diagnostic]]] = {}
         self.token_identifier_map: dict[str, DiagnosticsIdentifier] = {}  # maps identifiers to partial result tokens
 
-    @lru_cache
     def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
         return set(
             diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
@@ -46,7 +55,7 @@ class DiagnosticsStorage:
         self._workspace_diagnostics_identifiers = set(
             options.get('identifier') for options in self._providers.values() if options['workspaceDiagnostics']
         )
-        self.get_identifiers.cache_clear()
+        get_diagnostics_identifiers.cache_clear()
 
     def register_provider(
         self, registration_id: str | None, options: DiagnosticOptions | DiagnosticRegistrationOptions

@@ -582,6 +582,7 @@ class SessionBuffer:
     def _on_document_diagnostic_async(
         self, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
     ) -> None:
+        self._diagnostics_versions[identifier] = version
         self._document_diagnostic_pending_requests[identifier] = None
         self._if_view_unchanged(self._apply_document_diagnostic_async, version)(identifier, response)
 

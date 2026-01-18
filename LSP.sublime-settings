@@ -342,6 +342,15 @@
   //     //     If the server supports `diagnosticProvider.workspaceDiagnostics`,
   //     //     diagnostics are requested for all files in the project folders.
   //     "diagnostics_mode": "open_files",
+  //
+  //     // Map the paths of URIs in the data exchanged between the server and the client.
+  //     //
+  //     // WARNING: Due to its working principle of modifying the interaction data between
+  //     // the client and the server, it cannot identify the source of the content in the 
+  //     // data. If your code file happens to start with a URI and meets the mapping conditions,
+  //     // it may inadvertently send incorrect messages to the server. However, such situations 
+  //     // should be virtually nonexistent.
+  //     "path_maps": [ {"local": "file:///C:", "remote": "file:///mnt/c"} ]
   //   }
   // }
   "clients": {},

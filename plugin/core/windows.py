@@ -20,6 +20,7 @@ from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
 from .protocol import Error
+from .protocol import Point
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -33,6 +34,7 @@ from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import parse_uri
+from .views import diagnostic_severity
 from .views import extract_variables
 from .views import format_diagnostic_for_panel
 from .views import make_link
@@ -465,10 +467,13 @@ class WindowManager(Manager, WindowConfigChangeListener):
             for uri, diagnostics in session.diagnostics.get_diagnostics(max_severity).items():
                 contributions.setdefault(uri, []).extend(diagnostics)
         for uri, diagnostics in contributions.items():
+            if not diagnostics:
+                continue
             _, path = parse_uri(uri)
             to_render.append(f"{path}:")
             row += 1
-            for diagnostic in diagnostics:
+            for diagnostic in sorted(
+                    diagnostics, key=lambda d: (Point.from_lsp(d['range']['start']), diagnostic_severity(d))):
                 content, offset, code, href = format_diagnostic_for_panel(diagnostic)
                 to_render.append(content)
                 if offset is not None and code is not None and href is not None:

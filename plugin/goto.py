@@ -246,7 +246,9 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
                     'session_name': session.config.name,
                     'diagnostic': diagnostic
                 } for diagnostic in session.diagnostics.get_diagnostics_for_uri(uri, self._max_severity))
-            diagnostics.sort(key=lambda d: Point.from_lsp(d['diagnostic']['range']['start']))
+            diagnostics.sort(
+                key=lambda d: (Point.from_lsp(d['diagnostic']['range']['start']), diagnostic_severity(d['diagnostic']))
+            )
             return DiagnosticInputHandler(self.window, self.view, self.sessions, uri, diagnostics)
         return None
 

@@ -2,17 +2,63 @@ from __future__ import annotations
 from ..protocol import TextEdit
 from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
+from .core.edit import parse_workspace_edit
+from .core.edit import WorkspaceChanges
 from .core.logging import debug
+from .core.panels import PanelName
+from .core.promise import Promise
 from .core.registry import LspWindowCommand
+from .core.registry import windows
+from .core.url import parse_uri
+from .core.views import get_line
+from .core.windows import WindowManager
 from contextlib import contextmanager
-from typing import Any, Generator, Iterable, Tuple
+from typing import Any, Callable, Generator, Iterable, Tuple, TYPE_CHECKING
 import operator
+import os
 import re
 import sublime
 import sublime_plugin
-
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
+
+# Workspace edit panel resolvers keyed on Window ID.
+g_workspace_edit_panel_resolvers: dict[int, Callable[[bool], None]] = {}
+
+BUTTONS_TEMPLATE = """
+<style>
+    html {{
+        background-color: transparent;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }}
+    a {{
+        line-height: 1.6rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #fff4;
+        border-radius: 4px;
+        color: #cccccc;
+        background-color: #3f3f3f;
+        text-decoration: none;
+    }}
+    html.light a {{
+        border-color: #000a;
+        color: white;
+        background-color: #636363;
+    }}
+    a.primary, html.light a.primary {{
+        background-color: color(var(--accent) min-contrast(white 6.0));
+    }}
+</style>
+<body id='lsp-buttons'>
+    <a href='{apply}' class='primary'>Apply</a>&nbsp;
+    <a href='{discard}'>Discard</a>
+</body>"""
 
 
 @contextmanager
@@ -140,3 +186,148 @@ def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> list[TextEdi
     # we use the index in the array as the key.
 
     return list(sorted(changes, key=operator.itemgetter(0)))
+
+
+def prompt_for_workspace_edits(session: Session, response: WorkspaceEdit, label: str) -> Promise[bool]:
+    changes = parse_workspace_edit(response, label)
+    file_count = len(changes)
+    if file_count <= 1:
+        return Promise.resolve(True)
+    total_changes = sum(len(value[0]) for value in changes.values())
+    message = f"Apply {total_changes} changes across {file_count} files?"
+    choice = sublime.yes_no_cancel_dialog(message, "Rename", "Preview", title=label)
+    if choice == sublime.DialogResult.YES:
+        return Promise.resolve(True)
+    if choice == sublime.DialogResult.NO:
+        promise, resolve = Promise[bool].packaged_task()
+        _render_workspace_edit_panel(session, changes, label, total_changes, file_count, resolve)
+        return promise
+    return Promise.resolve(False)
+
+
+def _render_workspace_edit_panel(
+    session: Session,
+    changes_per_uri: WorkspaceChanges,
+    label: str,
+    total_changes: int,
+    file_count: int,
+    on_done: Callable[[bool], None]
+) -> None:
+    def _get_relative_path(wm: WindowManager, file_path: str) -> str:
+        base_dir = wm.get_project_path(file_path)
+        return os.path.relpath(file_path, base_dir) if base_dir else file_path
+
+    wm = windows.lookup(session.window)
+    if not wm:
+        on_done(False)
+        return
+    pm = wm.panel_manager
+    if not pm:
+        on_done(False)
+        return
+    panel = pm.ensure_workspace_edit_panel()
+    if not panel:
+        on_done(False)
+        return
+    to_render: list[str] = []
+    reference_document: list[str] = []
+    header_lines = f"{total_changes} changes across {file_count} files - {label}\n"
+    to_render.append(header_lines)
+    reference_document.append(header_lines)
+    ROWCOL_PREFIX = " {:>4}:{:<4} {}"
+    for uri, (changes, _, _) in changes_per_uri.items():
+        scheme, file = parse_uri(uri)
+        filename_line = '{}:'.format(_get_relative_path(wm, file) if scheme == 'file' else uri)
+        to_render.append(filename_line)
+        reference_document.append(filename_line)
+        for edit in changes:
+            start_row, start_col_utf16 = parse_range(edit['range']['start'])
+            line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
+                '<no preview available>'
+            start_col = utf16_to_code_points(line_content, start_col_utf16)
+            original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
+            reference_document.append(original_line)
+            if scheme == "file" and line_content:
+                end_row, end_col_utf16 = parse_range(edit['range']['end'])
+                new_text_rows = edit['newText'].split('\n')
+                new_line_content = line_content[:start_col] + new_text_rows[0]
+                if start_row == end_row and len(new_text_rows) == 1:
+                    end_col = start_col if end_col_utf16 <= start_col_utf16 else \
+                        utf16_to_code_points(line_content, end_col_utf16)
+                    if end_col < len(line_content):
+                        new_line_content += line_content[end_col:]
+                to_render.append(
+                    ROWCOL_PREFIX.format(start_row + 1, start_col + 1, new_line_content.strip() + "\n"))
+            else:
+                to_render.append(original_line)
+    first_uri = next(iter(changes_per_uri))
+    base_dir = wm.get_project_path(parse_uri(first_uri)[1]) if first_uri else None
+    if base_dir:
+        panel.settings().set("result_base_dir", base_dir)
+    characters = "\n".join(to_render)
+    panel.run_command("lsp_clear_panel")
+    # Ensure window's potential unresolved panel is concluded.
+    wm.window.run_command('lsp_conclude_workspace_edit_panel', {'window_id': wm.window.id(), 'accept': False})
+    wm.window.run_command("show_panel", {"panel": f"output.{PanelName.WorkspaceEdit}"})
+    panel.run_command('append', {
+        'characters': characters,
+        'force': True,
+        'scroll_to_end': False
+    })
+    panel.set_reference_document("\n".join(reference_document))
+    selection = panel.sel()
+    selection.add(sublime.Region(0, panel.size()))
+    is_inline_diff_active = panel.settings().get('workspace_edit.is_inline_diff_active')
+    if not is_inline_diff_active:
+        panel.run_command('toggle_inline_diff')
+        panel.settings().set('workspace_edit.is_inline_diff_active', True)
+    selection.clear()
+    g_workspace_edit_panel_resolvers[wm.window.id()] = on_done
+    buttons_html = BUTTONS_TEMPLATE.format(
+        apply=sublime.command_url('chain', {
+            'commands': [
+                ['hide_panel', {}],
+                ['lsp_conclude_workspace_edit_panel', {
+                    'window_id': wm.window.id(),
+                    'accept': True
+                }]
+            ]
+        }),
+        discard=sublime.command_url('chain', {
+            'commands': [
+                ['hide_panel', {}],
+                ['lsp_conclude_workspace_edit_panel', {
+                    'window_id': wm.window.id(),
+                    'accept': False
+                }]
+            ]
+        })
+    )
+    pm.update_workspace_edit_panel_buttons([
+        sublime.Phantom(sublime.Region(len(to_render[0]) - 1), buttons_html, sublime.PhantomLayout.BLOCK)
+    ])
+
+
+def utf16_to_code_points(s: str, col: int) -> int:
+    """Convert a position from UTF-16 code units to Unicode code points, usable for string slicing."""
+    utf16_len = 0
+    idx = 0
+    for idx, c in enumerate(s):
+        if utf16_len >= col:
+            if utf16_len > col:  # If col is in the middle of a character (emoji), don't advance to the next code point
+                idx -= 1
+            break
+        utf16_len += 1 if ord(c) < 65536 else 2
+    else:
+        idx += 1  # get_line function trims the trailing '\n'
+    return idx
+
+
+class LspConcludeWorkspaceEditPanelCommand(sublime_plugin.WindowCommand):
+
+    def run(self, window_id: int, accept: bool) -> None:
+        resolver = g_workspace_edit_panel_resolvers.pop(window_id, None)
+        if resolver:
+            resolver(accept)
+        if (wm := windows.lookup(self.window)) and wm.panel_manager:
+            wm.panel_manager.update_workspace_edit_panel_buttons([])

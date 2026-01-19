@@ -130,7 +130,7 @@ Some language servers provide _global_ rename functionality as well. This packag
 
 Some language servers support updating imports on file rename.
 
-<video src="/videos/file-rename.mp4" controls></video>
+<video src="./videos/file-rename.mp4" controls></video>
 
 ## Code Actions
 

@@ -730,21 +730,13 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
     return result, offset, code, href
 
 
-def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
-    formatted, code, href = diagnostic_source_and_code(diagnostic)
-    if href is None or code is None:
-        return formatted
-    return formatted + f"({code})"
-
-
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> tuple[str, str | None, str | None]:
     formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
     if code is not None:
         code = str(code)
-        code_description = diagnostic.get("codeDescription")
-        if code_description:
+        if code_description := diagnostic.get("codeDescription"):
             href = code_description["href"]
         else:
             formatted += f"({code})"

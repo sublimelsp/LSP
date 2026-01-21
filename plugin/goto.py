@@ -16,10 +16,11 @@ from .core.sessions import Session, method_to_capability
 from .core.settings import userprefs
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
-from .core.views import format_diagnostic_source_and_code
 from .core.views import get_symbol_kind_from_scope
+from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
+from .core.views import uri_from_view
 from .locationpicker import LocationPicker
 from .locationpicker import open_location_async
 from collections import Counter
@@ -185,13 +186,13 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
     def __init__(
         self,
         window: sublime.Window,
-        view: sublime.View,
+        initial_view: sublime.View,
         sessions: list[Session],
         initial_value: DocumentUri | None = None
     ) -> None:
         super().__init__(window, initial_value)
         self.window = window
-        self.view = view
+        self.initial_view = initial_view
         self.sessions = sessions
         self.uri: DocumentUri | None = None
         self._preview: sublime.View | None = None
@@ -225,15 +226,19 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
 
     def preview(self, value: DocumentUri | None) -> str:
         if value:
-            scheme, path = parse_uri(value)
-            if scheme == 'file':
-                self._preview = self.window.open_file(path, sublime.NewFileFlags.TRANSIENT)
+            for session in self.sessions:
+                if session_buffer := session.get_session_buffer_for_uri_async(value):
+                    self._preview = session_buffer.get_view_in_group()
+                    self.window.focus_view(self._preview)
+                    break
+            else:
+                scheme, path = parse_uri(value)
+                if scheme == 'file':
+                    self._preview = self.window.open_file(path, sublime.NewFileFlags.TRANSIENT)
         return ''
 
     def cancel(self) -> None:
-        if self._preview and (preview_sheet := self._preview.sheet()) and preview_sheet.is_transient():
-            self._preview.close()
-        self.window.focus_view(self.view)
+        _focus_initial_view(self.window, self.initial_view, self._preview)
 
     def confirm(self, value: DocumentUri | None) -> None:
         self.uri = value
@@ -249,7 +254,8 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
             diagnostics.sort(
                 key=lambda d: (Point.from_lsp(d['diagnostic']['range']['start']), diagnostic_severity(d['diagnostic']))
             )
-            return DiagnosticInputHandler(self.window, self.view, self.sessions, uri, diagnostics)
+            return DiagnosticInputHandler(
+                self.window, self.initial_view, self._preview, self.sessions, uri, diagnostics)
         return None
 
     def description(self, value: DocumentUri, text: str) -> str:
@@ -262,18 +268,20 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def __init__(
         self,
         window: sublime.Window,
-        view: sublime.View,
+        initial_view: sublime.View,
+        _preview: sublime.View | None,
         sessions: list[Session],
         uri: DocumentUri,
         diagnostics: list[DiagnosticData]
     ) -> None:
         super().__init__()
         self.window = window
-        self.view = view
+        self.initial_view = initial_view
+        self._preview = _preview
         self.sessions = sessions
         self.uri = uri
+        self._has_preview = self._preview is not None and uri_from_view(self._preview) == uri
         self.diagnostics = diagnostics
-        self._preview: sublime.View | None = None
 
     def name(self) -> str:
         return 'diagnostic'
@@ -285,37 +293,62 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             message = diagnostic['message'] or '…'
             severity = diagnostic_severity(diagnostic)
             text = f"{'_EWIH'[severity]}: {message.splitlines()[0]}"
-            line = str(diagnostic['range']['start']['line'] + 1)
+            value = cast(dict, diagnostic_data)
+            code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
-            items.append(sublime.ListInputItem(text, cast(dict, diagnostic_data), annotation=line, kind=kind))
+            items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))
         return items
 
-    def preview(self, value: DiagnosticData | None) -> str:
+    def preview(self, value: DiagnosticData | None) -> str | sublime.Html:
         if value:
-            if preview := self._open_file(value, transient=True):
-                self._preview = preview
-            return format_diagnostic_source_and_code(value['diagnostic'])
+            diagnostic = value['diagnostic']
+            if self.uri.startswith('file:'):
+                self._open_file(value, transient=True)
+            elif self._preview and self._has_preview:
+                self._preview.show_at_center(range_to_region(diagnostic['range'], self._preview))
+            source = diagnostic.get('source', '')
+            if code := str(diagnostic.get('code', '')):
+                if code_description := diagnostic.get('codeDescription'):
+                    href = code_description['href']
+                    return sublime.Html(
+                        f"{source}(<a href='{href}' title='{href}' style='color: var(--bluish)'>{code}</a>)")
+                return f"{source}({code})"
+            return source
         return ''
 
     def cancel(self) -> None:
-        if self._preview and (preview_sheet := self._preview.sheet()) and preview_sheet.is_transient():
-            self._preview.close()
-        self.window.focus_view(self.view)
+        _focus_initial_view(self.window, self.initial_view, self._preview)
 
     def confirm(self, value: DiagnosticData | None) -> None:
-        if value:
-            self._open_file(value)
+        if not value:
+            return
+        if self._has_preview:
+            return
+        if session := self._session(value):
+            location: Location = {'uri': self.uri, 'range': value['diagnostic']['range']}
+            sublime.set_timeout_async(partial(session.open_location_async, location))
+
+    def _session(self, value: DiagnosticData) -> Session | None:
+        session_name = value['session_name']
+        for session in self.sessions:
+            if session.config.name == session_name:
+                return session
+        return None
 
     def _open_file(self, value: DiagnosticData, *, transient: bool = False) -> sublime.View | None:
-        diagnostic = value['diagnostic']
-        for session in self.sessions:
-            if session.config.name == value['session_name']:
-                filename = to_encoded_filename(
-                    session.config.map_server_uri_to_client_path(self.uri),
-                    diagnostic['range']['start']
-                )
-                flags = sublime.NewFileFlags.ENCODED_POSITION
-                if transient:
-                    flags |= sublime.NewFileFlags.TRANSIENT
-                return self.window.open_file(filename, flags)
+        if session := self._session(value):
+            filename = to_encoded_filename(
+                session.config.map_server_uri_to_client_path(self.uri),
+                value['diagnostic']['range']['start']
+            )
+            flags = sublime.NewFileFlags.ENCODED_POSITION
+            if transient:
+                flags |= sublime.NewFileFlags.TRANSIENT
+            return self.window.open_file(filename, flags)
         return None
+
+
+def _focus_initial_view(window: sublime.Window, initial_view: sublime.View, preview: sublime.View | None) -> None:
+    if preview and (preview_sheet := preview.sheet()) and preview_sheet.is_transient():
+        preview.close()
+    window.focus_view(initial_view)

@@ -1,13 +1,16 @@
 from __future__ import annotations
+from .core.edit import show_summary_message
 from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
+from .edit import prompt_for_workspace_edits
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypedDict
+from typing_extensions import NotRequired
 import sublime
 import sublime_plugin
 import weakref
@@ -39,8 +42,18 @@ class RenamePathInputHandler(sublime_plugin.TextInputHandler):
         return len(path) > 0
 
 
+class LspRenamePathInputArgs(TypedDict):
+    paths: NotRequired[list[str]]
+    new_name: NotRequired[str]
+    prompt_workspace_edits: NotRequired[bool]
+
+
 class LspRenamePathCommand(LspWindowCommand):
     capability = 'workspace.fileOperations.willRename'
+
+    @staticmethod
+    def is_case_change(path_a: str, path_b: str) -> bool:
+        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
     def is_enabled(self) -> bool:
         return True
@@ -48,7 +61,7 @@ class LspRenamePathCommand(LspWindowCommand):
     def want_event(self) -> bool:
         return False
 
-    def input(self, args: dict) -> sublime_plugin.TextInputHandler | None:
+    def input(self, args: LspRenamePathInputArgs) -> sublime_plugin.TextInputHandler | None:
         if "new_name" in args:
             return None
         if paths := args.get('paths'):  # command was called from side bar context menu
@@ -57,7 +70,7 @@ class LspRenamePathCommand(LspWindowCommand):
             return RenamePathInputHandler(file_name)
         return RenamePathInputHandler("")
 
-    def run(self, new_name: str, paths: list[str] | None = None) -> None:
+    def run(self, new_name: str, paths: list[str] | None = None, prompt_workspace_edits: bool = True) -> None:
         old_path = paths[0] if paths else None
         view = self.window.active_view()
         if old_path is None and view:
@@ -74,21 +87,28 @@ class LspRenamePathCommand(LspWindowCommand):
         if resolved_new_path.exists() and not self.is_case_change(old_path, new_path):
             self.window.status_message('Rename error: Target already exists')
             return
-        sublime.set_timeout_async(lambda: self.run_async(old_path, new_path))
-
-    @staticmethod
-    def is_case_change(path_a: str, path_b: str) -> bool:
-        return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
-
-    def run_async(self, old_path: str, new_path: str) -> None:
         file_rename: FileRename = {
             "newUri": filename_to_uri(new_path),
             "oldUri": filename_to_uri(old_path)
         }
+        if prompt_workspace_edits:
+            rename_command_args: dict[str, Any] = {
+                "paths": [old_path],
+                "new_name": new_path,
+                "prompt_workspace_edits": False
+            }
+            label = f"Rename {Path(old_path).name} -> {new_name}"
+            sublime.set_timeout_async(lambda: self.prompt_rename_async(file_rename, label, rename_command_args))
+            return
+        self.rename_path(old_path, new_name).then(lambda success: self.on_rename_path(success, file_rename))
+
+    def on_rename_path(self, success: bool, file_rename: FileRename) -> None:
+        if success:
+            self.notify_did_rename(file_rename)
+
+    def prompt_rename_async(self, file_rename: FileRename, label: str, rename_command_args: dict[str, Any]) -> None:
         Promise.all(list(self.create_will_rename_requests_async(file_rename))) \
-            .then(lambda responses: self.handle_rename_async(responses)) \
-            .then(lambda _: self.rename_path(old_path, new_path)) \
-            .then(lambda success: self.notify_did_rename(file_rename) if success else None)
+            .then(lambda responses: self.handle_rename_async(responses, label, rename_command_args))
 
     def create_will_rename_requests_async(
         self, file_rename: FileRename
@@ -99,11 +119,25 @@ class LspRenamePathCommand(LspWindowCommand):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
                     .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]]) -> Promise[None]:
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
+                            label: str, rename_command_args: dict[str, Any]) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
-                return session.apply_workspace_edit_async(response, is_refactoring=True).then(lambda _: None)
-        return Promise.resolve(None)
+                prompt_for_workspace_edits(session, response, label=label) \
+                    .then(partial(self.on_prompt_for_workspace_edits_concluded, weak_session, response, label)) \
+                    .then(lambda accepted: accepted and self.window.run_command('lsp_rename_path', rename_command_args))
+                return
+        # Ensure file rename even if all WorkspaceEdit responses are empty
+        self.window.run_command('lsp_rename_path', rename_command_args)
+
+    def on_prompt_for_workspace_edits_concluded(
+        self, weak_session: weakref.ref[Session], response: WorkspaceEdit, label: str, accepted: bool,
+    ) -> Promise[bool]:
+        if accepted and (session := weak_session()):
+            return session.apply_workspace_edit_async(response, label=label, is_refactoring=True) \
+                .then(lambda summary: show_summary_message(session.window, summary)) \
+                .then(lambda _: accepted)
+        return Promise.resolve(False)
 
     def rename_path(self, old: str, new: str) -> Promise[bool]:
         old_path = Path(old)

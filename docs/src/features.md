@@ -116,7 +116,7 @@ Formatting is the art of computing a minimal set of white space text replacement
 
 Signature Help is similar to Auto Complete, but focuses on presenting the different overloads of a function invocation. This package provides Signature Help by means of showing a popup. If multiple overloads exist, you can browse through them just like Auto Complete. Sublime Text has no concept of Signature Help.
 
-## Rename
+## Rename Symbol
 
 [Example GIF 1](https://user-images.githubusercontent.com/5006548/119980137-891ff400-bfc4-11eb-830e-509a5dd181bb.gif)
 
@@ -125,6 +125,12 @@ When you want to rename an identifier in Sublime Text, you probably use <kbd>ctr
 Because a language server (usually) has an abstract syntax tree view of the file, it may be able to rename an identifier semantically. This package exposes that functionality through the hover popup, the context menu, and the top menu bar.
 
 Some language servers provide _global_ rename functionality as well. This package will present a modal dialog to ask you to confirm to apply the changes if they span more than one file.
+
+## Rename File
+
+Some language servers support updating imports on file rename.
+
+<video src="./videos/file-rename.mp4" controls></video>
 
 ## Code Actions
 

@@ -1,0 +1,43 @@
+=> 2.8.0
+
+# Features
+
+- Add willRename and didRename fileOperations (#2498) (Предраг Николић)
+- Add prompt on triggering workspace edits during rename file (#2716) (Предраг Николић)
+- Copy diagnostic hover text (#2618) (Предраг Николић)
+- Show WorkspaceEdit and TextEdit description in undo menu (#2695) (jwortmann)
+
+# Fixes
+
+- Notify server on change between each code action on save (#2707) (Rafał Chłodnicki)
+- Fix duplicate requests on file open with dynamic registration (#2698) (jwortmann)
+- Fix diagnostics request after refresh (#2699) (jwortmann)
+- Fix unregistering of didChangeWatchedFiles capability (#2683) (Rafał Chłodnicki)
+
+# Enhancements
+
+- Return number of changes and changed files when applying WorkspaceEdit (#2717) (jwortmann)
+- Switch to CommonMark/GFM parser "marko" (#2712) (Rafał Chłodnicki)
+- Improve request cancellation handling (#2700) (Rafał Chłodnicki)
+- Add caching for color scheme support of custom semantic token types (#2704) (jwortmann)
+- Don't delay didOpen until next message loop iteration (#2696) (Rafał Chłodnicki)
+- Make signature help popup open and stay visible more reliably (#2686) (Rafał Chłodnicki)
+- Don't expand range to cover all diagnostics for code action requests (#2690) (Rafał Chłodnicki)
+- Limit some requests to a single session (#2688) (jwortmann)
+- Add support for relative patterns in didChangeWatchedFiles (#2685) (Rafał Chłodnicki)
+
+# Refactors
+
+- Uncomment await_message for textDocument/didSave  (#2722) (Предраг Николић)
+- Make apply_text_edits return a Promise (#2708) (Rafał Chłodnicki)
+- Remove unused Manager.sessions() (#2703) (Rafał Chłodnicki)
+- Merge diagnostics getter functions (#2694) (Rafał Chłodnicki)
+- Aggregate watch patterns that match same root and kind (#2687) (Rafał Chłodnicki)
+- Use more assignment expressions (#2681) (jwortmann)
+
+# Documentation
+
+- Add docs for rename file (#2728) (Предраг Николић)
+- Switch docs from "Material for MkDocs" to "Zensical"  (#2720) (Предраг Николић)
+- Tweak semantic tokens table (#2709) (jwortmann)
+- Update Helm section in language_servers.md (#2682) (Предраг Николић)

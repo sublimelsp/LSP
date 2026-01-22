@@ -32,14 +32,14 @@ OUTPUT_PANEL_SETTINGS = {
 class PanelName:
     Diagnostics = "diagnostics"
     References = "references"
-    Rename = "rename"
+    WorkspaceEdit = "Workspace Edit"
     Log = "LSP Log Panel"
 
 
 class PanelManager:
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self._rename_panel_buttons: sublime.PhantomSet | None = None
+        self._workspace_edit_panel_buttons: sublime.PhantomSet | None = None
 
     def destroy_output_panels(self) -> None:
         for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
@@ -48,7 +48,7 @@ class PanelManager:
             if panel and panel.is_valid():
                 panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
                 self._window.destroy_output_panel(panel_name)
-        self._rename_panel_buttons = None
+        self._workspace_edit_panel_buttons = None
 
     def toggle_output_panel(self, panel_type: str) -> None:
         panel_name = f"output.{panel_type}"
@@ -82,8 +82,8 @@ class PanelManager:
         return self.ensure_panel("references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
-    def ensure_rename_panel(self) -> sublime.View | None:
-        return self.ensure_panel(PanelName.Rename, PANEL_FILE_REGEX, PANEL_LINE_REGEX,
+    def ensure_workspace_edit_panel(self) -> sublime.View | None:
+        return self.ensure_panel(PanelName.WorkspaceEdit, PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                                  "Packages/LSP/Syntaxes/References.sublime-syntax")
 
     def get_panel(self, panel_name: str) -> sublime.View | None:
@@ -94,8 +94,8 @@ class PanelManager:
         panel = self.create_output_panel(name)
         if not panel:
             return None
-        if name == PanelName.Rename:
-            self._rename_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
+        if name == PanelName.WorkspaceEdit:
+            self._workspace_edit_panel_buttons = sublime.PhantomSet(panel, "lsp_rename_buttons")
         settings = panel.settings()
         if result_file_regex:
             settings.set("result_file_regex", result_file_regex)
@@ -127,6 +127,6 @@ class PanelManager:
         if self.is_panel_open(PanelName.Diagnostics):
             self.toggle_output_panel(PanelName.Diagnostics)
 
-    def update_rename_panel_buttons(self, phantoms: Iterable[sublime.Phantom]) -> None:
-        if self._rename_panel_buttons:
-            self._rename_panel_buttons.update(phantoms)
+    def update_workspace_edit_panel_buttons(self, phantoms: Iterable[sublime.Phantom]) -> None:
+        if self._workspace_edit_panel_buttons:
+            self._workspace_edit_panel_buttons.update(phantoms)

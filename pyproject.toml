@@ -1,0 +1,44 @@
+[tool.pyright]
+pythonVersion = "3.8"
+
+[tool.ruff]
+exclude = [
+    "third_party",
+]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+select = ["ALL"]
+# Refer to https://docs.astral.sh/ruff/rules/
+ignore = [
+    "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "COM812",  # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
+    "D100",  # https://docs.astral.sh/ruff/rules/undocumented-public-module/#undocumented-public-module-d100
+    "D101",  # https://docs.astral.sh/ruff/rules/undocumented-public-class/
+    "D102",  # https://docs.astral.sh/ruff/rules/undocumented-public-method/
+    "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+    "EM",  # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
+    "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
+    "I001",  # https://docs.astral.sh/ruff/rules/unsorted-imports/
+    "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    "PERF203",  # https://docs.astral.sh/ruff/rules/try-except-in-loop/
+    "PGH003",  # https://docs.astral.sh/ruff/rules/blanket-type-ignore/
+    "Q000",  # https://docs.astral.sh/ruff/rules/bad-quotes-inline-string/
+    "T20",  # https://docs.astral.sh/ruff/rules/#flake8-print-t20
+    "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/
+    "TD003",  # https://docs.astral.sh/ruff/rules/missing-todo-link/
+    "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/
+    "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
+    "TRY203",  # https://docs.astral.sh/ruff/rules/useless-try-except/
+]
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+# Respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Automatically detect the appropriate line ending.
+line-ending = "auto"

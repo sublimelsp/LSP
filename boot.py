@@ -21,6 +21,7 @@ from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
+from .plugin.core.registry import LspCheckApplicableCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
 from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
@@ -42,6 +43,7 @@ from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.edit import LspApplyWorkspaceEditCommand
+from .plugin.edit import LspConcludeWorkspaceEditPanelCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.folding_range import LspFoldAllCommand
 from .plugin.folding_range import LspFoldCommand
@@ -69,7 +71,6 @@ from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.panels import LspUpdateLogPanelCommand
 from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
-from .plugin.rename import LspHideRenameButtonsCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.rename_file import LspRenamePathCommand
 from .plugin.save_command import LspSaveAllCommand
@@ -95,6 +96,7 @@ __all__ = (
     "LspApplyDocumentEditCommand",
     "LspApplyWorkspaceEditCommand",
     "LspCallHierarchyCommand",
+    "LspCheckApplicableCommand",
     "LspClearLogPanelCommand",
     "LspClearPanelCommand",
     "LspCodeActionsCommand",
@@ -102,6 +104,7 @@ __all__ = (
     "LspCollapseTreeItemCommand",
     "LspColorPresentationCommand",
     "LspCommitCompletionWithOppositeInsertMode",
+    "LspConcludeWorkspaceEditPanelCommand",
     "LspCopyTextCommand",
     "LspCopyToClipboardFromBase64Command",
     "LspDisableLanguageServerGloballyCommand",
@@ -120,7 +123,6 @@ __all__ = (
     "LspFormatDocumentCommand",
     "LspFormatDocumentRangeCommand",
     "LspGotoDiagnosticCommand",
-    "LspHideRenameButtonsCommand",
     "LspHierarchyToggleCommand",
     "LspHoverCommand",
     "LspInlayHintClickCommand",
@@ -272,10 +274,13 @@ class Listener(sublime_plugin.EventListener):
                     tup[1](None)
                     break
 
-    def on_window_command(self, window: sublime.Window, command_name: str, args: dict) -> tuple[str, dict] | None:
+    def on_window_command(
+        self, window: sublime.Window, command_name: str, args: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]] | None:
         if command_name == "rename_path":
             return ('lsp_rename_path', args)
- 
+        return None
+
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":
             wm = windows.lookup(window)

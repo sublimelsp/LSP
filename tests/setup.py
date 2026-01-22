@@ -11,7 +11,6 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
-from typing import Any, Callable
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -210,18 +209,6 @@ class TextDocumentTestCase(DeferrableTestCase):
                 promise.fulfill
             )
         )
-        yield from self.await_promise(promise)
-
-    def run_on_async_thread(self, fn: Callable[[], Generator | None]) -> Generator:
-        promise = YieldPromise()
-
-        def call_and_resolve() -> None:
-            result = fn()
-            if isinstance(result, Generator):
-                next(result)
-            promise.fulfill()
-
-        sublime.set_timeout_async(lambda: call_and_resolve())
         yield from self.await_promise(promise)
 
     def set_response(self, method: str, response: Any) -> None:

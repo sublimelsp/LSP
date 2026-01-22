@@ -629,6 +629,7 @@ class SessionBuffer:
         self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
+            print('PRESENT diagnostics')
             self._diagnostics_version = diagnostics_version
             self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
@@ -636,6 +637,7 @@ class SessionBuffer:
                 sv.present_diagnostics_async(sv in visible_session_views)
 
         self._diagnostics_debouncer_async.cancel_pending()
+        print('diagnostics visible?', self._diagnostics_are_visible)
         if self._diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
             present()

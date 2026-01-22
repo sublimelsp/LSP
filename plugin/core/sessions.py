@@ -122,6 +122,7 @@ from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
+from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
@@ -923,13 +924,31 @@ class AbstractPlugin(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
-    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
+    def is_applicable(cls, view: sublime.View, config: ClientConfig) -> bool:
         """
-        Override the default selector used to determine whether server should run on the given view.
+        Determine whether the server should run on the given view.
+
+        The default implementation checks whether the URI scheme and the syntax scope match against the schemes and
+        selector from the settings file. You can override this method for example to dynamically evaluate the applicable
+        selector, or to ignore certain views even when those would match the static config. Please note that no document
+        syncronization messages (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to
+        the server for ignored views.
+
+        This method is called when the view gets opened. To manually trigger this method again, run the
+        `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
 
         :param      view:             The view
         :param      config:           The config
         """
+        if (syntax := view.syntax()) and (selector := cls.selector(view, config).strip()):
+            # TODO replace `cls.selector(view, config)` with `config.selector` after the next release
+            scheme, _ = parse_uri(uri_from_view(view))
+            return scheme in config.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        return False
+
+    @classmethod
+    @deprecated("Use `is_applicable(view, config)` instead.")
+    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
         return config.selector
 
     @classmethod
@@ -1030,15 +1049,8 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
     @classmethod
+    @deprecated("Use `is_applicable(view, config)` instead.")
     def should_ignore(cls, view: sublime.View) -> bool:
-        """
-        Exclude a view from being handled by the language server, even if it matches the URI scheme(s) and selector from
-        the configuration. This can be used to, for example, ignore certain file patterns which are listed in a
-        configuration file (e.g. .gitignore). Please note that this also means that no document syncronization
-        notifications (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to the server
-        for ignored views, when they are opened in the editor. Therefore this method should be used with caution for
-        language servers which index all files in the workspace.
-        """
         return False
 
     @classmethod
@@ -1510,7 +1522,7 @@ class Session(TransportCallbacks):
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
             return False
-        if self._plugin and self._plugin.should_ignore(view):
+        if self._plugin and self._plugin.should_ignore(view):  # TODO remove after next release
             debug(view, "ignored by plugin", self._plugin.__class__.__name__)
             return False
         if scheme == "file":
@@ -2427,9 +2439,7 @@ class Session(TransportCallbacks):
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
         for sv in self.session_views_async():
-            for status_key in self._status_messages.keys():
-                sv.view.erase_status(status_key)
-            sv.shutdown_async()
+            self.shutdown_session_view_async(sv)
         self.capabilities.clear()
         self._registrations.clear()
         for watcher in self._static_file_watchers:
@@ -2440,6 +2450,11 @@ class Session(TransportCallbacks):
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
+
+    def shutdown_session_view_async(self, session_view: SessionViewProtocol) -> None:
+        for status_key in self._status_messages.keys():
+            session_view.view.erase_status(status_key)
+        session_view.shutdown_async()
 
     def _handle_shutdown_result(self, _: Any) -> None:
         self.exit()

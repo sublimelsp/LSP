@@ -887,14 +887,11 @@ class ClientConfig:
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         from .sessions import get_plugin
-        syntax = view.syntax()
-        if not syntax:
-            return False
-        plugin = get_plugin(self.name)
-        selector = plugin.selector(view, self).strip() if plugin else self.selector.strip()
-        if not selector:
-            return False
-        return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        if plugin := get_plugin(self.name):
+            return plugin.is_applicable(view, self)
+        if (syntax := view.syntax()) and (selector := self.selector.strip()):
+            return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        return False
 
     def map_client_path_to_server_uri(self, path: str) -> str:
         if self.path_maps:

@@ -16,7 +16,9 @@ from .core.sessions import Session, method_to_capability
 from .core.settings import userprefs
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
+from .core.views import first_selection_region
 from .core.views import get_symbol_kind_from_scope
+from .core.views import position_to_offset
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .core.views import to_encoded_filename
@@ -254,8 +256,14 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
             diagnostics.sort(
                 key=lambda d: (Point.from_lsp(d['diagnostic']['range']['start']), diagnostic_severity(d['diagnostic']))
             )
+            view: sublime.View | None = None
+            if self._preview:
+                if uri_from_view(self._preview) == uri:
+                    view = self._preview
+                elif (preview_sheet := self._preview.sheet()) and preview_sheet.is_transient():
+                    self._preview.close()
             return DiagnosticInputHandler(
-                self.window, self.initial_view, self._preview, self.sessions, uri, diagnostics)
+                self.window, self.initial_view, view, self.sessions, uri, diagnostics)
         return None
 
     def description(self, value: DocumentUri, text: str) -> str:
@@ -280,15 +288,16 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         self._preview = _preview
         self.sessions = sessions
         self.uri = uri
-        self._has_preview = self._preview is not None and uri_from_view(self._preview) == uri
         self.diagnostics = diagnostics
 
     def name(self) -> str:
         return 'diagnostic'
 
-    def list_items(self) -> list[sublime.ListInputItem]:
+    def list_items(self) -> tuple[list[sublime.ListInputItem], int]:
         items: list[sublime.ListInputItem] = []
-        for diagnostic_data in self.diagnostics:
+        selected_index = 0
+        caret_pos = region.b if self._preview and (region := first_selection_region(self._preview)) is not None else 0
+        for index, diagnostic_data in enumerate(self.diagnostics):
             diagnostic = diagnostic_data['diagnostic']
             message = diagnostic['message'] or '…'
             severity = diagnostic_severity(diagnostic)
@@ -297,14 +306,16 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
             items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))
-        return items
+            if self._preview and position_to_offset(diagnostic['range']['start'], self._preview) <= caret_pos:
+                selected_index = index
+        return items, selected_index
 
     def preview(self, value: DiagnosticData | None) -> str | sublime.Html:
         if value:
             diagnostic = value['diagnostic']
             if self.uri.startswith('file:'):
                 self._open_file(value, transient=True)
-            elif self._preview and self._has_preview:
+            elif self._preview:
                 self._preview.show_at_center(range_to_region(diagnostic['range'], self._preview))
             source = diagnostic.get('source', '')
             if code := str(diagnostic.get('code', '')):
@@ -322,9 +333,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
     def confirm(self, value: DiagnosticData | None) -> None:
         if not value:
             return
-        if self._has_preview:
-            return
-        if session := self._session(value):
+        scheme, _ = parse_uri(self.uri)
+        if scheme == 'file':
+            self._open_file(value)
+        elif session := self._session(value):
             location: Location = {'uri': self.uri, 'range': value['diagnostic']['range']}
             sublime.set_timeout_async(partial(session.open_location_async, location))
 

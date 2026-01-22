@@ -90,6 +90,7 @@ from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
+from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
@@ -1805,6 +1806,8 @@ class Session(TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)
+        if uri.startswith('res:'):
+            return self._open_res_uri_async(uri, r, group)
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
             flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
             if name := uri[len('untitled:'):]:
@@ -1850,6 +1853,22 @@ class Session(TransportCallbacks):
             sublime.set_timeout_async(lambda: result[1](view))
 
         sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))
+        return result[0]
+
+    def _open_res_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Range | None = None,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
+
+        def handle_continuation(view: sublime.View | None) -> None:
+            if view and r:
+                sublime.set_timeout(functools.partial(center_selection, view, r))
+            sublime.set_timeout_async(lambda: result[1](view))
+
+        sublime.set_timeout(lambda: open_resource(self.window, uri, group).then(handle_continuation))
         return result[0]
 
     def _open_uri_with_plugin_async(

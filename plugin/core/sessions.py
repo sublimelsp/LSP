@@ -2243,6 +2243,7 @@ class Session(TransportCallbacks):
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
         if sb := self.get_session_buffer_for_uri_async(uri):
+            print('m_textDocument_publishDiagnostics', sb.last_synced_version, sb.get_view_in_group(0).change_count())
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:

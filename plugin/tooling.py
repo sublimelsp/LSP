@@ -127,10 +127,9 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
     def run(self, base_package_name: str) -> None:
         # Download the contents of the URL pointing to the package.json file.
         base_url = sublime.get_clipboard()
-        try:
-            urllib.parse.urlparse(base_url)
-        except Exception:
-            sublime.error_message("The clipboard content must be a URL to a package.json file.")
+        parsed_url = urllib.parse.urlparse(base_url)
+        if parsed_url.scheme not in ("http", "https"):
+            sublime.error_message("URL must use http or https scheme.")
             return
         if not base_url.endswith("package.json"):
             sublime.error_message("URL must end with 'package.json'")

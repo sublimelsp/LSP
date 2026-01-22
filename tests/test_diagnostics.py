@@ -12,12 +12,12 @@ if TYPE_CHECKING:
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 
 
-def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> PublishDiagnosticsParams:
-    def diagnostic_to_lsp(diagnostic: tuple[str, Range]) -> Diagnostic:
-        message, r = diagnostic
+def create_test_diagnostics(diagnostics: list[tuple[str, Point, Point]]) -> PublishDiagnosticsParams:
+    def diagnostic_to_lsp(diagnostic: tuple[str, Point, Point]) -> Diagnostic:
+        message, start, end = diagnostic
         return {
             "message": message,
-            "range": r
+            "range": range_from_points(start, end)
         }
     return {
         "uri": TEST_FILE_URI,
@@ -52,7 +52,7 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_client_notification(
             "textDocument/publishDiagnostics",
-            create_test_diagnostics([('error', range_from_points(Point(0, 0), Point(0, 11)))])
+            create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
         )
         yield from self.run_on_async_thread(insert_text_and_clear_diagnostics)
         session_view = self.session.session_view_for_view_async(self.view)

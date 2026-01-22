@@ -54,5 +54,6 @@ class DiagnosticsTestCase(TextDocumentTestCase):
             create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
         )
         yield from self.run_on_async_thread(insert_text_and_clear_diagnostics)
-        session_view = self.session.session_view_for_view_async(self.view)
-        self.assertEqual(len(session_view.session_buffer.diagnostics), 0)
+        session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
+        print('test diagnostics', session_buffer.diagnostics)
+        self.assertEqual(len(session_buffer.diagnostics), 0)

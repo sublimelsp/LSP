@@ -708,7 +708,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
@@ -1474,7 +1474,7 @@ class Session(TransportCallbacks):
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -2243,8 +2243,7 @@ class Session(TransportCallbacks):
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
         if sb := self.get_session_buffer_for_uri_async(uri):
-            version = params.get('version', sb.last_synced_version)
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

@@ -605,9 +605,10 @@ class SessionBuffer:
         view = self.some_view()
         if view is None:
             return
+        change_count = view.change_count()
         if version is None:
-            version = view.change_count()
-        elif version != view.change_count():
+            version = change_count
+        elif version != change_count:
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []

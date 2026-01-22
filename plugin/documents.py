@@ -134,7 +134,6 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         if not view:
             return
         change_count = view.change_count()
-        print('on_text_changed', change_count)
         frozen_listeners = WeakSet(self.view_listeners)
 
         def notify() -> None:
@@ -343,7 +342,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     @requires_session
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
-        print('on_text_changed_async', change_count)
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(change_count, changes)

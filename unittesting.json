@@ -5,6 +5,5 @@
     "failfast": false,
     "reload_package_on_testing": false,
     "output": null,
-    "generate_html_report": true,
-    "pattern": "test_diagnostics.py"
+    "generate_html_report": true
 }

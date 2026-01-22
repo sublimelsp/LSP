@@ -57,9 +57,8 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         )
         sublime.set_timeout_async(insert_text_and_clear_diagnostics_async)
         yield AWAIT_WORKER
-        # This is just a dummy wait to ensure that the `textDocument/publishDiagnostics` triggered from async thread
+        # Just a dummy wait to ensure that the `textDocument/publishDiagnostics` triggered from async thread
         # is processed since we can't await it there.
         yield from self.await_client_notification('$/dummy', [])
         session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
-        print('test diagnostics', session_buffer.diagnostics)
         self.assertEqual(len(session_buffer.diagnostics), 0)

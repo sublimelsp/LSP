@@ -1471,13 +1471,13 @@ class Session(TransportCallbacks):
         for data in self._registrations.values():
             data.check_applicable(sb, suppress_requests=True)
         if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.diagnostics_by_document_uri(uri)):
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic]
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
-        sb.on_diagnostics_async(diagnostics, version, visible_session_views)
+        sb.on_diagnostics_async(diagnostics, None, visible_session_views)
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -2243,7 +2243,7 @@ class Session(TransportCallbacks):
         self.diagnostics.add_diagnostics_async(uri, diagnostics)
         mgr.on_diagnostics_updated()
         if sb := self.get_session_buffer_for_uri_async(uri):
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, params.get('version'))
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""

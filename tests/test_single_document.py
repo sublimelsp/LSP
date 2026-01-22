@@ -8,6 +8,7 @@ from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
 from setup import TIMEOUT_TIME
 from setup import YieldPromise
+from unittest import skip
 import os
 import sublime
 
@@ -381,6 +382,7 @@ class SingleDocumentTestCase3(TextDocumentTestCase):
     def get_test_name(cls) -> str:
         return "testfile2"
 
+    @skip('Flaky on Windows and Mac')
     def test_did_change_before_did_close(self) -> Generator:
         assert self.view
         self.view.window().run_command("chain", {

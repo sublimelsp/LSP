@@ -76,8 +76,7 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")
         yield from self.await_client_notification(
-            "textDocument/publishDiagnostics",
-            create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
+            "textDocument/publishDiagnostics", create_test_diagnostics([('error', Point(0, 0), Point(0, 11))])
         )
         session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
         self.assertEqual(len(session_buffer.diagnostics), 1)

@@ -44,9 +44,8 @@ class DiagnosticsTestCase(TextDocumentTestCase):
         # Verify that the diagnostics are properly cleared.
 
         def insert_text_and_clear_diagnostics() -> Generator:
-            # Don't wait for result - trigger edit immediately before receiving publishDiagnostics.
-            yield from self.await_client_notification("textDocument/publishDiagnostics", create_test_diagnostics([]))
             self.insert_characters('// anything')
+            yield from self.await_client_notification("textDocument/publishDiagnostics", create_test_diagnostics([]))
 
         self.insert_characters('const x = 1')
         yield from self.await_message("textDocument/didChange")

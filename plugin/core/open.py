@@ -125,7 +125,7 @@ def open_file(
     return promise
 
 
-def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> Promise[sublime.View | None]:
+def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> sublime.View | None:
     """
     Open a resource file.
     It is only safe to call this function from the UI thread.
@@ -133,15 +133,13 @@ def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> 
     """
     prefix = 'res:/Packages/'
     if not uri.startswith(prefix):
-        return Promise.resolve(None)
+        return None
     if group != -1:
         window.focus_group(group)
     resource_path = uri[len(prefix):]
     window.run_command('open_file', {'file': f'${{packages}}/{resource_path}'})
     file = os.path.join(ST_PACKAGES_PATH, *resource_path.split('/'))
-    if view := _find_open_file(window, file, group):
-        return Promise.resolve(view)
-    return Promise.resolve(None)
+    return _find_open_file(window, file, group)
 
 
 def center_selection(view: sublime.View, r: Range) -> sublime.View:

@@ -1880,7 +1880,7 @@ class Session(TransportCallbacks):
                 sublime.set_timeout(functools.partial(center_selection, view, r))
             sublime.set_timeout_async(lambda: result[1](view))
 
-        sublime.set_timeout(lambda: open_resource(self.window, uri, group).then(handle_continuation))
+        sublime.set_timeout(lambda: Promise.resolve(open_resource(self.window, uri, group)).then(handle_continuation))
         return result[0]
 
     def _open_uri_with_plugin_async(

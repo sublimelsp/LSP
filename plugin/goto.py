@@ -12,8 +12,9 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session, method_to_capability
+from .core.sessions import Session
 from .core.settings import userprefs
+from .core.types import method_to_capability
 from .core.url import parse_uri
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region

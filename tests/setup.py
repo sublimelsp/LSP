@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Generator
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
@@ -9,7 +10,7 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
-from typing import Any, Generator
+from typing import Any
 from unittesting import DeferrableTestCase
 import sublime
 

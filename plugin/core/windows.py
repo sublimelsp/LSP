@@ -327,7 +327,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: Any) -> None:
+    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: int | str) -> None:
         if view := self._window.active_view():
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
@@ -563,15 +563,18 @@ class WindowRegistry(LspSettingsChangeListener):
 
 class RequestTimeTracker:
     def __init__(self) -> None:
-        self._start_times: dict[int, float] = {}
+        self._client_initiated_start_times: dict[int | str, float] = {}
+        self._server_initiated_start_times: dict[int | str, float] = {}
 
-    def start_tracking(self, request_id: int) -> None:
-        self._start_times[request_id] = perf_counter()
+    def start_tracking(self, request_id: int | str, *, server_initiated: bool) -> None:
+        start_times = self._server_initiated_start_times if server_initiated else self._client_initiated_start_times
+        start_times[request_id] = perf_counter()
 
-    def end_tracking(self, request_id: int) -> str:
+    def end_tracking(self, request_id: int | str, *, server_initiated: bool) -> str:
         duration = '-'
-        if request_id in self._start_times:
-            start = self._start_times.pop(request_id)
+        start_times = self._server_initiated_start_times if server_initiated else self._client_initiated_start_times
+        if request_id in start_times:
+            start = start_times.pop(request_id)
             duration_ms = perf_counter() - start
             duration = f'{int(duration_ms * 1000)}ms'
         return duration
@@ -610,22 +613,22 @@ class PanelLogger(Logger):
 
         sublime.set_timeout_async(run_on_async_worker_thread)
 
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
+    def outgoing_response(self, request_id: int | str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
         self.log(self._format_response(">>>", request_id, duration), params)
 
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
         if not userprefs().log_server:
             return
-        duration = self._request_time_tracker.end_tracking(request_id)
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=True)
         self.log(self._format_response("~~>", request_id, duration), error.to_lsp())
 
-    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
+    def outgoing_request(self, request_id: int | str, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        self._request_time_tracker.start_tracking(request_id)
+        self._request_time_tracker.start_tracking(request_id, server_initiated=False)
         self.log(self._format_request("-->", method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
@@ -633,17 +636,17 @@ class PanelLogger(Logger):
             return
         self.log(self._format_notification(" ->", method), params)
 
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
-        duration = self._request_time_tracker.end_tracking(request_id) if request_id is not None else "-"
+        duration = self._request_time_tracker.end_tracking(request_id, server_initiated=False)
         self.log(self._format_response(direction, request_id, duration), params)
 
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+    def incoming_request(self, request_id: int | str, method: str, params: Any) -> None:
         if not userprefs().log_server:
             return
-        self._request_time_tracker.start_tracking(request_id)
+        self._request_time_tracker.start_tracking(request_id, server_initiated=True)
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
@@ -652,11 +655,11 @@ class PanelLogger(Logger):
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
 
-    def _format_response(self, direction: str, request_id: Any, duration: str) -> str:
+    def _format_response(self, direction: str, request_id: int | str, duration: str) -> str:
         return "[{}] {} {} ({}) (duration: {})".format(
             RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
 
-    def _format_request(self, direction: str, method: str, request_id: Any) -> str:
+    def _format_request(self, direction: str, method: str, request_id: int | str) -> str:
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method} ({request_id})"
 
     def _format_notification(self, direction: str, method: str) -> str:
@@ -726,7 +729,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_INCOMING,
         })
 
-    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
+    def outgoing_request(self, request_id: int | str, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -736,7 +739,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -746,7 +749,7 @@ class RemoteLogger(Logger):
             'isError': is_error,
         })
 
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+    def incoming_request(self, request_id: int | str, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -756,7 +759,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_INCOMING,
         })
 
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
+    def outgoing_response(self, request_id: int | str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -765,7 +768,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_OUTGOING,
         })
 
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,

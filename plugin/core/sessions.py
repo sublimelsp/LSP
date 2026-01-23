@@ -1277,11 +1277,11 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
+    def outgoing_response(self, request_id: int | str, params: Any) -> None:
         pass
 
     @abstractmethod
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+    def outgoing_error_response(self, request_id: int | str, error: Error) -> None:
         pass
 
     @abstractmethod
@@ -1293,11 +1293,11 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int | None, params: Any, is_error: bool) -> None:
+    def incoming_response(self, request_id: int | str, params: Any, is_error: bool) -> None:
         pass
 
     @abstractmethod
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+    def incoming_request(self, request_id: int | str, method: str, params: Any) -> None:
         pass
 
     @abstractmethod
@@ -2154,7 +2154,7 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: Any) -> None:
+    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: int | str) -> None:
         """handles the window/showMessageRequest request"""
         self.call_manager('handle_message_request', self, params, request_id)
 
@@ -2166,11 +2166,11 @@ class Session(TransportCallbacks):
         """handles the window/logMessage notification"""
         self.call_manager('handle_log_message', self, params)
 
-    def m_workspace_workspaceFolders(self, params: None, request_id: Any) -> None:
+    def m_workspace_workspaceFolders(self, params: None, request_id: int | str) -> None:
         """handles the workspace/workspaceFolders request"""
         self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def m_workspace_configuration(self, params: ConfigurationParams, request_id: Any) -> None:
+    def m_workspace_configuration(self, params: ConfigurationParams, request_id: int | str) -> None:
         """handles the workspace/configuration request"""
         items: list[Any] = []
         requested_items = params.get("items") or []
@@ -2182,12 +2182,12 @@ class Session(TransportCallbacks):
                 items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
-    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: Any) -> None:
+    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: int | str) -> None:
         """handles the workspace/applyEdit request"""
         self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
             .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
 
-    def m_workspace_codeLens_refresh(self, params: None, request_id: Any) -> None:
+    def m_workspace_codeLens_refresh(self, params: None, request_id: int | str) -> None:
         """handles the workspace/codeLens/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2196,7 +2196,7 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_code_lenses_pending_refresh()
 
-    def m_workspace_semanticTokens_refresh(self, params: None, request_id: Any) -> None:
+    def m_workspace_semanticTokens_refresh(self, params: None, request_id: int | str) -> None:
         """handles the workspace/semanticTokens/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2208,7 +2208,7 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
 
-    def m_workspace_inlayHint_refresh(self, params: None, request_id: Any) -> None:
+    def m_workspace_inlayHint_refresh(self, params: None, request_id: int | str) -> None:
         """handles the workspace/inlayHint/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2220,7 +2220,7 @@ class Session(TransportCallbacks):
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
 
-    def m_workspace_diagnostic_refresh(self, params: None, request_id: Any) -> None:
+    def m_workspace_diagnostic_refresh(self, params: None, request_id: int | str) -> None:
         """handles the workspace/diagnostic/refresh request"""
         self.send_response(Response(request_id, None))
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
@@ -2245,7 +2245,7 @@ class Session(TransportCallbacks):
         if sb := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
 
-    def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
+    def m_client_registerCapability(self, params: RegistrationParams, request_id: int | str) -> None:
         """handles the client/registerCapability request"""
         registrations = params["registrations"]
         for registration in registrations:
@@ -2279,7 +2279,7 @@ class Session(TransportCallbacks):
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
         self.send_response(Response(request_id, None))
 
-    def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
+    def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: int | str) -> None:
         """handles the client/unregisterCapability request"""
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:
@@ -2327,7 +2327,7 @@ class Session(TransportCallbacks):
             for file_watcher in file_watchers:
                 file_watcher.destroy()
 
-    def m_window_showDocument(self, params: ShowDocumentParams, request_id: Any) -> None:
+    def m_window_showDocument(self, params: ShowDocumentParams, request_id: int | str) -> None:
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
@@ -2346,7 +2346,7 @@ class Session(TransportCallbacks):
             # TODO: ST API does not allow us to say "do not focus this new view"
             self.open_uri_async(uri, params.get("selection")).then(success)
 
-    def m_window_workDoneProgress_create(self, params: WorkDoneProgressCreateParams, request_id: Any) -> None:
+    def m_window_workDoneProgress_create(self, params: WorkDoneProgressCreateParams, request_id: int | str) -> None:
         """handles the window/workDoneProgress/create request"""
         self._progress[params['token']] = None
         self.send_response(Response(request_id, None))
@@ -2538,7 +2538,7 @@ class Session(TransportCallbacks):
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
 
-    def send_error_response(self, request_id: Any, error: Error) -> None:
+    def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)
         self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
@@ -2577,10 +2577,10 @@ class Session(TransportCallbacks):
                     self._plugin.on_server_notification_async(Notification(method, result))
                 return res
         elif "id" in payload:
-            if payload["id"] is None:
-                self._logger.incoming_response(None, payload.get("error"), True)
+            response_id = payload["id"]
+            if response_id is None:
+                self._logger.incoming_response('<missing>', payload.get("error"), True)
                 return (None, None, None, None, None)
-            response_id = int(payload["id"])
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)

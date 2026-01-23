@@ -1,0 +1,9 @@
+=> 2.8.1
+
+# Features
+
+- Add `AbstractPlugin.is_applicable` plugin API method and deprecate `should_ignore` and `selector` (#2713) (jwortmann)
+
+# Fixes
+
+- Fix regression causing outdated diagnostics (#2732) (Rafał Chłodnicki)

@@ -711,7 +711,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def on_diagnostics_async(
-        self, raw_diagnostics: list[Diagnostic], version: int, visible_session_views: set[SessionViewProtocol]
+        self, raw_diagnostics: list[Diagnostic], version: int | None, visible_session_views: set[SessionViewProtocol]
     ) -> None:
         ...
 
@@ -1474,10 +1474,10 @@ class Session(TransportCallbacks):
         for data in self._registrations.values():
             data.check_applicable(sb, suppress_requests=True)
         if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.get_diagnostics_for_uri(uri)):
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics, sb.last_synced_version)
+            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None = None
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
         sb.on_diagnostics_async(diagnostics, version, visible_session_views)
@@ -2269,7 +2269,7 @@ class Session(TransportCallbacks):
 
     def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-        self.handle_diagnostics(params['uri'], None, params.get('version'), params['diagnostics'])
+        self.handle_diagnostics(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics(
         self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
@@ -2283,15 +2283,11 @@ class Session(TransportCallbacks):
             return
         session_buffer = self.get_session_buffer_for_uri_async(uri)
         if session_buffer and version is not None and version != session_buffer.last_synced_version:
-            # The diagnostics version is only relevant for PublishDiagnosticsParams which can be pushed by the server at
-            # any time, but not for the pull diagnostics.
             debug(f"ignoring diagnostics for {uri} due to outdated version {version}")
             return
         self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
         if session_buffer:
-            if version is None:
-                version = session_buffer.last_synced_version
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 

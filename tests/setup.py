@@ -1,6 +1,6 @@
 from __future__ import annotations
+from collections.abc import Generator
 from LSP.plugin.core.promise import Promise
-from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
@@ -10,7 +10,7 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
-from typing import Any, Generator
+from typing import Any
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -173,7 +173,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
 
         cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from cls.await_promise(promise)
@@ -225,7 +225,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
 
         payload = [{"method": method, "response": responses} for method, responses in responses]
         self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
@@ -240,7 +240,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.fulfill(params)
 
         def error_handler(params: Any) -> None:
-            debug("Got error:", params, "awaiting timeout :(")
+            print("Got error:", params, "awaiting timeout :(")
 
         req = Request("$test/sendNotification", {"method": method, "params": params})
         self.session.send_request(req, handler, error_handler)

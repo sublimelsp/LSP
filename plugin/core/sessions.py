@@ -1363,7 +1363,7 @@ class Session(TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int | str, tuple[Request, Callable, Callable[[Any], None]]] = {}
+        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None]]] = {}
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -2610,9 +2610,7 @@ class Session(TransportCallbacks):
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
 
-    def response_handler(
-        self, response_id: int | str, response: dict[str, Any]
-    ) -> tuple[Callable, str | None, Any, bool]:
+    def response_handler(self, response_id: int, response: dict[str, Any]) -> tuple[Callable, str | None, Any, bool]:
         matching_handler = self._response_handlers.pop(response_id)
         if not matching_handler:
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}

@@ -3,7 +3,6 @@ site_url: https://sublimelsp.github.io/LSP/
 repo_url: https://github.com/sublimelsp/LSP/
 edit_uri: edit/main/docs/src/
 docs_dir: 'src'
-use_directory_urls: false
 
 plugins:
   - search

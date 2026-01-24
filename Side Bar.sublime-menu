@@ -1,0 +1,9 @@
+[
+    { "caption": "-", "id": "lsp" },
+    {
+        "caption": "Lsp: Rename",
+        "mnemonic": "l",
+        "command": "lsp_rename_path",
+        "args": {"paths": []}
+    }
+]

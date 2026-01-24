@@ -32,6 +32,7 @@ def get_diagnostics_identifiers(session: Session, view: sublime.View) -> set[Dia
 
 
 class DiagnosticsStorage:
+    """ Per session storage for diagnostics from pull diangostics streams and from publishDiagnostics notifications. """
 
     def __init__(self) -> None:
         self._providers: dict[str | None, DiagnosticOptions | DiagnosticRegistrationOptions] = {}

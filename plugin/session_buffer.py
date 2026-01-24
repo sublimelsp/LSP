@@ -16,7 +16,6 @@ from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
-from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -56,7 +55,7 @@ from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from functools import partial
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Callable, Iterable, List
 from typing import cast
 from typing_extensions import Concatenate
 from typing_extensions import ParamSpec
@@ -78,7 +77,6 @@ DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
 
 
 P = ParamSpec('P')
-RelatedDocuments = Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
 
 
 def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:
@@ -597,10 +595,11 @@ class SessionBuffer:
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.handle_diagnostics(self._last_known_uri, identifier, version, response['items'])
-        for uri, diagnostic_report in cast(RelatedDocuments, response.get('relatedDocuments', {})).items():
-            self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-            if diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full:
-                self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
+        if 'relatedDocuments' in response:
+            for uri, diagnostic_report in response['relatedDocuments'].items():
+                self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+                if diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full:
+                    self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
 
     def _on_document_diagnostic_error_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError

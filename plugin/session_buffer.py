@@ -678,7 +678,11 @@ class SessionBuffer:
     def has_latest_diagnostics(self) -> bool:
         if view := self.some_view():
             view_version = view.change_count()
-            return all(version == view_version for version in self._diagnostics_versions.values())
+            return all(
+                version == view_version
+                for identifier, version in self._diagnostics_versions.items()
+                if identifier is not None
+            )
         return False
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------

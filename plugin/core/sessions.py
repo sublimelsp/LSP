@@ -1873,14 +1873,15 @@ class Session(TransportCallbacks):
         r: Range | None = None,
         group: int = -1
     ) -> Promise[sublime.View | None]:
-        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
-        def handle_continuation(view: sublime.View | None) -> None:
+        def continue_on_main_thread() -> None:
+            view = open_resource(self.window, uri, group)
             if view and r:
                 sublime.set_timeout(functools.partial(center_selection, view, r))
             sublime.set_timeout_async(lambda: result[1](view))
 
-        sublime.set_timeout(lambda: Promise.resolve(open_resource(self.window, uri, group)).then(handle_continuation))
+        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
+        sublime.set_timeout(continue_on_main_thread)
         return result[0]
 
     def _open_uri_with_plugin_async(

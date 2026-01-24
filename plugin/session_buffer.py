@@ -16,6 +16,7 @@ from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -55,7 +56,7 @@ from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from functools import partial
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, Dict, Iterable, List, Union
 from typing import cast
 from typing_extensions import Concatenate
 from typing_extensions import ParamSpec
@@ -77,6 +78,7 @@ DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
 
 
 P = ParamSpec('P')
+RelatedDocuments = Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
 
 
 def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:
@@ -575,41 +577,45 @@ class SessionBuffer:
             params['previousResultId'] = result_id
         request_id = self.session.send_request_async(
             Request.documentDiagnostic(params, view),
-            partial(self._on_document_diagnostic_async, identifier, version),
-            partial(self._on_document_diagnostic_error_async, identifier, version)
+            partial(self._on_document_diagnostic_async, view, identifier, version),
+            partial(self._on_document_diagnostic_error_async, view, identifier, version)
         )
         self._document_diagnostic_pending_requests[identifier] = \
             PendingDocumentDiagnosticRequest(version, request_id)
 
     def _on_document_diagnostic_async(
-        self, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
+        self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
     ) -> None:
+        if version != view.change_count():
+            # The buffer content has changed in the meanwhile. Ignore the response, because another request has already
+            # been sent or will be sent automatically after the didChange notification. Also don't reset the stored
+            # value for the pending request, to prevent accidentally overriding a possibly newer value from a new
+            # request that might has been sent already.
+            return
         self._diagnostics_versions[identifier] = version
         self._document_diagnostic_pending_requests[identifier] = None
-        self._if_view_unchanged(self._apply_document_diagnostic_async, version)(identifier, response)
-
-    def _apply_document_diagnostic_async(
-        self, view: sublime.View | None, identifier: DiagnosticsIdentifier, response: DocumentDiagnosticReport
-    ) -> None:
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
-            self.session.handle_diagnostics(self._last_known_uri, identifier, None, response['items'])
-        if 'relatedDocuments' in response:
-            for uri, diagnostic_report in response['relatedDocuments'].items():
-                if session_buffer := self.session.get_session_buffer_for_uri_async(uri):
-                    session_buffer = cast(SessionBuffer, session_buffer)
-                    diagnostic_report = cast(DocumentDiagnosticReport, diagnostic_report)
-                    session_buffer._apply_document_diagnostic_async(None, identifier, diagnostic_report)
+            self.session.handle_diagnostics(self._last_known_uri, identifier, version, response['items'])
+        for uri, diagnostic_report in cast(RelatedDocuments, response.get('relatedDocuments', {})).items():
+            self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+            if diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full:
+                self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
 
     def _on_document_diagnostic_error_async(
-        self, identifier: DiagnosticsIdentifier, version: int, error: ResponseError
+        self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError
     ) -> None:
+        if version != view.change_count():
+            # It is not necessary to check whether to retrigger the request, because a new request is sent automatically
+            # after the didChange notification.
+            return
         self._document_diagnostic_pending_requests[identifier] = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                # Retrigger the request after a short delay, but only if there were no additional changes to the buffer
-                # (in that case the request will be retriggered automatically anyway)
+                # Retrigger the request after a short delay, but only if there are no additional changes to the buffer
+                # in the meanwhile, because in that case a new request will be sent automatically after the didChange
+                # notification.
                 sublime.set_timeout_async(
                     lambda: self._if_view_unchanged(self._do_document_diagnostic_async, version)(identifier, version),
                     DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY

@@ -656,7 +656,6 @@ class SessionBuffer:
         self.diagnostics_data_per_severity = data_per_severity
 
         def present() -> None:
-            self._diagnostics_versions[None] = diagnostics_version
             self._diagnostics = diagnostics
             self._diagnostics_are_visible = bool(diagnostics)
             for sv in self.session_views:
@@ -684,9 +683,8 @@ class SessionBuffer:
         if view := self.some_view():
             view_version = view.change_count()
             return all(
-                version == view_version
-                for identifier, version in self._diagnostics_versions.items()
-                if identifier is not None
+                self._diagnostics_versions.get(identifier) == view_version
+                for identifier in get_diagnostics_identifiers(self.session, view)
             )
         return False
 

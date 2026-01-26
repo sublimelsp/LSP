@@ -578,19 +578,22 @@ class SessionBuffer:
             params['previousResultId'] = result_id
         request_id = self.session.send_request_async(
             Request.documentDiagnostic(params, view),
-            partial(self._on_document_diagnostic_async, view, identifier, version),
+            partial(self._on_document_diagnostic_async, identifier, version),
             partial(self._on_document_diagnostic_error_async, view, identifier, version)
         )
         self._document_diagnostic_pending_requests[identifier] = \
             PendingDocumentDiagnosticRequest(version, request_id)
 
     def _on_document_diagnostic_async(
-        self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
+        self, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
     ) -> None:
         self._diagnostics_versions[identifier] = version
-        if version == view.change_count():
-            # Only reset the pending request if the buffer content hasn't changed in the meanwhile, because otherwise we
-            # might accidentally overwrite the request number of a new request that was already sent after this one.
+        if version == self.last_synced_version:
+            # Only reset the pending request if the synced version wasn't incremented in the meanwhile, to prevent to
+            # accidentally overwrite the request number of a new request that might already been sent after this one.
+            # Note that the diagnostic response still needs to be handled even if the buffer content has changed,
+            # because the response of the next request might be an UnchangedDocumentDiagnosticReport, signalizing that
+            # the diagnostics with the present resultId are still valid.
             self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):

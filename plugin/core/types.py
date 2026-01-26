@@ -885,6 +885,24 @@ class ClientConfig:
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
+    def map_uri_on_payload(self, payload: Any, is_from_client_to_server: bool) -> Any:
+        if isinstance(payload, dict):
+            for k, v in payload.items():
+                payload[k] = self.map_uri_on_payload(v, is_from_client_to_server)
+
+        if isinstance(payload, list):
+            for i, v in enumerate(payload):
+                payload[i] = self.map_uri_on_payload(v, is_from_client_to_server)
+
+        if isinstance(payload, str) and payload.startswith("file://") and self.path_maps:
+            for path_map in self.path_maps:
+                path, mapped = path_map.map_from_local_to_remote(payload) if is_from_client_to_server else \
+                               path_map.map_from_remote_to_local(payload)
+                if mapped:
+                    payload = path
+
+        return payload
+
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         from .sessions import get_plugin
         if plugin := get_plugin(self.name):
@@ -894,22 +912,12 @@ class ClientConfig:
         return False
 
     def map_client_path_to_server_uri(self, path: str) -> str:
-        if self.path_maps:
-            for path_map in self.path_maps:
-                path, mapped = path_map.map_from_local_to_remote(path)
-                if mapped:
-                    break
-        return filename_to_uri(path)
+        return self.map_uri_on_payload(filename_to_uri(path), is_from_client_to_server=True)
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
-        scheme, path = parse_uri(uri)
+        scheme, path = parse_uri(self.map_uri_on_payload(uri, is_from_client_to_server=False))
         if scheme not in ("file", "res"):
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
-        if self.path_maps:
-            for path_map in self.path_maps:
-                path, mapped = path_map.map_from_remote_to_local(path)
-                if mapped:
-                    break
         return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:

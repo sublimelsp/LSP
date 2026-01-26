@@ -2172,7 +2172,7 @@ class Session(TransportCallbacks):
                     continue
             self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
+                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
 
     def _on_workspace_diagnostics_error_async(self, partial_result_token: str, error: ResponseError) -> None:
         identifier = self.diagnostics.token_identifier_map.pop(partial_result_token)
@@ -2270,9 +2270,9 @@ class Session(TransportCallbacks):
 
     def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-        self.handle_diagnostics(params['uri'], None, None, params['diagnostics'])
+        self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
-    def handle_diagnostics(
+    def handle_diagnostics_async(
         self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
     ) -> None:
         mgr = self.manager()
@@ -2283,7 +2283,7 @@ class Session(TransportCallbacks):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
         session_buffer = self.get_session_buffer_for_uri_async(uri)
-        if session_buffer and version is not None and version != session_buffer.last_synced_version:
+        if session_buffer and version is not None and version < session_buffer.last_synced_version:
             # FIXME version > session_buffer.last_synced_version
             # debug(f"ignoring diagnostics for {uri} due to outdated version {version}")
             return

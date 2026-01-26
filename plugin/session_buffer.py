@@ -594,12 +594,12 @@ class SessionBuffer:
         self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
-            self.session.handle_diagnostics(self._last_known_uri, identifier, version, response['items'])
+            self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
                 self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                 if diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full:
-                    self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
+                    self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
 
     def _on_document_diagnostic_error_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError

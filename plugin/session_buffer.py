@@ -584,14 +584,11 @@ class SessionBuffer:
     def _on_document_diagnostic_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
     ) -> None:
-        if version != view.change_count():
-            # The buffer content has changed in the meanwhile. Ignore the response, because another request has already
-            # been sent or will be sent automatically after the didChange notification. Also don't reset the stored
-            # value for the pending request, to prevent accidentally overriding a possibly newer value from a new
-            # request that might has been sent already.
-            return
         self._diagnostics_versions[identifier] = version
-        self._document_diagnostic_pending_requests[identifier] = None
+        if version == view.change_count():
+            # Only reset the pending request if the buffer content hasn't changed in the meanwhile, because otherwise we
+            # might accidentally overwrite the request number of a new request that was already sent after this one.
+            self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_full_document_diagnostic_report(response):
             self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])

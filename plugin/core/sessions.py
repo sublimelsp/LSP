@@ -2282,14 +2282,9 @@ class Session(TransportCallbacks):
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        session_buffer = self.get_session_buffer_for_uri_async(uri)
-        if session_buffer and version is not None and version < session_buffer.last_synced_version:
-            # FIXME version > session_buffer.last_synced_version
-            # debug(f"ignoring diagnostics for {uri} due to outdated version {version}")
-            return
         self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
-        if session_buffer:
+        if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 

@@ -16,6 +16,7 @@ from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -79,8 +80,10 @@ DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
 P = ParamSpec('P')
 
 
-def is_full_document_diagnostic_report(response: DocumentDiagnosticReport) -> TypeGuard[FullDocumentDiagnosticReport]:
-    return response['kind'] == DocumentDiagnosticReportKind.Full
+def is_full_document_diagnostic_report(
+    diagnostic_report: DocumentDiagnosticReport | FullDocumentDiagnosticReport | UnchangedDocumentDiagnosticReport
+) -> TypeGuard[FullDocumentDiagnosticReport]:
+    return diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full
 
 
 class PendingChanges:
@@ -595,7 +598,7 @@ class SessionBuffer:
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
                 self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-                if diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full:
+                if is_full_document_diagnostic_report(diagnostic_report):
                     self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
 
     def _on_document_diagnostic_error_async(

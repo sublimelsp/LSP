@@ -12,6 +12,7 @@ from .core.protocol import Response
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import AbstractPlugin
+from .core.sessions import HandleUpdateOrInstallationParams
 from .core.sessions import register_plugin
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
@@ -42,6 +43,7 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'HandleUpdateOrInstallationParams',
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',

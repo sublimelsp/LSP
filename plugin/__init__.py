@@ -1,3 +1,6 @@
+from .api import AbstractPluginV2
+from .api import PluginContext
+from .api import HandleUpdateOrInstallationParams
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -32,6 +35,7 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'AbstractPluginV2',
     'apply_text_edits',
     'ClientConfig',
     'css',
@@ -42,12 +46,14 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'HandleUpdateOrInstallationParams',
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',
     'parse_uri',
+    'PluginContext',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',

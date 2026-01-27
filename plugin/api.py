@@ -368,5 +368,3 @@ class AbstractPluginV2(metaclass=ABCMeta):
         This API is triggered on async thread.
         """
         return
-
-

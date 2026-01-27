@@ -70,6 +70,7 @@ from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
+from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .collections import DottedDict
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
@@ -115,7 +116,6 @@ from .types import method_to_capability
 from .types import SemanticToken
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .typing import StrEnum
 from .url import filename_to_uri
 from .url import parse_uri
@@ -1683,9 +1683,7 @@ class Session(TransportCallbacks):
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
-        if self.config.diagnostics_mode == "workspace" and \
-                self.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            self.do_workspace_diagnostics_async()
+        self.do_workspace_diagnostics_async()
 
     def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
@@ -2112,8 +2110,12 @@ class Session(TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
+        if not self.config.diagnostics_mode == 'workspace':
+            return
+        if not self.get_workspace_folders():
+            return
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:
-            if self.workspace_diagnostics_pending_responses[identifier]:
+            if self.workspace_diagnostics_pending_responses.get(identifier) is not None:
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
                 continue
@@ -2182,12 +2184,10 @@ class Session(TransportCallbacks):
                 # Retrigger the request after a short delay, but don't reset the pending response variable for this
                 # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
                 # infinite cycles of cancel -> retrigger, in case the server is busy.
-
-                def _retrigger_request() -> None:
-                    self.workspace_diagnostics_pending_responses[identifier] = None
-                    self._do_workspace_diagnostics_async(identifier)
-
-                sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                sublime.set_timeout_async(
+                    lambda: self._do_workspace_diagnostics_async(identifier),
+                    WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+                )
                 return
         self.workspace_diagnostics_pending_responses[identifier] = None
 
@@ -2290,8 +2290,8 @@ class Session(TransportCallbacks):
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: Any) -> None:
         """handles the client/registerCapability request"""
-        registrations = params["registrations"]
-        for registration in registrations:
+        new_workspace_diagnostics_provider = False
+        for registration in params["registrations"]:
             capability_path, registration_path = method_to_capability(registration["method"])
             if self.config.is_disabled_capability(capability_path):
                 continue
@@ -2301,7 +2301,10 @@ class Session(TransportCallbacks):
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
             registration_id = registration["id"]
             if capability_path == 'diagnosticProvider':
-                self.diagnostics.register_provider(registration_id, cast(DiagnosticOptions, options))
+                options = cast(DiagnosticOptions, options)
+                self.diagnostics.register_provider(registration_id, options)
+                if options['workspaceDiagnostics']:
+                    new_workspace_diagnostics_provider = True
                 continue
             debug(f"{self.config.name}: registering capability:", capability_path)
             data = _RegistrationData(registration_id, capability_path, registration_path, options)
@@ -2324,6 +2327,8 @@ class Session(TransportCallbacks):
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
         self.send_response(Response(request_id, None))
+        if new_workspace_diagnostics_provider:
+            self.do_workspace_diagnostics_async()
 
     def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""

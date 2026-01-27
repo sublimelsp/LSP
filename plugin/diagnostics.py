@@ -25,6 +25,11 @@ if TYPE_CHECKING:
 
 DiagnosticsIdentifier = Union[str, None]
 
+# Delay in milliseconds that applies when a pull diagnostics request is retriggered after being cancelled by the server
+# with the retriggerRequest flag.
+DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
+WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY = 3000
+
 
 @lru_cache
 def get_diagnostics_identifiers(session: Session, view: sublime.View) -> set[DiagnosticsIdentifier]:

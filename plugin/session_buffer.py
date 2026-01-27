@@ -37,7 +37,6 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
-from .core.types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -53,6 +52,7 @@ from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
+from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from functools import partial
@@ -71,10 +71,6 @@ import time
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
-
-# Delay in milliseconds that applies when a pull diagnostics request is retriggered after being cancelled by the server
-# with the retriggerRequest flag.
-DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
 
 
 P = ParamSpec('P')
@@ -153,7 +149,6 @@ class SessionBuffer:
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
         self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
-        self._workspace_diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
@@ -414,11 +409,6 @@ class SessionBuffer:
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
             self.do_document_diagnostic_async(view, version)
-            if self.session.config.diagnostics_mode == "workspace" and \
-                    not self.session.workspace_diagnostics_pending_response and \
-                    self.session.has_capability('diagnosticProvider.workspaceDiagnostics'):
-                self._workspace_diagnostics_debouncer_async.debounce(
-                    self.session.do_workspace_diagnostics_async, timeout_ms=WORKSPACE_DIAGNOSTICS_TIMEOUT)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):
@@ -450,6 +440,7 @@ class SessionBuffer:
         if self._has_changed_during_save:
             self._has_changed_during_save = False
             self._on_after_change_async(view, view.change_count())
+        self.session.do_workspace_diagnostics_async()
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_document_links_async()

@@ -873,6 +873,8 @@ class AbstractPlugin(metaclass=ABCMeta):
     To understand how this works, see the __getattr__ method of the Session class.
     """
 
+    opt_into_new_api: bool = False
+
     @classmethod
     @abstractmethod
     def name(cls) -> str:

@@ -249,13 +249,14 @@ class WindowManager(Manager, WindowConfigChangeListener):
             variables = extract_variables(self._window)
             cwd: str | None = None
             if plugin_class is not None:
-                plugin_class.handle_update_or_installation_async({
-                    'configuration': config,
-                    'set_installing_status': set_installing_status,
-                })
-                if plugin_class.needs_update_or_installation():
-                    set_installing_status()
-                    plugin_class.install_or_update()
+                if plugin_class.opt_into_new_api:
+                    plugin_class.handle_update_or_installation_async({
+                        'configuration': config,
+                        'set_installing_status': set_installing_status,
+                    })
+                elif plugin_class.needs_update_or_installation():
+                        set_installing_status()
+                        plugin_class.install_or_update()
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)

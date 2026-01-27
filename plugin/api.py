@@ -140,7 +140,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
     ) -> None:
         """Update or install the server binary if this plugin manages one. Called before server is started.
 
-        Make sure to call `args.set_installing_status()` before starting long-running operations to give user
+        Make sure to call `params.set_installing_status()` before starting long-running operations to give user
         a better feedback that something is happening.
         """
         return

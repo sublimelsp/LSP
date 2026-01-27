@@ -255,8 +255,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                         'set_installing_status': set_installing_status,
                     })
                 elif plugin_class.needs_update_or_installation():
-                        set_installing_status()
-                        plugin_class.install_or_update()
+                    set_installing_status()
+                    plugin_class.install_or_update()
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)

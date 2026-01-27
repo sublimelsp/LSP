@@ -1194,7 +1194,6 @@ class AbstractPlugin(metaclass=ABCMeta):
     # --- New API ------------------------------------------------------------------------------------------------------
 
     @classmethod
-    @abstractmethod
     def handle_update_or_installation_async(cls, args: HandleUpdateOrInstallationParams) -> None:
         """Update or install the server binary if this plugin manages one. Called before server is started.
 

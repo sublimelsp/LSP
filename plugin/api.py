@@ -1,5 +1,7 @@
 from __future__ import annotations
 from .core.constants import ST_STORAGE_PATH
+from .core.url import parse_uri
+from .core.views import uri_from_view
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Any, Callable, Literal, TypedDict, final, TYPE_CHECKING
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
     from .core.protocol import Response
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
+    from .core.sessions import SessionViewProtocol
     from .core.types import ClientConfig
     from .core.views import MarkdownLangMap
     from .core.workspace import WorkspaceFolder
@@ -103,6 +106,28 @@ class AbstractPluginV2(metaclass=ABCMeta):
         return sublime.load_settings(basename), filepath
 
     @classmethod
+    def is_applicable(cls, context: PluginContext, view: sublime.View) -> bool:
+        """
+        Determine whether the server should run on the given view.
+
+        The default implementation checks whether the URI scheme and the syntax scope match against the schemes and
+        selector from the settings file. You can override this method for example to dynamically evaluate the applicable
+        selector, or to ignore certain views even when those would match the static config. Please note that no document
+        syncronization messages (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to
+        the server for ignored views.
+
+        This method is called when the view gets opened. To manually trigger this method again, run the
+        `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
+
+        :param      view:             The view
+        :param      config:           The config
+        """
+        if (syntax := view.syntax()) and (selector := context.configuration.selector.strip()):
+            scheme, _ = parse_uri(uri_from_view(view))
+            return scheme in context.configuration.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        return False
+
+    @classmethod
     def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
         """
         In addition to the above variables, add more variables here to be expanded.
@@ -180,6 +205,18 @@ class AbstractPluginV2(metaclass=ABCMeta):
         return None
 
     @classmethod
+    def on_post_start(cls, context: PluginContext) -> None:
+        """
+        Callback invoked when the subprocess was just started.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      configuration:      The configuration
+        """
+        return
+
+    @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
@@ -230,7 +267,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
 
         :param      settings:      The settings that the server should receive.
         """
-        pass
+        return
 
     def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
@@ -263,7 +300,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
         :param    request_id:  The request ID.
         :param    request:     The request object. The request params can be modified by the plugin.
         """
-        pass
+        return
 
     def on_pre_send_notification_async(self, notification: Notification) -> None:
         """
@@ -272,7 +309,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
 
         :param    notification:  The notification object. The notification params can be modified by the plugin.
         """
-        pass
+        return
 
     def on_server_response_async(self, method: str, response: Response) -> None:
         """
@@ -283,7 +320,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
         :param    response:  The response object to the request. The response.result field can be modified by the
                              plugin, before it gets further handled by the LSP package.
         """
-        pass
+        return
 
     def on_server_notification_async(self, notification: Notification) -> None:
         """
@@ -291,7 +328,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
 
         :param    notification:  The notification object.
         """
-        pass
+        return
 
     def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
         """
@@ -310,7 +347,13 @@ class AbstractPluginV2(metaclass=ABCMeta):
         """
         Called when the context of the session buffer has changed or a new buffer was opened.
         """
-        pass
+        return
+
+    def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
+        """
+        Called after the selection has been modified in a view (debounced).
+        """
+        return
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """
@@ -324,6 +367,6 @@ class AbstractPluginV2(metaclass=ABCMeta):
 
         This API is triggered on async thread.
         """
-        pass
+        return
 
 

@@ -234,6 +234,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
+
+        def set_installing_status() -> None:
+            config.set_view_status(initiating_view, "installing...")
+
         config = ClientConfig.from_config(config, {})
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
@@ -245,8 +249,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
             variables = extract_variables(self._window)
             cwd: str | None = None
             if plugin_class is not None:
+                plugin_class.handle_update_or_installation_async({
+                    'configuration': config,
+                    'set_installing_status': set_installing_status,
+                })
                 if plugin_class.needs_update_or_installation():
-                    config.set_view_status(initiating_view, "installing...")
+                    set_installing_status()
                     plugin_class.install_or_update()
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):

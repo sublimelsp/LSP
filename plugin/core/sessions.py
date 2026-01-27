@@ -128,7 +128,7 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum, IntFlag
-from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
+from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, TypedDict, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -148,6 +148,11 @@ if TYPE_CHECKING:
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
 T = TypeVar('T')
+
+
+class HandleUpdateOrInstallationParams(TypedDict):
+    configuration: ClientConfig
+    set_installing_status: Callable[[], None]
 
 
 class ViewStateActions(IntFlag):
@@ -1183,6 +1188,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         This API is triggered on async thread.
         """
         pass
+
+    # --- New API ------------------------------------------------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def handle_update_or_installation_async(cls, args: HandleUpdateOrInstallationParams) -> None:
+        """Update or install the server binary if this plugin manages one. Called before server is started.
+
+        Make sure to call `args.set_installing_status()` before starting long-running operations to give user
+        a better feedback that something is happening.
+        """
 
 
 _plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}

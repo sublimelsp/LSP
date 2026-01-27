@@ -704,25 +704,27 @@ class TransportConfig:
 
 
 class ClientConfig:
-    def __init__(self,
-                 name: str,
-                 selector: str,
-                 priority_selector: str | None = None,
-                 schemes: list[str] | None = None,
-                 command: list[str] | None = None,
-                 binary_args: list[str] | None = None,  # DEPRECATED
-                 tcp_port: int | None = None,
-                 auto_complete_selector: str | None = None,
-                 enabled: bool = True,
-                 init_options: DottedDict = DottedDict(),
-                 settings: DottedDict = DottedDict(),
-                 env: dict[str, str | list[str]] = {},
-                 experimental_capabilities: dict[str, Any] | None = None,
-                 disabled_capabilities: DottedDict = DottedDict(),
-                 file_watcher: FileWatcherConfig = {},
-                 semantic_tokens: dict[str, str] | None = None,
-                 diagnostics_mode: str = "open_files",
-                 path_maps: list[PathMap] | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        selector: str,
+        priority_selector: str | None = None,
+        schemes: list[str] | None = None,
+        command: list[str] | None = None,
+        binary_args: list[str] | None = None,  # DEPRECATED
+        tcp_port: int | None = None,
+        auto_complete_selector: str | None = None,
+        enabled: bool = True,
+        init_options: DottedDict = DottedDict(),
+        settings: DottedDict = DottedDict(),
+        env: dict[str, str | list[str]] = {},
+        experimental_capabilities: dict[str, Any] | None = None,
+        disabled_capabilities: DottedDict = DottedDict(),
+        file_watcher: FileWatcherConfig = {},
+        semantic_tokens: dict[str, str] | None = None,
+        diagnostics_mode: str = "open_files",
+        path_maps: list[PathMap] | None = None
+    ) -> None:
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector

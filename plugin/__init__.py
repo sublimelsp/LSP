@@ -1,3 +1,6 @@
+from .api import AbstractPluginV2
+from .api import PluginContext
+from .api import HandleUpdateOrInstallationParams
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -12,7 +15,6 @@ from .core.protocol import Response
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import AbstractPlugin
-from .core.sessions import HandleUpdateOrInstallationParams
 from .core.sessions import register_plugin
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
@@ -33,6 +35,7 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'AbstractPluginV2',
     'apply_text_edits',
     'ClientConfig',
     'css',
@@ -50,6 +53,7 @@ __all__ = [
     'matches_pattern',
     'Notification',
     'parse_uri',
+    'PluginContext',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',

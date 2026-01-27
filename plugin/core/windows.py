@@ -5,6 +5,7 @@ from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
+from ..api import AbstractPluginV2
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -249,18 +250,26 @@ class WindowManager(Manager, WindowConfigChangeListener):
             variables = extract_variables(self._window)
             cwd: str | None = None
             if plugin_class is not None:
-                if plugin_class.opt_into_new_api:
+                if plugin_class.API_VERSION == 2:
+                    plugin_context = AbstractPluginV2.PluginContext(
+                        config, initiating_view, self._window, workspace_folders)
                     plugin_class.handle_update_or_installation_async({
                         'configuration': config,
                         'set_installing_status': set_installing_status,
                     })
-                elif plugin_class.needs_update_or_installation():
-                    set_installing_status()
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
+                    additional_variables = plugin_class.additional_variables(plugin_context)
+                else:
+                    if plugin_class.needs_update_or_installation():
+                        set_installing_status()
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
+                if plugin_class.API_VERSION == 2:
+                    cannot_start_reason = plugin_class.can_start(plugin_context)
+                else:
+                    cannot_start_reason = plugin_class.can_start(
+                        self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = f"cannot start {config.name}: {cannot_start_reason}"
@@ -270,7 +279,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     sublime.set_timeout_async(self._dequeue_listener_async)
                     self._window.status_message(message)
                     return
-                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
+                if plugin_class.API_VERSION == 2:
+                    cwd = plugin_class.on_pre_start(plugin_context)
+                else:
+                    cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             if cwd:
@@ -279,7 +291,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
             transport = create_transport(transport_config, transport_cwd, session)
-            if plugin_class:
+            if plugin_class and plugin_class.API_VERSION == 1:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(

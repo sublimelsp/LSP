@@ -118,8 +118,8 @@ from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .typing import StrEnum
 from .url import filename_to_uri
+from .url import normalize_uri
 from .url import parse_uri
-from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_uri_and_range_from_location
@@ -2147,31 +2147,13 @@ class Session(TransportCallbacks):
         if reset_pending_response:
             self.workspace_diagnostics_pending_responses[identifier] = None
             self.diagnostics.token_identifier_map.pop(partial_result_token)
-        if not response['items']:
-            return
-        window = sublime.active_window()
-        active_view = window.active_view() if window else None
-        active_view_path = active_view.file_name() if active_view else None
         for diagnostic_report in response['items']:
-            uri = diagnostic_report['uri']
-            # Normalize URI
-            scheme, path = parse_uri(uri)
-            if scheme == 'file':
-                # Skip for active view
-                if path == active_view_path:
-                    continue
-                uri = unparse_uri((scheme, path))
-            # Note: 'version' is a mandatory field, but some language servers have serialization bugs with null values.
-            version = diagnostic_report.get('version')
+            uri = normalize_uri(diagnostic_report['uri'])
+            version = diagnostic_report['version']
             # Skip if outdated
-            # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
-            # file are likely not accurate anymore, because changes in another file in the meanwhile could have affected
-            # the diagnostics in this file. If this is the case, a new request is already queued, or updated partial
-            # results are expected to be streamed by the server.
-            if isinstance(version, int):
-                sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.last_synced_version != version:
-                    continue
+            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
+                    version < session_buffer.last_synced_version:
+                continue
             self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
                 self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])

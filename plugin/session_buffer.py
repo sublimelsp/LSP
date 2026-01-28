@@ -37,6 +37,7 @@ from .core.types import debounced
 from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
+from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -591,6 +592,7 @@ class SessionBuffer:
             self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
         if 'relatedDocuments' in response:
             for uri, diagnostic_report in response['relatedDocuments'].items():
+                uri = normalize_uri(uri)
                 self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                 if is_full_document_diagnostic_report(diagnostic_report):
                     self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])

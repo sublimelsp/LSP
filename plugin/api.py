@@ -43,12 +43,10 @@ class PluginContext:
         self.workspace_folders = workspace_folders
 
 
-class AbstractPluginV2(metaclass=ABCMeta):
+class LspPlugin(metaclass=ABCMeta):
     """
     TODO: doc
     """
-
-    API_VERSION: Literal[2] = 2
 
     @classmethod
     @abstractmethod
@@ -160,9 +158,7 @@ class AbstractPluginV2(metaclass=ABCMeta):
         return ST_STORAGE_PATH
 
     @classmethod
-    def handle_update_or_installation_async(
-        cls, context: PluginContext, params: HandleUpdateOrInstallationParams
-    ) -> None:
+    def install_async(cls, context: PluginContext) -> None:
         """Update or install the server binary if this plugin manages one. Called before server is started.
 
         Make sure to call `params.set_installing_status()` before starting long-running operations to give user

@@ -143,6 +143,7 @@ import weakref
 
 
 if TYPE_CHECKING:
+    from ..api import LspPlugin
     from .active_request import ActiveRequest
 
 
@@ -868,8 +869,6 @@ class AbstractPlugin(metaclass=ABCMeta):
     To understand how this works, see the __getattr__ method of the Session class.
     """
 
-    API_VERSION: Literal[1] = 1
-
     @classmethod
     @abstractmethod
     def name(cls) -> str:
@@ -1187,10 +1186,10 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
 
-_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
+_plugins: dict[str, tuple[type[AbstractPlugin | LspPlugin], SettingsRegistration]] = {}
 
 
-def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
+def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool) -> None:
     global _plugins
     name = plugin.name()
     if name in _plugins:
@@ -1204,7 +1203,7 @@ def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -
         exception_log(f'Failed to register plugin "{name}"', ex)
 
 
-def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
+def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
 
@@ -1266,7 +1265,7 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
         exception_log(f'Failed to unregister plugin "{name}"', ex)
 
 
-def get_plugin(name: str) -> type[AbstractPlugin] | None:
+def get_plugin(name: str) -> type[AbstractPlugin | LspPlugin] | None:
     global _plugins
     tup = _plugins.get(name, None)
     return tup[0] if tup else None
@@ -1360,7 +1359,7 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
+                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None) -> None:
         self.transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -1388,7 +1387,7 @@ class Session(TransportCallbacks):
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
         self._plugin_class = plugin_class
-        self._plugin: AbstractPlugin | None = None
+        self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
@@ -1412,7 +1411,7 @@ class Session(TransportCallbacks):
         return self._plugin is not None
 
     @property
-    def plugin(self) -> AbstractPlugin | None:
+    def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
@@ -1862,7 +1861,7 @@ class Session(TransportCallbacks):
 
     def _open_uri_with_plugin_async(
         self,
-        plugin: AbstractPlugin,
+        plugin: AbstractPlugin | LspPlugin,
         uri: DocumentUri,
         r: Range | None,
         flags: sublime.NewFileFlags,

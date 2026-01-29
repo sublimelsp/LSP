@@ -5,7 +5,8 @@ from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
-from ..api import AbstractPluginV2
+from ..api import LspPlugin
+from ..api import PluginContext
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -21,6 +22,7 @@ from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
 from .protocol import Error
+from .sessions import AbstractPlugin
 from .sessions import AbstractViewListener
 from .sessions import get_plugin
 from .sessions import Logger
@@ -235,14 +237,9 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
-
-        def set_installing_status() -> None:
-            config.set_view_status(initiating_view, "installing...")
-
         config = ClientConfig.from_config(config, {})
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
-            # debug('Already starting on this window:', config.name)
             return
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
@@ -250,22 +247,19 @@ class WindowManager(Manager, WindowConfigChangeListener):
             variables = extract_variables(self._window)
             cwd: str | None = None
             if plugin_class is not None:
-                if plugin_class.API_VERSION == 2:
-                    plugin_context = AbstractPluginV2.PluginContext(
-                        config, initiating_view, self._window, workspace_folders)
-                    plugin_class.handle_update_or_installation_async({
-                        'configuration': config,
-                        'set_installing_status': set_installing_status,
-                    })
+                plugin_context = PluginContext(config, initiating_view, self._window, workspace_folders)
+                if issubclass(plugin_class, LspPlugin):
+                    config.set_view_status(initiating_view, "installing...")
+                    plugin_class.install_async(plugin_context)
                     additional_variables = plugin_class.additional_variables(plugin_context)
                 else:
                     if plugin_class.needs_update_or_installation():
-                        set_installing_status()
+                        config.set_view_status(initiating_view, "installing...")
                         plugin_class.install_or_update()
                     additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-                if plugin_class.API_VERSION == 2:
+                if issubclass(plugin_class, LspPlugin):
                     cannot_start_reason = plugin_class.can_start(plugin_context)
                 else:
                     cannot_start_reason = plugin_class.can_start(
@@ -279,7 +273,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     sublime.set_timeout_async(self._dequeue_listener_async)
                     self._window.status_message(message)
                     return
-                if plugin_class.API_VERSION == 2:
+                if issubclass(plugin_class, LspPlugin):
                     cwd = plugin_class.on_pre_start(plugin_context)
                 else:
                     cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
@@ -291,7 +285,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
             transport = create_transport(transport_config, transport_cwd, session)
-            if plugin_class and plugin_class.API_VERSION == 1:
+            if plugin_class and issubclass(plugin_class, AbstractPlugin):
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(

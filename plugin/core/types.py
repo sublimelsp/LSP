@@ -1,4 +1,6 @@
 from __future__ import annotations
+from ...protocol import DocumentSelector
+from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
 from ...protocol import ServerCapabilities
@@ -401,7 +403,7 @@ class ClientStates:
     STOPPING = 2
 
 
-class DocumentFilter:
+class DocumentFilter_:
     """
     A document filter denotes a document through properties like language, scheme or pattern. An example is a filter
     that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
@@ -442,7 +444,7 @@ class DocumentFilter:
         return True
 
 
-class DocumentSelector:
+class DocumentSelector_:
     """
     A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
     filters matches against the view.
@@ -450,8 +452,8 @@ class DocumentSelector:
 
     __slots__ = ("filters",)
 
-    def __init__(self, document_selector: list[dict[str, Any]]) -> None:
-        self.filters = [DocumentFilter(**document_filter) for document_filter in document_selector]
+    def __init__(self, document_selector: DocumentSelector) -> None:
+        self.filters = [DocumentFilter_(**cast(dict, document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -901,7 +903,7 @@ class ClientConfig:
                     break
         return filename_to_uri(path)
 
-    def map_server_uri_to_client_path(self, uri: str) -> str:
+    def map_server_uri_to_client_path(self, uri: DocumentUri) -> str:
         scheme, path = parse_uri(uri)
         if scheme not in ("file", "res"):
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")

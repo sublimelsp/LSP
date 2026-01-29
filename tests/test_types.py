@@ -1,7 +1,7 @@
 from __future__ import annotations
 from LSP.plugin.core.types import diff
 from LSP.plugin.core.types import basescope2languageid
-from LSP.plugin.core.types import DocumentSelector
+from LSP.plugin.core.types import DocumentSelector_
 from unittest.mock import MagicMock
 import sublime
 import unittest
@@ -52,7 +52,7 @@ class TestDocumentSelector(unittest.TestCase):
         self._opened_views.clear()
 
     def _make_view(self, syntax: str, file_name: str) -> sublime.View:
-        view = sublime.active_window().new_file(0, syntax)
+        view = sublime.active_window().new_file(sublime.NewFileFlags.NONE, syntax)
         self._opened_views.append(view)
         view.set_scratch(True)
         self.assertFalse(view.is_loading())
@@ -60,14 +60,14 @@ class TestDocumentSelector(unittest.TestCase):
         return view
 
     def test_language(self) -> None:
-        selector = DocumentSelector([{"language": "plaintext"}])
+        selector = DocumentSelector_([{"language": "plaintext"}])
         view = self._make_view("Packages/Text/Plain text.tmLanguage", "foobar.txt")
         self.assertTrue(selector.matches(view))
         view = self._make_view("Packages/Python/Python.sublime-syntax", "hello.py")
         self.assertFalse(selector.matches(view))
 
     def test_pattern_basics(self) -> None:
-        selector = DocumentSelector([{"language": "html", "pattern": "**/*.component.html"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "**/*.component.html"}])
         view = self._make_view("Packages/HTML/HTML.sublime-syntax", "index.html")
         self.assertFalse(selector.matches(view))
         view = self._make_view("Packages/HTML/HTML.sublime-syntax", "components/foo.component.html")
@@ -78,14 +78,14 @@ class TestDocumentSelector(unittest.TestCase):
 
     def test_pattern_asterisk(self) -> None:
         """`*` to match one or more characters in a path segment"""
-        selector = DocumentSelector([{"language": "html", "pattern": "a*c.html"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "a*c.html"}])
         # self.assertFalse(selector.matches(self._make_html_view("ac.html")))
         self.assertTrue(selector.matches(self._make_html_view("abc.html")))
         self.assertTrue(selector.matches(self._make_html_view("axyc.html")))
 
     def test_pattern_optional(self) -> None:
         """`?` to match on one character in a path segment"""
-        selector = DocumentSelector([{"language": "html", "pattern": "a?c.html"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "a?c.html"}])
         self.assertTrue(selector.matches(self._make_html_view("axc.html")))
         self.assertTrue(selector.matches(self._make_html_view("ayc.html")))
         self.assertFalse(selector.matches(self._make_html_view("ac.html")))
@@ -93,13 +93,13 @@ class TestDocumentSelector(unittest.TestCase):
 
     def test_pattern_globstar(self) -> None:
         """`**` to match any number of path segments, including none"""
-        selector = DocumentSelector([{"language": "html", "pattern": "**/abc.html"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "**/abc.html"}])
         self.assertTrue(selector.matches(self._make_html_view("foo/bar/abc.html")))
         self.assertFalse(selector.matches(self._make_html_view("asdf/qwerty/abc.htm")))
 
     def test_pattern_grouping(self) -> None:
         """`{}` to group conditions (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)"""
-        selector = DocumentSelector([{"pattern": "**/*.{ts,js}"}])
+        selector = DocumentSelector_([{"pattern": "**/*.{ts,js}"}])
         self.assertTrue(selector.matches(self._make_view(
             "Packages/JavaScript/TypeScript.sublime-syntax", "foo/bar.ts")))
         self.assertTrue(selector.matches(self._make_view(
@@ -114,7 +114,7 @@ class TestDocumentSelector(unittest.TestCase):
         `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on
         `example.0`, `example.1`, …)
         """
-        selector = DocumentSelector([{"language": "html", "pattern": "example.[0-9]"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "example.[0-9]"}])
         self.assertTrue(selector.matches(self._make_html_view("example.0")))
         self.assertTrue(selector.matches(self._make_html_view("example.1")))
         self.assertTrue(selector.matches(self._make_html_view("example.2")))
@@ -132,7 +132,7 @@ class TestDocumentSelector(unittest.TestCase):
         `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on
         `example.a`, `example.b`, but not `example.0`)
         """
-        selector = DocumentSelector([{"language": "html", "pattern": "example.[!0-9]"}])
+        selector = DocumentSelector_([{"language": "html", "pattern": "example.[!0-9]"}])
         self.assertTrue(selector.matches(self._make_html_view("example.a")))
         self.assertTrue(selector.matches(self._make_html_view("example.b")))
         self.assertTrue(selector.matches(self._make_html_view("example.c")))

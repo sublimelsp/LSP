@@ -4,6 +4,7 @@ import sublime
 import sublime_plugin
 
 # Please keep this list sorted (Edit -> Sort Lines)
+from .plugin.api import LspPlugin
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -88,7 +89,7 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 __all__ = (
     "DocumentSyncListener",
@@ -180,8 +181,9 @@ def _get_final_subclasses(derived: list[type], results: list[type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes: list[type[AbstractPlugin]] = []
+    plugin_classes: list[type[AbstractPlugin | LspPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
+    _get_final_subclasses(LspPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:
             if not plugin_class.name():

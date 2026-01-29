@@ -1,3 +1,6 @@
+from .api import LspPlugin
+from .api import PluginContext
+from .api import HandleUpdateOrInstallationParams
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -42,12 +45,15 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'HandleUpdateOrInstallationParams',
+    'LspPlugin',
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',
     'parse_uri',
+    'PluginContext',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',

@@ -201,18 +201,6 @@ class LspPlugin(metaclass=ABCMeta):
         return None
 
     @classmethod
-    def on_post_start(cls, context: PluginContext) -> None:
-        """
-        Callback invoked when the subprocess was just started.
-
-        :param      window:             The window
-        :param      initiating_view:    The initiating view
-        :param      workspace_folders:  The workspace folders
-        :param      configuration:      The configuration
-        """
-        return
-
-    @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
         """
         Override this method to tweak the syntax highlighting of code blocks in popups from your language server.

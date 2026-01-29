@@ -11,6 +11,7 @@ from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHint
 from ..protocol import InlayHintParams
 from ..protocol import LSPErrorCodes
+from ..protocol import RelatedFullDocumentDiagnosticReport
 from ..protocol import SemanticTokensDeltaParams
 from ..protocol import SemanticTokensParams
 from ..protocol import SemanticTokensRangeParams
@@ -78,8 +79,14 @@ P = ParamSpec('P')
 
 
 def is_full_document_diagnostic_report(
-    diagnostic_report: DocumentDiagnosticReport | FullDocumentDiagnosticReport | UnchangedDocumentDiagnosticReport
+    diagnostic_report: FullDocumentDiagnosticReport | UnchangedDocumentDiagnosticReport
 ) -> TypeGuard[FullDocumentDiagnosticReport]:
+    return diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full
+
+
+def is_related_full_document_diagnostic_report(
+    diagnostic_report: DocumentDiagnosticReport
+) -> TypeGuard[RelatedFullDocumentDiagnosticReport]:
     return diagnostic_report['kind'] == DocumentDiagnosticReportKind.Full
 
 
@@ -588,10 +595,10 @@ class SessionBuffer:
             # the diagnostics with the present resultId are still valid.
             self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
-        if is_full_document_diagnostic_report(response):
+        if is_related_full_document_diagnostic_report(response):
             self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
-        if 'relatedDocuments' in response:
-            for uri, diagnostic_report in response['relatedDocuments'].items():
+        if related_documents := response.get('relatedDocuments'):
+            for uri, diagnostic_report in related_documents.items():
                 uri = normalize_uri(uri)
                 self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                 if is_full_document_diagnostic_report(diagnostic_report):

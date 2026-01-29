@@ -67,7 +67,7 @@ from ...protocol import WorkspaceDiagnosticReport
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
-from .collections import DottedDict
+from ..api import LspPlugin
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
@@ -143,8 +143,9 @@ import weakref
 
 
 if TYPE_CHECKING:
-    from ..api import LspPlugin
+    from ..api import PluginContext
     from .active_request import ActiveRequest
+    from .collections import DottedDict
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -1359,7 +1360,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None) -> None:
+                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
+                 plugin_context: PluginContext) -> None:
         self.transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -1387,6 +1389,7 @@ class Session(TransportCallbacks):
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
         self._plugin_class = plugin_class
+        self._plugin_context = plugin_context
         self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
@@ -1653,7 +1656,10 @@ class Session(TransportCallbacks):
             self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
+            if issubclass(self._plugin_class, LspPlugin):
+                self._plugin = self._plugin_class(weakref.ref(self), self._plugin_context)
+            else:
+                self._plugin = self._plugin_class(weakref.ref(self))
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             self._plugin.on_server_response_async('initialize', Response(-1, result))
@@ -1721,8 +1727,11 @@ class Session(TransportCallbacks):
 
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
-        if self._plugin_class is not None:
-            if extra_vars := self._plugin_class.additional_variables():
+        if self._plugin_class:
+            if issubclass(self._plugin_class, LspPlugin):
+                if extra_vars := self._plugin_class.additional_variables(self._plugin_context):
+                    variables.update(extra_vars)
+            elif extra_vars := self._plugin_class.additional_variables():
                 variables.update(extra_vars)
         return variables
 
@@ -1734,7 +1743,10 @@ class Session(TransportCallbacks):
         if self._plugin:
             task: PackagedTask[LSPAny | Error] = Promise.packaged_task()
             promise, resolve = task
-            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
+            if isinstance(self._plugin, LspPlugin):
+                if self._plugin.on_execute_command(command, lambda: resolve(None)):
+                    return promise
+            elif self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp

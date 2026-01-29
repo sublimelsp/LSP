@@ -4,7 +4,7 @@ from .core.url import parse_uri
 from .core.views import uri_from_view
 from abc import ABCMeta
 from abc import abstractmethod
-from typing import Any, Callable, Literal, TypedDict, final, TYPE_CHECKING
+from typing import Any, Callable, TypedDict, final, TYPE_CHECKING
 import sublime
 
 if TYPE_CHECKING:
@@ -264,7 +264,7 @@ class LspPlugin(metaclass=ABCMeta):
         """
         return configuration
 
-    def on_pre_server_command(self, command: ExecuteCommandParams, done_callback: Callable[[], None]) -> bool:
+    def on_execute_command(self, command: ExecuteCommandParams, done_callback: Callable[[], None]) -> bool:
         """
         Intercept a command that is about to be sent to the language server.
 

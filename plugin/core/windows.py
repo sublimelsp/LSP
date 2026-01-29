@@ -246,8 +246,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd: str | None = None
+            plugin_context = PluginContext(config, initiating_view, self._window, workspace_folders)
             if plugin_class is not None:
-                plugin_context = PluginContext(config, initiating_view, self._window, workspace_folders)
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_async(plugin_context)
@@ -278,7 +278,8 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 else:
                     cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")
-            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
+            session = Session(
+                self, self._create_logger(config.name), workspace_folders, config, plugin_class, plugin_context)
             if cwd:
                 transport_cwd: str | None = cwd
             else:

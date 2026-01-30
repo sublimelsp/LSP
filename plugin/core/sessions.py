@@ -2132,7 +2132,8 @@ class Session(TransportCallbacks):
             params['identifier'] = identifier
         self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
             Request.workspaceDiagnostic(
-                params, on_partial_result=partial(self._on_workspace_diagnostics_partial_result_async, identifier)),
+                params,
+                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # noqa: E501
             partial(self._on_workspace_diagnostics_async, identifier),
             partial(self._on_workspace_diagnostics_error_async, identifier)
         )
@@ -2141,6 +2142,7 @@ class Session(TransportCallbacks):
         self,
         identifier: DiagnosticsIdentifier,
         response: WorkspaceDiagnosticReport,
+        *,
         reset_pending_response: bool = True
     ) -> None:
         if reset_pending_response:
@@ -2155,13 +2157,6 @@ class Session(TransportCallbacks):
             self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
                 self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
-
-    def _on_workspace_diagnostics_partial_result_async(
-        self,
-        identifier: DiagnosticsIdentifier,
-        diagnostics: WorkspaceDiagnosticReport
-    ) -> None:
-        self._on_workspace_diagnostics_async(identifier, diagnostics, reset_pending_response=False)
 
     def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:

@@ -132,7 +132,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from functools import lru_cache
 from functools import partial
-from typing import Any, Callable, Generator, Iterable, List, Literal, Mapping, Protocol, TypeVar, overload
+from typing import Any, Callable, Generator, Iterable, List, Literal, Mapping, Protocol, TypeVar, Union, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -152,7 +152,7 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=None | bool | int | Uint | float | str | Mapping[str, Any] | Iterable[Any])
+P = TypeVar('P', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
 R = TypeVar('R')
 
 

@@ -1,14 +1,14 @@
 from __future__ import annotations
 from ...protocol import *  # For backward compatibility with LSP packages.
 from functools import total_ordering
-from typing import Any, Callable, Generic, Iterable, Mapping, TypedDict, TypeVar
+from typing import Any, Callable, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
 from typing_extensions import NotRequired
 import sublime
 
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX
 
-P = TypeVar('P', bound=None | bool | int | Uint | float | str | Mapping[str, Any] | Iterable[Any])
+P = TypeVar('P', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
 R = TypeVar('R')
 
 

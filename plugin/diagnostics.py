@@ -44,7 +44,6 @@ class DiagnosticsStorage:
         self._identifiers: set[DiagnosticsIdentifier] = set()
         self._workspace_diagnostics_identifiers: set[DiagnosticsIdentifier] = set()
         self._diagnostics: dict[DocumentUri, dict[DiagnosticsIdentifier, list[Diagnostic]]] = {}
-        self.token_identifier_map: dict[str, DiagnosticsIdentifier] = {}  # maps identifiers to partial result tokens
 
     def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
         return set(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from ...protocol import *  # For backward compatibility with LSP packages.
 from functools import total_ordering
-from typing import Any, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
+from typing import Any, Callable, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
 from typing_extensions import NotRequired
 import sublime
 
@@ -13,7 +13,7 @@ R = TypeVar('R')
 
 class Request(Generic[R]):
 
-    __slots__ = ('method', 'params', 'view', 'progress', 'partial_results')
+    __slots__ = ('method', 'params', 'view', 'progress', 'on_partial_result')
 
     def __init__(
         self,
@@ -21,13 +21,13 @@ class Request(Generic[R]):
         params: Any = None,
         view: sublime.View | None = None,
         progress: bool = False,
-        partial_results: bool = False
+        on_partial_result: Callable[[Any], None] | None = None,
     ) -> None:
         self.method = method
         self.params = params
         self.view = view
         self.progress: bool | str = progress
-        self.partial_results = partial_results
+        self.on_partial_result = on_partial_result
 
     @classmethod
     def initialize(cls, params: InitializeParams) -> Request:
@@ -156,8 +156,10 @@ class Request(Generic[R]):
         return Request('textDocument/diagnostic', params, view)
 
     @classmethod
-    def workspaceDiagnostic(cls, params: WorkspaceDiagnosticParams) -> Request:
-        return Request('workspace/diagnostic', params, partial_results=True)
+    def workspaceDiagnostic(
+        cls, params: WorkspaceDiagnosticParams, on_partial_result: Callable[[WorkspaceDiagnosticReport], None]
+    ) -> Request:
+        return Request('workspace/diagnostic', params, on_partial_result=on_partial_result)
 
     @classmethod
     def shutdown(cls) -> Request:

@@ -28,7 +28,7 @@ import sublime
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator
-    from typing import TypeGuard
+    from typing_extensions import TypeGuard
 
 
 ConfigName = str

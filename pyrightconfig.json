@@ -1,5 +1,5 @@
 {
-    "pythonVersion": "3.11",
+    "pythonVersion": "3.8",
     "reportMissingModuleSource": "none",
     "reportIncompatibleMethodOverride": "none",
     "stubPath": "./stubs",

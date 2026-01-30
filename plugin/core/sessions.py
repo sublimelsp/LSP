@@ -71,7 +71,6 @@ from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .collections import DottedDict
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
@@ -116,7 +115,6 @@ from .types import method_to_capability
 from .types import SemanticToken
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .typing import StrEnum
 from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
@@ -131,13 +129,14 @@ from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
 from enum import IntEnum, IntFlag
+from functools import lru_cache
+from functools import partial
 from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
 from typing_extensions import deprecated
 from weakref import WeakSet
-import functools
 import itertools
 import mdpopups
 import os
@@ -147,6 +146,8 @@ import weakref
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
+    from .collections import DottedDict
+    from .typing import StrEnum
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -176,7 +177,7 @@ def get_semantic_tokens_map(custom_tokens_map: dict[str, str] | None) -> tuple[t
     return tuple(sorted(tokens_scope_map.items()))  # make map hashable
 
 
-@functools.lru_cache(maxsize=128)
+@lru_cache(maxsize=128)
 def decode_semantic_token(
     types_legend: tuple[str, ...],
     modifiers_legend: tuple[str, ...],
@@ -1199,7 +1200,7 @@ def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -
     try:
         settings, base_file = plugin.configuration()
         if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
+            on_change = partial(client_configs.update_external_config, name, settings, base_file)
             _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
         exception_log(f'Failed to register plugin "{name}"', ex)
@@ -1875,7 +1876,7 @@ class Session(TransportCallbacks):
         def continue_on_main_thread() -> None:
             view = open_resource(self.window, uri, group)
             if view and r:
-                sublime.set_timeout(functools.partial(center_selection, view, r))
+                sublime.set_timeout(partial(center_selection, view, r))
             sublime.set_timeout_async(lambda: result[1](view))
 
         result: PackagedTask[sublime.View | None] = Promise.packaged_task()
@@ -2014,7 +2015,7 @@ class Session(TransportCallbacks):
             view_state_actions = self._get_view_state_actions(uri, auto_save)
             promises.append(
                 self.open_uri_async(uri)
-                    .then(functools.partial(handle_view, edits, label, view_version, uri, view_state_actions))
+                    .then(partial(handle_view, edits, label, view_version, uri, view_state_actions))
             )
         return Promise.all(promises) \
             .then(lambda _: self._set_selected_sheets(selected_sheets)) \
@@ -2129,24 +2130,21 @@ class Session(TransportCallbacks):
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
         if identifier is not None:
             params['identifier'] = identifier
-        partial_result_token = _PARTIAL_RESULT_PROGRESS_PREFIX + str(self.request_id + 1)
-        self.diagnostics.token_identifier_map[partial_result_token] = identifier
         self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
-            Request.workspaceDiagnostic(params),
-            functools.partial(self._on_workspace_diagnostics_async, partial_result_token),
-            functools.partial(self._on_workspace_diagnostics_error_async, partial_result_token)
+            Request.workspaceDiagnostic(
+                params, on_partial_result=partial(self._on_workspace_diagnostics_partial_result_async, identifier)),
+            partial(self._on_workspace_diagnostics_async, identifier),
+            partial(self._on_workspace_diagnostics_error_async, identifier)
         )
 
     def _on_workspace_diagnostics_async(
         self,
-        partial_result_token: str,
+        identifier: DiagnosticsIdentifier,
         response: WorkspaceDiagnosticReport,
         reset_pending_response: bool = True
     ) -> None:
-        identifier = self.diagnostics.token_identifier_map[partial_result_token]
         if reset_pending_response:
             self.workspace_diagnostics_pending_responses[identifier] = None
-            self.diagnostics.token_identifier_map.pop(partial_result_token)
         for diagnostic_report in response['items']:
             uri = normalize_uri(diagnostic_report['uri'])
             version = diagnostic_report['version']
@@ -2158,8 +2156,14 @@ class Session(TransportCallbacks):
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
                 self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
 
-    def _on_workspace_diagnostics_error_async(self, partial_result_token: str, error: ResponseError) -> None:
-        identifier = self.diagnostics.token_identifier_map.pop(partial_result_token)
+    def _on_workspace_diagnostics_partial_result_async(
+        self,
+        identifier: DiagnosticsIdentifier,
+        diagnostics: WorkspaceDiagnosticReport
+    ) -> None:
+        self._on_workspace_diagnostics_async(identifier, diagnostics, reset_pending_response=False)
+
+    def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
@@ -2301,7 +2305,7 @@ class Session(TransportCallbacks):
                 # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
                 for sv in self.session_views_async():
-                    inform = functools.partial(sv.on_capability_added_async, registration_id, capability_path, options)
+                    inform = partial(sv.on_capability_added_async, registration_id, capability_path, options)
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
@@ -2412,9 +2416,8 @@ class Session(TransportCallbacks):
         if isinstance(token, str) and token.startswith(_PARTIAL_RESULT_PROGRESS_PREFIX):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
-            if request.method == "workspace/diagnostic":
-                workspace_diagnostic_report = cast(WorkspaceDiagnosticReport, value)
-                self._on_workspace_diagnostics_async(token, workspace_diagnostic_report, reset_pending_response=False)
+            if request.on_partial_result:
+                request.on_partial_result(value)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress
@@ -2524,7 +2527,7 @@ class Session(TransportCallbacks):
         request_id = self.request_id
         if request.progress and isinstance(request.params, dict):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
-        if request.partial_results and isinstance(request.params, dict):
+        if request.on_partial_result and isinstance(request.params, dict):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
         on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
@@ -2542,7 +2545,7 @@ class Session(TransportCallbacks):
             on_error: Callable[[Any], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
-        sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
+        sublime.set_timeout_async(partial(self.send_request_async, request, on_result, on_error))
 
     def send_request_task(self, request: Request) -> Promise:
         task: PackagedTask[Any] = Promise.packaged_task()

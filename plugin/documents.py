@@ -53,6 +53,7 @@ from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
+from .diagnostics import get_diagnostics_identifiers
 from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
@@ -224,6 +225,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
         self._cleanup()
         self._setup()
+        get_diagnostics_identifiers.cache_clear()
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
 

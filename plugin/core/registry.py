@@ -269,7 +269,7 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
         return
     diagnostics: list[Diagnostic] = []
     for session in wm.get_sessions():
-        diagnostics.extend(session.diagnostics.diagnostics_by_document_uri(uri))
+        diagnostics.extend(session.diagnostics.get_diagnostics_for_uri(uri))
     if not diagnostics:
         return
     # Sort diagnostics by location
@@ -290,7 +290,12 @@ def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = 
     view.show_at_center(diag_pos)
     # We need a small delay before showing the popup to wait for the scrolling animation to finish. Otherwise ST would
     # immediately hide the popup.
-    sublime.set_timeout_async(lambda: view.run_command('lsp_hover', {'only_diagnostics': True, 'point': diag_pos}), 200)
+    sublime.set_timeout(lambda: _show_diagnostic_popup(view, diag_pos), 250)
+
+
+def _show_diagnostic_popup(view: sublime.View, point: int) -> None:
+    view.hide_popup()
+    view.run_command('lsp_hover', {'only_diagnostics': True, 'point': point})
 
 
 class LspNextDiagnosticCommand(LspTextCommand):

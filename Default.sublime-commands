@@ -99,13 +99,6 @@
     },
     {
         "caption": "LSP: Goto Diagnostic",
-        "command": "lsp_goto_diagnostic",
-        "args": {
-            "uri": "$view_uri"
-        }
-    },
-    {
-        "caption": "LSP: Goto Diagnostic in Project",
         "command": "lsp_goto_diagnostic"
     },
     {

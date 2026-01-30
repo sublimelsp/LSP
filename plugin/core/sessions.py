@@ -9,6 +9,7 @@ from ...protocol import CompletionItemTag
 from ...protocol import ConfigurationItem
 from ...protocol import ConfigurationParams
 from ...protocol import Diagnostic
+from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
 from ...protocol import DiagnosticTag
@@ -67,12 +68,14 @@ from ...protocol import WorkspaceDiagnosticReport
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
+from ..diagnostics import DiagnosticsIdentifier
+from ..diagnostics import DiagnosticsStorage
+from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .collections import DottedDict
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
-from .diagnostics_storage import DiagnosticsStorage
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
@@ -88,6 +91,7 @@ from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
 from .open import open_file
+from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
@@ -107,16 +111,15 @@ from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
-from .types import DocumentSelector
+from .types import DocumentSelector_
 from .types import method_to_capability
 from .types import SemanticToken
 from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
-from .types import WORKSPACE_DIAGNOSTICS_TIMEOUT
 from .typing import StrEnum
 from .url import filename_to_uri
+from .url import normalize_uri
 from .url import parse_uri
-from .url import unparse_uri
 from .version import __version__
 from .views import extract_variables
 from .views import get_uri_and_range_from_location
@@ -677,7 +680,7 @@ class SessionBufferProtocol(Protocol):
     def get_language_id(self) -> str | None:
         ...
 
-    def get_view_in_group(self, group: int) -> sublime.View:
+    def get_view_in_group(self, group: int = ...) -> sublime.View:
         ...
 
     def register_capability_async(
@@ -1333,7 +1336,7 @@ class _RegistrationData:
         document_selector = options.pop("documentSelector", None)
         if not isinstance(document_selector, list):
             document_selector = []
-        self.selector = DocumentSelector(document_selector)
+        self.selector = DocumentSelector_(document_selector)
         self.options = options
         self.session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
 
@@ -1371,8 +1374,8 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STARTING
         self.capabilities = Capabilities()
         self.diagnostics = DiagnosticsStorage()
-        self.diagnostics_result_ids: dict[DocumentUri, str | None] = {}
-        self.workspace_diagnostics_pending_response: int | None = None
+        self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
+        self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
         self._init_callback: InitCallback | None = None
@@ -1470,14 +1473,14 @@ class Session(TransportCallbacks):
         self._session_buffers.add(sb)
         for data in self._registrations.values():
             data.check_applicable(sb, suppress_requests=True)
-        if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.diagnostics_by_document_uri(uri)):
+        if (uri := sb.get_uri()) and (diagnostics := self.diagnostics.get_diagnostics_for_uri(uri)):
             self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
 
     def _publish_diagnostics_to_session_buffer_async(
-        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic]
+        self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None = None
     ) -> None:
         visible_session_views, _ = self.session_views_by_visibility()
-        sb.on_diagnostics_async(diagnostics, None, visible_session_views)
+        sb.on_diagnostics_async(diagnostics, version, visible_session_views)
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -1647,9 +1650,12 @@ class Session(TransportCallbacks):
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
     def _handle_initialize_success(self, result: InitializeResult) -> None:
-        self.capabilities.assign(result.get('capabilities', dict()))
+        capabilities = result['capabilities']
+        self.capabilities.assign(capabilities)
         if self._workspace_folders and not self._supports_workspace_folders():
             self._workspace_folders = self._workspace_folders[:1]
+        if diagnostic_options := capabilities.get('diagnosticProvider'):
+            self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
@@ -1677,9 +1683,7 @@ class Session(TransportCallbacks):
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
-        if self.config.diagnostics_mode == "workspace" and \
-                self.has_capability('diagnosticProvider.workspaceDiagnostics'):
-            self.do_workspace_diagnostics_async()
+        self.do_workspace_diagnostics_async()
 
     def _handle_initialize_error(self, result: InitializeError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
@@ -1812,18 +1816,21 @@ class Session(TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(view)
+        if uri.startswith('res:'):
+            return self._open_res_uri_async(uri, r, group)
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
+            flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
             if name := uri[len('untitled:'):]:
                 # Check if there is a pre-existing unsaved buffer with the given name
                 for view in self.window.views():
                     if view.file_name() is None and view.name() == name:
                         self.window.focus_view(view)
                         return Promise.resolve(view)
-                view = self.window.new_file()
+                view = self.window.new_file(flags)
                 view.set_scratch(True)
                 view.set_name(name)
                 return Promise.resolve(view)
-            view = self.window.new_file()
+            view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
@@ -1856,6 +1863,23 @@ class Session(TransportCallbacks):
             sublime.set_timeout_async(lambda: result[1](view))
 
         sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))
+        return result[0]
+
+    def _open_res_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Range | None = None,
+        group: int = -1
+    ) -> Promise[sublime.View | None]:
+
+        def continue_on_main_thread() -> None:
+            view = open_resource(self.window, uri, group)
+            if view and r:
+                sublime.set_timeout(functools.partial(center_selection, view, r))
+            sublime.set_timeout_async(lambda: result[1](view))
+
+        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
+        sublime.set_timeout(continue_on_main_thread)
         return result[0]
 
     def _open_uri_with_plugin_async(
@@ -2086,71 +2110,68 @@ class Session(TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
-        if self.workspace_diagnostics_pending_response:
-            # The server is probably leaving the request open intentionally, in order to continuously stream updates via
-            # $/progress notifications.
+        if not self.config.diagnostics_mode == 'workspace':
             return
+        if not self.get_workspace_folders():
+            return
+        for identifier in self.diagnostics.workspace_diagnostics_identifiers:
+            if self.workspace_diagnostics_pending_responses.get(identifier) is not None:
+                # The server is probably leaving the request open intentionally, in order to continuously stream updates
+                # via $/progress notifications.
+                continue
+            self._do_workspace_diagnostics_async(identifier)
+
+    def _do_workspace_diagnostics_async(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
-            {'uri': uri, 'value': result_id} for uri, result_id in self.diagnostics_result_ids.items()
-            if result_id is not None
+            {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
+            if id_ == identifier and result_id is not None
         ]
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
-        if identifier := self.get_capability("diagnosticProvider.identifier"):
+        if identifier is not None:
             params['identifier'] = identifier
-        self.workspace_diagnostics_pending_response = self.send_request_async(
+        partial_result_token = _PARTIAL_RESULT_PROGRESS_PREFIX + str(self.request_id + 1)
+        self.diagnostics.token_identifier_map[partial_result_token] = identifier
+        self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
             Request.workspaceDiagnostic(params),
-            self._on_workspace_diagnostics_async,
-            self._on_workspace_diagnostics_error_async)
+            functools.partial(self._on_workspace_diagnostics_async, partial_result_token),
+            functools.partial(self._on_workspace_diagnostics_error_async, partial_result_token)
+        )
 
     def _on_workspace_diagnostics_async(
-        self, response: WorkspaceDiagnosticReport, reset_pending_response: bool = True
+        self,
+        partial_result_token: str,
+        response: WorkspaceDiagnosticReport,
+        reset_pending_response: bool = True
     ) -> None:
+        identifier = self.diagnostics.token_identifier_map[partial_result_token]
         if reset_pending_response:
-            self.workspace_diagnostics_pending_response = None
-        if not response['items']:
-            return
-        window = sublime.active_window()
-        active_view = window.active_view() if window else None
-        active_view_path = active_view.file_name() if active_view else None
+            self.workspace_diagnostics_pending_responses[identifier] = None
+            self.diagnostics.token_identifier_map.pop(partial_result_token)
         for diagnostic_report in response['items']:
-            uri = diagnostic_report['uri']
-            # Normalize URI
-            scheme, path = parse_uri(uri)
-            if scheme == 'file':
-                # Skip for active view
-                if path == active_view_path:
-                    continue
-                uri = unparse_uri((scheme, path))
-            # Note: 'version' is a mandatory field, but some language servers have serialization bugs with null values.
-            version = diagnostic_report.get('version')
+            uri = normalize_uri(diagnostic_report['uri'])
+            version = diagnostic_report['version']
             # Skip if outdated
-            # Note: this is just a necessary, but not a sufficient condition to decide whether the diagnostics for this
-            # file are likely not accurate anymore, because changes in another file in the meanwhile could have affected
-            # the diagnostics in this file. If this is the case, a new request is already queued, or updated partial
-            # results are expected to be streamed by the server.
-            if isinstance(version, int):
-                sb = self.get_session_buffer_for_uri_async(uri)
-                if sb and sb.last_synced_version != version:
-                    continue
-            self.diagnostics_result_ids[uri] = diagnostic_report.get('resultId')
+            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
+                    version < session_buffer.last_synced_version:
+                continue
+            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.m_textDocument_publishDiagnostics({'uri': uri, 'diagnostics': diagnostic_report['items']})
+                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
 
-    def _on_workspace_diagnostics_error_async(self, error: ResponseError) -> None:
+    def _on_workspace_diagnostics_error_async(self, partial_result_token: str, error: ResponseError) -> None:
+        identifier = self.diagnostics.token_identifier_map.pop(partial_result_token)
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
             if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                 # Retrigger the request after a short delay, but don't reset the pending response variable for this
                 # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
                 # infinite cycles of cancel -> retrigger, in case the server is busy.
-
-                def _retrigger_request() -> None:
-                    self.workspace_diagnostics_pending_response = None
-                    self.do_workspace_diagnostics_async()
-
-                sublime.set_timeout_async(_retrigger_request, WORKSPACE_DIAGNOSTICS_TIMEOUT)
+                sublime.set_timeout_async(
+                    lambda: self._do_workspace_diagnostics_async(identifier),
+                    WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+                )
                 return
-        self.workspace_diagnostics_pending_response = None
+        self.workspace_diagnostics_pending_responses[identifier] = None
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
@@ -2231,33 +2252,43 @@ class Session(TransportCallbacks):
 
     def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
         """handles the textDocument/publishDiagnostics notification"""
+        self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
+
+    def handle_diagnostics_async(
+        self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
+    ) -> None:
         mgr = self.manager()
         if not mgr:
             return
-        uri = params["uri"]
         reason = mgr.should_ignore_diagnostics(uri, self.config)
         if isinstance(reason, str):
             debug("ignoring unsuitable diagnostics for", uri, "reason:", reason)
             return
-        diagnostics = params["diagnostics"]
-        self.diagnostics.add_diagnostics_async(uri, diagnostics)
+        self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
-        if sb := self.get_session_buffer_for_uri_async(uri):
-            self._publish_diagnostics_to_session_buffer_async(sb, diagnostics)
+        if session_buffer := self.get_session_buffer_for_uri_async(uri):
+            self._publish_diagnostics_to_session_buffer_async(
+                session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 
     def m_client_registerCapability(self, params: RegistrationParams, request_id: int | str) -> None:
         """handles the client/registerCapability request"""
-        registrations = params["registrations"]
-        for registration in registrations:
+        new_workspace_diagnostics_provider = False
+        for registration in params["registrations"]:
             capability_path, registration_path = method_to_capability(registration["method"])
             if self.config.is_disabled_capability(capability_path):
                 continue
-            debug(f"{self.config.name}: registering capability:", capability_path)
             options = registration.get("registerOptions")
             if not isinstance(options, dict):
                 options = {}
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
             registration_id = registration["id"]
+            if capability_path == 'diagnosticProvider':
+                options = cast(DiagnosticOptions, options)
+                self.diagnostics.register_provider(registration_id, options)
+                if options['workspaceDiagnostics']:
+                    new_workspace_diagnostics_provider = True
+                continue
+            debug(f"{self.config.name}: registering capability:", capability_path)
             data = _RegistrationData(registration_id, capability_path, registration_path, options)
             self._registrations[registration_id] = data
             if data.selector:
@@ -2278,6 +2309,8 @@ class Session(TransportCallbacks):
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
         self.send_response(Response(request_id, None))
+        if new_workspace_diagnostics_provider:
+            self.do_workspace_diagnostics_async()
 
     def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: int | str) -> None:
         """handles the client/unregisterCapability request"""
@@ -2285,6 +2318,9 @@ class Session(TransportCallbacks):
         for unregistration in unregistrations:
             registration_id = unregistration["id"]
             capability_path, registration_path = method_to_capability(unregistration["method"])
+            if capability_path == 'diagnosticProvider':
+                self.diagnostics.unregister_provider(registration_id)
+                continue
             debug(f"{self.config.name}: unregistering capability:", capability_path)
             data = self._registrations.pop(registration_id, None)
             if capability_path == "didChangeWatchedFilesProvider":
@@ -2377,8 +2413,8 @@ class Session(TransportCallbacks):
             request_id = int(token[len(_PARTIAL_RESULT_PROGRESS_PREFIX):])
             request = self._response_handlers[request_id][0]
             if request.method == "workspace/diagnostic":
-                self._on_workspace_diagnostics_async(
-                    cast(WorkspaceDiagnosticReport, value), reset_pending_response=False)
+                workspace_diagnostic_report = cast(WorkspaceDiagnosticReport, value)
+                self._on_workspace_diagnostics_async(token, workspace_diagnostic_report, reset_pending_response=False)
             return
         # Work Done Progress
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress

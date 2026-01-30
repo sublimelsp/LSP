@@ -12,9 +12,8 @@ from ..protocol import InlayHint
 from ..protocol import InlayHintParams
 from ..protocol import LSPErrorCodes
 from ..protocol import RelatedFullDocumentDiagnosticReport
-from ..protocol import SemanticTokensDeltaParams
-from ..protocol import SemanticTokensParams
-from ..protocol import SemanticTokensRangeParams
+from ..protocol import SemanticTokens
+from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
 from ..protocol import UnchangedDocumentDiagnosticReport
@@ -501,10 +500,8 @@ class SessionBuffer:
             )
 
     def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
-        if response is None:  # Guard against spec violation from certain language servers
-            self._color_phantoms.update([])
-            return
-        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response]
+        # None-check guards against spec violation from certain language servers.
+        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:
@@ -703,39 +700,46 @@ class SessionBuffer:
         if self.semantic_tokens.pending_response:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
         self.semantic_tokens.view_change_count = view.change_count()
-        params: dict[str, Any] = {"textDocument": text_document_identifier(view)}
         if only_viewport and self.has_capability("semanticTokensProvider.range"):
-            params["range"] = region_to_range(view, view.visible_region())
-            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
+            request = Request.semanticTokensRange({
+                "textDocument": text_document_identifier(view),
+                "range": region_to_range(view, view.visible_region())
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, partial(self._on_semantic_tokens_viewport_async, view), self._on_semantic_tokens_error_async)
         elif self.semantic_tokens.result_id and self.has_capability("semanticTokensProvider.full.delta"):
-            params["previousResultId"] = self.semantic_tokens.result_id
-            request = Request.semanticTokensFullDelta(cast(SemanticTokensDeltaParams, params), view)
+            request = Request.semanticTokensFullDelta({
+                "textDocument": text_document_identifier(view),
+                "previousResultId": self.semantic_tokens.result_id
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_delta_async, self._on_semantic_tokens_error_async)
         elif self.has_capability("semanticTokensProvider.full"):
-            request = Request.semanticTokensFull(cast(SemanticTokensParams, params), view)
+            request = Request.semanticTokensFull({
+                "textDocument": text_document_identifier(view),
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
         elif self.has_capability("semanticTokensProvider.range"):
-            params["range"] = entire_content_range(view)
-            request = Request.semanticTokensRange(cast(SemanticTokensRangeParams, params), view)
+            request = Request.semanticTokensRange({
+                "textDocument": text_document_identifier(view),
+                "range": entire_content_range(view)
+            }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
 
-    def _on_semantic_tokens_async(self, response: dict | None) -> None:
+    def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
             self.semantic_tokens.data = response["data"]
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: dict | None) -> None:
+    def _on_semantic_tokens_viewport_async(self, view: sublime.View, response: SemanticTokens | None) -> None:
         self._on_semantic_tokens_async(response)
         self.do_semantic_tokens_async(view)  # now request semantic tokens for the full file
 
-    def _on_semantic_tokens_delta_async(self, response: dict | None) -> None:
+    def _on_semantic_tokens_delta_async(self, response: SemanticTokens | SemanticTokensDelta | None) -> None:
         self.semantic_tokens.pending_response = None
         if response:
             self.semantic_tokens.result_id = response.get("resultId")
@@ -749,11 +753,9 @@ class SessionBuffer:
                         self.semantic_tokens.data[start:start] = data
             elif "data" in response:  # response is of type SemanticTokens
                 self.semantic_tokens.data = response["data"]
-            else:
-                return
             self._draw_semantic_tokens_async()
 
-    def _on_semantic_tokens_error_async(self, _: dict) -> None:
+    def _on_semantic_tokens_error_async(self, _: ResponseError) -> None:
         self.semantic_tokens.pending_response = None
         self.semantic_tokens.result_id = None
 

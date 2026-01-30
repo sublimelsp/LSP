@@ -25,7 +25,6 @@ from ...protocol import FileEvent
 from ...protocol import FileSystemWatcher
 from ...protocol import FoldingRangeKind
 from ...protocol import GeneralClientCapabilities
-from ...protocol import InitializeError
 from ...protocol import InitializeParams
 from ...protocol import InitializeResult
 from ...protocol import InsertTextMode
@@ -55,6 +54,7 @@ from ...protocol import TextDocumentClientCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
 from ...protocol import TokenFormat
+from ...protocol import Uint
 from ...protocol import UnregistrationParams
 from ...protocol import WatchKind
 from ...protocol import WindowClientCapabilities
@@ -95,6 +95,7 @@ from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
 from .protocol import Error
+from .protocol import JsonRpcPayload
 from .protocol import Notification
 from .protocol import Request
 from .protocol import ResolvedCodeLens
@@ -131,7 +132,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from functools import lru_cache
 from functools import partial
-from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
+from typing import Any, Callable, Generator, Iterable, List, Literal, Mapping, Protocol, TypeVar, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -151,7 +152,8 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-T = TypeVar('T')
+P = TypeVar('P', bound=None | bool | int | Uint | float | str | Mapping[str, Any] | Iterable[Any])
+R = TypeVar('R')
 
 
 class ViewStateActions(IntFlag):
@@ -629,7 +631,7 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         ...
 
-    def on_request_started_async(self, request_id: int, request: Request) -> None:
+    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
         ...
 
     def on_request_finished_async(self, request_id: int) -> None:
@@ -1110,7 +1112,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return False
 
-    def on_pre_send_request_async(self, request_id: int, request: Request) -> None:
+    def on_pre_send_request_async(self, request_id: int, request: Request[Any, Any]) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
         This API is triggered on async thread.
@@ -1120,7 +1122,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_pre_send_notification_async(self, notification: Notification) -> None:
+    def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
         """
         Notifies about a notification that is about to be sent to the language server.
         This API is triggered on async thread.
@@ -1129,7 +1131,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_server_response_async(self, method: str, response: Response) -> None:
+    def on_server_response_async(self, method: str, response: Response[Any]) -> None:
         """
         Notifies about a response message that has been received from the language server.
         Only successful responses are passed to this method.
@@ -1140,7 +1142,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_server_notification_async(self, notification: Notification) -> None:
+    def on_server_notification_async(self, notification: Notification[Any]) -> None:
         """
         Notifies about a notification message that has been received from the language server.
 
@@ -1309,7 +1311,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
 
-def print_to_status_bar(error: dict[str, Any]) -> None:
+def print_to_status_bar(error: ResponseError) -> None:
     sublime.status_message(error["message"])
 
 
@@ -1367,7 +1369,7 @@ class Session(TransportCallbacks):
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int, tuple[Request, Callable, Callable[[Any], None]]] = {}
+        self._response_handlers: dict[int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1686,7 +1688,7 @@ class Session(TransportCallbacks):
             self._init_callback = None
         self.do_workspace_diagnostics_async()
 
-    def _handle_initialize_error(self, result: InitializeError) -> None:
+    def _handle_initialize_error(self, result: ResponseError) -> None:
         self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
@@ -2386,7 +2388,7 @@ class Session(TransportCallbacks):
         self._progress[params['token']] = None
         self.send_response(Response(request_id, None))
 
-    def _invoke_views(self, request: Request, method: str, *args: Any) -> None:
+    def _invoke_views(self, request: Request[Any, Any], method: str, *args: Any) -> None:
         if request.view:
             if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
@@ -2513,9 +2515,9 @@ class Session(TransportCallbacks):
 
     def send_request_async(
             self,
-            request: Request,
-            on_result: Callable[[Any], None],
-            on_error: Callable[[Any], None] | None = None
+            request: Request[P, R],
+            on_result: Callable[[R], None],
+            on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
         """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
         self.request_id += 1
@@ -2535,21 +2537,21 @@ class Session(TransportCallbacks):
 
     def send_request(
             self,
-            request: Request,
-            on_result: Callable[[Any], None],
-            on_error: Callable[[Any], None] | None = None,
+            request: Request[P, R],
+            on_result: Callable[[R], None],
+            on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(partial(self.send_request_async, request, on_result, on_error))
 
-    def send_request_task(self, request: Request) -> Promise:
+    def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
-    def send_request_task_2(self, request: Request) -> tuple[Promise, int]:
-        task: PackagedTask[Any] = Promise.packaged_task()
+    def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
+        task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task
         request_id = self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return (promise, request_id)
@@ -2562,13 +2564,13 @@ class Session(TransportCallbacks):
             self._invoke_views(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
-    def send_notification(self, notification: Notification) -> None:
+    def send_notification(self, notification: Notification[P]) -> None:
         if self._plugin:
             self._plugin.on_pre_send_notification_async(notification)
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
-    def send_response(self, response: Response) -> None:
+    def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
 
@@ -2583,7 +2585,7 @@ class Session(TransportCallbacks):
         except AttributeError:
             pass
 
-    def send_payload(self, payload: dict[str, Any]) -> None:
+    def send_payload(self, payload: JsonRpcPayload) -> None:
         try:
             self.transport.send(payload)  # type: ignore
         except AttributeError:
@@ -2644,7 +2646,9 @@ class Session(TransportCallbacks):
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
 
-    def response_handler(self, response_id: int, response: dict[str, Any]) -> tuple[Callable, str | None, Any, bool]:
+    def response_handler(
+        self, response_id: int, response: dict[str, Any]
+    ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
         matching_handler = self._response_handlers.pop(response_id)
         if not matching_handler:
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}

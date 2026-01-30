@@ -31,9 +31,9 @@ class LspExpandSelectionCommand(LspTextCommand):
         if position is None:
             return
         if session := self.best_session(self.capability, position):
-            params = selection_range_params(self.view)
             self._regions.extend(self.view.sel())
             self._change_count = self.view.change_count()
+            params = selection_range_params(self.view)
             session.send_request(Request.selectionRange(params), self.on_result, self.on_error)
         elif fallback:
             self._run_builtin_expand_selection(f"No {self.capability} found")

@@ -501,7 +501,7 @@ class SessionBuffer:
 
     def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
         # None-check guards against spec violation from certain language servers.
-        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison]
+        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison] # noqa: E501
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:

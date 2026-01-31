@@ -54,7 +54,6 @@ from ...protocol import TextDocumentClientCapabilities
 from ...protocol import TextDocumentSyncKind
 from ...protocol import TextEdit
 from ...protocol import TokenFormat
-from ...protocol import Uint
 from ...protocol import UnregistrationParams
 from ...protocol import WatchKind
 from ...protocol import WindowClientCapabilities
@@ -96,6 +95,7 @@ from .promise import PackagedTask
 from .promise import Promise
 from .protocol import Error
 from .protocol import JsonRpcPayload
+from .protocol import LspPayload
 from .protocol import Notification
 from .protocol import Request
 from .protocol import ResolvedCodeLens
@@ -132,7 +132,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from functools import lru_cache
 from functools import partial
-from typing import Any, Callable, Generator, Iterable, List, Literal, Mapping, Protocol, TypeVar, Union, overload
+from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -152,8 +152,8 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
-R = TypeVar('R')
+P = TypeVar('P', bound=LspPayload)
+R = TypeVar('R', bound=LspPayload)
 
 
 class ViewStateActions(IntFlag):

@@ -257,8 +257,8 @@ class Request(Generic[P, R]):
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, request_id: int) -> JSONRpcPayload:
-        payload: JSONRpcPayload = {
+    def to_payload(self, request_id: int) -> RequestMessage:
+        payload: RequestMessage = {
             "jsonrpc": "2.0",
             "id": request_id,
             "method": self.method,
@@ -301,7 +301,7 @@ class Response(Generic[P]):
         self.request_id = request_id
         self.result = result
 
-    def to_payload(self) -> JSONRpcPayload:
+    def to_payload(self) -> ResponseMessage:
         return {
             "id": self.request_id,
             "jsonrpc": "2.0",
@@ -366,8 +366,8 @@ class Notification(Generic[P]):
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> JSONRpcPayload:
-        payload: JSONRpcPayload = {
+    def to_payload(self) -> NotificationMessage:
+        payload: NotificationMessage = {
             "jsonrpc": "2.0",
             "method": self.method,
         }

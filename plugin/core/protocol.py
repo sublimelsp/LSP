@@ -13,13 +13,27 @@ P = TypeVar('P', bound=LspPayload)
 R = TypeVar('R', bound=LspPayload)
 
 
-class JsonRpcPayload(TypedDict):
+class RequestMessage(TypedDict):
     jsonrpc: str
-    error: NotRequired[ResponseError]
-    id: NotRequired[str | int]
-    method: NotRequired[str]
+    id: str | int
+    method: str
     params: NotRequired[Any]
+
+
+class ResponseMessage(TypedDict):
+    jsonrpc: str
+    id: str | int
     result: NotRequired[Any]
+    error: NotRequired[ResponseError]
+
+
+class NotificationMessage(TypedDict):
+    jsonrpc: str
+    method: str
+    params: NotRequired[Any]
+
+
+JSONRpcPayload = Union[RequestMessage, ResponseMessage, NotificationMessage]
 
 
 class Request(Generic[P, R]):
@@ -243,8 +257,8 @@ class Request(Generic[P, R]):
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, request_id: int) -> JsonRpcPayload:
-        payload: JsonRpcPayload = {
+    def to_payload(self, request_id: int) -> JSONRpcPayload:
+        payload: JSONRpcPayload = {
             "jsonrpc": "2.0",
             "id": request_id,
             "method": self.method,
@@ -287,7 +301,7 @@ class Response(Generic[P]):
         self.request_id = request_id
         self.result = result
 
-    def to_payload(self) -> JsonRpcPayload:
+    def to_payload(self) -> JSONRpcPayload:
         return {
             "id": self.request_id,
             "jsonrpc": "2.0",
@@ -352,8 +366,8 @@ class Notification(Generic[P]):
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> JsonRpcPayload:
-        payload: JsonRpcPayload = {
+    def to_payload(self) -> JSONRpcPayload:
+        payload: JSONRpcPayload = {
             "jsonrpc": "2.0",
             "method": self.method,
         }

@@ -94,7 +94,7 @@ from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
 from .protocol import Error
-from .protocol import JsonRpcPayload
+from .protocol import JSONRpcPayload
 from .protocol import LspPayload
 from .protocol import Notification
 from .protocol import Request
@@ -2585,7 +2585,7 @@ class Session(TransportCallbacks):
         except AttributeError:
             pass
 
-    def send_payload(self, payload: JsonRpcPayload) -> None:
+    def send_payload(self, payload: JSONRpcPayload) -> None:
         try:
             self.transport.send(payload)  # type: ignore
         except AttributeError:

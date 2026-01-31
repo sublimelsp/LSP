@@ -584,13 +584,7 @@ class SessionBuffer:
         self, identifier: DiagnosticsIdentifier, version: int, response: DocumentDiagnosticReport
     ) -> None:
         self._diagnostics_versions[identifier] = version
-        if version == self.last_synced_version:
-            # Only reset the pending request if the synced version wasn't incremented in the meanwhile, to prevent to
-            # accidentally overwrite the request number of a new request that might already been sent after this one.
-            # Note that the diagnostic response still needs to be handled even if the buffer content has changed,
-            # because the response of the next request might be an UnchangedDocumentDiagnosticReport, signalizing that
-            # the diagnostics with the present resultId are still valid.
-            self._document_diagnostic_pending_requests[identifier] = None
+        self._document_diagnostic_pending_requests[identifier] = None
         self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
         if is_related_full_document_diagnostic_report(response):
             self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
@@ -604,10 +598,6 @@ class SessionBuffer:
     def _on_document_diagnostic_error_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, error: ResponseError
     ) -> None:
-        if version != view.change_count():
-            # It is not necessary to check whether to retrigger the request, because a new request is sent automatically
-            # after the didChange notification.
-            return
         self._document_diagnostic_pending_requests[identifier] = None
         if error['code'] == LSPErrorCodes.ServerCancelled:
             data = error.get('data')
@@ -615,6 +605,8 @@ class SessionBuffer:
                 # Retrigger the request after a short delay, but only if there are no additional changes to the buffer
                 # in the meanwhile, because in that case a new request will be sent automatically after the didChange
                 # notification.
+                if version != view.change_count():
+                    return
                 sublime.set_timeout_async(
                     lambda: self._if_view_unchanged(self._do_document_diagnostic_async, version)(identifier, version),
                     DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY

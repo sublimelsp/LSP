@@ -2,9 +2,10 @@
 # LSP v3.17.0
 
 from __future__ import annotations
+from collections.abc import Iterable, Mapping
 from ..plugin.core.typing import StrEnum
 from enum import IntEnum, IntFlag
-from typing import Dict, List, Literal, TypedDict, Union
+from typing import Any, Dict, List, Literal, Sequence, TypedDict, Union
 from typing_extensions import NotRequired
 
 
@@ -704,7 +705,7 @@ DefinitionLink = 'LocationLink'
 Provides additional metadata over normal {@link Location location} definitions, including the range of
 the defining symbol """
 
-LSPArray = List['LSPAny']
+LSPArray = Sequence['LSPAny']
 """ LSP arrays.
 @since 3.17.0 """
 
@@ -789,7 +790,7 @@ a notebook cell document.
 
 @since 3.17.0 - support for NotebookCellTextDocumentFilter. """
 
-LSPObject = Dict[str, 'LSPAny']
+LSPObject = Mapping[str, Any]
 """ LSP object definition.
 @since 3.17.0 """
 

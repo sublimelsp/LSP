@@ -95,7 +95,6 @@ from .promise import PackagedTask
 from .promise import Promise
 from .protocol import Error
 from .protocol import JSONRpcPayload
-from .protocol import LspPayload
 from .protocol import Notification
 from .protocol import Request
 from .protocol import ResolvedCodeLens
@@ -132,7 +131,7 @@ from abc import abstractmethod
 from enum import IntEnum, IntFlag
 from functools import lru_cache
 from functools import partial
-from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, overload
+from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, Union, overload
 from typing import cast
 from typing import TYPE_CHECKING
 from typing_extensions import TypeAlias, TypeGuard
@@ -152,8 +151,8 @@ if TYPE_CHECKING:
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
-P = TypeVar('P', bound=LspPayload)
-R = TypeVar('R', bound=LspPayload)
+P = TypeVar('P', bound=LSPAny)
+R = TypeVar('R', bound=LSPAny)
 
 
 class ViewStateActions(IntFlag):
@@ -1735,10 +1734,10 @@ class Session(TransportCallbacks):
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise[LSPAny | Error]:
+    ) -> Promise[R | Error | None]:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task: PackagedTask[LSPAny | Error] = Promise.packaged_task()
+            task: PackagedTask[R | Error | None] = Promise.packaged_task()
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
@@ -1761,18 +1760,12 @@ class Session(TransportCallbacks):
 
             sublime.set_timeout_async(run_async)
             return Promise.resolve(None)
-        # TODO: Our Promise class should be able to handle errors/exceptions
-        execute_command = Promise(
-            lambda resolve: self.send_request(
-                Request("workspace/executeCommand", command, None, progress),
-                resolve,
-                lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
-            )
-        )
+        request = Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress)
+        execute_command_promise = self.send_request_task(request)
         if is_refactoring:
             self._is_executing_refactoring_command = True
-            execute_command.then(lambda _: self._reset_is_executing_refactoring_command())
-        return execute_command
+            execute_command_promise.then(lambda _: self._reset_is_executing_refactoring_command())
+        return execute_command_promise
 
     def _reset_is_executing_refactoring_command(self) -> None:
         self._is_executing_refactoring_command = False

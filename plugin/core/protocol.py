@@ -1,16 +1,15 @@
 from __future__ import annotations
 from ...protocol import *  # For backward compatibility with LSP packages.
 from functools import total_ordering
-from typing import Any, Callable, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
-from typing_extensions import NotRequired, TypeAlias
+from typing import Any, Callable, Generic, TypedDict, TypeVar, Union
+from typing_extensions import NotRequired
 import sublime
 
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX
 
-LspPayload: TypeAlias = Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]]
-P = TypeVar('P', bound=LspPayload)
-R = TypeVar('R', bound=LspPayload)
+P = TypeVar('P', bound=LSPAny)
+R = TypeVar('R', bound=LSPAny)
 
 
 class RequestMessage(TypedDict):
@@ -87,6 +86,12 @@ class Request(Generic[P, R]):
         cls, params: ColorPresentationParams, view: sublime.View
     ) -> Request[ColorPresentationParams, list[ColorPresentation]]:
         return Request('textDocument/colorPresentation', params, view)
+
+    @classmethod
+    def executeCommand(
+        cls, params: ExecuteCommandParams, *, progress: bool = False
+    ) -> Request[ExecuteCommandParams, R]:
+        return Request("workspace/executeCommand", params, progress=progress)
 
     @classmethod
     def willSaveWaitUntil(
@@ -190,7 +195,7 @@ class Request(Generic[P, R]):
 
     @classmethod
     def rename(
-        cls, params: RenameParams, view: sublime.View, progress: bool = False
+        cls, params: RenameParams, view: sublime.View, *, progress: bool = False
     ) -> Request[RenameParams, WorkspaceEdit | None]:
         return Request('textDocument/rename', params, view, progress)
 

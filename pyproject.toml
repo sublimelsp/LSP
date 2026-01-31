@@ -1,5 +1,8 @@
 [tool.pyright]
 pythonVersion = "3.8"
+reportIncompatibleMethodOverride = "none"
+reportMissingModuleSource = "none"
+stubPath = "./stubs"
 
 [tool.ruff]
 exclude = [

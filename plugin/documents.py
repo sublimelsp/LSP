@@ -404,7 +404,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sb.do_code_lenses_async(self.view)
             if sb.document_diagnostic_needs_refresh:
                 sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
-                sb.do_document_diagnostic_async(self.view, self.view.change_count())
+                sb.do_document_diagnostic_async(self.view, self.view.change_count(), forced_update=True)
             if sb.semantic_tokens.needs_refresh \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:

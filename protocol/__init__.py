@@ -2,10 +2,9 @@
 # LSP v3.17.0
 
 from __future__ import annotations
-from collections.abc import Iterable, Mapping
 from ..plugin.core.typing import StrEnum
 from enum import IntEnum, IntFlag
-from typing import Any, Dict, List, Literal, Sequence, TypedDict, Union
+from typing import Any, Dict, List, Literal, Mapping, Sequence, TypedDict, Union
 from typing_extensions import NotRequired
 
 

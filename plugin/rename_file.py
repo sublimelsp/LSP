@@ -2,7 +2,7 @@ from __future__ import annotations
 from .core.edit import show_summary_message
 from .core.open import open_file_uri
 from .core.promise import Promise
-from .core.protocol import Notification, Request
+from .core.protocol import Error, Notification, Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
@@ -112,17 +112,25 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def create_will_rename_requests_async(
         self, file_rename: FileRename
-    ) -> Generator[Promise[tuple[WorkspaceEdit | None, weakref.ref[Session]]]]:
+    ) -> Generator[Promise[tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]]]:
         for session in self.sessions():
             filters = session.get_capability('workspace.fileOperations.willRename.filters') or []
             if match_file_operation_filters(filters, file_rename['oldUri']):
                 yield session.send_request_task(Request.willRenameFiles({'files': [file_rename]})) \
-                    .then(partial(lambda weak_session, response: (response, weak_session), weakref.ref(session)))
+                    .then(partial(self.return_response_with_session, weakref.ref(session)))
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None, weakref.ref[Session]]],
+    def return_response_with_session(
+        self, weak_session: weakref.ref[Session], response: WorkspaceEdit | None | Error
+    ) -> tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]:
+        return (response, weak_session)
+
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]],
                             label: str, rename_command_args: dict[str, Any]) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:
+                if isinstance(response, Error):
+                    print(f'LSP: Error response during rename: {response}')
+                    return
                 prompt_for_workspace_edits(session, response, label=label) \
                     .then(partial(self.on_prompt_for_workspace_edits_concluded, weak_session, response, label)) \
                     .then(lambda accepted: accepted and self.window.run_command('lsp_rename_path', rename_command_args))

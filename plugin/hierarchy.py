@@ -24,18 +24,17 @@ from .core.views import text_document_position_params
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, TypedDict, Union
-from typing import cast
+from typing import Any, Callable, TypedDict, Union
 import sublime
 import weakref
 
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
-HierarchyItemWrapper = TypedDict('HierarchyItemWrapper', {
-    'item': HierarchyItem,
-    'selectionRange': Range,
-})
+
+class HierarchyItemWrapper(TypedDict):
+    item: HierarchyItem
+    selectionRange: Range
 
 
 class HierarchyDataProvider(TreeDataProvider):
@@ -43,8 +42,8 @@ class HierarchyDataProvider(TreeDataProvider):
     def __init__(
         self,
         weaksession: weakref.ref[Session],
-        request: Callable[..., Request],
-        request_handler: Callable[..., list[HierarchyItemWrapper]],
+        request: Callable[[Any], Request[Any, Any]],
+        request_handler: Callable[[Any], Any],
         root_elements: list[HierarchyItemWrapper]
     ) -> None:
         self.weaksession = weaksession
@@ -63,12 +62,12 @@ class HierarchyDataProvider(TreeDataProvider):
 
     def get_tree_item(self, element: HierarchyItemWrapper) -> TreeItem:
         item = element['item']
-        selectionRange = element['selectionRange']
+        selection_range = element['selectionRange']
         command_url = sublime.command_url('lsp_open_location', {
             'location': {
                 'targetUri': item['uri'],
                 'targetRange': item['range'],
-                'targetSelectionRange': selectionRange
+                'targetSelectionRange': selection_range
             },
             'session_name': self.session_name,
             'flags': sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT | sublime.NewFileFlags.CLEAR_TO_RIGHT  # noqa: E501
@@ -144,7 +143,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
     @abstractmethod
     def request(
         cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[HierarchyItem] | Error | None]:
+    ) -> Request[Any, list[HierarchyItem] | None]:
         """ A function that generates the initial request when this command is invoked. """
         raise NotImplementedError()
 
@@ -223,9 +222,10 @@ class LspCallHierarchyCommand(LspHierarchyCommand):
 
     @classmethod
     def request(
-        cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[CallHierarchyItem] | Error | None]:
-        return Request.prepareCallHierarchy(cast(CallHierarchyPrepareParams, params), view)
+        cls, params: CallHierarchyPrepareParams, view: sublime.View
+    ) -> Request[CallHierarchyPrepareParams, list[CallHierarchyItem] | None]:
+        print(params)
+        return Request.prepareCallHierarchy(params, view)
 
 
 class LspTypeHierarchyCommand(LspHierarchyCommand):
@@ -234,6 +234,6 @@ class LspTypeHierarchyCommand(LspHierarchyCommand):
 
     @classmethod
     def request(
-        cls, params: TextDocumentPositionParams, view: sublime.View
-    ) -> Request[list[TypeHierarchyItem] | Error | None]:
-        return Request.prepareTypeHierarchy(cast(TypeHierarchyPrepareParams, params), view)
+        cls, params: TypeHierarchyPrepareParams, view: sublime.View
+    ) -> Request[TypeHierarchyPrepareParams, list[TypeHierarchyItem] | None]:
+        return Request.prepareTypeHierarchy(params, view)

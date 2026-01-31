@@ -353,7 +353,7 @@ class SessionView:
             else:
                 self.view.erase_regions(data.key)
 
-    def on_request_started_async(self, request_id: int, request: Request) -> None:
+    def on_request_started_async(self, request_id: int, request: Request[Any, Any]) -> None:
         self._active_requests[request_id] = ActiveRequest(self, request_id, request)
 
     def on_request_finished_async(self, request_id: int) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ..protocol import CodeAction
 from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.promise import Promise
@@ -82,7 +83,7 @@ class CodeActionsManager:
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
-        def request_factory(sb: SessionBufferProtocol) -> Request | None:
+        def request_factory(sb: SessionBufferProtocol) -> Request[CodeActionParams, list[CodeActionOrCommand] | None]:
             diagnostics: list[Diagnostic] = []
             for diag_sb, diags in session_buffer_diagnostics:
                 if diag_sb == sb:
@@ -125,7 +126,7 @@ class CodeActionsManager:
     def _collect_code_actions_async(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request | None],
+        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # noqa: E501
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
     ) -> Promise[list[CodeActionsByConfigName]]:
 
@@ -133,7 +134,7 @@ class CodeActionsManager:
             sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
         ) -> CodeActionsByConfigName:
             actions = []
-            if response and not isinstance(response, Error) and response_filter:
+            if response and not isinstance(response, Error):
                 actions = response_filter(sb, response)
             return (sb.session.config.name, actions)
 
@@ -145,7 +146,7 @@ class CodeActionsManager:
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
-                task: Promise[list[CodeActionOrCommand] | None | Error] = session.send_request_task(request)
+                task = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \
@@ -259,7 +260,7 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         view = self._task_runner.view
-        tasks: list[Promise] = []
+        tasks: list[Promise[None]] = []
         config_name, code_actions = response
         session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
         if session and code_actions:

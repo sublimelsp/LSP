@@ -13,6 +13,7 @@ from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Point
+from .core.protocol import ResponseError
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
@@ -220,7 +221,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 self.cached = True
                 window.run_command('show_overlay', {'overlay': 'command_palette', 'command': self.name()})
 
-    def handle_response_error(self, error: Any) -> None:
+    def handle_response_error(self, error: ResponseError) -> None:
         self._reset_suppress_input()
         print_to_status_bar(error)
 
@@ -333,9 +334,9 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
         if session := self.session_by_name(session_name):
             if location := symbol.get('location'):
                 session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
-            else:
+            elif workspace_symbol := symbol.get('workspaceSymbol'):
                 session.send_request(
-                    Request.resolveWorkspaceSymbol(symbol['workspaceSymbol']),  # type: ignore
+                    Request.resolveWorkspaceSymbol(workspace_symbol),
                     partial(self._on_resolved_symbol_async, session_name))
 
     def input(self, args: dict[str, Any]) -> sublime_plugin.ListInputHandler | None:

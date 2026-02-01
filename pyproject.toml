@@ -22,7 +22,15 @@ ignore = [
     "D100",  # https://docs.astral.sh/ruff/rules/undocumented-public-module/#undocumented-public-module-d100
     "D101",  # https://docs.astral.sh/ruff/rules/undocumented-public-class/
     "D102",  # https://docs.astral.sh/ruff/rules/undocumented-public-method/
+    "D103",  # https://docs.astral.sh/ruff/rules/undocumented-public-function/
+    "D104",  # https://docs.astral.sh/ruff/rules/undocumented-public-package/
     "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+    "D203",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
+    "D205",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
+    "D212",  # https://docs.astral.sh/ruff/rules/multi-line-summary-first-line/
+    "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
+    "D400",  # https://docs.astral.sh/ruff/rules/missing-trailing-period/
+    "D415",  # https://docs.astral.sh/ruff/rules/missing-terminal-punctuation/
     "EM",  # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
     "F405",  # https://docs.astral.sh/ruff/rules/undefined-local-with-import-star-usage/
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix

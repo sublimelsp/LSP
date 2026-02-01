@@ -1,9 +1,9 @@
+# ruff: noqa: E501, UP006, UP007
 # Code generated. DO NOT EDIT.
 # LSP v3.17.0
 
 from __future__ import annotations
-from ..plugin.core.typing import StrEnum
-from enum import IntEnum, IntFlag
+from enum import IntEnum, IntFlag, StrEnum
 from typing import Any, Dict, List, Literal, Mapping, Sequence, TypedDict, Union
 from typing_extensions import NotRequired
 
@@ -15,15 +15,20 @@ RegExp = str
 
 
 class SemanticTokenTypes(StrEnum):
-    """ A set of predefined token types. This set is not fixed
+    """
+    A set of predefined token types. This set is not fixed
     an clients can specify additional token types via the
     corresponding client capabilities.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     Namespace = 'namespace'
     Type = 'type'
-    """ Represents a generic type. Acts as a fallback for types which can't be mapped to
-    a specific type like class or enum. """
+    """
+    Represents a generic type. Acts as a fallback for types which can't be mapped to
+    a specific type like class or enum.
+    """
     Class = 'class'
     Enum = 'enum'
     Interface = 'interface'
@@ -45,17 +50,20 @@ class SemanticTokenTypes(StrEnum):
     Regexp = 'regexp'
     Operator = 'operator'
     Decorator = 'decorator'
-    """ @since 3.17.0 """
+    """@since 3.17.0"""
     Label = 'label'
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
 
 
 class SemanticTokenModifiers(StrEnum):
-    """ A set of predefined token modifiers. This set is not fixed
+    """
+    A set of predefined token modifiers. This set is not fixed
     an clients can specify additional token types via the
     corresponding client capabilities.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     Declaration = 'declaration'
     Definition = 'definition'
     Readonly = 'readonly'
@@ -69,70 +77,90 @@ class SemanticTokenModifiers(StrEnum):
 
 
 class DocumentDiagnosticReportKind(StrEnum):
-    """ The document diagnostic report kinds.
+    """
+    The document diagnostic report kinds.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     Full = 'full'
-    """ A diagnostic report with a full
-    set of problems. """
+    """
+    A diagnostic report with a full
+    set of problems.
+    """
     Unchanged = 'unchanged'
-    """ A report indicating that the last
-    returned report is still accurate. """
+    """
+    A report indicating that the last
+    returned report is still accurate.
+    """
 
 
 class ErrorCodes(IntEnum):
-    """ Predefined error codes. """
+    """Predefined error codes."""
+
     ParseError = -32700
     InvalidRequest = -32600
     MethodNotFound = -32601
     InvalidParams = -32602
     InternalError = -32603
     ServerNotInitialized = -32002
-    """ Error code indicating that a server received a notification or
-    request before the server has received the `initialize` request. """
+    """
+    Error code indicating that a server received a notification or
+    request before the server has received the `initialize` request.
+    """
     UnknownErrorCode = -32001
 
 
 class LSPErrorCodes(IntEnum):
     RequestFailed = -32803
-    """ A request failed but it was syntactically correct, e.g the
+    """
+    A request failed but it was syntactically correct, e.g the
     method name was known and the parameters were valid. The error
     message should contain human readable information about why
     the request failed.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     ServerCancelled = -32802
-    """ The server cancelled the request. This error code should
+    """
+    The server cancelled the request. This error code should
     only be used for requests that explicitly support being
     server cancellable.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     ContentModified = -32801
-    """ The server detected that the content of a document got
+    """
+    The server detected that the content of a document got
     modified outside normal conditions. A server should
     NOT send this error code if it detects a content change
     in it unprocessed messages. The result even computed
     on an older state might still be useful for the client.
 
     If a client decides that a result is not of any use anymore
-    the client should cancel the request. """
+    the client should cancel the request.
+    """
     RequestCancelled = -32800
-    """ The client has canceled a request and a server has detected
-    the cancel. """
+    """
+    The client has canceled a request and a server has detected
+    the cancel.
+    """
 
 
 class FoldingRangeKind(StrEnum):
-    """ A set of predefined range kinds. """
+    """A set of predefined range kinds."""
+
     Comment = 'comment'
-    """ Folding range for a comment """
+    """Folding range for a comment"""
     Imports = 'imports'
-    """ Folding range for an import or include """
+    """Folding range for an import or include"""
     Region = 'region'
-    """ Folding range for a region (e.g. `#region`) """
+    """Folding range for a region (e.g. `#region`)"""
 
 
 class SymbolKind(IntEnum):
-    """ A symbol kind. """
+    """A symbol kind."""
+
     File = 1
     Module = 2
     Namespace = 3
@@ -162,96 +190,124 @@ class SymbolKind(IntEnum):
 
 
 class SymbolTag(IntEnum):
-    """ Symbol tags are extra annotations that tweak the rendering of a symbol.
+    """
+    Symbol tags are extra annotations that tweak the rendering of a symbol.
 
-    @since 3.16 """
+    @since 3.16
+    """
+
     Deprecated = 1
-    """ Render a symbol as obsolete, usually using a strike-out. """
+    """Render a symbol as obsolete, usually using a strike-out."""
 
 
 class UniquenessLevel(StrEnum):
-    """ Moniker uniqueness level to define scope of the moniker.
+    """
+    Moniker uniqueness level to define scope of the moniker.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     Document = 'document'
-    """ The moniker is only unique inside a document """
+    """The moniker is only unique inside a document"""
     Project = 'project'
-    """ The moniker is unique inside a project for which a dump got created """
+    """The moniker is unique inside a project for which a dump got created"""
     Group = 'group'
-    """ The moniker is unique inside the group to which a project belongs """
+    """The moniker is unique inside the group to which a project belongs"""
     Scheme = 'scheme'
-    """ The moniker is unique inside the moniker scheme. """
+    """The moniker is unique inside the moniker scheme."""
     Global = 'global'
-    """ The moniker is globally unique """
+    """The moniker is globally unique"""
 
 
 class MonikerKind(StrEnum):
-    """ The moniker kind.
+    """
+    The moniker kind.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     Import = 'import'
-    """ The moniker represent a symbol that is imported into a project """
+    """The moniker represent a symbol that is imported into a project"""
     Export = 'export'
-    """ The moniker represents a symbol that is exported from a project """
+    """The moniker represents a symbol that is exported from a project"""
     Local = 'local'
-    """ The moniker represents a symbol that is local to a project (e.g. a local
-    variable of a function, a class not visible outside the project, ...) """
+    """
+    The moniker represents a symbol that is local to a project (e.g. a local
+    variable of a function, a class not visible outside the project, ...)
+    """
 
 
 class InlayHintKind(IntEnum):
-    """ Inlay hint kinds.
+    """
+    Inlay hint kinds.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     Type = 1
-    """ An inlay hint that for a type annotation. """
+    """An inlay hint that for a type annotation."""
     Parameter = 2
-    """ An inlay hint that is for a parameter. """
+    """An inlay hint that is for a parameter."""
 
 
 class MessageType(IntEnum):
-    """ The message type """
+    """The message type"""
+
     Error = 1
-    """ An error message. """
+    """An error message."""
     Warning = 2
-    """ A warning message. """
+    """A warning message."""
     Info = 3
-    """ An information message. """
+    """An information message."""
     Log = 4
-    """ A log message. """
+    """A log message."""
     Debug = 5
-    """ A debug message.
+    """
+    A debug message.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class TextDocumentSyncKind(IntEnum):
-    """ Defines how the host (editor) should sync
-    document changes to the language server. """
+    """
+    Defines how the host (editor) should sync
+    document changes to the language server.
+    """
+
     None_ = 0
-    """ Documents should not be synced at all. """
+    """Documents should not be synced at all."""
     Full = 1
-    """ Documents are synced by always sending the full content
-    of the document. """
+    """
+    Documents are synced by always sending the full content
+    of the document.
+    """
     Incremental = 2
-    """ Documents are synced by sending the full content on open.
+    """
+    Documents are synced by sending the full content on open.
     After that only incremental updates to the document are
-    send. """
+    send.
+    """
 
 
 class TextDocumentSaveReason(IntEnum):
-    """ Represents reasons why a text document is saved. """
+    """Represents reasons why a text document is saved."""
+
     Manual = 1
-    """ Manually triggered, e.g. by the user pressing save, by starting debugging,
-    or by an API call. """
+    """
+    Manually triggered, e.g. by the user pressing save, by starting debugging,
+    or by an API call.
+    """
     AfterDelay = 2
-    """ Automatic after a delay. """
+    """Automatic after a delay."""
     FocusOut = 3
-    """ When the editor lost focus. """
+    """When the editor lost focus."""
 
 
 class CompletionItemKind(IntEnum):
-    """ The kind of a completion entry. """
+    """The kind of a completion entry."""
+
     Text = 1
     Method = 2
     Function = 3
@@ -280,71 +336,89 @@ class CompletionItemKind(IntEnum):
 
 
 class CompletionItemTag(IntEnum):
-    """ Completion item tags are extra annotations that tweak the rendering of a completion
+    """
+    Completion item tags are extra annotations that tweak the rendering of a completion
     item.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
+
     Deprecated = 1
-    """ Render a completion as obsolete, usually using a strike-out. """
+    """Render a completion as obsolete, usually using a strike-out."""
 
 
 class InsertTextFormat(IntEnum):
-    """ Defines whether the insert text in a completion item should be interpreted as
-    plain text or a snippet. """
+    """
+    Defines whether the insert text in a completion item should be interpreted as
+    plain text or a snippet.
+    """
+
     PlainText = 1
-    """ The primary text to be inserted is treated as a plain string. """
+    """The primary text to be inserted is treated as a plain string."""
     Snippet = 2
-    """ The primary text to be inserted is treated as a snippet.
+    """
+    The primary text to be inserted is treated as a snippet.
 
     A snippet can define tab stops and placeholders with `$1`, `$2`
     and `${3:foo}`. `$0` defines the final tab stop, it defaults to
     the end of the snippet. Placeholders with equal identifiers are linked,
     that is typing in one will update others too.
 
-    See also: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax """
+    See also: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax
+    """
 
 
 class InsertTextMode(IntEnum):
-    """ How whitespace and indentation is handled during completion
+    """
+    How whitespace and indentation is handled during completion
     item insertion.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     AsIs = 1
-    """ The insertion or replace strings is taken as it is. If the
+    """
+    The insertion or replace strings is taken as it is. If the
     value is multi line the lines below the cursor will be
     inserted using the indentation defined in the string value.
     The client will not apply any kind of adjustments to the
-    string. """
+    string.
+    """
     AdjustIndentation = 2
-    """ The editor adjusts leading whitespace of new lines so that
+    """
+    The editor adjusts leading whitespace of new lines so that
     they match the indentation up to the cursor of the line for
     which the item is accepted.
 
     Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
     multi line completion item is indented using 2 tabs and all
-    following lines inserted will be indented using 2 tabs as well. """
+    following lines inserted will be indented using 2 tabs as well.
+    """
 
 
 class DocumentHighlightKind(IntEnum):
-    """ A document highlight kind. """
+    """A document highlight kind."""
+
     Text = 1
-    """ A textual occurrence. """
+    """A textual occurrence."""
     Read = 2
-    """ Read-access of a symbol, like reading a variable. """
+    """Read-access of a symbol, like reading a variable."""
     Write = 3
-    """ Write-access of a symbol, like writing to a variable. """
+    """Write-access of a symbol, like writing to a variable."""
 
 
 class CodeActionKind(StrEnum):
-    """ A set of predefined code action kinds """
+    """A set of predefined code action kinds"""
+
     Empty = ''
-    """ Empty kind. """
+    """Empty kind."""
     QuickFix = 'quickfix'
-    """ Base kind for quickfix actions: 'quickfix' """
+    """Base kind for quickfix actions: 'quickfix'"""
     Refactor = 'refactor'
-    """ Base kind for refactoring actions: 'refactor' """
+    """Base kind for refactoring actions: 'refactor'"""
     RefactorExtract = 'refactor.extract'
-    """ Base kind for refactoring extraction actions: 'refactor.extract'
+    """
+    Base kind for refactoring extraction actions: 'refactor.extract'
 
     Example extract actions:
 
@@ -352,18 +426,22 @@ class CodeActionKind(StrEnum):
     - Extract function
     - Extract variable
     - Extract interface from class
-    - ... """
+    - ...
+    """
     RefactorInline = 'refactor.inline'
-    """ Base kind for refactoring inline actions: 'refactor.inline'
+    """
+    Base kind for refactoring inline actions: 'refactor.inline'
 
     Example inline actions:
 
     - Inline function
     - Inline variable
     - Inline constant
-    - ... """
+    - ...
+    """
     RefactorMove = 'refactor.move'
-    """ Base kind for refactoring move actions: `refactor.move`
+    """
+    Base kind for refactoring move actions: `refactor.move`
 
     Example move actions:
 
@@ -373,9 +451,11 @@ class CodeActionKind(StrEnum):
     - ...
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     RefactorRewrite = 'refactor.rewrite'
-    """ Base kind for refactoring rewrite actions: 'refactor.rewrite'
+    """
+    Base kind for refactoring rewrite actions: 'refactor.rewrite'
 
     Example rewrite actions:
 
@@ -384,59 +464,75 @@ class CodeActionKind(StrEnum):
     - Encapsulate field
     - Make method static
     - Move method to base class
-    - ... """
+    - ...
+    """
     Source = 'source'
-    """ Base kind for source actions: `source`
+    """
+    Base kind for source actions: `source`
 
-    Source code actions apply to the entire file. """
+    Source code actions apply to the entire file.
+    """
     SourceOrganizeImports = 'source.organizeImports'
-    """ Base kind for an organize imports source action: `source.organizeImports` """
+    """Base kind for an organize imports source action: `source.organizeImports`"""
     SourceFixAll = 'source.fixAll'
-    """ Base kind for auto-fix source actions: `source.fixAll`.
+    """
+    Base kind for auto-fix source actions: `source.fixAll`.
 
     Fix all actions automatically fix errors that have a clear fix that do not require user input.
     They should not suppress errors or perform unsafe fixes such as generating new types or classes.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     Notebook = 'notebook'
-    """ Base kind for all code actions applying to the entire notebook's scope. CodeActionKinds using
+    """
+    Base kind for all code actions applying to the entire notebook's scope. CodeActionKinds using
     this should always begin with `notebook.`
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
 
 
 class CodeActionTag(IntEnum):
-    """ Code action tags are extra annotations that tweak the behavior of a code action.
+    """
+    Code action tags are extra annotations that tweak the behavior of a code action.
 
-    @since 3.18.0 - proposed """
+    @since 3.18.0 - proposed
+    """
+
     LLMGenerated = 1
-    """ Marks the code action as LLM-generated. """
+    """Marks the code action as LLM-generated."""
 
 
 class TraceValue(StrEnum):
     Off = 'off'
-    """ Turn tracing off. """
+    """Turn tracing off."""
     Messages = 'messages'
-    """ Trace messages only. """
+    """Trace messages only."""
     Verbose = 'verbose'
-    """ Verbose message tracing. """
+    """Verbose message tracing."""
 
 
 class MarkupKind(StrEnum):
-    """ Describes the content type that a client supports in various
+    """
+    Describes the content type that a client supports in various
     result literals like `Hover`, `ParameterInfo` or `CompletionItem`.
 
     Please note that `MarkupKinds` must not start with a `$`. This kinds
-    are reserved for internal usage. """
+    are reserved for internal usage.
+    """
+
     PlainText = 'plaintext'
-    """ Plain text is supported as a content format """
+    """Plain text is supported as a content format"""
     Markdown = 'markdown'
-    """ Markdown is supported as a content format """
+    """Markdown is supported as a content format"""
 
 
 class LanguageKind(StrEnum):
-    """ Predefined Language kinds
-    @since 3.18.0 """
+    """
+    Predefined Language kinds
+    @since 3.18.0
+    """
+
     ABAP = 'abap'
     WindowsBat = 'bat'
     BibTeX = 'bibtex'
@@ -447,11 +543,15 @@ class LanguageKind(StrEnum):
     CSharp = 'csharp'
     CSS = 'css'
     D = 'd'
-    """ @since 3.18.0
-    @proposed """
+    """
+    @since 3.18.0
+    @proposed
+    """
     Delphi = 'pascal'
-    """ @since 3.18.0
-    @proposed """
+    """
+    @since 3.18.0
+    @proposed
+    """
     Diff = 'diff'
     Dart = 'dart'
     Dockerfile = 'dockerfile'
@@ -478,8 +578,10 @@ class LanguageKind(StrEnum):
     ObjectiveC = 'objective-c'
     ObjectiveCPP = 'objective-cpp'
     Pascal = 'pascal'
-    """ @since 3.18.0
-    @proposed """
+    """
+    @since 3.18.0
+    @proposed
+    """
     Perl = 'perl'
     Perl6 = 'perl6'
     PHP = 'php'
@@ -507,183 +609,238 @@ class LanguageKind(StrEnum):
 
 
 class InlineCompletionTriggerKind(IntEnum):
-    """ Describes how an {@link InlineCompletionItemProvider inline completion provider} was triggered.
+    """
+    Describes how an {@link InlineCompletionItemProvider inline completion provider} was triggered.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     Invoked = 1
-    """ Completion was triggered explicitly by a user gesture. """
+    """Completion was triggered explicitly by a user gesture."""
     Automatic = 2
-    """ Completion was triggered automatically while editing. """
+    """Completion was triggered automatically while editing."""
 
 
 class PositionEncodingKind(StrEnum):
-    """ A set of predefined position encoding kinds.
+    """
+    A set of predefined position encoding kinds.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     UTF8 = 'utf-8'
-    """ Character offsets count UTF-8 code units (e.g. bytes). """
+    """Character offsets count UTF-8 code units (e.g. bytes)."""
     UTF16 = 'utf-16'
-    """ Character offsets count UTF-16 code units.
+    """
+    Character offsets count UTF-16 code units.
 
     This is the default and must always be supported
-    by servers """
+    by servers
+    """
     UTF32 = 'utf-32'
-    """ Character offsets count UTF-32 code units.
+    """
+    Character offsets count UTF-32 code units.
 
     Implementation note: these are the same as Unicode codepoints,
     so this `PositionEncodingKind` may also be used for an
-    encoding-agnostic representation of character offsets. """
+    encoding-agnostic representation of character offsets.
+    """
 
 
 class FileChangeType(IntEnum):
-    """ The file event type """
+    """The file event type"""
+
     Created = 1
-    """ The file got created. """
+    """The file got created."""
     Changed = 2
-    """ The file got changed. """
+    """The file got changed."""
     Deleted = 3
-    """ The file got deleted. """
+    """The file got deleted."""
 
 
 class WatchKind(IntFlag):
     Create = 1
-    """ Interested in create events. """
+    """Interested in create events."""
     Change = 2
-    """ Interested in change events """
+    """Interested in change events"""
     Delete = 4
-    """ Interested in delete events """
+    """Interested in delete events"""
 
 
 class DiagnosticSeverity(IntEnum):
-    """ The diagnostic's severity. """
+    """The diagnostic's severity."""
+
     Error = 1
-    """ Reports an error. """
+    """Reports an error."""
     Warning = 2
-    """ Reports a warning. """
+    """Reports a warning."""
     Information = 3
-    """ Reports an information. """
+    """Reports an information."""
     Hint = 4
-    """ Reports a hint. """
+    """Reports a hint."""
 
 
 class DiagnosticTag(IntEnum):
-    """ The diagnostic tags.
+    """
+    The diagnostic tags.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
+
     Unnecessary = 1
-    """ Unused or unnecessary code.
+    """
+    Unused or unnecessary code.
 
     Clients are allowed to render diagnostics with this tag faded out instead of having
-    an error squiggle. """
+    an error squiggle.
+    """
     Deprecated = 2
-    """ Deprecated or obsolete code.
+    """
+    Deprecated or obsolete code.
 
-    Clients are allowed to rendered diagnostics with this tag strike through. """
+    Clients are allowed to rendered diagnostics with this tag strike through.
+    """
 
 
 class CompletionTriggerKind(IntEnum):
-    """ How a completion was triggered """
+    """How a completion was triggered"""
+
     Invoked = 1
-    """ Completion was triggered by typing an identifier (24x7 code
-    complete), manual invocation (e.g Ctrl+Space) or via API. """
+    """
+    Completion was triggered by typing an identifier (24x7 code
+    complete), manual invocation (e.g Ctrl+Space) or via API.
+    """
     TriggerCharacter = 2
-    """ Completion was triggered by a trigger character specified by
-    the `triggerCharacters` properties of the `CompletionRegistrationOptions`. """
+    """
+    Completion was triggered by a trigger character specified by
+    the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+    """
     TriggerForIncompleteCompletions = 3
-    """ Completion was re-triggered as current completion list is incomplete """
+    """Completion was re-triggered as current completion list is incomplete"""
 
 
 class ApplyKind(IntFlag):
-    """ Defines how values from a set of defaults and an individual item will be
+    """
+    Defines how values from a set of defaults and an individual item will be
     merged.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     Replace = 1
-    """ The value from the individual item (if provided and not `null`) will be
-    used instead of the default. """
+    """
+    The value from the individual item (if provided and not `null`) will be
+    used instead of the default.
+    """
     Merge = 2
-    """ The value from the item will be merged with the default.
+    """
+    The value from the item will be merged with the default.
 
     The specific rules for mergeing values are defined against each field
-    that supports merging. """
+    that supports merging.
+    """
 
 
 class SignatureHelpTriggerKind(IntEnum):
-    """ How a signature help was triggered.
+    """
+    How a signature help was triggered.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
+
     Invoked = 1
-    """ Signature help was invoked manually by the user or by a command. """
+    """Signature help was invoked manually by the user or by a command."""
     TriggerCharacter = 2
-    """ Signature help was triggered by a trigger character. """
+    """Signature help was triggered by a trigger character."""
     ContentChange = 3
-    """ Signature help was triggered by the cursor moving or by the document content changing. """
+    """Signature help was triggered by the cursor moving or by the document content changing."""
 
 
 class CodeActionTriggerKind(IntEnum):
-    """ The reason why code actions were requested.
+    """
+    The reason why code actions were requested.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     Invoked = 1
-    """ Code actions were explicitly requested by the user or by an extension. """
+    """Code actions were explicitly requested by the user or by an extension."""
     Automatic = 2
-    """ Code actions were requested automatically.
+    """
+    Code actions were requested automatically.
 
     This typically happens when current selection in a file changes, but can
-    also be triggered when file content changes. """
+    also be triggered when file content changes.
+    """
 
 
 class FileOperationPatternKind(StrEnum):
-    """ A pattern kind describing if a glob pattern matches a file a folder or
+    """
+    A pattern kind describing if a glob pattern matches a file a folder or
     both.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     File = 'file'
-    """ The pattern matches a file only. """
+    """The pattern matches a file only."""
     Folder = 'folder'
-    """ The pattern matches a folder only. """
+    """The pattern matches a folder only."""
 
 
 class NotebookCellKind(IntEnum):
-    """ A notebook cell kind.
+    """
+    A notebook cell kind.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     Markup = 1
-    """ A markup-cell is formatted source that is used for display. """
+    """A markup-cell is formatted source that is used for display."""
     Code = 2
-    """ A code-cell is source code. """
+    """A code-cell is source code."""
 
 
 class ResourceOperationKind(StrEnum):
     Create = 'create'
-    """ Supports creating new files and folders. """
+    """Supports creating new files and folders."""
     Rename = 'rename'
-    """ Supports renaming existing files and folders. """
+    """Supports renaming existing files and folders."""
     Delete = 'delete'
-    """ Supports deleting existing files and folders. """
+    """Supports deleting existing files and folders."""
 
 
 class FailureHandlingKind(StrEnum):
     Abort = 'abort'
-    """ Applying the workspace change is simply aborted if one of the changes provided
-    fails. All operations executed before the failing operation stay executed. """
+    """
+    Applying the workspace change is simply aborted if one of the changes provided
+    fails. All operations executed before the failing operation stay executed.
+    """
     Transactional = 'transactional'
-    """ All operations are executed transactional. That means they either all
-    succeed or no changes at all are applied to the workspace. """
+    """
+    All operations are executed transactional. That means they either all
+    succeed or no changes at all are applied to the workspace.
+    """
     TextOnlyTransactional = 'textOnlyTransactional'
-    """ If the workspace edit contains only textual file changes they are executed transactional.
+    """
+    If the workspace edit contains only textual file changes they are executed transactional.
     If resource changes (create, rename or delete file) are part of the change the failure
-    handling strategy is abort. """
+    handling strategy is abort.
+    """
     Undo = 'undo'
-    """ The client tries to undo the operations already executed. But there is no
-    guarantee that this is succeeding. """
+    """
+    The client tries to undo the operations already executed. But there is no
+    guarantee that this is succeeding.
+    """
 
 
 class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
-    """ The client's default behavior is to select the identifier
-    according the to language's syntax rule. """
+    """
+    The client's default behavior is to select the identifier
+    according the to language's syntax rule.
+    """
 
 
 class TokenFormat(StrEnum):
@@ -691,86 +848,107 @@ class TokenFormat(StrEnum):
 
 
 Definition = Union['Location', List['Location']]
-""" The definition of a symbol represented as one or many {@link Location locations}.
+"""
+The definition of a symbol represented as one or many {@link Location locations}.
 For most programming languages there is only one location at which a symbol is
 defined.
 
 Servers should prefer returning `DefinitionLink` over `Definition` if supported
-by the client. """
+by the client.
+"""
 
 DefinitionLink = 'LocationLink'
-""" Information about where a symbol is defined.
+"""
+Information about where a symbol is defined.
 
 Provides additional metadata over normal {@link Location location} definitions, including the range of
-the defining symbol """
+the defining symbol
+"""
 
 LSPArray = Sequence['LSPAny']
-""" LSP arrays.
-@since 3.17.0 """
+"""
+LSP arrays.
+@since 3.17.0
+"""
 
 LSPAny = Union['LSPObject', 'LSPArray', str, int, Uint, float, bool, None]
-""" The LSP any type.
+"""
+The LSP any type.
 Please note that strictly speaking a property with the value `undefined`
 can't be converted into JSON preserving the property name. However for
 convenience it is allowed and assumed that all these properties are
 optional as well.
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 Declaration = Union['Location', List['Location']]
-""" The declaration of a symbol representation as one or many {@link Location locations}. """
+"""The declaration of a symbol representation as one or many {@link Location locations}."""
 
 DeclarationLink = 'LocationLink'
-""" Information about where a symbol is declared.
+"""
+Information about where a symbol is declared.
 
 Provides additional metadata over normal {@link Location location} declarations, including the range of
 the declaring symbol.
 
 Servers should prefer returning `DeclarationLink` over `Declaration` if supported
-by the client. """
+by the client.
+"""
 
 InlineValue = Union['InlineValueText', 'InlineValueVariableLookup', 'InlineValueEvaluatableExpression']
-""" Inline value information can be provided by different means:
+"""
+Inline value information can be provided by different means:
 - directly as a text value (class InlineValueText).
 - as a name to use for a variable lookup (class InlineValueVariableLookup)
 - as an evaluatable expression (class InlineValueEvaluatableExpression)
 The InlineValue types combines all inline value types into one type.
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 DocumentDiagnosticReport = Union['RelatedFullDocumentDiagnosticReport', 'RelatedUnchangedDocumentDiagnosticReport']
-""" The result of a document diagnostic pull request. A report can
+"""
+The result of a document diagnostic pull request. A report can
 either be a full report containing all diagnostics for the
 requested document or an unchanged report indicating that nothing
 has changed in terms of diagnostics in comparison to the last
 pull request.
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 PrepareRenameResult = Union['Range', 'PrepareRenamePlaceholder', 'PrepareRenameDefaultBehavior']
 
 DocumentSelector = List['DocumentFilter']
-""" A document selector is the combination of one or many document filters.
+"""
+A document selector is the combination of one or many document filters.
 
-@sample `let sel:DocumentSelector = [{ language: 'typescript' }, { language: 'json', pattern: '**∕tsconfig.json' }]`;
+@sample `let sel:DocumentSelector = [{ language: 'typescript' }, { language: 'json', pattern: '**/tsconfig.json' }]`;
 
-The use of a string as a document filter is deprecated @since 3.16.0. """
+The use of a string as a document filter is deprecated @since 3.16.0.
+"""
 
 ProgressToken = Union[int, str]
 
 ChangeAnnotationIdentifier = str
-""" An identifier to refer to a change annotation stored with a workspace edit. """
+"""An identifier to refer to a change annotation stored with a workspace edit."""
 
 WorkspaceDocumentDiagnosticReport = Union['WorkspaceFullDocumentDiagnosticReport', 'WorkspaceUnchangedDocumentDiagnosticReport']
-""" A workspace diagnostic document report.
+"""
+A workspace diagnostic document report.
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 TextDocumentContentChangeEvent = Union['TextDocumentContentChangePartial', 'TextDocumentContentChangeWholeDocument']
-""" An event describing a change to a text document. If only a text is provided
-it is considered to be the full content of the document. """
+"""
+An event describing a change to a text document. If only a text is provided
+it is considered to be the full content of the document.
+"""
 
 MarkedString = Union[str, 'MarkedStringWithLanguage']
-""" MarkedString can be used to render human readable text. It is either a markdown string
+"""
+MarkedString can be used to render human readable text. It is either a markdown string
 or a code-block that provides a language and a code snippet. The language identifier
 is semantically equal to the optional language identifier in fenced code blocks in GitHub
 issues. See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
@@ -781,25 +959,33 @@ ${value}
 ```
 
 Note that markdown strings will be sanitized - that means html will be escaped.
-@deprecated use MarkupContent instead. """
+@deprecated use MarkupContent instead.
+"""
 
 DocumentFilter = Union['TextDocumentFilter', 'NotebookCellTextDocumentFilter']
-""" A document filter describes a top level text document or
+"""
+A document filter describes a top level text document or
 a notebook cell document.
 
-@since 3.17.0 - support for NotebookCellTextDocumentFilter. """
+@since 3.17.0 - support for NotebookCellTextDocumentFilter.
+"""
 
 LSPObject = Mapping[str, Any]
-""" LSP object definition.
-@since 3.17.0 """
+"""
+LSP object definition.
+@since 3.17.0
+"""
 
 GlobPattern = Union['Pattern', 'RelativePattern']
-""" The glob pattern. Either a string pattern or a relative pattern.
+"""
+The glob pattern. Either a string pattern or a relative pattern.
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 TextDocumentFilter = Union['TextDocumentFilterLanguage', 'TextDocumentFilterScheme', 'TextDocumentFilterPattern']
-""" A document filter denotes a document by different properties like
+"""
+A document filter denotes a document by different properties like
 the {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of
 its resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.
 
@@ -807,160 +993,202 @@ Glob patterns can have the following syntax:
 - `*` to match one or more characters in a path segment
 - `?` to match on one character in a path segment
 - `**` to match any number of path segments, including none
-- `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)
+- `{}` to group sub patterns into an OR expression. (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
 - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
 - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
 
 @sample A language filter that applies to typescript files on disk: `{ language: 'typescript', scheme: 'file' }`
 @sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 NotebookDocumentFilter = Union['NotebookDocumentFilterNotebookType', 'NotebookDocumentFilterScheme', 'NotebookDocumentFilterPattern']
-""" A notebook document filter denotes a notebook document by
+"""
+A notebook document filter denotes a notebook document by
 different properties. The properties will be match
 against the notebook's URI (same as with documents)
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 Pattern = str
-""" The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:
+"""
+The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:
 - `*` to match one or more characters in a path segment
 - `?` to match on one character in a path segment
 - `**` to match any number of path segments, including none
-- `{}` to group conditions (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)
+- `{}` to group conditions (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
 - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
 - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
 
-@since 3.17.0 """
+@since 3.17.0
+"""
 
 RegularExpressionEngineKind = str
 
 
 class ImplementationParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class Location(TypedDict):
-    """ Represents a location inside a resource, such as a line
-    inside a text file. """
-    uri: 'DocumentUri'
+    """
+    Represents a location inside a resource, such as a line
+    inside a text file.
+    """
+
+    uri: DocumentUri
     range: 'Range'
 
 
 class ImplementationRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class TypeDefinitionParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class TypeDefinitionRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class WorkspaceFolder(TypedDict):
-    """ A workspace folder inside a client. """
-    uri: 'URI'
-    """ The associated URI for this workspace folder. """
+    """A workspace folder inside a client."""
+
+    uri: URI
+    """The associated URI for this workspace folder."""
     name: str
-    """ The name of the workspace folder. Used to refer to this
-    workspace folder in the user interface. """
+    """
+    The name of the workspace folder. Used to refer to this
+    workspace folder in the user interface.
+    """
 
 
 class DidChangeWorkspaceFoldersParams(TypedDict):
-    """ The parameters of a `workspace/didChangeWorkspaceFolders` notification. """
+    """The parameters of a `workspace/didChangeWorkspaceFolders` notification."""
+
     event: 'WorkspaceFoldersChangeEvent'
-    """ The actual workspace folder change event. """
+    """The actual workspace folder change event."""
 
 
 class ConfigurationParams(TypedDict):
-    """ The parameters of a configuration request. """
+    """The parameters of a configuration request."""
+
     items: List['ConfigurationItem']
 
 
 class DocumentColorParams(TypedDict):
-    """ Parameters for a {@link DocumentColorRequest}. """
+    """Parameters for a {@link DocumentColorRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class ColorInformation(TypedDict):
-    """ Represents a color range from a document. """
+    """Represents a color range from a document."""
+
     range: 'Range'
-    """ The range in the document where this color appears. """
+    """The range in the document where this color appears."""
     color: 'Color'
-    """ The actual color value for this color range. """
+    """The actual color value for this color range."""
 
 
 class DocumentColorRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class ColorPresentationParams(TypedDict):
-    """ Parameters for a {@link ColorPresentationRequest}. """
+    """Parameters for a {@link ColorPresentationRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     color: 'Color'
-    """ The color to request presentations for. """
+    """The color to request presentations for."""
     range: 'Range'
-    """ The range where the color would be inserted. Serves as a context. """
+    """The range where the color would be inserted. Serves as a context."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class ColorPresentation(TypedDict):
     label: str
-    """ The label of this color presentation. It will be shown on the color
+    """
+    The label of this color presentation. It will be shown on the color
     picker header. By default this is also the text that is inserted when selecting
-    this color presentation. """
+    this color presentation.
+    """
     textEdit: NotRequired['TextEdit']
-    """ An {@link TextEdit edit} which is applied to a document when selecting
+    """
+    An {@link TextEdit edit} which is applied to a document when selecting
     this presentation for the color.  When `falsy` the {@link ColorPresentation.label label}
-    is used. """
+    is used.
+    """
     additionalTextEdits: NotRequired[List['TextEdit']]
-    """ An optional array of additional {@link TextEdit text edits} that are applied when
-    selecting this color presentation. Edits must not overlap with the main {@link ColorPresentation.textEdit edit} nor with themselves. """
+    """
+    An optional array of additional {@link TextEdit text edits} that are applied when
+    selecting this color presentation. Edits must not overlap with the main {@link ColorPresentation.textEdit edit} nor with themselves.
+    """
 
 
 class WorkDoneProgressOptions(TypedDict):
@@ -968,178 +1196,237 @@ class WorkDoneProgressOptions(TypedDict):
 
 
 class TextDocumentRegistrationOptions(TypedDict):
-    """ General text document registration options. """
+    """General text document registration options."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class FoldingRangeParams(TypedDict):
-    """ Parameters for a {@link FoldingRangeRequest}. """
+    """Parameters for a {@link FoldingRangeRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class FoldingRange(TypedDict):
-    """ Represents a folding range. To be valid, start and end line must be bigger than zero and smaller
-    than the number of lines in the document. Clients are free to ignore invalid ranges. """
+    """
+    Represents a folding range. To be valid, start and end line must be bigger than zero and smaller
+    than the number of lines in the document. Clients are free to ignore invalid ranges.
+    """
+
     startLine: Uint
-    """ The zero-based start line of the range to fold. The folded area starts after the line's last character.
-    To be valid, the end must be zero or larger and smaller than the number of lines in the document. """
+    """
+    The zero-based start line of the range to fold. The folded area starts after the line's last character.
+    To be valid, the end must be zero or larger and smaller than the number of lines in the document.
+    """
     startCharacter: NotRequired[Uint]
-    """ The zero-based character offset from where the folded range starts. If not defined, defaults to the length of the start line. """
+    """The zero-based character offset from where the folded range starts. If not defined, defaults to the length of the start line."""
     endLine: Uint
-    """ The zero-based end line of the range to fold. The folded area ends with the line's last character.
-    To be valid, the end must be zero or larger and smaller than the number of lines in the document. """
+    """
+    The zero-based end line of the range to fold. The folded area ends with the line's last character.
+    To be valid, the end must be zero or larger and smaller than the number of lines in the document.
+    """
     endCharacter: NotRequired[Uint]
-    """ The zero-based character offset before the folded range ends. If not defined, defaults to the length of the end line. """
+    """The zero-based character offset before the folded range ends. If not defined, defaults to the length of the end line."""
     kind: NotRequired['FoldingRangeKind']
-    """ Describes the kind of the folding range such as 'comment' or 'region'. The kind
+    """
+    Describes the kind of the folding range such as 'comment' or 'region'. The kind
     is used to categorize folding ranges and used by commands like 'Fold all comments'.
-    See {@link FoldingRangeKind} for an enumeration of standardized kinds. """
+    See {@link FoldingRangeKind} for an enumeration of standardized kinds.
+    """
     collapsedText: NotRequired[str]
-    """ The text that the client should show when the specified range is
+    """
+    The text that the client should show when the specified range is
     collapsed. If not defined or not supported by the client, a default
     will be chosen by the client.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class FoldingRangeRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class DeclarationParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class DeclarationRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class SelectionRangeParams(TypedDict):
-    """ A parameter literal used in selection range requests. """
+    """A parameter literal used in selection range requests."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     positions: List['Position']
-    """ The positions inside the text document. """
+    """The positions inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class SelectionRange(TypedDict):
-    """ A selection range represents a part of a selection hierarchy. A selection range
-    may have a parent selection range that contains it. """
+    """
+    A selection range represents a part of a selection hierarchy. A selection range
+    may have a parent selection range that contains it.
+    """
+
     range: 'Range'
-    """ The {@link Range range} of this selection range. """
+    """The {@link Range range} of this selection range."""
     parent: NotRequired['SelectionRange']
-    """ The parent selection range containing this range. Therefore `parent.range` must contain `this.range`. """
+    """The parent selection range containing this range. Therefore `parent.range` must contain `this.range`."""
 
 
 class SelectionRangeRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class WorkDoneProgressCreateParams(TypedDict):
     token: 'ProgressToken'
-    """ The token to be used to report progress. """
+    """The token to be used to report progress."""
 
 
 class WorkDoneProgressCancelParams(TypedDict):
     token: 'ProgressToken'
-    """ The token to be used to report progress. """
+    """The token to be used to report progress."""
 
 
 class CallHierarchyPrepareParams(TypedDict):
-    """ The parameter of a `textDocument/prepareCallHierarchy` request.
+    """
+    The parameter of a `textDocument/prepareCallHierarchy` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class CallHierarchyItem(TypedDict):
-    """ Represents programming constructs like functions or constructors in the context
+    """
+    Represents programming constructs like functions or constructors in the context
     of call hierarchy.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     name: str
-    """ The name of this item. """
+    """The name of this item."""
     kind: 'SymbolKind'
-    """ The kind of this item. """
+    """The kind of this item."""
     tags: NotRequired[List['SymbolTag']]
-    """ Tags for this item. """
+    """Tags for this item."""
     detail: NotRequired[str]
-    """ More detail for this item, e.g. the signature of a function. """
-    uri: 'DocumentUri'
-    """ The resource identifier of this item. """
+    """More detail for this item, e.g. the signature of a function."""
+    uri: DocumentUri
+    """The resource identifier of this item."""
     range: 'Range'
-    """ The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code. """
+    """The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code."""
     selectionRange: 'Range'
-    """ The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
-    Must be contained by the {@link CallHierarchyItem.range `range`}. """
+    """
+    The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
+    Must be contained by the {@link CallHierarchyItem.range `range`}.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved between a call hierarchy prepare and
-    incoming calls or outgoing calls requests. """
+    """
+    A data entry field that is preserved between a call hierarchy prepare and
+    incoming calls or outgoing calls requests.
+    """
 
 
 class CallHierarchyRegistrationOptions(TypedDict):
-    """ Call hierarchy options used during static or dynamic registration.
+    """
+    Call hierarchy options used during static or dynamic registration.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class CallHierarchyIncomingCallsParams(TypedDict):
-    """ The parameter of a `callHierarchy/incomingCalls` request.
+    """
+    The parameter of a `callHierarchy/incomingCalls` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     item: 'CallHierarchyItem'
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 CallHierarchyIncomingCall = TypedDict('CallHierarchyIncomingCall', {
@@ -1149,190 +1436,253 @@ CallHierarchyIncomingCall = TypedDict('CallHierarchyIncomingCall', {
     # denoted by {@link CallHierarchyIncomingCall.from `this.from`}.
     'fromRanges': List['Range'],
 })
-""" Represents an incoming call, e.g. a caller of a method or constructor.
+"""
+Represents an incoming call, e.g. a caller of a method or constructor.
 
-@since 3.16.0 """
+@since 3.16.0
+"""
 
 
 class CallHierarchyOutgoingCallsParams(TypedDict):
-    """ The parameter of a `callHierarchy/outgoingCalls` request.
+    """
+    The parameter of a `callHierarchy/outgoingCalls` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     item: 'CallHierarchyItem'
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class CallHierarchyOutgoingCall(TypedDict):
-    """ Represents an outgoing call, e.g. calling a getter from a method or a method from a constructor etc.
+    """
+    Represents an outgoing call, e.g. calling a getter from a method or a method from a constructor etc.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     to: 'CallHierarchyItem'
-    """ The item that is called. """
+    """The item that is called."""
     fromRanges: List['Range']
-    """ The range at which this item is called. This is the range relative to the caller, e.g the item
+    """
+    The range at which this item is called. This is the range relative to the caller, e.g the item
     passed to {@link CallHierarchyItemProvider.provideCallHierarchyOutgoingCalls `provideCallHierarchyOutgoingCalls`}
-    and not {@link CallHierarchyOutgoingCall.to `this.to`}. """
+    and not {@link CallHierarchyOutgoingCall.to `this.to`}.
+    """
 
 
 class SemanticTokensParams(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class SemanticTokens(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     resultId: NotRequired[str]
-    """ An optional result id. If provided and clients support delta updating
+    """
+    An optional result id. If provided and clients support delta updating
     the client will include the result id in the next semantic token request.
     A server can then instead of computing all semantic tokens again simply
-    send a delta. """
+    send a delta.
+    """
     data: List[Uint]
-    """ The actual tokens. """
+    """The actual tokens."""
 
 
 class SemanticTokensPartialResult(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     data: List[Uint]
 
 
 class SemanticTokensRegistrationOptions(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     legend: 'SemanticTokensLegend'
-    """ The legend used by the server """
-    range: NotRequired[Union[bool, dict]]
-    """ Server supports providing semantic tokens for a specific range
-    of a document. """
+    """The legend used by the server"""
+    range: NotRequired[Union[bool, Dict[str, LSPAny]]]
+    """
+    Server supports providing semantic tokens for a specific range
+    of a document.
+    """
     full: NotRequired[Union[bool, 'SemanticTokensFullDelta']]
-    """ Server supports providing semantic tokens for a full document. """
+    """Server supports providing semantic tokens for a full document."""
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class SemanticTokensDeltaParams(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     previousResultId: str
-    """ The result id of a previous response. The result Id can either point to a full response
-    or a delta response depending on what was received last. """
+    """
+    The result id of a previous response. The result Id can either point to a full response
+    or a delta response depending on what was received last.
+    """
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class SemanticTokensDelta(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     resultId: NotRequired[str]
     edits: List['SemanticTokensEdit']
-    """ The semantic token edits to transform a previous result into a new result. """
+    """The semantic token edits to transform a previous result into a new result."""
 
 
 class SemanticTokensDeltaPartialResult(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     edits: List['SemanticTokensEdit']
 
 
 class SemanticTokensRangeParams(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     range: 'Range'
-    """ The range the semantic tokens are requested for. """
+    """The range the semantic tokens are requested for."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class ShowDocumentParams(TypedDict):
-    """ Params to show a resource in the UI.
+    """
+    Params to show a resource in the UI.
 
-    @since 3.16.0 """
-    uri: 'URI'
-    """ The uri to show. """
+    @since 3.16.0
+    """
+
+    uri: URI
+    """The uri to show."""
     external: NotRequired[bool]
-    """ Indicates to show the resource in an external program.
+    """
+    Indicates to show the resource in an external program.
     To show, for example, `https://code.visualstudio.com/`
-    in the default WEB browser set `external` to `true`. """
+    in the default WEB browser set `external` to `true`.
+    """
     takeFocus: NotRequired[bool]
-    """ An optional property to indicate whether the editor
+    """
+    An optional property to indicate whether the editor
     showing the document should take focus or not.
     Clients might ignore this property if an external
-    program is started. """
+    program is started.
+    """
     selection: NotRequired['Range']
-    """ An optional selection range if the document is a text
+    """
+    An optional selection range if the document is a text
     document. Clients might ignore the property if an
     external program is started or the file is not a text
-    file. """
+    file.
+    """
 
 
 class ShowDocumentResult(TypedDict):
-    """ The result of a showDocument request.
+    """
+    The result of a showDocument request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     success: bool
-    """ A boolean indicating if the show was successful. """
+    """A boolean indicating if the show was successful."""
 
 
 class LinkedEditingRangeParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class LinkedEditingRanges(TypedDict):
-    """ The result of a linked editing range request.
+    """
+    The result of a linked editing range request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     ranges: List['Range']
-    """ A list of ranges that can be edited together. The ranges must have
-    identical length and contain identical text content. The ranges cannot overlap. """
+    """
+    A list of ranges that can be edited together. The ranges must have
+    identical length and contain identical text content. The ranges cannot overlap.
+    """
     wordPattern: NotRequired[str]
-    """ An optional word pattern (regular expression) that describes valid contents for
+    """
+    An optional word pattern (regular expression) that describes valid contents for
     the given ranges. If no pattern is provided, the client configuration's word
-    pattern will be used. """
+    pattern will be used.
+    """
 
 
 class LinkedEditingRangeRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class CreateFilesParams(TypedDict):
-    """ The parameters sent in notifications/requests for user-initiated creation of
+    """
+    The parameters sent in notifications/requests for user-initiated creation of
     files.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     files: List['FileCreate']
-    """ An array of all files/folders created in this operation. """
+    """An array of all files/folders created in this operation."""
 
 
 class WorkspaceEdit(TypedDict):
-    """ A workspace edit represents changes to many resources managed in the workspace. The edit
+    """
+    A workspace edit represents changes to many resources managed in the workspace. The edit
     should either provide `changes` or `documentChanges`. If documentChanges are present
     they are preferred over `changes` if the client can handle versioned document edits.
 
@@ -1343,11 +1693,14 @@ class WorkspaceEdit(TypedDict):
 
     An invalid sequence (e.g. (1) delete file a.txt and (2) insert text into file a.txt) will
     cause failure of the operation. How the client recovers from the failure is described by
-    the client capability: `workspace.workspaceEdit.failureHandling` """
-    changes: NotRequired[Dict['DocumentUri', List['TextEdit']]]
-    """ Holds changes to existing resources. """
+    the client capability: `workspace.workspaceEdit.failureHandling`
+    """
+
+    changes: NotRequired[Dict[DocumentUri, List['TextEdit']]]
+    """Holds changes to existing resources."""
     documentChanges: NotRequired[List[Union['TextDocumentEdit', 'CreateFile', 'RenameFile', 'DeleteFile']]]
-    """ Depending on the client capability `workspace.workspaceEdit.resourceOperations` document changes
+    """
+    Depending on the client capability `workspace.workspaceEdit.resourceOperations` document changes
     are either an array of `TextDocumentEdit`s to express changes to n different text documents
     where each text document edit addresses a specific version of a text document. Or it can contain
     above `TextDocumentEdit`s mixed with create, rename and delete file / folder operations.
@@ -1356,365 +1709,509 @@ class WorkspaceEdit(TypedDict):
     `workspace.workspaceEdit.documentChanges` client capability.
 
     If a client neither supports `documentChanges` nor `workspace.workspaceEdit.resourceOperations` then
-    only plain `TextEdit`s using the `changes` property are supported. """
-    changeAnnotations: NotRequired[Dict['ChangeAnnotationIdentifier', 'ChangeAnnotation']]
-    """ A map of change annotations that can be referenced in `AnnotatedTextEdit`s or create, rename and
+    only plain `TextEdit`s using the `changes` property are supported.
+    """
+    changeAnnotations: NotRequired[Dict[ChangeAnnotationIdentifier, 'ChangeAnnotation']]
+    """
+    A map of change annotations that can be referenced in `AnnotatedTextEdit`s or create, rename and
     delete file / folder operations.
 
     Whether clients honor this property depends on the client capability `workspace.changeAnnotationSupport`.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class FileOperationRegistrationOptions(TypedDict):
-    """ The options to register for file operations.
+    """
+    The options to register for file operations.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     filters: List['FileOperationFilter']
-    """ The actual filters. """
+    """The actual filters."""
 
 
 class RenameFilesParams(TypedDict):
-    """ The parameters sent in notifications/requests for user-initiated renames of
+    """
+    The parameters sent in notifications/requests for user-initiated renames of
     files.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     files: List['FileRename']
-    """ An array of all files/folders renamed in this operation. When a folder is renamed, only
-    the folder will be included, and not its children. """
+    """
+    An array of all files/folders renamed in this operation. When a folder is renamed, only
+    the folder will be included, and not its children.
+    """
 
 
 class DeleteFilesParams(TypedDict):
-    """ The parameters sent in notifications/requests for user-initiated deletes of
+    """
+    The parameters sent in notifications/requests for user-initiated deletes of
     files.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     files: List['FileDelete']
-    """ An array of all files/folders deleted in this operation. """
+    """An array of all files/folders deleted in this operation."""
 
 
 class MonikerParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class Moniker(TypedDict):
-    """ Moniker definition to match LSIF 0.5 moniker definition.
+    """
+    Moniker definition to match LSIF 0.5 moniker definition.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     scheme: str
-    """ The scheme of the moniker. For example tsc or .Net """
+    """The scheme of the moniker. For example tsc or .Net"""
     identifier: str
-    """ The identifier of the moniker. The value is opaque in LSIF however
-    schema owners are allowed to define the structure if they want. """
+    """
+    The identifier of the moniker. The value is opaque in LSIF however
+    schema owners are allowed to define the structure if they want.
+    """
     unique: 'UniquenessLevel'
-    """ The scope in which the moniker is unique """
+    """The scope in which the moniker is unique"""
     kind: NotRequired['MonikerKind']
-    """ The moniker kind if known. """
+    """The moniker kind if known."""
 
 
 class MonikerRegistrationOptions(TypedDict):
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class TypeHierarchyPrepareParams(TypedDict):
-    """ The parameter of a `textDocument/prepareTypeHierarchy` request.
+    """
+    The parameter of a `textDocument/prepareTypeHierarchy` request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class TypeHierarchyItem(TypedDict):
-    """ @since 3.17.0 """
+    """@since 3.17.0"""
+
     name: str
-    """ The name of this item. """
+    """The name of this item."""
     kind: 'SymbolKind'
-    """ The kind of this item. """
+    """The kind of this item."""
     tags: NotRequired[List['SymbolTag']]
-    """ Tags for this item. """
+    """Tags for this item."""
     detail: NotRequired[str]
-    """ More detail for this item, e.g. the signature of a function. """
-    uri: 'DocumentUri'
-    """ The resource identifier of this item. """
+    """More detail for this item, e.g. the signature of a function."""
+    uri: DocumentUri
+    """The resource identifier of this item."""
     range: 'Range'
-    """ The range enclosing this symbol not including leading/trailing whitespace
-    but everything else, e.g. comments and code. """
+    """
+    The range enclosing this symbol not including leading/trailing whitespace
+    but everything else, e.g. comments and code.
+    """
     selectionRange: 'Range'
-    """ The range that should be selected and revealed when this symbol is being
+    """
+    The range that should be selected and revealed when this symbol is being
     picked, e.g. the name of a function. Must be contained by the
-    {@link TypeHierarchyItem.range `range`}. """
+    {@link TypeHierarchyItem.range `range`}.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved between a type hierarchy prepare and
+    """
+    A data entry field that is preserved between a type hierarchy prepare and
     supertypes or subtypes requests. It could also be used to identify the
     type hierarchy in the server, helping improve the performance on
-    resolving supertypes and subtypes. """
+    resolving supertypes and subtypes.
+    """
 
 
 class TypeHierarchyRegistrationOptions(TypedDict):
-    """ Type hierarchy options used during static or dynamic registration.
+    """
+    Type hierarchy options used during static or dynamic registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class TypeHierarchySupertypesParams(TypedDict):
-    """ The parameter of a `typeHierarchy/supertypes` request.
+    """
+    The parameter of a `typeHierarchy/supertypes` request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     item: 'TypeHierarchyItem'
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class TypeHierarchySubtypesParams(TypedDict):
-    """ The parameter of a `typeHierarchy/subtypes` request.
+    """
+    The parameter of a `typeHierarchy/subtypes` request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     item: 'TypeHierarchyItem'
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class InlineValueParams(TypedDict):
-    """ A parameter literal used in inline value requests.
+    """
+    A parameter literal used in inline value requests.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     range: 'Range'
-    """ The document range for which inline values should be computed. """
+    """The document range for which inline values should be computed."""
     context: 'InlineValueContext'
-    """ Additional information about the context in which inline values were
-    requested. """
+    """
+    Additional information about the context in which inline values were
+    requested.
+    """
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class InlineValueRegistrationOptions(TypedDict):
-    """ Inline value options used during static or dynamic registration.
+    """
+    Inline value options used during static or dynamic registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class InlayHintParams(TypedDict):
-    """ A parameter literal used in inlay hint requests.
+    """
+    A parameter literal used in inlay hint requests.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     range: 'Range'
-    """ The document range for which inlay hints should be computed. """
+    """The document range for which inlay hints should be computed."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class InlayHint(TypedDict):
-    """ Inlay hint information.
+    """
+    Inlay hint information.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     position: 'Position'
-    """ The position of this hint.
+    """
+    The position of this hint.
 
     If multiple hints have the same position, they will be shown in the order
-    they appear in the response. """
+    they appear in the response.
+    """
     label: Union[str, List['InlayHintLabelPart']]
-    """ The label of this hint. A human readable string or an array of
+    """
+    The label of this hint. A human readable string or an array of
     InlayHintLabelPart label parts.
 
-    *Note* that neither the string nor the label part can be empty. """
+    *Note* that neither the string nor the label part can be empty.
+    """
     kind: NotRequired['InlayHintKind']
-    """ The kind of this hint. Can be omitted in which case the client
-    should fall back to a reasonable default. """
+    """
+    The kind of this hint. Can be omitted in which case the client
+    should fall back to a reasonable default.
+    """
     textEdits: NotRequired[List['TextEdit']]
-    """ Optional text edits that are performed when accepting this inlay hint.
+    """
+    Optional text edits that are performed when accepting this inlay hint.
 
     *Note* that edits are expected to change the document so that the inlay
     hint (or its nearest variant) is now part of the document and the inlay
-    hint itself is now obsolete. """
+    hint itself is now obsolete.
+    """
     tooltip: NotRequired[Union[str, 'MarkupContent']]
-    """ The tooltip text when you hover over this item. """
+    """The tooltip text when you hover over this item."""
     paddingLeft: NotRequired[bool]
-    """ Render padding before the hint.
+    """
+    Render padding before the hint.
 
     Note: Padding should use the editor's background color, not the
     background color of the hint itself. That means padding can be used
-    to visually align/separate an inlay hint. """
+    to visually align/separate an inlay hint.
+    """
     paddingRight: NotRequired[bool]
-    """ Render padding after the hint.
+    """
+    Render padding after the hint.
 
     Note: Padding should use the editor's background color, not the
     background color of the hint itself. That means padding can be used
-    to visually align/separate an inlay hint. """
+    to visually align/separate an inlay hint.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on an inlay hint between
-    a `textDocument/inlayHint` and a `inlayHint/resolve` request. """
+    """
+    A data entry field that is preserved on an inlay hint between
+    a `textDocument/inlayHint` and a `inlayHint/resolve` request.
+    """
 
 
 class InlayHintRegistrationOptions(TypedDict):
-    """ Inlay hint options used during static or dynamic registration.
+    """
+    Inlay hint options used during static or dynamic registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
-    information for an inlay hint item. """
+    """
+    The server provides support to resolve additional
+    information for an inlay hint item.
+    """
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class DocumentDiagnosticParams(TypedDict):
-    """ Parameters of the document diagnostic request.
+    """
+    Parameters of the document diagnostic request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     identifier: NotRequired[str]
-    """ The additional identifier  provided during registration. """
+    """The additional identifier  provided during registration."""
     previousResultId: NotRequired[str]
-    """ The result id of a previous response if provided. """
+    """The result id of a previous response if provided."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class DocumentDiagnosticReportPartialResult(TypedDict):
-    """ A partial result for a document diagnostic report.
+    """
+    A partial result for a document diagnostic report.
 
-    @since 3.17.0 """
-    relatedDocuments: Dict['DocumentUri', Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]
+    @since 3.17.0
+    """
+
+    relatedDocuments: Dict[DocumentUri, Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]
 
 
 class DiagnosticServerCancellationData(TypedDict):
-    """ Cancellation data returned from a diagnostic request.
+    """
+    Cancellation data returned from a diagnostic request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     retriggerRequest: bool
 
 
 class DiagnosticRegistrationOptions(TypedDict):
-    """ Diagnostic registration options.
+    """
+    Diagnostic registration options.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     identifier: NotRequired[str]
-    """ An optional identifier under which the diagnostics are
-    managed by the client. """
+    """
+    An optional identifier under which the diagnostics are
+    managed by the client.
+    """
     interFileDependencies: bool
-    """ Whether the language has inter file dependencies meaning that
+    """
+    Whether the language has inter file dependencies meaning that
     editing code in one file can result in a different diagnostic
     set in another file. Inter file dependencies are common for
-    most programming languages and typically uncommon for linters. """
+    most programming languages and typically uncommon for linters.
+    """
     workspaceDiagnostics: bool
-    """ The server provides support for workspace diagnostics as well. """
+    """The server provides support for workspace diagnostics as well."""
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class WorkspaceDiagnosticParams(TypedDict):
-    """ Parameters of the workspace diagnostic request.
+    """
+    Parameters of the workspace diagnostic request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     identifier: NotRequired[str]
-    """ The additional identifier provided during registration. """
+    """The additional identifier provided during registration."""
     previousResultIds: List['PreviousResultId']
-    """ The currently known diagnostic reports with their
-    previous result ids. """
+    """
+    The currently known diagnostic reports with their
+    previous result ids.
+    """
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class WorkspaceDiagnosticReport(TypedDict):
-    """ A workspace diagnostic report.
+    """
+    A workspace diagnostic report.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     items: List['WorkspaceDocumentDiagnosticReport']
 
 
 class WorkspaceDiagnosticReportPartialResult(TypedDict):
-    """ A partial result for a workspace diagnostic report.
+    """
+    A partial result for a workspace diagnostic report.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     items: List['WorkspaceDocumentDiagnosticReport']
 
 
 class DidOpenNotebookDocumentParams(TypedDict):
-    """ The params sent in an open notebook document notification.
+    """
+    The params sent in an open notebook document notification.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookDocument: 'NotebookDocument'
-    """ The notebook document that got opened. """
+    """The notebook document that got opened."""
     cellTextDocuments: List['TextDocumentItem']
-    """ The text documents that represent the content
-    of a notebook cell. """
+    """
+    The text documents that represent the content
+    of a notebook cell.
+    """
 
 
 class NotebookDocumentSyncRegistrationOptions(TypedDict):
-    """ Registration options specific to a notebook.
+    """
+    Registration options specific to a notebook.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookSelector: List[Union['NotebookDocumentFilterWithNotebook', 'NotebookDocumentFilterWithCells']]
-    """ The notebooks to be synced """
+    """The notebooks to be synced"""
     save: NotRequired[bool]
-    """ Whether save notification should be forwarded to
-    the server. Will only be honored if mode === `notebook`. """
+    """
+    Whether save notification should be forwarded to
+    the server. Will only be honored if mode === `notebook`.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class DidChangeNotebookDocumentParams(TypedDict):
-    """ The params sent in a change notebook document notification.
+    """
+    The params sent in a change notebook document notification.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookDocument: 'VersionedNotebookDocumentIdentifier'
-    """ The notebook document that did change. The version number points
+    """
+    The notebook document that did change. The version number points
     to the version after all provided changes have been applied. If
     only the text document content of a cell changes the notebook version
-    doesn't necessarily have to change. """
+    doesn't necessarily have to change.
+    """
     change: 'NotebookDocumentChangeEvent'
-    """ The actual changes to the notebook document.
+    """
+    The actual changes to the notebook document.
 
     The changes describe single state changes to the notebook document.
     So if there are two changes c1 (at array index 0) and c2 (at array
@@ -1726,121 +2223,164 @@ class DidChangeNotebookDocumentParams(TypedDict):
     - start with the same initial content
     - apply the 'notebookDocument/didChange' notifications in the order you receive them.
     - apply the `NotebookChangeEvent`s in a single notification in the order
-      you receive them. """
+      you receive them.
+    """
 
 
 class DidSaveNotebookDocumentParams(TypedDict):
-    """ The params sent in a save notebook document notification.
+    """
+    The params sent in a save notebook document notification.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookDocument: 'NotebookDocumentIdentifier'
-    """ The notebook document that got saved. """
+    """The notebook document that got saved."""
 
 
 class DidCloseNotebookDocumentParams(TypedDict):
-    """ The params sent in a close notebook document notification.
+    """
+    The params sent in a close notebook document notification.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookDocument: 'NotebookDocumentIdentifier'
-    """ The notebook document that got closed. """
+    """The notebook document that got closed."""
     cellTextDocuments: List['TextDocumentIdentifier']
-    """ The text documents that represent the content
-    of a notebook cell that got closed. """
+    """
+    The text documents that represent the content
+    of a notebook cell that got closed.
+    """
 
 
 class InlineCompletionParams(TypedDict):
-    """ A parameter literal used in inline completion requests.
+    """
+    A parameter literal used in inline completion requests.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     context: 'InlineCompletionContext'
-    """ Additional information about the context in which inline completions were
-    requested. """
+    """
+    Additional information about the context in which inline completions were
+    requested.
+    """
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class InlineCompletionList(TypedDict):
-    """ Represents a collection of {@link InlineCompletionItem inline completion items} to be presented in the editor.
+    """
+    Represents a collection of {@link InlineCompletionItem inline completion items} to be presented in the editor.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     items: List['InlineCompletionItem']
-    """ The inline completion items """
+    """The inline completion items"""
 
 
 class InlineCompletionItem(TypedDict):
-    """ An inline completion item represents a text snippet that is proposed inline to complete text that is being typed.
+    """
+    An inline completion item represents a text snippet that is proposed inline to complete text that is being typed.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     insertText: Union[str, 'StringValue']
-    """ The text to replace the range with. Must be set. """
+    """The text to replace the range with. Must be set."""
     filterText: NotRequired[str]
-    """ A text that is used to decide if this inline completion should be shown. When `falsy` the {@link InlineCompletionItem.insertText} is used. """
+    """A text that is used to decide if this inline completion should be shown. When `falsy` the {@link InlineCompletionItem.insertText} is used."""
     range: NotRequired['Range']
-    """ The range to replace. Must begin and end on the same line. """
+    """The range to replace. Must begin and end on the same line."""
     command: NotRequired['Command']
-    """ An optional {@link Command} that is executed *after* inserting this completion. """
+    """An optional {@link Command} that is executed *after* inserting this completion."""
 
 
 class InlineCompletionRegistrationOptions(TypedDict):
-    """ Inline completion options used during static or dynamic registration.
+    """
+    Inline completion options used during static or dynamic registration.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class TextDocumentContentParams(TypedDict):
-    """ Parameters for the `workspace/textDocumentContent` request.
+    """
+    Parameters for the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed """
-    uri: 'DocumentUri'
-    """ The uri of the text document. """
+    @proposed
+    """
+
+    uri: DocumentUri
+    """The uri of the text document."""
 
 
 class TextDocumentContentResult(TypedDict):
-    """ Result of the `workspace/textDocumentContent` request.
+    """
+    Result of the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     text: str
-    """ The text content of the text document. Please note, that the content of
+    """
+    The text content of the text document. Please note, that the content of
     any subsequent open notifications for the text document might differ
     from the returned content due to whitespace and line ending
-    normalizations done on the client """
+    normalizations done on the client
+    """
 
 
 class TextDocumentContentRegistrationOptions(TypedDict):
-    """ Text document content provider registration options.
+    """
+    Text document content provider registration options.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     schemes: List[str]
-    """ The schemes for which the server provides content. """
+    """The schemes for which the server provides content."""
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class TextDocumentContentRefreshParams(TypedDict):
-    """ Parameters for the `workspace/textDocumentContent/refresh` request.
+    """
+    Parameters for the `workspace/textDocumentContent/refresh` request.
 
     @since 3.18.0
-    @proposed """
-    uri: 'DocumentUri'
-    """ The uri of the text document to refresh. """
+    @proposed
+    """
+
+    uri: DocumentUri
+    """The uri of the text document to refresh."""
 
 
 class RegistrationParams(TypedDict):
@@ -1853,69 +2393,89 @@ class UnregistrationParams(TypedDict):
 
 class InitializeParams(TypedDict):
     processId: Union[int, None]
-    """ The process Id of the parent process that started
+    """
+    The process Id of the parent process that started
     the server.
 
     Is `null` if the process has not been started by another process.
-    If the parent process is not alive then the server should exit. """
+    If the parent process is not alive then the server should exit.
+    """
     clientInfo: NotRequired['ClientInfo']
-    """ Information about the client
+    """
+    Information about the client
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     locale: NotRequired[str]
-    """ The locale the client is currently showing the user interface
+    """
+    The locale the client is currently showing the user interface
     in. This must not necessarily be the locale of the operating
     system.
 
     Uses IETF language tags as the value's syntax
     (See https://en.wikipedia.org/wiki/IETF_language_tag)
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     rootPath: NotRequired[Union[str, None]]
-    """ The rootPath of the workspace. Is null
+    """
+    The rootPath of the workspace. Is null
     if no folder is open.
 
-    @deprecated in favour of rootUri. """
-    rootUri: Union['DocumentUri', None]
-    """ The rootUri of the workspace. Is null if no
+    @deprecated in favour of rootUri.
+    """
+    rootUri: Union[DocumentUri, None]
+    """
+    The rootUri of the workspace. Is null if no
     folder is open. If both `rootPath` and `rootUri` are set
     `rootUri` wins.
 
-    @deprecated in favour of workspaceFolders. """
+    @deprecated in favour of workspaceFolders.
+    """
     capabilities: 'ClientCapabilities'
-    """ The capabilities provided by the client (editor or tool) """
+    """The capabilities provided by the client (editor or tool)"""
     initializationOptions: NotRequired['LSPAny']
-    """ User provided initialization options. """
+    """User provided initialization options."""
     trace: NotRequired['TraceValue']
-    """ The initial trace setting. If omitted trace is disabled ('off'). """
+    """The initial trace setting. If omitted trace is disabled ('off')."""
     workspaceFolders: NotRequired[Union[List['WorkspaceFolder'], None]]
-    """ The workspace folders configured in the client when the server starts.
+    """
+    The workspace folders configured in the client when the server starts.
 
     This property is only available if the client supports workspace folders.
     It can be `null` if the client supports workspace folders but none are
     configured.
 
-    @since 3.6.0 """
+    @since 3.6.0
+    """
 
 
 class InitializeResult(TypedDict):
-    """ The result returned from an initialize request. """
-    capabilities: 'ServerCapabilities'
-    """ The capabilities the language server provides. """
-    serverInfo: NotRequired['ServerInfo']
-    """ Information about the server.
+    """The result returned from an initialize request."""
 
-    @since 3.15.0 """
+    capabilities: 'ServerCapabilities'
+    """The capabilities the language server provides."""
+    serverInfo: NotRequired['ServerInfo']
+    """
+    Information about the server.
+
+    @since 3.15.0
+    """
 
 
 class InitializeError(TypedDict):
-    """ The data type of the ResponseError if the
-    initialize request fails. """
+    """
+    The data type of the ResponseError if the
+    initialize request fails.
+    """
+
     retry: bool
-    """ Indicates whether the client execute the following retry logic:
+    """
+    Indicates whether the client execute the following retry logic:
     (1) show the message provided by the ResponseError to the user
     (2) user selects retry or cancel
-    (3) if user selected retry the initialize method is sent again. """
+    (3) if user selected retry the initialize method is sent again.
+    """
 
 
 class InitializedParams(TypedDict):
@@ -1923,9 +2483,10 @@ class InitializedParams(TypedDict):
 
 
 class DidChangeConfigurationParams(TypedDict):
-    """ The parameters of a change configuration notification. """
+    """The parameters of a change configuration notification."""
+
     settings: 'LSPAny'
-    """ The actual changed settings """
+    """The actual changed settings"""
 
 
 class DidChangeConfigurationRegistrationOptions(TypedDict):
@@ -1933,49 +2494,56 @@ class DidChangeConfigurationRegistrationOptions(TypedDict):
 
 
 class ShowMessageParams(TypedDict):
-    """ The parameters of a notification message. """
+    """The parameters of a notification message."""
+
     type: 'MessageType'
-    """ The message type. See {@link MessageType} """
+    """The message type. See {@link MessageType}"""
     message: str
-    """ The actual message. """
+    """The actual message."""
 
 
 class ShowMessageRequestParams(TypedDict):
     type: 'MessageType'
-    """ The message type. See {@link MessageType} """
+    """The message type. See {@link MessageType}"""
     message: str
-    """ The actual message. """
+    """The actual message."""
     actions: NotRequired[List['MessageActionItem']]
-    """ The message action items to present. """
+    """The message action items to present."""
 
 
 class MessageActionItem(TypedDict):
     title: str
-    """ A short title like 'Retry', 'Open Log' etc. """
+    """A short title like 'Retry', 'Open Log' etc."""
 
 
 class LogMessageParams(TypedDict):
-    """ The log message parameters. """
+    """The log message parameters."""
+
     type: 'MessageType'
-    """ The message type. See {@link MessageType} """
+    """The message type. See {@link MessageType}"""
     message: str
-    """ The actual message. """
+    """The actual message."""
 
 
 class DidOpenTextDocumentParams(TypedDict):
-    """ The parameters sent in an open text document notification """
+    """The parameters sent in an open text document notification"""
+
     textDocument: 'TextDocumentItem'
-    """ The document that was opened. """
+    """The document that was opened."""
 
 
 class DidChangeTextDocumentParams(TypedDict):
-    """ The change text document notification's parameters. """
+    """The change text document notification's parameters."""
+
     textDocument: 'VersionedTextDocumentIdentifier'
-    """ The document that did change. The version number points
+    """
+    The document that did change. The version number points
     to the version after all provided content changes have
-    been applied. """
+    been applied.
+    """
     contentChanges: List['TextDocumentContentChangeEvent']
-    """ The actual content changes. The content changes describe single state changes
+    """
+    The actual content changes. The content changes describe single state changes
     to the document. So if there are two content changes c1 (at array index 0) and
     c2 (at array index 1) for a document in state S then c1 moves the document from
     S to S' and c2 from S' to S''. So c1 is computed on the state S and c2 is computed
@@ -1985,146 +2553,195 @@ class DidChangeTextDocumentParams(TypedDict):
     - start with the same initial content
     - apply the 'textDocument/didChange' notifications in the order you receive them.
     - apply the `TextDocumentContentChangeEvent`s in a single notification in the order
-      you receive them. """
+      you receive them.
+    """
 
 
 class TextDocumentChangeRegistrationOptions(TypedDict):
-    """ Describe options to be used when registered for text document change events. """
+    """Describe options to be used when registered for text document change events."""
+
     syncKind: 'TextDocumentSyncKind'
-    """ How documents are synced to the server. """
+    """How documents are synced to the server."""
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class DidCloseTextDocumentParams(TypedDict):
-    """ The parameters sent in a close text document notification """
+    """The parameters sent in a close text document notification"""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document that was closed. """
+    """The document that was closed."""
 
 
 class DidSaveTextDocumentParams(TypedDict):
-    """ The parameters sent in a save text document notification """
+    """The parameters sent in a save text document notification"""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document that was saved. """
+    """The document that was saved."""
     text: NotRequired[str]
-    """ Optional the content when saved. Depends on the includeText value
-    when the save notification was requested. """
+    """
+    Optional the content when saved. Depends on the includeText value
+    when the save notification was requested.
+    """
 
 
 class TextDocumentSaveRegistrationOptions(TypedDict):
-    """ Save registration options. """
+    """Save registration options."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     includeText: NotRequired[bool]
-    """ The client is supposed to include the content on save. """
+    """The client is supposed to include the content on save."""
 
 
 class WillSaveTextDocumentParams(TypedDict):
-    """ The parameters sent in a will save text document notification. """
+    """The parameters sent in a will save text document notification."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document that will be saved. """
+    """The document that will be saved."""
     reason: 'TextDocumentSaveReason'
-    """ The 'TextDocumentSaveReason'. """
+    """The 'TextDocumentSaveReason'."""
 
 
 class TextEdit(TypedDict):
-    """ A text edit applicable to a text document. """
+    """A text edit applicable to a text document."""
+
     range: 'Range'
-    """ The range of the text document to be manipulated. To insert
-    text into a document create a range where start === end. """
+    """
+    The range of the text document to be manipulated. To insert
+    text into a document create a range where start === end.
+    """
     newText: str
-    """ The string to be inserted. For delete operations use an
-    empty string. """
+    """
+    The string to be inserted. For delete operations use an
+    empty string.
+    """
 
 
 class DidChangeWatchedFilesParams(TypedDict):
-    """ The watched files change notification's parameters. """
+    """The watched files change notification's parameters."""
+
     changes: List['FileEvent']
-    """ The actual file events. """
+    """The actual file events."""
 
 
 class DidChangeWatchedFilesRegistrationOptions(TypedDict):
-    """ Describe options to be used when registered for text document change events. """
+    """Describe options to be used when registered for text document change events."""
+
     watchers: List['FileSystemWatcher']
-    """ The watchers to register. """
+    """The watchers to register."""
 
 
 class PublishDiagnosticsParams(TypedDict):
-    """ The publish diagnostic notification's parameters. """
-    uri: 'DocumentUri'
-    """ The URI for which diagnostic information is reported. """
-    version: NotRequired[int]
-    """ Optional the version number of the document the diagnostics are published for.
+    """The publish diagnostic notification's parameters."""
 
-    @since 3.15.0 """
+    uri: DocumentUri
+    """The URI for which diagnostic information is reported."""
+    version: NotRequired[int]
+    """
+    Optional the version number of the document the diagnostics are published for.
+
+    @since 3.15.0
+    """
     diagnostics: List['Diagnostic']
-    """ An array of diagnostic information items. """
+    """An array of diagnostic information items."""
 
 
 class CompletionParams(TypedDict):
-    """ Completion parameters """
+    """Completion parameters"""
+
     context: NotRequired['CompletionContext']
-    """ The completion context. This is only available it the client specifies
-    to send this using the client capability `textDocument.completion.contextSupport === true` """
+    """
+    The completion context. This is only available it the client specifies
+    to send this using the client capability `textDocument.completion.contextSupport === true`
+    """
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class CompletionItem(TypedDict):
-    """ A completion item represents a text snippet that is
-    proposed to complete text that is being typed. """
+    """
+    A completion item represents a text snippet that is
+    proposed to complete text that is being typed.
+    """
+
     label: str
-    """ The label of this completion item.
+    """
+    The label of this completion item.
 
     The label property is also by default the text that
     is inserted when selecting this completion.
 
     If label details are provided the label itself should
-    be an unqualified name of the completion item. """
+    be an unqualified name of the completion item.
+    """
     labelDetails: NotRequired['CompletionItemLabelDetails']
-    """ Additional details for the label
+    """
+    Additional details for the label
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     kind: NotRequired['CompletionItemKind']
-    """ The kind of this completion item. Based of the kind
-    an icon is chosen by the editor. """
+    """
+    The kind of this completion item. Based of the kind
+    an icon is chosen by the editor.
+    """
     tags: NotRequired[List['CompletionItemTag']]
-    """ Tags for this completion item.
+    """
+    Tags for this completion item.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     detail: NotRequired[str]
-    """ A human-readable string with additional information
-    about this item, like type or symbol information. """
+    """
+    A human-readable string with additional information
+    about this item, like type or symbol information.
+    """
     documentation: NotRequired[Union[str, 'MarkupContent']]
-    """ A human-readable string that represents a doc-comment. """
+    """A human-readable string that represents a doc-comment."""
     deprecated: NotRequired[bool]
-    """ Indicates if this item is deprecated.
-    @deprecated Use `tags` instead. """
+    """
+    Indicates if this item is deprecated.
+    @deprecated Use `tags` instead.
+    """
     preselect: NotRequired[bool]
-    """ Select this item when showing.
+    """
+    Select this item when showing.
 
     *Note* that only one completion item can be selected and that the
     tool / client decides which item that is. The rule is that the *first*
-    item of those that match best is selected. """
+    item of those that match best is selected.
+    """
     sortText: NotRequired[str]
-    """ A string that should be used when comparing this item
+    """
+    A string that should be used when comparing this item
     with other items. When `falsy` the {@link CompletionItem.label label}
-    is used. """
+    is used.
+    """
     filterText: NotRequired[str]
-    """ A string that should be used when filtering a set of
+    """
+    A string that should be used when filtering a set of
     completion items. When `falsy` the {@link CompletionItem.label label}
-    is used. """
+    is used.
+    """
     insertText: NotRequired[str]
-    """ A string that should be inserted into a document when selecting
+    """
+    A string that should be inserted into a document when selecting
     this completion. When `falsy` the {@link CompletionItem.label label}
     is used.
 
@@ -2134,22 +2751,28 @@ class CompletionItem(TypedDict):
     `con<cursor position>` and a completion item with an `insertText` of
     `console` is provided it will only insert `sole`. Therefore it is
     recommended to use `textEdit` instead since it avoids additional client
-    side interpretation. """
+    side interpretation.
+    """
     insertTextFormat: NotRequired['InsertTextFormat']
-    """ The format of the insert text. The format applies to both the
+    """
+    The format of the insert text. The format applies to both the
     `insertText` property and the `newText` property of a provided
     `textEdit`. If omitted defaults to `InsertTextFormat.PlainText`.
 
     Please note that the insertTextFormat doesn't apply to
-    `additionalTextEdits`. """
+    `additionalTextEdits`.
+    """
     insertTextMode: NotRequired['InsertTextMode']
-    """ How whitespace and indentation is handled during completion
+    """
+    How whitespace and indentation is handled during completion
     item insertion. If not provided the clients default value depends on
     the `textDocument.completion.insertTextMode` client capability.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     textEdit: NotRequired[Union['TextEdit', 'InsertReplaceEdit']]
-    """ An {@link TextEdit edit} which is applied to a document when selecting
+    """
+    An {@link TextEdit edit} which is applied to a document when selecting
     this completion. When an edit is provided the value of
     {@link CompletionItem.insertText insertText} is ignored.
 
@@ -2168,9 +2791,11 @@ class CompletionItem(TypedDict):
     must be a prefix of the edit's replace range, that means it must be
     contained and starting at the same position.
 
-    @since 3.16.0 additional type `InsertReplaceEdit` """
+    @since 3.16.0 additional type `InsertReplaceEdit`
+    """
     textEditText: NotRequired[str]
-    """ The edit text used if the completion item is part of a CompletionList and
+    """
+    The edit text used if the completion item is part of a CompletionList and
     CompletionList defines an item default for the text edit range.
 
     Clients will only honor this property if they opt into completion list
@@ -2179,38 +2804,53 @@ class CompletionItem(TypedDict):
     If not provided and a list's default range is provided the label
     property is used as a text.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     additionalTextEdits: NotRequired[List['TextEdit']]
-    """ An optional array of additional {@link TextEdit text edits} that are applied when
+    """
+    An optional array of additional {@link TextEdit text edits} that are applied when
     selecting this completion. Edits must not overlap (including the same insert position)
     with the main {@link CompletionItem.textEdit edit} nor with themselves.
 
     Additional text edits should be used to change text unrelated to the current cursor position
     (for example adding an import statement at the top of the file if the completion item will
-    insert an unqualified type). """
+    insert an unqualified type).
+    """
     commitCharacters: NotRequired[List[str]]
-    """ An optional set of characters that when pressed while this completion is active will accept it first and
+    """
+    An optional set of characters that when pressed while this completion is active will accept it first and
     then type that character. *Note* that all commit characters should have `length=1` and that superfluous
-    characters will be ignored. """
+    characters will be ignored.
+    """
     command: NotRequired['Command']
-    """ An optional {@link Command command} that is executed *after* inserting this completion. *Note* that
+    """
+    An optional {@link Command command} that is executed *after* inserting this completion. *Note* that
     additional modifications to the current document should be described with the
-    {@link CompletionItem.additionalTextEdits additionalTextEdits}-property. """
+    {@link CompletionItem.additionalTextEdits additionalTextEdits}-property.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on a completion item between a
-    {@link CompletionRequest} and a {@link CompletionResolveRequest}. """
+    """
+    A data entry field that is preserved on a completion item between a
+    {@link CompletionRequest} and a {@link CompletionResolveRequest}.
+    """
 
 
 class CompletionList(TypedDict):
-    """ Represents a collection of {@link CompletionItem completion items} to be presented
-    in the editor. """
+    """
+    Represents a collection of {@link CompletionItem completion items} to be presented
+    in the editor.
+    """
+
     isIncomplete: bool
-    """ This list it not complete. Further typing results in recomputing this list.
+    """
+    This list it not complete. Further typing results in recomputing this list.
 
     Recomputed lists have all their items replaced (not appended) in the
-    incomplete completion sessions. """
+    incomplete completion sessions.
+    """
     itemDefaults: NotRequired['CompletionItemDefaults']
-    """ In many cases the items of an actual completion result share the same
+    """
+    In many cases the items of an actual completion result share the same
     value for properties like `commitCharacters` or the range of a text
     edit. A completion list can therefore define item defaults which will
     be used if a completion item itself doesn't specify the value.
@@ -2224,9 +2864,11 @@ class CompletionList(TypedDict):
     signals support for this via the `completionList.itemDefaults`
     capability.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     applyKind: NotRequired['CompletionItemApplyKinds']
-    """ Specifies how fields from a completion item should be combined with those
+    """
+    Specifies how fields from a completion item should be combined with those
     from `completionList.itemDefaults`.
 
     If unspecified, all fields will be treated as ApplyKind.Replace.
@@ -2242,93 +2884,119 @@ class CompletionList(TypedDict):
     signals support for this via the `completionList.applyKindSupport`
     capability.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
     items: List['CompletionItem']
-    """ The completion items. """
+    """The completion items."""
 
 
 class CompletionRegistrationOptions(TypedDict):
-    """ Registration options for a {@link CompletionRequest}. """
+    """Registration options for a {@link CompletionRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     triggerCharacters: NotRequired[List[str]]
-    """ Most tools trigger completion request automatically without explicitly requesting
+    """
+    Most tools trigger completion request automatically without explicitly requesting
     it using a keyboard shortcut (e.g. Ctrl+Space). Typically they do so when the user
     starts to type an identifier. For example if the user types `c` in a JavaScript file
     code complete will automatically pop up present `console` besides others as a
     completion item. Characters that make up identifiers don't need to be listed here.
 
     If code complete should automatically be trigger on characters not being valid inside
-    an identifier (for example `.` in JavaScript) list them in `triggerCharacters`. """
+    an identifier (for example `.` in JavaScript) list them in `triggerCharacters`.
+    """
     allCommitCharacters: NotRequired[List[str]]
-    """ The list of all possible characters that commit a completion. This field can be used
+    """
+    The list of all possible characters that commit a completion. This field can be used
     if clients don't support individual commit characters per completion item. See
     `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`
 
     If a server provides both `allCommitCharacters` and commit characters on an individual
     completion item the ones on the completion item win.
 
-    @since 3.2.0 """
+    @since 3.2.0
+    """
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
-    information for a completion item. """
+    """
+    The server provides support to resolve additional
+    information for a completion item.
+    """
     completionItem: NotRequired['ServerCompletionItemOptions']
-    """ The server supports the following `CompletionItem` specific
+    """
+    The server supports the following `CompletionItem` specific
     capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class HoverParams(TypedDict):
-    """ Parameters for a {@link HoverRequest}. """
+    """Parameters for a {@link HoverRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class Hover(TypedDict):
-    """ The result of a hover request. """
+    """The result of a hover request."""
+
     contents: Union['MarkupContent', 'MarkedString', List['MarkedString']]
-    """ The hover's content """
+    """The hover's content"""
     range: NotRequired['Range']
-    """ An optional range inside the text document that is used to
-    visualize the hover, e.g. by changing the background color. """
+    """
+    An optional range inside the text document that is used to
+    visualize the hover, e.g. by changing the background color.
+    """
 
 
 class HoverRegistrationOptions(TypedDict):
-    """ Registration options for a {@link HoverRequest}. """
+    """Registration options for a {@link HoverRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class SignatureHelpParams(TypedDict):
-    """ Parameters for a {@link SignatureHelpRequest}. """
+    """Parameters for a {@link SignatureHelpRequest}."""
+
     context: NotRequired['SignatureHelpContext']
-    """ The signature help context. This is only available if the client specifies
+    """
+    The signature help context. This is only available if the client specifies
     to send this using the client capability `textDocument.signatureHelp.contextSupport === true`
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class SignatureHelp(TypedDict):
-    """ Signature help represents the signature of something
+    """
+    Signature help represents the signature of something
     callable. There can be multiple signature but only one
-    active and only one active parameter. """
+    active and only one active parameter.
+    """
+
     signatures: List['SignatureInformation']
-    """ One or more signatures. """
+    """One or more signatures."""
     activeSignature: NotRequired[Uint]
-    """ The active signature. If omitted or the value lies outside the
+    """
+    The active signature. If omitted or the value lies outside the
     range of `signatures` the value defaults to zero or is ignored if
     the `SignatureHelp` has no signatures.
 
@@ -2336,9 +3004,11 @@ class SignatureHelp(TypedDict):
     the active signature and shouldn't rely on a default value.
 
     In future version of the protocol this property might become
-    mandatory to better express this. """
+    mandatory to better express this.
+    """
     activeParameter: NotRequired[Union[Uint, None]]
-    """ The active parameter of the active signature.
+    """
+    The active parameter of the active signature.
 
     If `null`, no parameter of the signature is active (for example a named
     argument that does not match any declared parameters). This is only valid
@@ -2353,116 +3023,152 @@ class SignatureHelp(TypedDict):
 
     In future version of the protocol this property might become
     mandatory (but still nullable) to better express the active parameter if
-    the active signature does have any. """
+    the active signature does have any.
+    """
 
 
 class SignatureHelpRegistrationOptions(TypedDict):
-    """ Registration options for a {@link SignatureHelpRequest}. """
+    """Registration options for a {@link SignatureHelpRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     triggerCharacters: NotRequired[List[str]]
-    """ List of characters that trigger signature help automatically. """
+    """List of characters that trigger signature help automatically."""
     retriggerCharacters: NotRequired[List[str]]
-    """ List of characters that re-trigger signature help.
+    """
+    List of characters that re-trigger signature help.
 
     These trigger characters are only active when signature help is already showing. All trigger characters
     are also counted as re-trigger characters.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
 
 
 class DefinitionParams(TypedDict):
-    """ Parameters for a {@link DefinitionRequest}. """
+    """Parameters for a {@link DefinitionRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class DefinitionRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DefinitionRequest}. """
+    """Registration options for a {@link DefinitionRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class ReferenceParams(TypedDict):
-    """ Parameters for a {@link ReferencesRequest}. """
+    """Parameters for a {@link ReferencesRequest}."""
+
     context: 'ReferenceContext'
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class ReferenceRegistrationOptions(TypedDict):
-    """ Registration options for a {@link ReferencesRequest}. """
+    """Registration options for a {@link ReferencesRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class DocumentHighlightParams(TypedDict):
-    """ Parameters for a {@link DocumentHighlightRequest}. """
+    """Parameters for a {@link DocumentHighlightRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class DocumentHighlight(TypedDict):
-    """ A document highlight is a range inside a text document which deserves
+    """
+    A document highlight is a range inside a text document which deserves
     special attention. Usually a document highlight is visualized by changing
-    the background color of its range. """
+    the background color of its range.
+    """
+
     range: 'Range'
-    """ The range this highlight applies to. """
+    """The range this highlight applies to."""
     kind: NotRequired['DocumentHighlightKind']
-    """ The highlight kind, default is {@link DocumentHighlightKind.Text text}. """
+    """The highlight kind, default is {@link DocumentHighlightKind.Text text}."""
 
 
 class DocumentHighlightRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentHighlightRequest}. """
+    """Registration options for a {@link DocumentHighlightRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class DocumentSymbolParams(TypedDict):
-    """ Parameters for a {@link DocumentSymbolRequest}. """
+    """Parameters for a {@link DocumentSymbolRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class SymbolInformation(TypedDict):
-    """ Represents information about programming constructs like variables, classes,
-    interfaces etc. """
-    deprecated: NotRequired[bool]
-    """ Indicates if this symbol is deprecated.
+    """
+    Represents information about programming constructs like variables, classes,
+    interfaces etc.
+    """
 
-    @deprecated Use tags instead """
+    deprecated: NotRequired[bool]
+    """
+    Indicates if this symbol is deprecated.
+
+    @deprecated Use tags instead
+    """
     location: 'Location'
-    """ The location of this symbol. The location's range is used by a tool
+    """
+    The location of this symbol. The location's range is used by a tool
     to reveal the location in the editor. If the symbol is selected in the
     tool the range's start information is used to position the cursor. So
     the range usually spans more than the actual symbol's name and does
@@ -2470,122 +3176,163 @@ class SymbolInformation(TypedDict):
 
     The range doesn't have to denote a node range in the sense of an abstract
     syntax tree. It can therefore not be used to re-construct a hierarchy of
-    the symbols. """
+    the symbols.
+    """
     name: str
-    """ The name of this symbol. """
+    """The name of this symbol."""
     kind: 'SymbolKind'
-    """ The kind of this symbol. """
+    """The kind of this symbol."""
     tags: NotRequired[List['SymbolTag']]
-    """ Tags for this symbol.
+    """
+    Tags for this symbol.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     containerName: NotRequired[str]
-    """ The name of the symbol containing this symbol. This information is for
+    """
+    The name of the symbol containing this symbol. This information is for
     user interface purposes (e.g. to render a qualifier in the user interface
     if necessary). It can't be used to re-infer a hierarchy for the document
-    symbols. """
+    symbols.
+    """
 
 
 class DocumentSymbol(TypedDict):
-    """ Represents programming constructs like variables, classes, interfaces etc.
+    """
+    Represents programming constructs like variables, classes, interfaces etc.
     that appear in a document. Document symbols can be hierarchical and they
     have two ranges: one that encloses its definition and one that points to
-    its most interesting range, e.g. the range of an identifier. """
+    its most interesting range, e.g. the range of an identifier.
+    """
+
     name: str
-    """ The name of this symbol. Will be displayed in the user interface and therefore must not be
-    an empty string or a string only consisting of white spaces. """
+    """
+    The name of this symbol. Will be displayed in the user interface and therefore must not be
+    an empty string or a string only consisting of white spaces.
+    """
     detail: NotRequired[str]
-    """ More detail for this symbol, e.g the signature of a function. """
+    """More detail for this symbol, e.g the signature of a function."""
     kind: 'SymbolKind'
-    """ The kind of this symbol. """
+    """The kind of this symbol."""
     tags: NotRequired[List['SymbolTag']]
-    """ Tags for this document symbol.
+    """
+    Tags for this document symbol.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     deprecated: NotRequired[bool]
-    """ Indicates if this symbol is deprecated.
+    """
+    Indicates if this symbol is deprecated.
 
-    @deprecated Use tags instead """
+    @deprecated Use tags instead
+    """
     range: 'Range'
-    """ The range enclosing this symbol not including leading/trailing whitespace but everything else
+    """
+    The range enclosing this symbol not including leading/trailing whitespace but everything else
     like comments. This information is typically used to determine if the clients cursor is
-    inside the symbol to reveal in the symbol in the UI. """
+    inside the symbol to reveal in the symbol in the UI.
+    """
     selectionRange: 'Range'
-    """ The range that should be selected and revealed when this symbol is being picked, e.g the name of a function.
-    Must be contained by the `range`. """
+    """
+    The range that should be selected and revealed when this symbol is being picked, e.g the name of a function.
+    Must be contained by the `range`.
+    """
     children: NotRequired[List['DocumentSymbol']]
-    """ Children of this symbol, e.g. properties of a class. """
+    """Children of this symbol, e.g. properties of a class."""
 
 
 class DocumentSymbolRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentSymbolRequest}. """
+    """Registration options for a {@link DocumentSymbolRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     label: NotRequired[str]
-    """ A human-readable string that is shown when multiple outlines trees
+    """
+    A human-readable string that is shown when multiple outlines trees
     are shown for the same document.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class CodeActionParams(TypedDict):
-    """ The parameters of a {@link CodeActionRequest}. """
+    """The parameters of a {@link CodeActionRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document in which the command was invoked. """
+    """The document in which the command was invoked."""
     range: 'Range'
-    """ The range for which the command was invoked. """
+    """The range for which the command was invoked."""
     context: 'CodeActionContext'
-    """ Context carrying additional information. """
+    """Context carrying additional information."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class Command(TypedDict):
-    """ Represents a reference to a command. Provides a title which
+    """
+    Represents a reference to a command. Provides a title which
     will be used to represent a command in the UI and, optionally,
     an array of arguments which will be passed to the command handler
-    function when invoked. """
+    function when invoked.
+    """
+
     title: str
-    """ Title of the command, like `save`. """
+    """Title of the command, like `save`."""
     tooltip: NotRequired[str]
-    """ An optional tooltip.
+    """
+    An optional tooltip.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     command: str
-    """ The identifier of the actual command handler. """
+    """The identifier of the actual command handler."""
     arguments: NotRequired[List['LSPAny']]
-    """ Arguments that the command handler should be
-    invoked with. """
+    """
+    Arguments that the command handler should be
+    invoked with.
+    """
 
 
 class CodeAction(TypedDict):
-    """ A code action represents a change that can be performed in code, e.g. to fix a problem or
+    """
+    A code action represents a change that can be performed in code, e.g. to fix a problem or
     to refactor code.
 
-    A CodeAction must set either `edit` and/or a `command`. If both are supplied, the `edit` is applied first, then the `command` is executed. """
-    title: str
-    """ A short, human-readable, title for this code action. """
-    kind: NotRequired['CodeActionKind']
-    """ The kind of the code action.
+    A CodeAction must set either `edit` and/or a `command`. If both are supplied, the `edit` is applied first, then the `command` is executed.
+    """
 
-    Used to filter code actions. """
+    title: str
+    """A short, human-readable, title for this code action."""
+    kind: NotRequired['CodeActionKind']
+    """
+    The kind of the code action.
+
+    Used to filter code actions.
+    """
     diagnostics: NotRequired[List['Diagnostic']]
-    """ The diagnostics that this code action resolves. """
+    """The diagnostics that this code action resolves."""
     isPreferred: NotRequired[bool]
-    """ Marks this as a preferred action. Preferred actions are used by the `auto fix` command and can be targeted
+    """
+    Marks this as a preferred action. Preferred actions are used by the `auto fix` command and can be targeted
     by keybindings.
 
     A quick fix should be marked preferred if it properly addresses the underlying error.
     A refactoring should be marked preferred if it is the most reasonable choice of actions to take.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     disabled: NotRequired['CodeActionDisabled']
-    """ Marks that the code action cannot currently be applied.
+    """
+    Marks that the code action cannot currently be applied.
 
     Clients should follow the following guidelines regarding disabled code actions:
 
@@ -2599,36 +3346,49 @@ class CodeAction(TypedDict):
         that auto applies a code action and only disabled code actions are returned, the client should show the user an
         error message with `reason` in the editor.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     edit: NotRequired['WorkspaceEdit']
-    """ The workspace edit this code action performs. """
+    """The workspace edit this code action performs."""
     command: NotRequired['Command']
-    """ A command this code action executes. If a code action
+    """
+    A command this code action executes. If a code action
     provides an edit and a command, first the edit is
-    executed and then the command. """
+    executed and then the command.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on a code action between
+    """
+    A data entry field that is preserved on a code action between
     a `textDocument/codeAction` and a `codeAction/resolve` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     tags: NotRequired[List['CodeActionTag']]
-    """ Tags for this code action.
+    """
+    Tags for this code action.
 
-    @since 3.18.0 - proposed """
+    @since 3.18.0 - proposed
+    """
 
 
 class CodeActionRegistrationOptions(TypedDict):
-    """ Registration options for a {@link CodeActionRequest}. """
+    """Registration options for a {@link CodeActionRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     codeActionKinds: NotRequired[List['CodeActionKind']]
-    """ CodeActionKinds that this server may return.
+    """
+    CodeActionKinds that this server may return.
 
     The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
-    may list out every specific kind they provide. """
+    may list out every specific kind they provide.
+    """
     documentation: NotRequired[List['CodeActionKindDocumentation']]
-    """ Static documentation for a class of code actions.
+    """
+    Static documentation for a class of code actions.
 
     Documentation from the provider should be shown in the code actions menu if either:
 
@@ -2642,364 +3402,469 @@ class CodeActionRegistrationOptions(TypedDict):
     At most one documentation entry should be shown per provider.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
+    """
+    The server provides support to resolve additional
     information for a code action.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class WorkspaceSymbolParams(TypedDict):
-    """ The parameters of a {@link WorkspaceSymbolRequest}. """
+    """The parameters of a {@link WorkspaceSymbolRequest}."""
+
     query: str
-    """ A query string to filter symbols by. Clients may send an empty
+    """
+    A query string to filter symbols by. Clients may send an empty
     string here to request all symbols.
 
     The `query`-parameter should be interpreted in a *relaxed way* as editors
     will apply their own highlighting and scoring on the results. A good rule
     of thumb is to match case-insensitive and to simply check that the
     characters of *query* appear in their order in a candidate symbol.
-    Servers shouldn't use prefix, substring, or similar strict matching. """
+    Servers shouldn't use prefix, substring, or similar strict matching.
+    """
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class WorkspaceSymbol(TypedDict):
-    """ A special workspace symbol that supports locations without a range.
+    """
+    A special workspace symbol that supports locations without a range.
 
     See also SymbolInformation.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     location: Union['Location', 'LocationUriOnly']
-    """ The location of the symbol. Whether a server is allowed to
+    """
+    The location of the symbol. Whether a server is allowed to
     return a location without a range depends on the client
     capability `workspace.symbol.resolveSupport`.
 
-    See SymbolInformation#location for more details. """
+    See SymbolInformation#location for more details.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on a workspace symbol between a
-    workspace symbol request and a workspace symbol resolve request. """
+    """
+    A data entry field that is preserved on a workspace symbol between a
+    workspace symbol request and a workspace symbol resolve request.
+    """
     name: str
-    """ The name of this symbol. """
+    """The name of this symbol."""
     kind: 'SymbolKind'
-    """ The kind of this symbol. """
+    """The kind of this symbol."""
     tags: NotRequired[List['SymbolTag']]
-    """ Tags for this symbol.
+    """
+    Tags for this symbol.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     containerName: NotRequired[str]
-    """ The name of the symbol containing this symbol. This information is for
+    """
+    The name of the symbol containing this symbol. This information is for
     user interface purposes (e.g. to render a qualifier in the user interface
     if necessary). It can't be used to re-infer a hierarchy for the document
-    symbols. """
+    symbols.
+    """
 
 
 class WorkspaceSymbolRegistrationOptions(TypedDict):
-    """ Registration options for a {@link WorkspaceSymbolRequest}. """
+    """Registration options for a {@link WorkspaceSymbolRequest}."""
+
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
+    """
+    The server provides support to resolve additional
     information for a workspace symbol.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class CodeLensParams(TypedDict):
-    """ The parameters of a {@link CodeLensRequest}. """
+    """The parameters of a {@link CodeLensRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to request code lens for. """
+    """The document to request code lens for."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class CodeLens(TypedDict):
-    """ A code lens represents a {@link Command command} that should be shown along with
+    """
+    A code lens represents a {@link Command command} that should be shown along with
     source text, like the number of references, a way to run tests, etc.
 
     A code lens is _unresolved_ when no command is associated to it. For performance
-    reasons the creation of a code lens and resolving should be done in two stages. """
+    reasons the creation of a code lens and resolving should be done in two stages.
+    """
+
     range: 'Range'
-    """ The range in which this code lens is valid. Should only span a single line. """
+    """The range in which this code lens is valid. Should only span a single line."""
     command: NotRequired['Command']
-    """ The command this code lens represents. """
+    """The command this code lens represents."""
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on a code lens item between
-    a {@link CodeLensRequest} and a {@link CodeLensResolveRequest} """
+    """
+    A data entry field that is preserved on a code lens item between
+    a {@link CodeLensRequest} and a {@link CodeLensResolveRequest}
+    """
 
 
 class CodeLensRegistrationOptions(TypedDict):
-    """ Registration options for a {@link CodeLensRequest}. """
+    """Registration options for a {@link CodeLensRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     resolveProvider: NotRequired[bool]
-    """ Code lens has a resolve provider as well. """
+    """Code lens has a resolve provider as well."""
 
 
 class DocumentLinkParams(TypedDict):
-    """ The parameters of a {@link DocumentLinkRequest}. """
+    """The parameters of a {@link DocumentLinkRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to provide document links for. """
+    """The document to provide document links for."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class DocumentLink(TypedDict):
-    """ A document link is a range in a text document that links to an internal or external resource, like another
-    text document or a web site. """
+    """
+    A document link is a range in a text document that links to an internal or external resource, like another
+    text document or a web site.
+    """
+
     range: 'Range'
-    """ The range this link applies to. """
-    target: NotRequired['URI']
-    """ The uri this link points to. If missing a resolve request is sent later. """
+    """The range this link applies to."""
+    target: NotRequired[URI]
+    """The uri this link points to. If missing a resolve request is sent later."""
     tooltip: NotRequired[str]
-    """ The tooltip text when you hover over this link.
+    """
+    The tooltip text when you hover over this link.
 
     If a tooltip is provided, is will be displayed in a string that includes instructions on how to
     trigger the link, such as `{0} (ctrl + click)`. The specific instructions vary depending on OS,
     user settings, and localization.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved on a document link between a
-    DocumentLinkRequest and a DocumentLinkResolveRequest. """
+    """
+    A data entry field that is preserved on a document link between a
+    DocumentLinkRequest and a DocumentLinkResolveRequest.
+    """
 
 
 class DocumentLinkRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentLinkRequest}. """
+    """Registration options for a {@link DocumentLinkRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     resolveProvider: NotRequired[bool]
-    """ Document links have a resolve provider as well. """
+    """Document links have a resolve provider as well."""
 
 
 class DocumentFormattingParams(TypedDict):
-    """ The parameters of a {@link DocumentFormattingRequest}. """
+    """The parameters of a {@link DocumentFormattingRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to format. """
+    """The document to format."""
     options: 'FormattingOptions'
-    """ The format options. """
+    """The format options."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class DocumentFormattingRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentFormattingRequest}. """
+    """Registration options for a {@link DocumentFormattingRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
 
 
 class DocumentRangeFormattingParams(TypedDict):
-    """ The parameters of a {@link DocumentRangeFormattingRequest}. """
+    """The parameters of a {@link DocumentRangeFormattingRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to format. """
+    """The document to format."""
     range: 'Range'
-    """ The range to format """
+    """The range to format"""
     options: 'FormattingOptions'
-    """ The format options """
+    """The format options"""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class DocumentRangeFormattingRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentRangeFormattingRequest}. """
+    """Registration options for a {@link DocumentRangeFormattingRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     rangesSupport: NotRequired[bool]
-    """ Whether the server supports formatting multiple ranges at once.
+    """
+    Whether the server supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class DocumentRangesFormattingParams(TypedDict):
-    """ The parameters of a {@link DocumentRangesFormattingRequest}.
+    """
+    The parameters of a {@link DocumentRangesFormattingRequest}.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to format. """
+    """The document to format."""
     ranges: List['Range']
-    """ The ranges to format """
+    """The ranges to format"""
     options: 'FormattingOptions'
-    """ The format options """
+    """The format options"""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class DocumentOnTypeFormattingParams(TypedDict):
-    """ The parameters of a {@link DocumentOnTypeFormattingRequest}. """
+    """The parameters of a {@link DocumentOnTypeFormattingRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to format. """
+    """The document to format."""
     position: 'Position'
-    """ The position around which the on type formatting should happen.
+    """
+    The position around which the on type formatting should happen.
     This is not necessarily the exact position where the character denoted
-    by the property `ch` got typed. """
+    by the property `ch` got typed.
+    """
     ch: str
-    """ The character that has been typed that triggered the formatting
+    """
+    The character that has been typed that triggered the formatting
     on type request. That is not necessarily the last character that
     got inserted into the document since the client could auto insert
-    characters as well (e.g. like automatic brace completion). """
+    characters as well (e.g. like automatic brace completion).
+    """
     options: 'FormattingOptions'
-    """ The formatting options. """
+    """The formatting options."""
 
 
 class DocumentOnTypeFormattingRegistrationOptions(TypedDict):
-    """ Registration options for a {@link DocumentOnTypeFormattingRequest}. """
+    """Registration options for a {@link DocumentOnTypeFormattingRequest}."""
+
     documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
     firstTriggerCharacter: str
-    """ A character on which formatting should be triggered, like `{`. """
+    """A character on which formatting should be triggered, like `{`."""
     moreTriggerCharacter: NotRequired[List[str]]
-    """ More trigger characters. """
+    """More trigger characters."""
 
 
 class RenameParams(TypedDict):
-    """ The parameters of a {@link RenameRequest}. """
+    """The parameters of a {@link RenameRequest}."""
+
     textDocument: 'TextDocumentIdentifier'
-    """ The document to rename. """
+    """The document to rename."""
     position: 'Position'
-    """ The position at which this request was sent. """
+    """The position at which this request was sent."""
     newName: str
-    """ The new name of the symbol. If the given name is not valid the
+    """
+    The new name of the symbol. If the given name is not valid the
     request must return a {@link ResponseError} with an
-    appropriate message set. """
+    appropriate message set.
+    """
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class RenameRegistrationOptions(TypedDict):
-    """ Registration options for a {@link RenameRequest}. """
-    documentSelector: Union['DocumentSelector', None]
-    """ A document selector to identify the scope of the registration. If set to null
-    the document selector provided on the client side will be used. """
-    prepareProvider: NotRequired[bool]
-    """ Renames should be checked and tested before being executed.
+    """Registration options for a {@link RenameRequest}."""
 
-    @since version 3.12.0 """
+    documentSelector: Union['DocumentSelector', None]
+    """
+    A document selector to identify the scope of the registration. If set to null
+    the document selector provided on the client side will be used.
+    """
+    prepareProvider: NotRequired[bool]
+    """
+    Renames should be checked and tested before being executed.
+
+    @since version 3.12.0
+    """
 
 
 class PrepareRenameParams(TypedDict):
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class ExecuteCommandParams(TypedDict):
-    """ The parameters of a {@link ExecuteCommandRequest}. """
+    """The parameters of a {@link ExecuteCommandRequest}."""
+
     command: str
-    """ The identifier of the actual command handler. """
+    """The identifier of the actual command handler."""
     arguments: NotRequired[List['LSPAny']]
-    """ Arguments that the command should be invoked with. """
+    """Arguments that the command should be invoked with."""
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class ExecuteCommandRegistrationOptions(TypedDict):
-    """ Registration options for a {@link ExecuteCommandRequest}. """
+    """Registration options for a {@link ExecuteCommandRequest}."""
+
     commands: List[str]
-    """ The commands to be executed on the server """
+    """The commands to be executed on the server"""
 
 
 class ApplyWorkspaceEditParams(TypedDict):
-    """ The parameters passed via an apply workspace edit request. """
+    """The parameters passed via an apply workspace edit request."""
+
     label: NotRequired[str]
-    """ An optional label of the workspace edit. This label is
+    """
+    An optional label of the workspace edit. This label is
     presented in the user interface for example on an undo
-    stack to undo the workspace edit. """
+    stack to undo the workspace edit.
+    """
     edit: 'WorkspaceEdit'
-    """ The edits to apply. """
+    """The edits to apply."""
     metadata: NotRequired['WorkspaceEditMetadata']
-    """ Additional data about the edit.
+    """
+    Additional data about the edit.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class ApplyWorkspaceEditResult(TypedDict):
-    """ The result returned from the apply workspace edit request.
+    """
+    The result returned from the apply workspace edit request.
 
-    @since 3.17 renamed from ApplyWorkspaceEditResponse """
+    @since 3.17 renamed from ApplyWorkspaceEditResponse
+    """
+
     applied: bool
-    """ Indicates whether the edit was applied or not. """
+    """Indicates whether the edit was applied or not."""
     failureReason: NotRequired[str]
-    """ An optional textual description for why the edit was not applied.
+    """
+    An optional textual description for why the edit was not applied.
     This may be used by the server for diagnostic logging or to provide
-    a suitable error for a request that triggered the edit. """
+    a suitable error for a request that triggered the edit.
+    """
     failedChange: NotRequired[Uint]
-    """ Depending on the client's failure handling strategy `failedChange` might
+    """
+    Depending on the client's failure handling strategy `failedChange` might
     contain the index of the change that failed. This property is only available
-    if the client signals a `failureHandlingStrategy` in its client capabilities. """
+    if the client signals a `failureHandlingStrategy` in its client capabilities.
+    """
 
 
 class WorkDoneProgressBegin(TypedDict):
     kind: Literal['begin']
     title: str
-    """ Mandatory title of the progress operation. Used to briefly inform about
+    """
+    Mandatory title of the progress operation. Used to briefly inform about
     the kind of operation being performed.
 
-    Examples: "Indexing" or "Linking dependencies". """
+    Examples: "Indexing" or "Linking dependencies".
+    """
     cancellable: NotRequired[bool]
-    """ Controls if a cancel button should show to allow the user to cancel the
+    """
+    Controls if a cancel button should show to allow the user to cancel the
     long running operation. Clients that don't support cancellation are allowed
-    to ignore the setting. """
+    to ignore the setting.
+    """
     message: NotRequired[str]
-    """ Optional, more detailed associated progress message. Contains
+    """
+    Optional, more detailed associated progress message. Contains
     complementary information to the `title`.
 
     Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-    If unset, the previous progress message (if any) is still valid. """
+    If unset, the previous progress message (if any) is still valid.
+    """
     percentage: NotRequired[Uint]
-    """ Optional progress percentage to display (value 100 is considered 100%).
+    """
+    Optional progress percentage to display (value 100 is considered 100%).
     If not provided infinite progress is assumed and clients are allowed
     to ignore the `percentage` value in subsequent in report notifications.
 
     The value should be steadily rising. Clients are free to ignore values
-    that are not following this rule. The value range is [0, 100]. """
+    that are not following this rule. The value range is [0, 100].
+    """
 
 
 class WorkDoneProgressReport(TypedDict):
     kind: Literal['report']
     cancellable: NotRequired[bool]
-    """ Controls enablement state of a cancel button.
+    """
+    Controls enablement state of a cancel button.
 
     Clients that don't support cancellation or don't support controlling the button's
-    enablement state are allowed to ignore the property. """
+    enablement state are allowed to ignore the property.
+    """
     message: NotRequired[str]
-    """ Optional, more detailed associated progress message. Contains
+    """
+    Optional, more detailed associated progress message. Contains
     complementary information to the `title`.
 
     Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-    If unset, the previous progress message (if any) is still valid. """
+    If unset, the previous progress message (if any) is still valid.
+    """
     percentage: NotRequired[Uint]
-    """ Optional progress percentage to display (value 100 is considered 100%).
+    """
+    Optional progress percentage to display (value 100 is considered 100%).
     If not provided infinite progress is assumed and clients are allowed
     to ignore the `percentage` value in subsequent in report notifications.
 
     The value should be steadily rising. Clients are free to ignore values
-    that are not following this rule. The value range is [0, 100] """
+    that are not following this rule. The value range is [0, 100]
+    """
 
 
 class WorkDoneProgressEnd(TypedDict):
     kind: Literal['end']
     message: NotRequired[str]
-    """ Optional, a final message indicating to for example indicate the outcome
-    of the operation. """
+    """
+    Optional, a final message indicating to for example indicate the outcome
+    of the operation.
+    """
 
 
 class SetTraceParams(TypedDict):
@@ -3013,57 +3878,72 @@ class LogTraceParams(TypedDict):
 
 class CancelParams(TypedDict):
     id: Union[int, str]
-    """ The request id to cancel. """
+    """The request id to cancel."""
 
 
 class ProgressParams(TypedDict):
     token: 'ProgressToken'
-    """ The progress token provided by the client or server. """
+    """The progress token provided by the client or server."""
     value: 'LSPAny'
-    """ The progress data. """
+    """The progress data."""
 
 
 class TextDocumentPositionParams(TypedDict):
-    """ A parameter literal used in requests to pass a text document and a position inside that
-    document. """
+    """
+    A parameter literal used in requests to pass a text document and a position inside that
+    document.
+    """
+
     textDocument: 'TextDocumentIdentifier'
-    """ The text document. """
+    """The text document."""
     position: 'Position'
-    """ The position inside the text document. """
+    """The position inside the text document."""
 
 
 class WorkDoneProgressParams(TypedDict):
     workDoneToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report work done progress. """
+    """An optional token that a server can use to report work done progress."""
 
 
 class PartialResultParams(TypedDict):
     partialResultToken: NotRequired['ProgressToken']
-    """ An optional token that a server can use to report partial results (e.g. streaming) to
-    the client. """
+    """
+    An optional token that a server can use to report partial results (e.g. streaming) to
+    the client.
+    """
 
 
 class LocationLink(TypedDict):
-    """ Represents the connection of two locations. Provides additional metadata over normal {@link Location locations},
-    including an origin range. """
+    """
+    Represents the connection of two locations. Provides additional metadata over normal {@link Location locations},
+    including an origin range.
+    """
+
     originSelectionRange: NotRequired['Range']
-    """ Span of the origin of this link.
+    """
+    Span of the origin of this link.
 
     Used as the underlined span for mouse interaction. Defaults to the word range at
-    the definition position. """
-    targetUri: 'DocumentUri'
-    """ The target resource identifier of this link. """
+    the definition position.
+    """
+    targetUri: DocumentUri
+    """The target resource identifier of this link."""
     targetRange: 'Range'
-    """ The full target range of this link. If the target for example is a symbol then target range is the
+    """
+    The full target range of this link. If the target for example is a symbol then target range is the
     range enclosing this symbol not including leading/trailing whitespace but everything else
-    like comments. This information is typically used to highlight the range in the editor. """
+    like comments. This information is typically used to highlight the range in the editor.
+    """
     targetSelectionRange: 'Range'
-    """ The range that should be selected and revealed when this link is being followed, e.g the name of a function.
-    Must be contained by the `targetRange`. See also `DocumentSymbol#range` """
+    """
+    The range that should be selected and revealed when this link is being followed, e.g the name of a function.
+    Must be contained by the `targetRange`. See also `DocumentSymbol#range`
+    """
 
 
 class Range(TypedDict):
-    """ A range in a text document expressed as (zero-based) start and end positions.
+    """
+    A range in a text document expressed as (zero-based) start and end positions.
 
     If you want to specify a range that contains a line including the line ending
     character(s) then use an end position denoting the start of the next line.
@@ -3073,11 +3953,13 @@ class Range(TypedDict):
         start: { line: 5, character: 23 }
         end : { line 6, character : 0 }
     }
-    ``` """
+    ```
+    """
+
     start: 'Position'
-    """ The range's start position. """
+    """The range's start position."""
     end: 'Position'
-    """ The range's end position. """
+    """The range's end position."""
 
 
 class ImplementationOptions(TypedDict):
@@ -3085,11 +3967,16 @@ class ImplementationOptions(TypedDict):
 
 
 class StaticRegistrationOptions(TypedDict):
-    """ Static registration options to be returned in the initialize
-    request. """
+    """
+    Static registration options to be returned in the initialize
+    request.
+    """
+
     id: NotRequired[str]
-    """ The id used to register the request. The id can be used to deregister
-    the request again. See also Registration#id. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again. See also Registration#id.
+    """
 
 
 class TypeDefinitionOptions(TypedDict):
@@ -3097,36 +3984,39 @@ class TypeDefinitionOptions(TypedDict):
 
 
 class WorkspaceFoldersChangeEvent(TypedDict):
-    """ The workspace folder change event. """
+    """The workspace folder change event."""
+
     added: List['WorkspaceFolder']
-    """ The array of added workspace folders """
+    """The array of added workspace folders"""
     removed: List['WorkspaceFolder']
-    """ The array of the removed workspace folders """
+    """The array of the removed workspace folders"""
 
 
 class ConfigurationItem(TypedDict):
-    scopeUri: NotRequired['URI']
-    """ The scope to get the configuration section for. """
+    scopeUri: NotRequired[URI]
+    """The scope to get the configuration section for."""
     section: NotRequired[str]
-    """ The configuration section asked for. """
+    """The configuration section asked for."""
 
 
 class TextDocumentIdentifier(TypedDict):
-    """ A literal to identify a text document in the client. """
-    uri: 'DocumentUri'
-    """ The text document's uri. """
+    """A literal to identify a text document in the client."""
+
+    uri: DocumentUri
+    """The text document's uri."""
 
 
 class Color(TypedDict):
-    """ Represents a color in RGBA space. """
+    """Represents a color in RGBA space."""
+
     red: float
-    """ The red component of this color in the range [0-1]. """
+    """The red component of this color in the range [0-1]."""
     green: float
-    """ The green component of this color in the range [0-1]. """
+    """The green component of this color in the range [0-1]."""
     blue: float
-    """ The blue component of this color in the range [0-1]. """
+    """The blue component of this color in the range [0-1]."""
     alpha: float
-    """ The alpha component of this color in the range [0-1]. """
+    """The alpha component of this color in the range [0-1]."""
 
 
 class DocumentColorOptions(TypedDict):
@@ -3142,7 +4032,8 @@ class DeclarationOptions(TypedDict):
 
 
 class Position(TypedDict):
-    """ Position in a text document expressed as zero-based line and character
+    r"""
+    Position in a text document expressed as zero-based line and character
     offset. Prior to 3.17 the offsets were always based on a UTF-16 string
     representation. So a string of the form `a𐐀b` the character offset of the
     character `a` is 0, the character offset of `𐐀` is 1 and the character
@@ -3168,14 +4059,18 @@ class Position(TypedDict):
     Positions are line end character agnostic. So you can not specify a position
     that denotes `\r|\n` or `\n|` where `|` represents the character offset.
 
-    @since 3.17.0 - support for negotiated position encoding. """
+    @since 3.17.0 - support for negotiated position encoding.
+    """
+
     line: Uint
-    """ Line position in a document (zero-based). """
+    """Line position in a document (zero-based)."""
     character: Uint
-    """ Character offset on a line in a document (zero-based).
+    """
+    Character offset on a line in a document (zero-based).
 
     The meaning of this offset is determined by the negotiated
-    `PositionEncodingKind`. """
+    `PositionEncodingKind`.
+    """
 
 
 class SelectionRangeOptions(TypedDict):
@@ -3183,32 +4078,39 @@ class SelectionRangeOptions(TypedDict):
 
 
 class CallHierarchyOptions(TypedDict):
-    """ Call hierarchy options used during static registration.
+    """
+    Call hierarchy options used during static registration.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     workDoneProgress: NotRequired[bool]
 
 
 class SemanticTokensOptions(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     legend: 'SemanticTokensLegend'
-    """ The legend used by the server """
-    range: NotRequired[Union[bool, dict]]
-    """ Server supports providing semantic tokens for a specific range
-    of a document. """
+    """The legend used by the server"""
+    range: NotRequired[Union[bool, Dict[str, LSPAny]]]
+    """
+    Server supports providing semantic tokens for a specific range
+    of a document.
+    """
     full: NotRequired[Union[bool, 'SemanticTokensFullDelta']]
-    """ Server supports providing semantic tokens for a full document. """
+    """Server supports providing semantic tokens for a full document."""
     workDoneProgress: NotRequired[bool]
 
 
 class SemanticTokensEdit(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     start: Uint
-    """ The start offset of the edit. """
+    """The start offset of the edit."""
     deleteCount: Uint
-    """ The count of elements to remove. """
+    """The count of elements to remove."""
     data: NotRequired[List[Uint]]
-    """ The elements to insert. """
+    """The elements to insert."""
 
 
 class LinkedEditingRangeOptions(TypedDict):
@@ -3216,116 +4118,151 @@ class LinkedEditingRangeOptions(TypedDict):
 
 
 class FileCreate(TypedDict):
-    """ Represents information on a file/folder create.
+    """
+    Represents information on a file/folder create.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     uri: str
-    """ A file:// URI for the location of the file/folder being created. """
+    """A file:// URI for the location of the file/folder being created."""
 
 
 class TextDocumentEdit(TypedDict):
-    """ Describes textual changes on a text document. A TextDocumentEdit describes all changes
+    """
+    Describes textual changes on a text document. A TextDocumentEdit describes all changes
     on a document version Si and after they are applied move the document to version Si+1.
     So the creator of a TextDocumentEdit doesn't need to sort the array of edits or do any
-    kind of ordering. However the edits must be non overlapping. """
+    kind of ordering. However the edits must be non overlapping.
+    """
+
     textDocument: 'OptionalVersionedTextDocumentIdentifier'
-    """ The text document to change. """
+    """The text document to change."""
     edits: List[Union['TextEdit', 'AnnotatedTextEdit', 'SnippetTextEdit']]
-    """ The edits to be applied.
+    """
+    The edits to be applied.
 
     @since 3.16.0 - support for AnnotatedTextEdit. This is guarded using a
     client capability.
 
     @since 3.18.0 - support for SnippetTextEdit. This is guarded using a
-    client capability. """
+    client capability.
+    """
 
 
 class CreateFile(TypedDict):
-    """ Create file operation. """
-    kind: Literal['create']
-    """ A create """
-    uri: 'DocumentUri'
-    """ The resource to create. """
-    options: NotRequired['CreateFileOptions']
-    """ Additional options """
-    annotationId: NotRequired['ChangeAnnotationIdentifier']
-    """ An optional annotation identifier describing the operation.
+    """Create file operation."""
 
-    @since 3.16.0 """
+    kind: Literal['create']
+    """A create"""
+    uri: DocumentUri
+    """The resource to create."""
+    options: NotRequired['CreateFileOptions']
+    """Additional options"""
+    annotationId: NotRequired['ChangeAnnotationIdentifier']
+    """
+    An optional annotation identifier describing the operation.
+
+    @since 3.16.0
+    """
 
 
 class RenameFile(TypedDict):
-    """ Rename file operation """
-    kind: Literal['rename']
-    """ A rename """
-    oldUri: 'DocumentUri'
-    """ The old (existing) location. """
-    newUri: 'DocumentUri'
-    """ The new location. """
-    options: NotRequired['RenameFileOptions']
-    """ Rename options. """
-    annotationId: NotRequired['ChangeAnnotationIdentifier']
-    """ An optional annotation identifier describing the operation.
+    """Rename file operation"""
 
-    @since 3.16.0 """
+    kind: Literal['rename']
+    """A rename"""
+    oldUri: DocumentUri
+    """The old (existing) location."""
+    newUri: DocumentUri
+    """The new location."""
+    options: NotRequired['RenameFileOptions']
+    """Rename options."""
+    annotationId: NotRequired['ChangeAnnotationIdentifier']
+    """
+    An optional annotation identifier describing the operation.
+
+    @since 3.16.0
+    """
 
 
 class DeleteFile(TypedDict):
-    """ Delete file operation """
-    kind: Literal['delete']
-    """ A delete """
-    uri: 'DocumentUri'
-    """ The file to delete. """
-    options: NotRequired['DeleteFileOptions']
-    """ Delete options. """
-    annotationId: NotRequired['ChangeAnnotationIdentifier']
-    """ An optional annotation identifier describing the operation.
+    """Delete file operation"""
 
-    @since 3.16.0 """
+    kind: Literal['delete']
+    """A delete"""
+    uri: DocumentUri
+    """The file to delete."""
+    options: NotRequired['DeleteFileOptions']
+    """Delete options."""
+    annotationId: NotRequired['ChangeAnnotationIdentifier']
+    """
+    An optional annotation identifier describing the operation.
+
+    @since 3.16.0
+    """
 
 
 class ChangeAnnotation(TypedDict):
-    """ Additional information that describes document changes.
+    """
+    Additional information that describes document changes.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     label: str
-    """ A human-readable string describing the actual change. The string
-    is rendered prominent in the user interface. """
+    """
+    A human-readable string describing the actual change. The string
+    is rendered prominent in the user interface.
+    """
     needsConfirmation: NotRequired[bool]
-    """ A flag which indicates that user confirmation is needed
-    before applying the change. """
+    """
+    A flag which indicates that user confirmation is needed
+    before applying the change.
+    """
     description: NotRequired[str]
-    """ A human-readable string which is rendered less prominent in
-    the user interface. """
+    """
+    A human-readable string which is rendered less prominent in
+    the user interface.
+    """
 
 
 class FileOperationFilter(TypedDict):
-    """ A filter to describe in which file operation requests or notifications
+    """
+    A filter to describe in which file operation requests or notifications
     the server is interested in receiving.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     scheme: NotRequired[str]
-    """ A Uri scheme like `file` or `untitled`. """
+    """A Uri scheme like `file` or `untitled`."""
     pattern: 'FileOperationPattern'
-    """ The actual file operation pattern. """
+    """The actual file operation pattern."""
 
 
 class FileRename(TypedDict):
-    """ Represents information on a file/folder rename.
+    """
+    Represents information on a file/folder rename.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     oldUri: str
-    """ A file:// URI for the original location of the file/folder being renamed. """
+    """A file:// URI for the original location of the file/folder being renamed."""
     newUri: str
-    """ A file:// URI for the new location of the file/folder being renamed. """
+    """A file:// URI for the new location of the file/folder being renamed."""
 
 
 class FileDelete(TypedDict):
-    """ Represents information on a file/folder delete.
+    """
+    Represents information on a file/folder delete.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     uri: str
-    """ A file:// URI for the location of the file/folder being deleted. """
+    """A file:// URI for the location of the file/folder being deleted."""
 
 
 class MonikerOptions(TypedDict):
@@ -3333,79 +4270,107 @@ class MonikerOptions(TypedDict):
 
 
 class TypeHierarchyOptions(TypedDict):
-    """ Type hierarchy options used during static registration.
+    """
+    Type hierarchy options used during static registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     workDoneProgress: NotRequired[bool]
 
 
 class InlineValueContext(TypedDict):
-    """ @since 3.17.0 """
+    """@since 3.17.0"""
+
     frameId: int
-    """ The stack frame (as a DAP Id) where the execution has stopped. """
+    """The stack frame (as a DAP Id) where the execution has stopped."""
     stoppedLocation: 'Range'
-    """ The document range where execution has stopped.
-    Typically the end position of the range denotes the line where the inline values are shown. """
+    """
+    The document range where execution has stopped.
+    Typically the end position of the range denotes the line where the inline values are shown.
+    """
 
 
 class InlineValueText(TypedDict):
-    """ Provide inline value as text.
+    """
+    Provide inline value as text.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     range: 'Range'
-    """ The document range for which the inline value applies. """
+    """The document range for which the inline value applies."""
     text: str
-    """ The text of the inline value. """
+    """The text of the inline value."""
 
 
 class InlineValueVariableLookup(TypedDict):
-    """ Provide inline value through a variable lookup.
+    """
+    Provide inline value through a variable lookup.
     If only a range is specified, the variable name will be extracted from the underlying document.
     An optional variable name can be used to override the extracted name.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     range: 'Range'
-    """ The document range for which the inline value applies.
-    The range is used to extract the variable name from the underlying document. """
+    """
+    The document range for which the inline value applies.
+    The range is used to extract the variable name from the underlying document.
+    """
     variableName: NotRequired[str]
-    """ If specified the name of the variable to look up. """
+    """If specified the name of the variable to look up."""
     caseSensitiveLookup: bool
-    """ How to perform the lookup. """
+    """How to perform the lookup."""
 
 
 class InlineValueEvaluatableExpression(TypedDict):
-    """ Provide an inline value through an expression evaluation.
+    """
+    Provide an inline value through an expression evaluation.
     If only a range is specified, the expression will be extracted from the underlying document.
     An optional expression can be used to override the extracted expression.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     range: 'Range'
-    """ The document range for which the inline value applies.
-    The range is used to extract the evaluatable expression from the underlying document. """
+    """
+    The document range for which the inline value applies.
+    The range is used to extract the evaluatable expression from the underlying document.
+    """
     expression: NotRequired[str]
-    """ If specified the expression overrides the extracted expression. """
+    """If specified the expression overrides the extracted expression."""
 
 
 class InlineValueOptions(TypedDict):
-    """ Inline value options used during static registration.
+    """
+    Inline value options used during static registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     workDoneProgress: NotRequired[bool]
 
 
 class InlayHintLabelPart(TypedDict):
-    """ An inlay hint label part allows for interactive and composite labels
+    """
+    An inlay hint label part allows for interactive and composite labels
     of inlay hints.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     value: str
-    """ The value of this label part. """
+    """The value of this label part."""
     tooltip: NotRequired[Union[str, 'MarkupContent']]
-    """ The tooltip text when you hover over this label part. Depending on
+    """
+    The tooltip text when you hover over this label part. Depending on
     the client capability `inlayHint.resolveSupport` clients might resolve
-    this property late using the resolve request. """
+    this property late using the resolve request.
+    """
     location: NotRequired['Location']
-    """ An optional source code location that represents this
+    """
+    An optional source code location that represents this
     label part.
 
     The editor will use this location for the hover and for code navigation
@@ -3415,16 +4380,20 @@ class InlayHintLabelPart(TypedDict):
     and it shows a context menu with further code navigation commands.
 
     Depending on the client capability `inlayHint.resolveSupport` clients
-    might resolve this property late using the resolve request. """
+    might resolve this property late using the resolve request.
+    """
     command: NotRequired['Command']
-    """ An optional command for this label part.
+    """
+    An optional command for this label part.
 
     Depending on the client capability `inlayHint.resolveSupport` clients
-    might resolve this property late using the resolve request. """
+    might resolve this property late using the resolve request.
+    """
 
 
 class MarkupContent(TypedDict):
-    """ A `MarkupContent` literal represents a string value which content is interpreted base on its
+    r"""
+    A `MarkupContent` literal represents a string value which content is interpreted base on its
     kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.
 
     If the kind is `markdown` then the value can contain fenced code blocks like in GitHub issues.
@@ -3445,160 +4414,220 @@ class MarkupContent(TypedDict):
     ```
 
     *Please Note* that clients might sanitize the return markdown. A client could decide to
-    remove HTML from the markdown to avoid script execution. """
+    remove HTML from the markdown to avoid script execution.
+    """
+
     kind: 'MarkupKind'
-    """ The type of the Markup """
+    """The type of the Markup"""
     value: str
-    """ The content itself """
+    """The content itself"""
 
 
 class InlayHintOptions(TypedDict):
-    """ Inlay hint options used during static registration.
+    """
+    Inlay hint options used during static registration.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
-    information for an inlay hint item. """
+    """
+    The server provides support to resolve additional
+    information for an inlay hint item.
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class RelatedFullDocumentDiagnosticReport(TypedDict):
-    """ A full diagnostic report with a set of related documents.
+    """
+    A full diagnostic report with a set of related documents.
 
-    @since 3.17.0 """
-    relatedDocuments: NotRequired[Dict['DocumentUri', Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]]
-    """ Diagnostics of related documents. This information is useful
+    @since 3.17.0
+    """
+
+    relatedDocuments: NotRequired[Dict[DocumentUri, Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]]
+    """
+    Diagnostics of related documents. This information is useful
     in programming languages where code in a file A can generate
     diagnostics in a file B which A depends on. An example of
     such a language is C/C++ where marco definitions in a file
     a.cpp and result in errors in a header file b.hpp.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     kind: Literal['full']
-    """ A full document diagnostic report. """
+    """A full document diagnostic report."""
     resultId: NotRequired[str]
-    """ An optional result id. If provided it will
+    """
+    An optional result id. If provided it will
     be sent on the next diagnostic request for the
-    same document. """
+    same document.
+    """
     items: List['Diagnostic']
-    """ The actual items. """
+    """The actual items."""
 
 
 class RelatedUnchangedDocumentDiagnosticReport(TypedDict):
-    """ An unchanged diagnostic report with a set of related documents.
+    """
+    An unchanged diagnostic report with a set of related documents.
 
-    @since 3.17.0 """
-    relatedDocuments: NotRequired[Dict['DocumentUri', Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]]
-    """ Diagnostics of related documents. This information is useful
+    @since 3.17.0
+    """
+
+    relatedDocuments: NotRequired[Dict[DocumentUri, Union['FullDocumentDiagnosticReport', 'UnchangedDocumentDiagnosticReport']]]
+    """
+    Diagnostics of related documents. This information is useful
     in programming languages where code in a file A can generate
     diagnostics in a file B which A depends on. An example of
     such a language is C/C++ where marco definitions in a file
     a.cpp and result in errors in a header file b.hpp.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     kind: Literal['unchanged']
-    """ A document diagnostic report indicating
+    """
+    A document diagnostic report indicating
     no changes to the last result. A server can
     only return `unchanged` if result ids are
-    provided. """
+    provided.
+    """
     resultId: str
-    """ A result id which will be sent on the next
-    diagnostic request for the same document. """
+    """
+    A result id which will be sent on the next
+    diagnostic request for the same document.
+    """
 
 
 class FullDocumentDiagnosticReport(TypedDict):
-    """ A diagnostic report with a full set of problems.
+    """
+    A diagnostic report with a full set of problems.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     kind: Literal['full']
-    """ A full document diagnostic report. """
+    """A full document diagnostic report."""
     resultId: NotRequired[str]
-    """ An optional result id. If provided it will
+    """
+    An optional result id. If provided it will
     be sent on the next diagnostic request for the
-    same document. """
+    same document.
+    """
     items: List['Diagnostic']
-    """ The actual items. """
+    """The actual items."""
 
 
 class UnchangedDocumentDiagnosticReport(TypedDict):
-    """ A diagnostic report indicating that the last returned
+    """
+    A diagnostic report indicating that the last returned
     report is still accurate.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     kind: Literal['unchanged']
-    """ A document diagnostic report indicating
+    """
+    A document diagnostic report indicating
     no changes to the last result. A server can
     only return `unchanged` if result ids are
-    provided. """
+    provided.
+    """
     resultId: str
-    """ A result id which will be sent on the next
-    diagnostic request for the same document. """
+    """
+    A result id which will be sent on the next
+    diagnostic request for the same document.
+    """
 
 
 class DiagnosticOptions(TypedDict):
-    """ Diagnostic options.
+    """
+    Diagnostic options.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     identifier: NotRequired[str]
-    """ An optional identifier under which the diagnostics are
-    managed by the client. """
+    """
+    An optional identifier under which the diagnostics are
+    managed by the client.
+    """
     interFileDependencies: bool
-    """ Whether the language has inter file dependencies meaning that
+    """
+    Whether the language has inter file dependencies meaning that
     editing code in one file can result in a different diagnostic
     set in another file. Inter file dependencies are common for
-    most programming languages and typically uncommon for linters. """
+    most programming languages and typically uncommon for linters.
+    """
     workspaceDiagnostics: bool
-    """ The server provides support for workspace diagnostics as well. """
+    """The server provides support for workspace diagnostics as well."""
     workDoneProgress: NotRequired[bool]
 
 
 class PreviousResultId(TypedDict):
-    """ A previous result id in a workspace pull request.
+    """
+    A previous result id in a workspace pull request.
 
-    @since 3.17.0 """
-    uri: 'DocumentUri'
-    """ The URI for which the client knowns a
-    result id. """
+    @since 3.17.0
+    """
+
+    uri: DocumentUri
+    """
+    The URI for which the client knowns a
+    result id.
+    """
     value: str
-    """ The value of the previous result id. """
+    """The value of the previous result id."""
 
 
 class NotebookDocument(TypedDict):
-    """ A notebook document.
+    """
+    A notebook document.
 
-    @since 3.17.0 """
-    uri: 'URI'
-    """ The notebook document's uri. """
+    @since 3.17.0
+    """
+
+    uri: URI
+    """The notebook document's uri."""
     notebookType: str
-    """ The type of the notebook. """
+    """The type of the notebook."""
     version: int
-    """ The version number of this document (it will increase after each
-    change, including undo/redo). """
+    """
+    The version number of this document (it will increase after each
+    change, including undo/redo).
+    """
     metadata: NotRequired['LSPObject']
-    """ Additional metadata stored with the notebook
+    """
+    Additional metadata stored with the notebook
     document.
 
-    Note: should always be an object literal (e.g. LSPObject) """
+    Note: should always be an object literal (e.g. LSPObject)
+    """
     cells: List['NotebookCell']
-    """ The cells of a notebook. """
+    """The cells of a notebook."""
 
 
 class TextDocumentItem(TypedDict):
-    """ An item to transfer a text document from the client to the
-    server. """
-    uri: 'DocumentUri'
-    """ The text document's uri. """
+    """
+    An item to transfer a text document from the client to the
+    server.
+    """
+
+    uri: DocumentUri
+    """The text document's uri."""
     languageId: 'LanguageKind'
-    """ The text document's language identifier. """
+    """The text document's language identifier."""
     version: int
-    """ The version number of this document (it will increase after each
-    change, including undo/redo). """
+    """
+    The version number of this document (it will increase after each
+    change, including undo/redo).
+    """
     text: str
-    """ The content of the opened text document. """
+    """The content of the opened text document."""
 
 
 class NotebookDocumentSyncOptions(TypedDict):
-    """ Options specific to a notebook plus its cells
+    """
+    Options specific to a notebook plus its cells
     to be synced to the server.
 
     If a selector provides a notebook document
@@ -3610,57 +4639,76 @@ class NotebookDocumentSyncOptions(TypedDict):
     document that contain at least one matching
     cell will be synced.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebookSelector: List[Union['NotebookDocumentFilterWithNotebook', 'NotebookDocumentFilterWithCells']]
-    """ The notebooks to be synced """
+    """The notebooks to be synced"""
     save: NotRequired[bool]
-    """ Whether save notification should be forwarded to
-    the server. Will only be honored if mode === `notebook`. """
+    """
+    Whether save notification should be forwarded to
+    the server. Will only be honored if mode === `notebook`.
+    """
 
 
 class VersionedNotebookDocumentIdentifier(TypedDict):
-    """ A versioned notebook document identifier.
+    """
+    A versioned notebook document identifier.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     version: int
-    """ The version number of this notebook document. """
-    uri: 'URI'
-    """ The notebook document's uri. """
+    """The version number of this notebook document."""
+    uri: URI
+    """The notebook document's uri."""
 
 
 class NotebookDocumentChangeEvent(TypedDict):
-    """ A change event for a notebook document.
+    """
+    A change event for a notebook document.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     metadata: NotRequired['LSPObject']
-    """ The changed meta data if any.
+    """
+    The changed meta data if any.
 
-    Note: should always be an object literal (e.g. LSPObject) """
+    Note: should always be an object literal (e.g. LSPObject)
+    """
     cells: NotRequired['NotebookDocumentCellChanges']
-    """ Changes to cells """
+    """Changes to cells"""
 
 
 class NotebookDocumentIdentifier(TypedDict):
-    """ A literal to identify a notebook document in the client.
+    """
+    A literal to identify a notebook document in the client.
 
-    @since 3.17.0 """
-    uri: 'URI'
-    """ The notebook document's uri. """
+    @since 3.17.0
+    """
+
+    uri: URI
+    """The notebook document's uri."""
 
 
 class InlineCompletionContext(TypedDict):
-    """ Provides information about the context in which an inline completion was requested.
+    """
+    Provides information about the context in which an inline completion was requested.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     triggerKind: 'InlineCompletionTriggerKind'
-    """ Describes how the inline completion was triggered. """
+    """Describes how the inline completion was triggered."""
     selectedCompletionInfo: NotRequired['SelectedCompletionInfo']
-    """ Provides information about the currently selected item in the autocomplete widget if it is visible. """
+    """Provides information about the currently selected item in the autocomplete widget if it is visible."""
 
 
 class StringValue(TypedDict):
-    """ A string value used as a snippet is a template which allows to insert text
+    """
+    A string value used as a snippet is a template which allows to insert text
     and to control the editor cursor when insertion happens.
 
     A snippet can define tab stops and placeholders with `$1`, `$2`
@@ -3669,66 +4717,86 @@ class StringValue(TypedDict):
     `${name:default value}`.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     kind: Literal['snippet']
-    """ The kind of string value. """
+    """The kind of string value."""
     value: str
-    """ The snippet string. """
+    """The snippet string."""
 
 
 class InlineCompletionOptions(TypedDict):
-    """ Inline completion options used during static registration.
+    """
+    Inline completion options used during static registration.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     workDoneProgress: NotRequired[bool]
 
 
 class TextDocumentContentOptions(TypedDict):
-    """ Text document content provider options.
+    """
+    Text document content provider options.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     schemes: List[str]
-    """ The schemes for which the server provides content. """
+    """The schemes for which the server provides content."""
 
 
 class Registration(TypedDict):
-    """ General parameters to register for a notification or to register a provider. """
+    """General parameters to register for a notification or to register a provider."""
+
     id: str
-    """ The id used to register the request. The id can be used to deregister
-    the request again. """
+    """
+    The id used to register the request. The id can be used to deregister
+    the request again.
+    """
     method: str
-    """ The method / capability to register for. """
+    """The method / capability to register for."""
     registerOptions: NotRequired['LSPAny']
-    """ Options necessary for the registration. """
+    """Options necessary for the registration."""
 
 
 class Unregistration(TypedDict):
-    """ General parameters to unregister a request or notification. """
+    """General parameters to unregister a request or notification."""
+
     id: str
-    """ The id used to unregister the request or notification. Usually an id
-    provided during the register request. """
+    """
+    The id used to unregister the request or notification. Usually an id
+    provided during the register request.
+    """
     method: str
-    """ The method to unregister for. """
+    """The method to unregister for."""
 
 
 class WorkspaceFoldersInitializeParams(TypedDict):
     workspaceFolders: NotRequired[Union[List['WorkspaceFolder'], None]]
-    """ The workspace folders configured in the client when the server starts.
+    """
+    The workspace folders configured in the client when the server starts.
 
     This property is only available if the client supports workspace folders.
     It can be `null` if the client supports workspace folders but none are
     configured.
 
-    @since 3.6.0 """
+    @since 3.6.0
+    """
 
 
 class ServerCapabilities(TypedDict):
-    """ Defines the capabilities provided by a language
-    server. """
+    """
+    Defines the capabilities provided by a language
+    server.
+    """
+
     positionEncoding: NotRequired['PositionEncodingKind']
-    """ The position encoding the server picked from the encodings offered
+    """
+    The position encoding the server picked from the encodings offered
     by the client via the client capability `general.positionEncodings`.
 
     If the client didn't provide any position encodings the only valid
@@ -3736,221 +4804,287 @@ class ServerCapabilities(TypedDict):
 
     If omitted it defaults to 'utf-16'.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     textDocumentSync: NotRequired[Union['TextDocumentSyncOptions', 'TextDocumentSyncKind']]
-    """ Defines how text documents are synced. Is either a detailed structure
+    """
+    Defines how text documents are synced. Is either a detailed structure
     defining each notification or for backwards compatibility the
-    TextDocumentSyncKind number. """
+    TextDocumentSyncKind number.
+    """
     notebookDocumentSync: NotRequired[Union['NotebookDocumentSyncOptions', 'NotebookDocumentSyncRegistrationOptions']]
-    """ Defines how notebook documents are synced.
+    """
+    Defines how notebook documents are synced.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     completionProvider: NotRequired['CompletionOptions']
-    """ The server provides completion support. """
+    """The server provides completion support."""
     hoverProvider: NotRequired[Union[bool, 'HoverOptions']]
-    """ The server provides hover support. """
+    """The server provides hover support."""
     signatureHelpProvider: NotRequired['SignatureHelpOptions']
-    """ The server provides signature help support. """
+    """The server provides signature help support."""
     declarationProvider: NotRequired[Union[bool, 'DeclarationOptions', 'DeclarationRegistrationOptions']]
-    """ The server provides Goto Declaration support. """
+    """The server provides Goto Declaration support."""
     definitionProvider: NotRequired[Union[bool, 'DefinitionOptions']]
-    """ The server provides goto definition support. """
+    """The server provides goto definition support."""
     typeDefinitionProvider: NotRequired[Union[bool, 'TypeDefinitionOptions', 'TypeDefinitionRegistrationOptions']]
-    """ The server provides Goto Type Definition support. """
+    """The server provides Goto Type Definition support."""
     implementationProvider: NotRequired[Union[bool, 'ImplementationOptions', 'ImplementationRegistrationOptions']]
-    """ The server provides Goto Implementation support. """
+    """The server provides Goto Implementation support."""
     referencesProvider: NotRequired[Union[bool, 'ReferenceOptions']]
-    """ The server provides find references support. """
+    """The server provides find references support."""
     documentHighlightProvider: NotRequired[Union[bool, 'DocumentHighlightOptions']]
-    """ The server provides document highlight support. """
+    """The server provides document highlight support."""
     documentSymbolProvider: NotRequired[Union[bool, 'DocumentSymbolOptions']]
-    """ The server provides document symbol support. """
+    """The server provides document symbol support."""
     codeActionProvider: NotRequired[Union[bool, 'CodeActionOptions']]
-    """ The server provides code actions. CodeActionOptions may only be
+    """
+    The server provides code actions. CodeActionOptions may only be
     specified if the client states that it supports
-    `codeActionLiteralSupport` in its initial `initialize` request. """
+    `codeActionLiteralSupport` in its initial `initialize` request.
+    """
     codeLensProvider: NotRequired['CodeLensOptions']
-    """ The server provides code lens. """
+    """The server provides code lens."""
     documentLinkProvider: NotRequired['DocumentLinkOptions']
-    """ The server provides document link support. """
+    """The server provides document link support."""
     colorProvider: NotRequired[Union[bool, 'DocumentColorOptions', 'DocumentColorRegistrationOptions']]
-    """ The server provides color provider support. """
+    """The server provides color provider support."""
     workspaceSymbolProvider: NotRequired[Union[bool, 'WorkspaceSymbolOptions']]
-    """ The server provides workspace symbol support. """
+    """The server provides workspace symbol support."""
     documentFormattingProvider: NotRequired[Union[bool, 'DocumentFormattingOptions']]
-    """ The server provides document formatting. """
+    """The server provides document formatting."""
     documentRangeFormattingProvider: NotRequired[Union[bool, 'DocumentRangeFormattingOptions']]
-    """ The server provides document range formatting. """
+    """The server provides document range formatting."""
     documentOnTypeFormattingProvider: NotRequired['DocumentOnTypeFormattingOptions']
-    """ The server provides document formatting on typing. """
+    """The server provides document formatting on typing."""
     renameProvider: NotRequired[Union[bool, 'RenameOptions']]
-    """ The server provides rename support. RenameOptions may only be
+    """
+    The server provides rename support. RenameOptions may only be
     specified if the client states that it supports
-    `prepareSupport` in its initial `initialize` request. """
+    `prepareSupport` in its initial `initialize` request.
+    """
     foldingRangeProvider: NotRequired[Union[bool, 'FoldingRangeOptions', 'FoldingRangeRegistrationOptions']]
-    """ The server provides folding provider support. """
+    """The server provides folding provider support."""
     selectionRangeProvider: NotRequired[Union[bool, 'SelectionRangeOptions', 'SelectionRangeRegistrationOptions']]
-    """ The server provides selection range support. """
+    """The server provides selection range support."""
     executeCommandProvider: NotRequired['ExecuteCommandOptions']
-    """ The server provides execute command support. """
+    """The server provides execute command support."""
     callHierarchyProvider: NotRequired[Union[bool, 'CallHierarchyOptions', 'CallHierarchyRegistrationOptions']]
-    """ The server provides call hierarchy support.
+    """
+    The server provides call hierarchy support.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     linkedEditingRangeProvider: NotRequired[Union[bool, 'LinkedEditingRangeOptions', 'LinkedEditingRangeRegistrationOptions']]
-    """ The server provides linked editing range support.
+    """
+    The server provides linked editing range support.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     semanticTokensProvider: NotRequired[Union['SemanticTokensOptions', 'SemanticTokensRegistrationOptions']]
-    """ The server provides semantic tokens support.
+    """
+    The server provides semantic tokens support.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     monikerProvider: NotRequired[Union[bool, 'MonikerOptions', 'MonikerRegistrationOptions']]
-    """ The server provides moniker support.
+    """
+    The server provides moniker support.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     typeHierarchyProvider: NotRequired[Union[bool, 'TypeHierarchyOptions', 'TypeHierarchyRegistrationOptions']]
-    """ The server provides type hierarchy support.
+    """
+    The server provides type hierarchy support.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     inlineValueProvider: NotRequired[Union[bool, 'InlineValueOptions', 'InlineValueRegistrationOptions']]
-    """ The server provides inline values.
+    """
+    The server provides inline values.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     inlayHintProvider: NotRequired[Union[bool, 'InlayHintOptions', 'InlayHintRegistrationOptions']]
-    """ The server provides inlay hints.
+    """
+    The server provides inlay hints.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     diagnosticProvider: NotRequired[Union['DiagnosticOptions', 'DiagnosticRegistrationOptions']]
-    """ The server has support for pull model diagnostics.
+    """
+    The server has support for pull model diagnostics.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     inlineCompletionProvider: NotRequired[Union[bool, 'InlineCompletionOptions']]
-    """ Inline completion options used during static registration.
+    """
+    Inline completion options used during static registration.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     workspace: NotRequired['WorkspaceOptions']
-    """ Workspace specific server capabilities. """
+    """Workspace specific server capabilities."""
     experimental: NotRequired['LSPAny']
-    """ Experimental server capabilities. """
+    """Experimental server capabilities."""
 
 
 class ServerInfo(TypedDict):
-    """ Information about the server
+    """
+    Information about the server
 
     @since 3.15.0
-    @since 3.18.0 ServerInfo type name added. """
+    @since 3.18.0 ServerInfo type name added.
+    """
+
     name: str
-    """ The name of the server as defined by the server. """
+    """The name of the server as defined by the server."""
     version: NotRequired[str]
-    """ The server's version as defined by the server. """
+    """The server's version as defined by the server."""
 
 
 class VersionedTextDocumentIdentifier(TypedDict):
-    """ A text document identifier to denote a specific version of a text document. """
+    """A text document identifier to denote a specific version of a text document."""
+
     version: int
-    """ The version number of this document. """
-    uri: 'DocumentUri'
-    """ The text document's uri. """
+    """The version number of this document."""
+    uri: DocumentUri
+    """The text document's uri."""
 
 
 class SaveOptions(TypedDict):
-    """ Save options. """
+    """Save options."""
+
     includeText: NotRequired[bool]
-    """ The client is supposed to include the content on save. """
+    """The client is supposed to include the content on save."""
 
 
 class FileEvent(TypedDict):
-    """ An event describing a file change. """
-    uri: 'DocumentUri'
-    """ The file's uri. """
+    """An event describing a file change."""
+
+    uri: DocumentUri
+    """The file's uri."""
     type: 'FileChangeType'
-    """ The change type. """
+    """The change type."""
 
 
 class FileSystemWatcher(TypedDict):
     globPattern: 'GlobPattern'
-    """ The glob pattern to watch. See {@link GlobPattern glob pattern} for more detail.
+    """
+    The glob pattern to watch. See {@link GlobPattern glob pattern} for more detail.
 
-    @since 3.17.0 support for relative patterns. """
+    @since 3.17.0 support for relative patterns.
+    """
     kind: NotRequired['WatchKind']
-    """ The kind of events of interest. If omitted it defaults
+    """
+    The kind of events of interest. If omitted it defaults
     to WatchKind.Create | WatchKind.Change | WatchKind.Delete
-    which is 7. """
+    which is 7.
+    """
 
 
 class Diagnostic(TypedDict):
-    """ Represents a diagnostic, such as a compiler error or warning. Diagnostic objects
-    are only valid in the scope of a resource. """
+    """
+    Represents a diagnostic, such as a compiler error or warning. Diagnostic objects
+    are only valid in the scope of a resource.
+    """
+
     range: 'Range'
-    """ The range at which the message applies """
+    """The range at which the message applies"""
     severity: NotRequired['DiagnosticSeverity']
-    """ The diagnostic's severity. To avoid interpretation mismatches when a
+    """
+    The diagnostic's severity. To avoid interpretation mismatches when a
     server is used with different clients it is highly recommended that servers
-    always provide a severity value. """
+    always provide a severity value.
+    """
     code: NotRequired[Union[int, str]]
-    """ The diagnostic's code, which usually appear in the user interface. """
+    """The diagnostic's code, which usually appear in the user interface."""
     codeDescription: NotRequired['CodeDescription']
-    """ An optional property to describe the error code.
+    """
+    An optional property to describe the error code.
     Requires the code field (above) to be present/not null.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     source: NotRequired[str]
-    """ A human-readable string describing the source of this
+    """
+    A human-readable string describing the source of this
     diagnostic, e.g. 'typescript' or 'super lint'. It usually
-    appears in the user interface. """
+    appears in the user interface.
+    """
     message: str
-    """ The diagnostic's message. It usually appears in the user interface """
+    """The diagnostic's message. It usually appears in the user interface"""
     tags: NotRequired[List['DiagnosticTag']]
-    """ Additional metadata about the diagnostic.
+    """
+    Additional metadata about the diagnostic.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     relatedInformation: NotRequired[List['DiagnosticRelatedInformation']]
-    """ An array of related diagnostic information, e.g. when symbol-names within
-    a scope collide all definitions can be marked via this property. """
+    """
+    An array of related diagnostic information, e.g. when symbol-names within
+    a scope collide all definitions can be marked via this property.
+    """
     data: NotRequired['LSPAny']
-    """ A data entry field that is preserved between a `textDocument/publishDiagnostics`
+    """
+    A data entry field that is preserved between a `textDocument/publishDiagnostics`
     notification and `textDocument/codeAction` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class CompletionContext(TypedDict):
-    """ Contains additional information about the context in which a completion request is triggered. """
+    """Contains additional information about the context in which a completion request is triggered."""
+
     triggerKind: 'CompletionTriggerKind'
-    """ How the completion was triggered. """
+    """How the completion was triggered."""
     triggerCharacter: NotRequired[str]
-    """ The trigger character (a single character) that has trigger code complete.
-    Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter` """
+    """
+    The trigger character (a single character) that has trigger code complete.
+    Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
+    """
 
 
 class CompletionItemLabelDetails(TypedDict):
-    """ Additional details for a completion item label.
+    """
+    Additional details for a completion item label.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     detail: NotRequired[str]
-    """ An optional string which is rendered less prominently directly after {@link CompletionItem.label label},
-    without any spacing. Should be used for function signatures and type annotations. """
+    """
+    An optional string which is rendered less prominently directly after {@link CompletionItem.label label},
+    without any spacing. Should be used for function signatures and type annotations.
+    """
     description: NotRequired[str]
-    """ An optional string which is rendered less prominently after {@link CompletionItem.detail}. Should be used
-    for fully qualified names and file paths. """
+    """
+    An optional string which is rendered less prominently after {@link CompletionItem.detail}. Should be used
+    for fully qualified names and file paths.
+    """
 
 
 class InsertReplaceEdit(TypedDict):
-    """ A special text edit to provide an insert and a replace operation.
+    """
+    A special text edit to provide an insert and a replace operation.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     newText: str
-    """ The string to be inserted. """
+    """The string to be inserted."""
     insert: 'Range'
-    """ The range if the insert is requested """
+    """The range if the insert is requested"""
     replace: 'Range'
-    """ The range if the replace is requested. """
+    """The range if the replace is requested."""
 
 
 class CompletionItemDefaults(TypedDict):
-    """ In many cases the items of an actual completion result share the same
+    """
+    In many cases the items of an actual completion result share the same
     value for properties like `commitCharacters` or the range of a text
     edit. A completion list can therefore define item defaults which will
     be used if a completion item itself doesn't specify the value.
@@ -3964,31 +5098,44 @@ class CompletionItemDefaults(TypedDict):
     signals support for this via the `completionList.itemDefaults`
     capability.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     commitCharacters: NotRequired[List[str]]
-    """ A default commit character set.
+    """
+    A default commit character set.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     editRange: NotRequired[Union['Range', 'EditRangeWithInsertReplace']]
-    """ A default edit range.
+    """
+    A default edit range.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     insertTextFormat: NotRequired['InsertTextFormat']
-    """ A default insert text format.
+    """
+    A default insert text format.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     insertTextMode: NotRequired['InsertTextMode']
-    """ A default insert text mode.
+    """
+    A default insert text mode.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     data: NotRequired['LSPAny']
-    """ A default data value.
+    """
+    A default data value.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class CompletionItemApplyKinds(TypedDict):
-    """ Specifies how fields from a completion item should be combined with those
+    """
+    Specifies how fields from a completion item should be combined with those
     from `completionList.itemDefaults`.
 
     If unspecified, all fields will be treated as ApplyKind.Replace.
@@ -4004,9 +5151,12 @@ class CompletionItemApplyKinds(TypedDict):
     signals support for this via the `completionList.applyKindSupport`
     capability.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     commitCharacters: NotRequired['ApplyKind']
-    """ Specifies whether commitCharacters on a completion will replace or be
+    """
+    Specifies whether commitCharacters on a completion will replace or be
     merged with those in `completionList.itemDefaults.commitCharacters`.
 
     If ApplyKind.Replace, the commit characters from the completion item will
@@ -4020,9 +5170,11 @@ class CompletionItemApplyKinds(TypedDict):
     union of all values in both `completionList.itemDefaults.commitCharacters`
     and the completion's own `commitCharacters`.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
     data: NotRequired['ApplyKind']
-    """ Specifies whether the `data` field on a completion will replace or
+    """
+    Specifies whether the `data` field on a completion will replace or
     be merged with data from `completionList.itemDefaults.data`.
 
     If ApplyKind.Replace, the data from the completion item will be used if
@@ -4043,81 +5195,109 @@ class CompletionItemApplyKinds(TypedDict):
       `completionList.itemDefaults.data` but no merging of nested fields
       within that value will occur.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
 
 
 class CompletionOptions(TypedDict):
-    """ Completion options. """
+    """Completion options."""
+
     triggerCharacters: NotRequired[List[str]]
-    """ Most tools trigger completion request automatically without explicitly requesting
+    """
+    Most tools trigger completion request automatically without explicitly requesting
     it using a keyboard shortcut (e.g. Ctrl+Space). Typically they do so when the user
     starts to type an identifier. For example if the user types `c` in a JavaScript file
     code complete will automatically pop up present `console` besides others as a
     completion item. Characters that make up identifiers don't need to be listed here.
 
     If code complete should automatically be trigger on characters not being valid inside
-    an identifier (for example `.` in JavaScript) list them in `triggerCharacters`. """
+    an identifier (for example `.` in JavaScript) list them in `triggerCharacters`.
+    """
     allCommitCharacters: NotRequired[List[str]]
-    """ The list of all possible characters that commit a completion. This field can be used
+    """
+    The list of all possible characters that commit a completion. This field can be used
     if clients don't support individual commit characters per completion item. See
     `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`
 
     If a server provides both `allCommitCharacters` and commit characters on an individual
     completion item the ones on the completion item win.
 
-    @since 3.2.0 """
+    @since 3.2.0
+    """
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
-    information for a completion item. """
+    """
+    The server provides support to resolve additional
+    information for a completion item.
+    """
     completionItem: NotRequired['ServerCompletionItemOptions']
-    """ The server supports the following `CompletionItem` specific
+    """
+    The server supports the following `CompletionItem` specific
     capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class HoverOptions(TypedDict):
-    """ Hover options. """
+    """Hover options."""
+
     workDoneProgress: NotRequired[bool]
 
 
 class SignatureHelpContext(TypedDict):
-    """ Additional information about the context in which a signature help request was triggered.
+    """
+    Additional information about the context in which a signature help request was triggered.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
+
     triggerKind: 'SignatureHelpTriggerKind'
-    """ Action that caused signature help to be triggered. """
+    """Action that caused signature help to be triggered."""
     triggerCharacter: NotRequired[str]
-    """ Character that caused signature help to be triggered.
+    """
+    Character that caused signature help to be triggered.
 
-    This is undefined when `triggerKind !== SignatureHelpTriggerKind.TriggerCharacter` """
+    This is undefined when `triggerKind !== SignatureHelpTriggerKind.TriggerCharacter`
+    """
     isRetrigger: bool
-    """ `true` if signature help was already showing when it was triggered.
+    """
+    `true` if signature help was already showing when it was triggered.
 
     Retriggers occurs when the signature help is already active and can be caused by actions such as
-    typing a trigger character, a cursor move, or document content changes. """
+    typing a trigger character, a cursor move, or document content changes.
+    """
     activeSignatureHelp: NotRequired['SignatureHelp']
-    """ The currently active `SignatureHelp`.
+    """
+    The currently active `SignatureHelp`.
 
     The `activeSignatureHelp` has its `SignatureHelp.activeSignature` field updated based on
-    the user navigating through available signatures. """
+    the user navigating through available signatures.
+    """
 
 
 class SignatureInformation(TypedDict):
-    """ Represents the signature of something callable. A signature
+    """
+    Represents the signature of something callable. A signature
     can have a label, like a function-name, a doc-comment, and
-    a set of parameters. """
+    a set of parameters.
+    """
+
     label: str
-    """ The label of this signature. Will be shown in
-    the UI. """
+    """
+    The label of this signature. Will be shown in
+    the UI.
+    """
     documentation: NotRequired[Union[str, 'MarkupContent']]
-    """ The human-readable doc-comment of this signature. Will be shown
-    in the UI but can be omitted. """
+    """
+    The human-readable doc-comment of this signature. Will be shown
+    in the UI but can be omitted.
+    """
     parameters: NotRequired[List['ParameterInformation']]
-    """ The parameters of this signature. """
+    """The parameters of this signature."""
     activeParameter: NotRequired[Union[Uint, None]]
-    """ The index of the active parameter.
+    """
+    The index of the active parameter.
 
     If `null`, no parameter of the signature is active (for example a named
     argument that does not match any declared parameters). This is only valid
@@ -4127,111 +5307,147 @@ class SignatureInformation(TypedDict):
     If provided (or `null`), this is used in place of
     `SignatureHelp.activeParameter`.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class SignatureHelpOptions(TypedDict):
-    """ Server Capabilities for a {@link SignatureHelpRequest}. """
+    """Server Capabilities for a {@link SignatureHelpRequest}."""
+
     triggerCharacters: NotRequired[List[str]]
-    """ List of characters that trigger signature help automatically. """
+    """List of characters that trigger signature help automatically."""
     retriggerCharacters: NotRequired[List[str]]
-    """ List of characters that re-trigger signature help.
+    """
+    List of characters that re-trigger signature help.
 
     These trigger characters are only active when signature help is already showing. All trigger characters
     are also counted as re-trigger characters.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class DefinitionOptions(TypedDict):
-    """ Server Capabilities for a {@link DefinitionRequest}. """
+    """Server Capabilities for a {@link DefinitionRequest}."""
+
     workDoneProgress: NotRequired[bool]
 
 
 class ReferenceContext(TypedDict):
-    """ Value-object that contains additional information when
-    requesting references. """
+    """
+    Value-object that contains additional information when
+    requesting references.
+    """
+
     includeDeclaration: bool
-    """ Include the declaration of the current symbol. """
+    """Include the declaration of the current symbol."""
 
 
 class ReferenceOptions(TypedDict):
-    """ Reference options. """
+    """Reference options."""
+
     workDoneProgress: NotRequired[bool]
 
 
 class DocumentHighlightOptions(TypedDict):
-    """ Provider options for a {@link DocumentHighlightRequest}. """
+    """Provider options for a {@link DocumentHighlightRequest}."""
+
     workDoneProgress: NotRequired[bool]
 
 
 class BaseSymbolInformation(TypedDict):
-    """ A base for all symbol information. """
-    name: str
-    """ The name of this symbol. """
-    kind: 'SymbolKind'
-    """ The kind of this symbol. """
-    tags: NotRequired[List['SymbolTag']]
-    """ Tags for this symbol.
+    """A base for all symbol information."""
 
-    @since 3.16.0 """
+    name: str
+    """The name of this symbol."""
+    kind: 'SymbolKind'
+    """The kind of this symbol."""
+    tags: NotRequired[List['SymbolTag']]
+    """
+    Tags for this symbol.
+
+    @since 3.16.0
+    """
     containerName: NotRequired[str]
-    """ The name of the symbol containing this symbol. This information is for
+    """
+    The name of the symbol containing this symbol. This information is for
     user interface purposes (e.g. to render a qualifier in the user interface
     if necessary). It can't be used to re-infer a hierarchy for the document
-    symbols. """
+    symbols.
+    """
 
 
 class DocumentSymbolOptions(TypedDict):
-    """ Provider options for a {@link DocumentSymbolRequest}. """
+    """Provider options for a {@link DocumentSymbolRequest}."""
+
     label: NotRequired[str]
-    """ A human-readable string that is shown when multiple outlines trees
+    """
+    A human-readable string that is shown when multiple outlines trees
     are shown for the same document.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class CodeActionContext(TypedDict):
-    """ Contains additional diagnostic information about the context in which
-    a {@link CodeActionProvider.provideCodeActions code action} is run. """
+    """
+    Contains additional diagnostic information about the context in which
+    a {@link CodeActionProvider.provideCodeActions code action} is run.
+    """
+
     diagnostics: List['Diagnostic']
-    """ An array of diagnostics known on the client side overlapping the range provided to the
+    """
+    An array of diagnostics known on the client side overlapping the range provided to the
     `textDocument/codeAction` request. They are provided so that the server knows which
     errors are currently presented to the user for the given range. There is no guarantee
     that these accurately reflect the error state of the resource. The primary parameter
-    to compute code actions is the provided range. """
+    to compute code actions is the provided range.
+    """
     only: NotRequired[List['CodeActionKind']]
-    """ Requested kind of actions to return.
+    """
+    Requested kind of actions to return.
 
     Actions not of this kind are filtered out by the client before being shown. So servers
-    can omit computing them. """
+    can omit computing them.
+    """
     triggerKind: NotRequired['CodeActionTriggerKind']
-    """ The reason why code actions were requested.
+    """
+    The reason why code actions were requested.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class CodeActionDisabled(TypedDict):
-    """ Captures why the code action is currently disabled.
+    """
+    Captures why the code action is currently disabled.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     reason: str
-    """ Human readable description of why the code action is currently disabled.
+    """
+    Human readable description of why the code action is currently disabled.
 
-    This is displayed in the code actions UI. """
+    This is displayed in the code actions UI.
+    """
 
 
 class CodeActionOptions(TypedDict):
-    """ Provider options for a {@link CodeActionRequest}. """
+    """Provider options for a {@link CodeActionRequest}."""
+
     codeActionKinds: NotRequired[List['CodeActionKind']]
-    """ CodeActionKinds that this server may return.
+    """
+    CodeActionKinds that this server may return.
 
     The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
-    may list out every specific kind they provide. """
+    may list out every specific kind they provide.
+    """
     documentation: NotRequired[List['CodeActionKindDocumentation']]
-    """ Static documentation for a class of code actions.
+    """
+    Static documentation for a class of code actions.
 
     Documentation from the provider should be shown in the code actions menu if either:
 
@@ -4245,474 +5461,627 @@ class CodeActionOptions(TypedDict):
     At most one documentation entry should be shown per provider.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
+    """
+    The server provides support to resolve additional
     information for a code action.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class LocationUriOnly(TypedDict):
-    """ Location with only uri and does not include range.
+    """
+    Location with only uri and does not include range.
 
-    @since 3.18.0 """
-    uri: 'DocumentUri'
+    @since 3.18.0
+    """
+
+    uri: DocumentUri
 
 
 class WorkspaceSymbolOptions(TypedDict):
-    """ Server capabilities for a {@link WorkspaceSymbolRequest}. """
+    """Server capabilities for a {@link WorkspaceSymbolRequest}."""
+
     resolveProvider: NotRequired[bool]
-    """ The server provides support to resolve additional
+    """
+    The server provides support to resolve additional
     information for a workspace symbol.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class CodeLensOptions(TypedDict):
-    """ Code Lens provider options of a {@link CodeLensRequest}. """
+    """Code Lens provider options of a {@link CodeLensRequest}."""
+
     resolveProvider: NotRequired[bool]
-    """ Code lens has a resolve provider as well. """
+    """Code lens has a resolve provider as well."""
     workDoneProgress: NotRequired[bool]
 
 
 class DocumentLinkOptions(TypedDict):
-    """ Provider options for a {@link DocumentLinkRequest}. """
+    """Provider options for a {@link DocumentLinkRequest}."""
+
     resolveProvider: NotRequired[bool]
-    """ Document links have a resolve provider as well. """
+    """Document links have a resolve provider as well."""
     workDoneProgress: NotRequired[bool]
 
 
 class FormattingOptions(TypedDict):
-    """ Value-object describing what options formatting should use. """
+    """Value-object describing what options formatting should use."""
+
     tabSize: Uint
-    """ Size of a tab in spaces. """
+    """Size of a tab in spaces."""
     insertSpaces: bool
-    """ Prefer spaces over tabs. """
+    """Prefer spaces over tabs."""
     trimTrailingWhitespace: NotRequired[bool]
-    """ Trim trailing whitespace on a line.
+    """
+    Trim trailing whitespace on a line.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     insertFinalNewline: NotRequired[bool]
-    """ Insert a newline character at the end of the file if one does not exist.
+    """
+    Insert a newline character at the end of the file if one does not exist.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     trimFinalNewlines: NotRequired[bool]
-    """ Trim all newlines after the final newline at the end of the file.
+    """
+    Trim all newlines after the final newline at the end of the file.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
 
 
 class DocumentFormattingOptions(TypedDict):
-    """ Provider options for a {@link DocumentFormattingRequest}. """
+    """Provider options for a {@link DocumentFormattingRequest}."""
+
     workDoneProgress: NotRequired[bool]
 
 
 class DocumentRangeFormattingOptions(TypedDict):
-    """ Provider options for a {@link DocumentRangeFormattingRequest}. """
+    """Provider options for a {@link DocumentRangeFormattingRequest}."""
+
     rangesSupport: NotRequired[bool]
-    """ Whether the server supports formatting multiple ranges at once.
+    """
+    Whether the server supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class DocumentOnTypeFormattingOptions(TypedDict):
-    """ Provider options for a {@link DocumentOnTypeFormattingRequest}. """
+    """Provider options for a {@link DocumentOnTypeFormattingRequest}."""
+
     firstTriggerCharacter: str
-    """ A character on which formatting should be triggered, like `{`. """
+    """A character on which formatting should be triggered, like `{`."""
     moreTriggerCharacter: NotRequired[List[str]]
-    """ More trigger characters. """
+    """More trigger characters."""
 
 
 class RenameOptions(TypedDict):
-    """ Provider options for a {@link RenameRequest}. """
-    prepareProvider: NotRequired[bool]
-    """ Renames should be checked and tested before being executed.
+    """Provider options for a {@link RenameRequest}."""
 
-    @since version 3.12.0 """
+    prepareProvider: NotRequired[bool]
+    """
+    Renames should be checked and tested before being executed.
+
+    @since version 3.12.0
+    """
     workDoneProgress: NotRequired[bool]
 
 
 class PrepareRenamePlaceholder(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     range: 'Range'
     placeholder: str
 
 
 class PrepareRenameDefaultBehavior(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     defaultBehavior: bool
 
 
 class ExecuteCommandOptions(TypedDict):
-    """ The server capabilities of a {@link ExecuteCommandRequest}. """
+    """The server capabilities of a {@link ExecuteCommandRequest}."""
+
     commands: List[str]
-    """ The commands to be executed on the server """
+    """The commands to be executed on the server"""
     workDoneProgress: NotRequired[bool]
 
 
 class WorkspaceEditMetadata(TypedDict):
-    """ Additional data about a workspace edit.
+    """
+    Additional data about a workspace edit.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     isRefactoring: NotRequired[bool]
-    """ Signal to the editor that this edit is a refactoring. """
+    """Signal to the editor that this edit is a refactoring."""
 
 
 class SemanticTokensLegend(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     tokenTypes: List[str]
-    """ The token types a server uses. """
+    """The token types a server uses."""
     tokenModifiers: List[str]
-    """ The token modifiers a server uses. """
+    """The token modifiers a server uses."""
 
 
 class SemanticTokensFullDelta(TypedDict):
-    """ Semantic tokens options to support deltas for full documents
+    """
+    Semantic tokens options to support deltas for full documents
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     delta: NotRequired[bool]
-    """ The server supports deltas for full documents. """
+    """The server supports deltas for full documents."""
 
 
 class OptionalVersionedTextDocumentIdentifier(TypedDict):
-    """ A text document identifier to optionally denote a specific version of a text document. """
+    """A text document identifier to optionally denote a specific version of a text document."""
+
     version: Union[int, None]
-    """ The version number of this document. If a versioned text document identifier
+    """
+    The version number of this document. If a versioned text document identifier
     is sent from the server to the client and the file is not open in the editor
     (the server has not received an open notification before) the server can send
     `null` to indicate that the version is unknown and the content on disk is the
-    truth (as specified with document content ownership). """
-    uri: 'DocumentUri'
-    """ The text document's uri. """
+    truth (as specified with document content ownership).
+    """
+    uri: DocumentUri
+    """The text document's uri."""
 
 
 class AnnotatedTextEdit(TypedDict):
-    """ A special text edit with an additional change annotation.
+    """
+    A special text edit with an additional change annotation.
 
-    @since 3.16.0. """
+    @since 3.16.0.
+    """
+
     annotationId: 'ChangeAnnotationIdentifier'
-    """ The actual identifier of the change annotation """
+    """The actual identifier of the change annotation"""
     range: 'Range'
-    """ The range of the text document to be manipulated. To insert
-    text into a document create a range where start === end. """
+    """
+    The range of the text document to be manipulated. To insert
+    text into a document create a range where start === end.
+    """
     newText: str
-    """ The string to be inserted. For delete operations use an
-    empty string. """
+    """
+    The string to be inserted. For delete operations use an
+    empty string.
+    """
 
 
 class SnippetTextEdit(TypedDict):
-    """ An interactive text edit.
+    """
+    An interactive text edit.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     range: 'Range'
-    """ The range of the text document to be manipulated. """
+    """The range of the text document to be manipulated."""
     snippet: 'StringValue'
-    """ The snippet to be inserted. """
+    """The snippet to be inserted."""
     annotationId: NotRequired['ChangeAnnotationIdentifier']
-    """ The actual identifier of the snippet edit. """
+    """The actual identifier of the snippet edit."""
 
 
 class ResourceOperation(TypedDict):
-    """ A generic resource operation. """
-    kind: str
-    """ The resource operation kind. """
-    annotationId: NotRequired['ChangeAnnotationIdentifier']
-    """ An optional annotation identifier describing the operation.
+    """A generic resource operation."""
 
-    @since 3.16.0 """
+    kind: str
+    """The resource operation kind."""
+    annotationId: NotRequired['ChangeAnnotationIdentifier']
+    """
+    An optional annotation identifier describing the operation.
+
+    @since 3.16.0
+    """
 
 
 class CreateFileOptions(TypedDict):
-    """ Options to create a file. """
+    """Options to create a file."""
+
     overwrite: NotRequired[bool]
-    """ Overwrite existing file. Overwrite wins over `ignoreIfExists` """
+    """Overwrite existing file. Overwrite wins over `ignoreIfExists`"""
     ignoreIfExists: NotRequired[bool]
-    """ Ignore if exists. """
+    """Ignore if exists."""
 
 
 class RenameFileOptions(TypedDict):
-    """ Rename file options """
+    """Rename file options"""
+
     overwrite: NotRequired[bool]
-    """ Overwrite target if existing. Overwrite wins over `ignoreIfExists` """
+    """Overwrite target if existing. Overwrite wins over `ignoreIfExists`"""
     ignoreIfExists: NotRequired[bool]
-    """ Ignores if target exists. """
+    """Ignores if target exists."""
 
 
 class DeleteFileOptions(TypedDict):
-    """ Delete file options """
+    """Delete file options"""
+
     recursive: NotRequired[bool]
-    """ Delete the content recursively if a folder is denoted. """
+    """Delete the content recursively if a folder is denoted."""
     ignoreIfNotExists: NotRequired[bool]
-    """ Ignore the operation if the file doesn't exist. """
+    """Ignore the operation if the file doesn't exist."""
 
 
 class FileOperationPattern(TypedDict):
-    """ A pattern to describe in which file operation requests or notifications
+    """
+    A pattern to describe in which file operation requests or notifications
     the server is interested in receiving.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     glob: str
-    """ The glob pattern to match. Glob patterns can have the following syntax:
+    """
+    The glob pattern to match. Glob patterns can have the following syntax:
     - `*` to match one or more characters in a path segment
     - `?` to match on one character in a path segment
     - `**` to match any number of path segments, including none
-    - `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)
+    - `{}` to group sub patterns into an OR expression. (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)
     - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
-    - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`) """
+    - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
+    """
     matches: NotRequired['FileOperationPatternKind']
-    """ Whether to match files or folders with this pattern.
+    """
+    Whether to match files or folders with this pattern.
 
-    Matches both if undefined. """
+    Matches both if undefined.
+    """
     options: NotRequired['FileOperationPatternOptions']
-    """ Additional options used during matching. """
+    """Additional options used during matching."""
 
 
 class WorkspaceFullDocumentDiagnosticReport(TypedDict):
-    """ A full document diagnostic report for a workspace diagnostic result.
+    """
+    A full document diagnostic report for a workspace diagnostic result.
 
-    @since 3.17.0 """
-    uri: 'DocumentUri'
-    """ The URI for which diagnostic information is reported. """
+    @since 3.17.0
+    """
+
+    uri: DocumentUri
+    """The URI for which diagnostic information is reported."""
     version: Union[int, None]
-    """ The version number for which the diagnostics are reported.
-    If the document is not marked as open `null` can be provided. """
+    """
+    The version number for which the diagnostics are reported.
+    If the document is not marked as open `null` can be provided.
+    """
     kind: Literal['full']
-    """ A full document diagnostic report. """
+    """A full document diagnostic report."""
     resultId: NotRequired[str]
-    """ An optional result id. If provided it will
+    """
+    An optional result id. If provided it will
     be sent on the next diagnostic request for the
-    same document. """
+    same document.
+    """
     items: List['Diagnostic']
-    """ The actual items. """
+    """The actual items."""
 
 
 class WorkspaceUnchangedDocumentDiagnosticReport(TypedDict):
-    """ An unchanged document diagnostic report for a workspace diagnostic result.
+    """
+    An unchanged document diagnostic report for a workspace diagnostic result.
 
-    @since 3.17.0 """
-    uri: 'DocumentUri'
-    """ The URI for which diagnostic information is reported. """
+    @since 3.17.0
+    """
+
+    uri: DocumentUri
+    """The URI for which diagnostic information is reported."""
     version: Union[int, None]
-    """ The version number for which the diagnostics are reported.
-    If the document is not marked as open `null` can be provided. """
+    """
+    The version number for which the diagnostics are reported.
+    If the document is not marked as open `null` can be provided.
+    """
     kind: Literal['unchanged']
-    """ A document diagnostic report indicating
+    """
+    A document diagnostic report indicating
     no changes to the last result. A server can
     only return `unchanged` if result ids are
-    provided. """
+    provided.
+    """
     resultId: str
-    """ A result id which will be sent on the next
-    diagnostic request for the same document. """
+    """
+    A result id which will be sent on the next
+    diagnostic request for the same document.
+    """
 
 
 class NotebookCell(TypedDict):
-    """ A notebook cell.
+    """
+    A notebook cell.
 
     A cell's document URI must be unique across ALL notebook
     cells and can therefore be used to uniquely identify a
     notebook cell or the cell's text document.
 
-    @since 3.17.0 """
-    kind: 'NotebookCellKind'
-    """ The cell's kind """
-    document: 'DocumentUri'
-    """ The URI of the cell's text document
-    content. """
-    metadata: NotRequired['LSPObject']
-    """ Additional metadata stored with the cell.
+    @since 3.17.0
+    """
 
-    Note: should always be an object literal (e.g. LSPObject) """
+    kind: 'NotebookCellKind'
+    """The cell's kind"""
+    document: DocumentUri
+    """
+    The URI of the cell's text document
+    content.
+    """
+    metadata: NotRequired['LSPObject']
+    """
+    Additional metadata stored with the cell.
+
+    Note: should always be an object literal (e.g. LSPObject)
+    """
     executionSummary: NotRequired['ExecutionSummary']
-    """ Additional execution summary information
-    if supported by the client. """
+    """
+    Additional execution summary information
+    if supported by the client.
+    """
 
 
 class NotebookDocumentFilterWithNotebook(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     notebook: Union[str, 'NotebookDocumentFilter']
-    """ The notebook to be synced If a string
+    """
+    The notebook to be synced If a string
     value is provided it matches against the
-    notebook type. '*' matches every notebook. """
+    notebook type. '*' matches every notebook.
+    """
     cells: NotRequired[List['NotebookCellLanguage']]
-    """ The cells of the matching notebook to be synced. """
+    """The cells of the matching notebook to be synced."""
 
 
 class NotebookDocumentFilterWithCells(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     notebook: NotRequired[Union[str, 'NotebookDocumentFilter']]
-    """ The notebook to be synced If a string
+    """
+    The notebook to be synced If a string
     value is provided it matches against the
-    notebook type. '*' matches every notebook. """
+    notebook type. '*' matches every notebook.
+    """
     cells: List['NotebookCellLanguage']
-    """ The cells of the matching notebook to be synced. """
+    """The cells of the matching notebook to be synced."""
 
 
 class NotebookDocumentCellChanges(TypedDict):
-    """ Cell changes to a notebook document.
+    """
+    Cell changes to a notebook document.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     structure: NotRequired['NotebookDocumentCellChangeStructure']
-    """ Changes to the cell structure to add or
-    remove cells. """
+    """
+    Changes to the cell structure to add or
+    remove cells.
+    """
     data: NotRequired[List['NotebookCell']]
-    """ Changes to notebook cells properties like its
-    kind, execution summary or metadata. """
+    """
+    Changes to notebook cells properties like its
+    kind, execution summary or metadata.
+    """
     textContent: NotRequired[List['NotebookDocumentCellContentChanges']]
-    """ Changes to the text content of notebook cells. """
+    """Changes to the text content of notebook cells."""
 
 
 class SelectedCompletionInfo(TypedDict):
-    """ Describes the currently selected completion item.
+    """
+    Describes the currently selected completion item.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     range: 'Range'
-    """ The range that will be replaced if this completion item is accepted. """
+    """The range that will be replaced if this completion item is accepted."""
     text: str
-    """ The text the range will be replaced with if this completion is accepted. """
+    """The text the range will be replaced with if this completion is accepted."""
 
 
 class ClientInfo(TypedDict):
-    """ Information about the client
+    """
+    Information about the client
 
     @since 3.15.0
-    @since 3.18.0 ClientInfo type name added. """
+    @since 3.18.0 ClientInfo type name added.
+    """
+
     name: str
-    """ The name of the client as defined by the client. """
+    """The name of the client as defined by the client."""
     version: NotRequired[str]
-    """ The client's version as defined by the client. """
+    """The client's version as defined by the client."""
 
 
 class ClientCapabilities(TypedDict):
-    """ Defines the capabilities provided by the client. """
+    """Defines the capabilities provided by the client."""
+
     workspace: NotRequired['WorkspaceClientCapabilities']
-    """ Workspace specific client capabilities. """
+    """Workspace specific client capabilities."""
     textDocument: NotRequired['TextDocumentClientCapabilities']
-    """ Text document specific client capabilities. """
+    """Text document specific client capabilities."""
     notebookDocument: NotRequired['NotebookDocumentClientCapabilities']
-    """ Capabilities specific to the notebook document support.
+    """
+    Capabilities specific to the notebook document support.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     window: NotRequired['WindowClientCapabilities']
-    """ Window specific client capabilities. """
+    """Window specific client capabilities."""
     general: NotRequired['GeneralClientCapabilities']
-    """ General client capabilities.
+    """
+    General client capabilities.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     experimental: NotRequired['LSPAny']
-    """ Experimental client capabilities. """
+    """Experimental client capabilities."""
 
 
 class TextDocumentSyncOptions(TypedDict):
     openClose: NotRequired[bool]
-    """ Open and close notifications are sent to the server. If omitted open close notification should not
-    be sent. """
+    """
+    Open and close notifications are sent to the server. If omitted open close notification should not
+    be sent.
+    """
     change: NotRequired['TextDocumentSyncKind']
-    """ Change notifications are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full
-    and TextDocumentSyncKind.Incremental. If omitted it defaults to TextDocumentSyncKind.None. """
+    """
+    Change notifications are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full
+    and TextDocumentSyncKind.Incremental. If omitted it defaults to TextDocumentSyncKind.None.
+    """
     willSave: NotRequired[bool]
-    """ If present will save notifications are sent to the server. If omitted the notification should not be
-    sent. """
+    """
+    If present will save notifications are sent to the server. If omitted the notification should not be
+    sent.
+    """
     willSaveWaitUntil: NotRequired[bool]
-    """ If present will save wait until requests are sent to the server. If omitted the request should not be
-    sent. """
+    """
+    If present will save wait until requests are sent to the server. If omitted the request should not be
+    sent.
+    """
     save: NotRequired[Union[bool, 'SaveOptions']]
-    """ If present save notifications are sent to the server. If omitted the notification should not be
-    sent. """
+    """
+    If present save notifications are sent to the server. If omitted the notification should not be
+    sent.
+    """
 
 
 class WorkspaceOptions(TypedDict):
-    """ Defines workspace specific capabilities of the server.
-
-    @since 3.18.0 """
-    workspaceFolders: NotRequired['WorkspaceFoldersServerCapabilities']
-    """ The server supports workspace folder.
-
-    @since 3.6.0 """
-    fileOperations: NotRequired['FileOperationOptions']
-    """ The server is interested in notifications/requests for operations on files.
-
-    @since 3.16.0 """
-    textDocumentContent: NotRequired[Union['TextDocumentContentOptions', 'TextDocumentContentRegistrationOptions']]
-    """ The server supports the `workspace/textDocumentContent` request.
+    """
+    Defines workspace specific capabilities of the server.
 
     @since 3.18.0
-    @proposed """
+    """
+
+    workspaceFolders: NotRequired['WorkspaceFoldersServerCapabilities']
+    """
+    The server supports workspace folder.
+
+    @since 3.6.0
+    """
+    fileOperations: NotRequired['FileOperationOptions']
+    """
+    The server is interested in notifications/requests for operations on files.
+
+    @since 3.16.0
+    """
+    textDocumentContent: NotRequired[Union['TextDocumentContentOptions', 'TextDocumentContentRegistrationOptions']]
+    """
+    The server supports the `workspace/textDocumentContent` request.
+
+    @since 3.18.0
+    @proposed
+    """
 
 
 class TextDocumentContentChangePartial(TypedDict):
-    """ @since 3.18.0 """
-    range: 'Range'
-    """ The range of the document that changed. """
-    rangeLength: NotRequired[Uint]
-    """ The optional length of the range that got replaced.
+    """@since 3.18.0"""
 
-    @deprecated use range instead. """
+    range: 'Range'
+    """The range of the document that changed."""
+    rangeLength: NotRequired[Uint]
+    """
+    The optional length of the range that got replaced.
+
+    @deprecated use range instead.
+    """
     text: str
-    """ The new text for the provided range. """
+    """The new text for the provided range."""
 
 
 class TextDocumentContentChangeWholeDocument(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     text: str
-    """ The new text of the whole document. """
+    """The new text of the whole document."""
 
 
 class CodeDescription(TypedDict):
-    """ Structure to capture a description for an error code.
+    """
+    Structure to capture a description for an error code.
 
-    @since 3.16.0 """
-    href: 'URI'
-    """ An URI to open with more information about the diagnostic error. """
+    @since 3.16.0
+    """
+
+    href: URI
+    """An URI to open with more information about the diagnostic error."""
 
 
 class DiagnosticRelatedInformation(TypedDict):
-    """ Represents a related message and source code location for a diagnostic. This should be
+    """
+    Represents a related message and source code location for a diagnostic. This should be
     used to point to code locations that cause or related to a diagnostics, e.g when duplicating
-    a symbol in a scope. """
+    a symbol in a scope.
+    """
+
     location: 'Location'
-    """ The location of this related diagnostic information. """
+    """The location of this related diagnostic information."""
     message: str
-    """ The message of this related diagnostic information. """
+    """The message of this related diagnostic information."""
 
 
 class EditRangeWithInsertReplace(TypedDict):
-    """ Edit range variant that includes ranges for insert and replace operations.
+    """
+    Edit range variant that includes ranges for insert and replace operations.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     insert: 'Range'
     replace: 'Range'
 
 
 class ServerCompletionItemOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     labelDetailsSupport: NotRequired[bool]
-    """ The server has support for completion item label
+    """
+    The server has support for completion item label
     details (see also `CompletionItemLabelDetails`) when
     receiving a completion item in a resolve call.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class MarkedStringWithLanguage(TypedDict):
-    """ @since 3.18.0
-    @deprecated use MarkupContent instead. """
+    """
+    @since 3.18.0
+    @deprecated use MarkupContent instead.
+    """
+
     language: str
     value: str
 
 
 class ParameterInformation(TypedDict):
-    """ Represents a parameter of a callable-signature. A parameter can
-    have a label and a doc-comment. """
-    label: Union[str, List[Union[Uint, Uint]]]
-    """ The label of this parameter information.
+    """
+    Represents a parameter of a callable-signature. A parameter can
+    have a label and a doc-comment.
+    """
+
+    label: Union[str, tuple[Uint, Uint]]
+    """
+    The label of this parameter information.
 
     Either a string or an inclusive start and exclusive end offsets within its containing
     signature label. (see SignatureInformation.label). The offsets are based on a UTF-16
@@ -4723,269 +6092,362 @@ class ParameterInformation(TypedDict):
     capability.
 
     *Note*: a label of type string should be a substring of its containing signature label.
-    Its intended use case is to highlight the parameter label part in the `SignatureInformation.label`. """
+    Its intended use case is to highlight the parameter label part in the `SignatureInformation.label`.
+    """
     documentation: NotRequired[Union[str, 'MarkupContent']]
-    """ The human-readable doc-comment of this parameter. Will be shown
-    in the UI but can be omitted. """
+    """
+    The human-readable doc-comment of this parameter. Will be shown
+    in the UI but can be omitted.
+    """
 
 
 class CodeActionKindDocumentation(TypedDict):
-    """ Documentation for a class of code actions.
+    """
+    Documentation for a class of code actions.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     kind: 'CodeActionKind'
-    """ The kind of the code action being documented.
+    """
+    The kind of the code action being documented.
 
     If the kind is generic, such as `CodeActionKind.Refactor`, the documentation will be shown whenever any
     refactorings are returned. If the kind if more specific, such as `CodeActionKind.RefactorExtract`, the
-    documentation will only be shown when extract refactoring code actions are returned. """
+    documentation will only be shown when extract refactoring code actions are returned.
+    """
     command: 'Command'
-    """ Command that is ued to display the documentation to the user.
+    """
+    Command that is ued to display the documentation to the user.
 
-    The title of this documentation code action is taken from {@linkcode Command.title} """
+    The title of this documentation code action is taken from {@linkcode Command.title}
+    """
 
 
 class NotebookCellTextDocumentFilter(TypedDict):
-    """ A notebook cell text document filter denotes a cell text
+    """
+    A notebook cell text document filter denotes a cell text
     document by different properties.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     notebook: Union[str, 'NotebookDocumentFilter']
-    """ A filter that matches against the notebook
+    """
+    A filter that matches against the notebook
     containing the notebook cell. If a string
     value is provided it matches against the
-    notebook type. '*' matches every notebook. """
+    notebook type. '*' matches every notebook.
+    """
     language: NotRequired[str]
-    """ A language id like `python`.
+    """
+    A language id like `python`.
 
     Will be matched against the language id of the
-    notebook cell document. '*' matches every language. """
+    notebook cell document. '*' matches every language.
+    """
 
 
 class FileOperationPatternOptions(TypedDict):
-    """ Matching options for the file operation pattern.
+    """
+    Matching options for the file operation pattern.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     ignoreCase: NotRequired[bool]
-    """ The pattern should be matched ignoring casing. """
+    """The pattern should be matched ignoring casing."""
 
 
 class ExecutionSummary(TypedDict):
     executionOrder: Uint
-    """ A strict monotonically increasing value
+    """
+    A strict monotonically increasing value
     indicating the execution order of a cell
-    inside a notebook. """
+    inside a notebook.
+    """
     success: NotRequired[bool]
-    """ Whether the execution was successful or
-    not if known by the client. """
+    """
+    Whether the execution was successful or
+    not if known by the client.
+    """
 
 
 class NotebookCellLanguage(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     language: str
 
 
 class NotebookDocumentCellChangeStructure(TypedDict):
-    """ Structural changes to cells in a notebook document.
+    """
+    Structural changes to cells in a notebook document.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     array: 'NotebookCellArrayChange'
-    """ The change to the cell array. """
+    """The change to the cell array."""
     didOpen: NotRequired[List['TextDocumentItem']]
-    """ Additional opened cell text documents. """
+    """Additional opened cell text documents."""
     didClose: NotRequired[List['TextDocumentIdentifier']]
-    """ Additional closed cell text documents. """
+    """Additional closed cell text documents."""
 
 
 class NotebookDocumentCellContentChanges(TypedDict):
-    """ Content changes to a cell in a notebook document.
+    """
+    Content changes to a cell in a notebook document.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     document: 'VersionedTextDocumentIdentifier'
     changes: List['TextDocumentContentChangeEvent']
 
 
 class WorkspaceClientCapabilities(TypedDict):
-    """ Workspace specific client capabilities. """
+    """Workspace specific client capabilities."""
+
     applyEdit: NotRequired[bool]
-    """ The client supports applying batch edits
+    """
+    The client supports applying batch edits
     to the workspace by supporting the request
-    'workspace/applyEdit' """
+    'workspace/applyEdit'
+    """
     workspaceEdit: NotRequired['WorkspaceEditClientCapabilities']
-    """ Capabilities specific to `WorkspaceEdit`s. """
+    """Capabilities specific to `WorkspaceEdit`s."""
     didChangeConfiguration: NotRequired['DidChangeConfigurationClientCapabilities']
-    """ Capabilities specific to the `workspace/didChangeConfiguration` notification. """
+    """Capabilities specific to the `workspace/didChangeConfiguration` notification."""
     didChangeWatchedFiles: NotRequired['DidChangeWatchedFilesClientCapabilities']
-    """ Capabilities specific to the `workspace/didChangeWatchedFiles` notification. """
+    """Capabilities specific to the `workspace/didChangeWatchedFiles` notification."""
     symbol: NotRequired['WorkspaceSymbolClientCapabilities']
-    """ Capabilities specific to the `workspace/symbol` request. """
+    """Capabilities specific to the `workspace/symbol` request."""
     executeCommand: NotRequired['ExecuteCommandClientCapabilities']
-    """ Capabilities specific to the `workspace/executeCommand` request. """
+    """Capabilities specific to the `workspace/executeCommand` request."""
     workspaceFolders: NotRequired[bool]
-    """ The client has support for workspace folders.
+    """
+    The client has support for workspace folders.
 
-    @since 3.6.0 """
+    @since 3.6.0
+    """
     configuration: NotRequired[bool]
-    """ The client supports `workspace/configuration` requests.
+    """
+    The client supports `workspace/configuration` requests.
 
-    @since 3.6.0 """
+    @since 3.6.0
+    """
     semanticTokens: NotRequired['SemanticTokensWorkspaceClientCapabilities']
-    """ Capabilities specific to the semantic token requests scoped to the
+    """
+    Capabilities specific to the semantic token requests scoped to the
     workspace.
 
-    @since 3.16.0. """
+    @since 3.16.0.
+    """
     codeLens: NotRequired['CodeLensWorkspaceClientCapabilities']
-    """ Capabilities specific to the code lens requests scoped to the
+    """
+    Capabilities specific to the code lens requests scoped to the
     workspace.
 
-    @since 3.16.0. """
+    @since 3.16.0.
+    """
     fileOperations: NotRequired['FileOperationClientCapabilities']
-    """ The client has support for file notifications/requests for user operations on files.
+    """
+    The client has support for file notifications/requests for user operations on files.
 
-    Since 3.16.0 """
+    Since 3.16.0
+    """
     inlineValue: NotRequired['InlineValueWorkspaceClientCapabilities']
-    """ Capabilities specific to the inline values requests scoped to the
+    """
+    Capabilities specific to the inline values requests scoped to the
     workspace.
 
-    @since 3.17.0. """
+    @since 3.17.0.
+    """
     inlayHint: NotRequired['InlayHintWorkspaceClientCapabilities']
-    """ Capabilities specific to the inlay hint requests scoped to the
+    """
+    Capabilities specific to the inlay hint requests scoped to the
     workspace.
 
-    @since 3.17.0. """
+    @since 3.17.0.
+    """
     diagnostics: NotRequired['DiagnosticWorkspaceClientCapabilities']
-    """ Capabilities specific to the diagnostic requests scoped to the
+    """
+    Capabilities specific to the diagnostic requests scoped to the
     workspace.
 
-    @since 3.17.0. """
+    @since 3.17.0.
+    """
     foldingRange: NotRequired['FoldingRangeWorkspaceClientCapabilities']
-    """ Capabilities specific to the folding range requests scoped to the workspace.
+    """
+    Capabilities specific to the folding range requests scoped to the workspace.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     textDocumentContent: NotRequired['TextDocumentContentClientCapabilities']
-    """ Capabilities specific to the `workspace/textDocumentContent` request.
+    """
+    Capabilities specific to the `workspace/textDocumentContent` request.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class TextDocumentClientCapabilities(TypedDict):
-    """ Text document specific client capabilities. """
+    """Text document specific client capabilities."""
+
     synchronization: NotRequired['TextDocumentSyncClientCapabilities']
-    """ Defines which synchronization capabilities the client supports. """
+    """Defines which synchronization capabilities the client supports."""
     filters: NotRequired['TextDocumentFilterClientCapabilities']
-    """ Defines which filters the client supports.
-
-    @since 3.18.0 """
-    completion: NotRequired['CompletionClientCapabilities']
-    """ Capabilities specific to the `textDocument/completion` request. """
-    hover: NotRequired['HoverClientCapabilities']
-    """ Capabilities specific to the `textDocument/hover` request. """
-    signatureHelp: NotRequired['SignatureHelpClientCapabilities']
-    """ Capabilities specific to the `textDocument/signatureHelp` request. """
-    declaration: NotRequired['DeclarationClientCapabilities']
-    """ Capabilities specific to the `textDocument/declaration` request.
-
-    @since 3.14.0 """
-    definition: NotRequired['DefinitionClientCapabilities']
-    """ Capabilities specific to the `textDocument/definition` request. """
-    typeDefinition: NotRequired['TypeDefinitionClientCapabilities']
-    """ Capabilities specific to the `textDocument/typeDefinition` request.
-
-    @since 3.6.0 """
-    implementation: NotRequired['ImplementationClientCapabilities']
-    """ Capabilities specific to the `textDocument/implementation` request.
-
-    @since 3.6.0 """
-    references: NotRequired['ReferenceClientCapabilities']
-    """ Capabilities specific to the `textDocument/references` request. """
-    documentHighlight: NotRequired['DocumentHighlightClientCapabilities']
-    """ Capabilities specific to the `textDocument/documentHighlight` request. """
-    documentSymbol: NotRequired['DocumentSymbolClientCapabilities']
-    """ Capabilities specific to the `textDocument/documentSymbol` request. """
-    codeAction: NotRequired['CodeActionClientCapabilities']
-    """ Capabilities specific to the `textDocument/codeAction` request. """
-    codeLens: NotRequired['CodeLensClientCapabilities']
-    """ Capabilities specific to the `textDocument/codeLens` request. """
-    documentLink: NotRequired['DocumentLinkClientCapabilities']
-    """ Capabilities specific to the `textDocument/documentLink` request. """
-    colorProvider: NotRequired['DocumentColorClientCapabilities']
-    """ Capabilities specific to the `textDocument/documentColor` and the
-    `textDocument/colorPresentation` request.
-
-    @since 3.6.0 """
-    formatting: NotRequired['DocumentFormattingClientCapabilities']
-    """ Capabilities specific to the `textDocument/formatting` request. """
-    rangeFormatting: NotRequired['DocumentRangeFormattingClientCapabilities']
-    """ Capabilities specific to the `textDocument/rangeFormatting` request. """
-    onTypeFormatting: NotRequired['DocumentOnTypeFormattingClientCapabilities']
-    """ Capabilities specific to the `textDocument/onTypeFormatting` request. """
-    rename: NotRequired['RenameClientCapabilities']
-    """ Capabilities specific to the `textDocument/rename` request. """
-    foldingRange: NotRequired['FoldingRangeClientCapabilities']
-    """ Capabilities specific to the `textDocument/foldingRange` request.
-
-    @since 3.10.0 """
-    selectionRange: NotRequired['SelectionRangeClientCapabilities']
-    """ Capabilities specific to the `textDocument/selectionRange` request.
-
-    @since 3.15.0 """
-    publishDiagnostics: NotRequired['PublishDiagnosticsClientCapabilities']
-    """ Capabilities specific to the `textDocument/publishDiagnostics` notification. """
-    callHierarchy: NotRequired['CallHierarchyClientCapabilities']
-    """ Capabilities specific to the various call hierarchy requests.
-
-    @since 3.16.0 """
-    semanticTokens: NotRequired['SemanticTokensClientCapabilities']
-    """ Capabilities specific to the various semantic token request.
-
-    @since 3.16.0 """
-    linkedEditingRange: NotRequired['LinkedEditingRangeClientCapabilities']
-    """ Capabilities specific to the `textDocument/linkedEditingRange` request.
-
-    @since 3.16.0 """
-    moniker: NotRequired['MonikerClientCapabilities']
-    """ Client capabilities specific to the `textDocument/moniker` request.
-
-    @since 3.16.0 """
-    typeHierarchy: NotRequired['TypeHierarchyClientCapabilities']
-    """ Capabilities specific to the various type hierarchy requests.
-
-    @since 3.17.0 """
-    inlineValue: NotRequired['InlineValueClientCapabilities']
-    """ Capabilities specific to the `textDocument/inlineValue` request.
-
-    @since 3.17.0 """
-    inlayHint: NotRequired['InlayHintClientCapabilities']
-    """ Capabilities specific to the `textDocument/inlayHint` request.
-
-    @since 3.17.0 """
-    diagnostic: NotRequired['DiagnosticClientCapabilities']
-    """ Capabilities specific to the diagnostic pull model.
-
-    @since 3.17.0 """
-    inlineCompletion: NotRequired['InlineCompletionClientCapabilities']
-    """ Client capabilities specific to inline completions.
+    """
+    Defines which filters the client supports.
 
     @since 3.18.0
-    @proposed """
+    """
+    completion: NotRequired['CompletionClientCapabilities']
+    """Capabilities specific to the `textDocument/completion` request."""
+    hover: NotRequired['HoverClientCapabilities']
+    """Capabilities specific to the `textDocument/hover` request."""
+    signatureHelp: NotRequired['SignatureHelpClientCapabilities']
+    """Capabilities specific to the `textDocument/signatureHelp` request."""
+    declaration: NotRequired['DeclarationClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/declaration` request.
+
+    @since 3.14.0
+    """
+    definition: NotRequired['DefinitionClientCapabilities']
+    """Capabilities specific to the `textDocument/definition` request."""
+    typeDefinition: NotRequired['TypeDefinitionClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/typeDefinition` request.
+
+    @since 3.6.0
+    """
+    implementation: NotRequired['ImplementationClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/implementation` request.
+
+    @since 3.6.0
+    """
+    references: NotRequired['ReferenceClientCapabilities']
+    """Capabilities specific to the `textDocument/references` request."""
+    documentHighlight: NotRequired['DocumentHighlightClientCapabilities']
+    """Capabilities specific to the `textDocument/documentHighlight` request."""
+    documentSymbol: NotRequired['DocumentSymbolClientCapabilities']
+    """Capabilities specific to the `textDocument/documentSymbol` request."""
+    codeAction: NotRequired['CodeActionClientCapabilities']
+    """Capabilities specific to the `textDocument/codeAction` request."""
+    codeLens: NotRequired['CodeLensClientCapabilities']
+    """Capabilities specific to the `textDocument/codeLens` request."""
+    documentLink: NotRequired['DocumentLinkClientCapabilities']
+    """Capabilities specific to the `textDocument/documentLink` request."""
+    colorProvider: NotRequired['DocumentColorClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/documentColor` and the
+    `textDocument/colorPresentation` request.
+
+    @since 3.6.0
+    """
+    formatting: NotRequired['DocumentFormattingClientCapabilities']
+    """Capabilities specific to the `textDocument/formatting` request."""
+    rangeFormatting: NotRequired['DocumentRangeFormattingClientCapabilities']
+    """Capabilities specific to the `textDocument/rangeFormatting` request."""
+    onTypeFormatting: NotRequired['DocumentOnTypeFormattingClientCapabilities']
+    """Capabilities specific to the `textDocument/onTypeFormatting` request."""
+    rename: NotRequired['RenameClientCapabilities']
+    """Capabilities specific to the `textDocument/rename` request."""
+    foldingRange: NotRequired['FoldingRangeClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/foldingRange` request.
+
+    @since 3.10.0
+    """
+    selectionRange: NotRequired['SelectionRangeClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/selectionRange` request.
+
+    @since 3.15.0
+    """
+    publishDiagnostics: NotRequired['PublishDiagnosticsClientCapabilities']
+    """Capabilities specific to the `textDocument/publishDiagnostics` notification."""
+    callHierarchy: NotRequired['CallHierarchyClientCapabilities']
+    """
+    Capabilities specific to the various call hierarchy requests.
+
+    @since 3.16.0
+    """
+    semanticTokens: NotRequired['SemanticTokensClientCapabilities']
+    """
+    Capabilities specific to the various semantic token request.
+
+    @since 3.16.0
+    """
+    linkedEditingRange: NotRequired['LinkedEditingRangeClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/linkedEditingRange` request.
+
+    @since 3.16.0
+    """
+    moniker: NotRequired['MonikerClientCapabilities']
+    """
+    Client capabilities specific to the `textDocument/moniker` request.
+
+    @since 3.16.0
+    """
+    typeHierarchy: NotRequired['TypeHierarchyClientCapabilities']
+    """
+    Capabilities specific to the various type hierarchy requests.
+
+    @since 3.17.0
+    """
+    inlineValue: NotRequired['InlineValueClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/inlineValue` request.
+
+    @since 3.17.0
+    """
+    inlayHint: NotRequired['InlayHintClientCapabilities']
+    """
+    Capabilities specific to the `textDocument/inlayHint` request.
+
+    @since 3.17.0
+    """
+    diagnostic: NotRequired['DiagnosticClientCapabilities']
+    """
+    Capabilities specific to the diagnostic pull model.
+
+    @since 3.17.0
+    """
+    inlineCompletion: NotRequired['InlineCompletionClientCapabilities']
+    """
+    Client capabilities specific to inline completions.
+
+    @since 3.18.0
+    @proposed
+    """
 
 
 class NotebookDocumentClientCapabilities(TypedDict):
-    """ Capabilities specific to the notebook document support.
+    """
+    Capabilities specific to the notebook document support.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     synchronization: 'NotebookDocumentSyncClientCapabilities'
-    """ Capabilities specific to notebook document synchronization
+    """
+    Capabilities specific to notebook document synchronization
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class WindowClientCapabilities(TypedDict):
     workDoneProgress: NotRequired[bool]
-    """ It indicates whether the client supports server initiated
+    """
+    It indicates whether the client supports server initiated
     progress using the `window/workDoneProgress/create` request.
 
     The capability also controls Whether client supports handling
@@ -4993,38 +6455,53 @@ class WindowClientCapabilities(TypedDict):
     `workDoneProgress` property in the request specific server
     capabilities.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     showMessage: NotRequired['ShowMessageRequestClientCapabilities']
-    """ Capabilities specific to the showMessage request.
+    """
+    Capabilities specific to the showMessage request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     showDocument: NotRequired['ShowDocumentClientCapabilities']
-    """ Capabilities specific to the showDocument request.
+    """
+    Capabilities specific to the showDocument request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class GeneralClientCapabilities(TypedDict):
-    """ General client capabilities.
+    """
+    General client capabilities.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     staleRequestSupport: NotRequired['StaleRequestSupportOptions']
-    """ Client capability that signals how the client
+    """
+    Client capability that signals how the client
     handles stale requests (e.g. a request
     for which the client will not process the response
     anymore since the information is outdated).
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     regularExpressions: NotRequired['RegularExpressionsClientCapabilities']
-    """ Client capabilities specific to regular expressions.
+    """
+    Client capabilities specific to regular expressions.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     markdown: NotRequired['MarkdownClientCapabilities']
-    """ Client capabilities specific to the client's markdown parser.
+    """
+    Client capabilities specific to the client's markdown parser.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     positionEncodings: NotRequired[List['PositionEncodingKind']]
-    """ The position encodings supported by the client. Client and server
+    """
+    The position encodings supported by the client. Client and server
     have to agree on the same position encoding to ensure that offsets
     (e.g. character position in a line) are interpreted the same on both
     sides.
@@ -5041,326 +6518,414 @@ class GeneralClientCapabilities(TypedDict):
     is best done where the file is read which is usually on the server
     side.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class WorkspaceFoldersServerCapabilities(TypedDict):
     supported: NotRequired[bool]
-    """ The server has support for workspace folders """
+    """The server has support for workspace folders"""
     changeNotifications: NotRequired[Union[str, bool]]
-    """ Whether the server wants to receive workspace folder
+    """
+    Whether the server wants to receive workspace folder
     change notifications.
 
     If a string is provided the string is treated as an ID
     under which the notification is registered on the client
     side. The ID can be used to unregister for these events
-    using the `client/unregisterCapability` request. """
+    using the `client/unregisterCapability` request.
+    """
 
 
 class FileOperationOptions(TypedDict):
-    """ Options for notifications/requests for user operations on files.
+    """
+    Options for notifications/requests for user operations on files.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     didCreate: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving didCreateFiles notifications. """
+    """The server is interested in receiving didCreateFiles notifications."""
     willCreate: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving willCreateFiles requests. """
+    """The server is interested in receiving willCreateFiles requests."""
     didRename: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving didRenameFiles notifications. """
+    """The server is interested in receiving didRenameFiles notifications."""
     willRename: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving willRenameFiles requests. """
+    """The server is interested in receiving willRenameFiles requests."""
     didDelete: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving didDeleteFiles file notifications. """
+    """The server is interested in receiving didDeleteFiles file notifications."""
     willDelete: NotRequired['FileOperationRegistrationOptions']
-    """ The server is interested in receiving willDeleteFiles file requests. """
+    """The server is interested in receiving willDeleteFiles file requests."""
 
 
 class RelativePattern(TypedDict):
-    """ A relative pattern is a helper to construct glob patterns that are matched
+    """
+    A relative pattern is a helper to construct glob patterns that are matched
     relatively to a base URI. The common value for a `baseUri` is a workspace
     folder root, but it can be another absolute URI as well.
 
-    @since 3.17.0 """
-    baseUri: Union['WorkspaceFolder', 'URI']
-    """ A workspace folder or a base URI to which this pattern will be matched
-    against relatively. """
+    @since 3.17.0
+    """
+
+    baseUri: Union['WorkspaceFolder', URI]
+    """
+    A workspace folder or a base URI to which this pattern will be matched
+    against relatively.
+    """
     pattern: 'Pattern'
-    """ The actual glob pattern; """
+    """The actual glob pattern;"""
 
 
 class TextDocumentFilterLanguage(TypedDict):
-    """ A document filter where `language` is required field.
+    """
+    A document filter where `language` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     language: str
-    """ A language id, like `typescript`. """
+    """A language id, like `typescript`."""
     scheme: NotRequired[str]
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: NotRequired['GlobPattern']
-    """ A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
 
     @since 3.18.0 - support for relative patterns. Whether clients support
     relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`. """
+    `textDocuments.filters.relativePatternSupport`.
+    """
 
 
 class TextDocumentFilterScheme(TypedDict):
-    """ A document filter where `scheme` is required field.
+    """
+    A document filter where `scheme` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     language: NotRequired[str]
-    """ A language id, like `typescript`. """
+    """A language id, like `typescript`."""
     scheme: str
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: NotRequired['GlobPattern']
-    """ A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
 
     @since 3.18.0 - support for relative patterns. Whether clients support
     relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`. """
+    `textDocuments.filters.relativePatternSupport`.
+    """
 
 
 class TextDocumentFilterPattern(TypedDict):
-    """ A document filter where `pattern` is required field.
+    """
+    A document filter where `pattern` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     language: NotRequired[str]
-    """ A language id, like `typescript`. """
+    """A language id, like `typescript`."""
     scheme: NotRequired[str]
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: 'GlobPattern'
-    """ A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
+    """
+    A glob pattern, like **/*.{ts,js}. See TextDocumentFilter for examples.
 
     @since 3.18.0 - support for relative patterns. Whether clients support
     relative patterns depends on the client capability
-    `textDocuments.filters.relativePatternSupport`. """
+    `textDocuments.filters.relativePatternSupport`.
+    """
 
 
 class NotebookDocumentFilterNotebookType(TypedDict):
-    """ A notebook document filter where `notebookType` is required field.
+    """
+    A notebook document filter where `notebookType` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     notebookType: str
-    """ The type of the enclosing notebook. """
+    """The type of the enclosing notebook."""
     scheme: NotRequired[str]
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: NotRequired['GlobPattern']
-    """ A glob pattern. """
+    """A glob pattern."""
 
 
 class NotebookDocumentFilterScheme(TypedDict):
-    """ A notebook document filter where `scheme` is required field.
+    """
+    A notebook document filter where `scheme` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     notebookType: NotRequired[str]
-    """ The type of the enclosing notebook. """
+    """The type of the enclosing notebook."""
     scheme: str
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: NotRequired['GlobPattern']
-    """ A glob pattern. """
+    """A glob pattern."""
 
 
 class NotebookDocumentFilterPattern(TypedDict):
-    """ A notebook document filter where `pattern` is required field.
+    """
+    A notebook document filter where `pattern` is required field.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
+
     notebookType: NotRequired[str]
-    """ The type of the enclosing notebook. """
+    """The type of the enclosing notebook."""
     scheme: NotRequired[str]
-    """ A Uri {@link Uri.scheme scheme}, like `file` or `untitled`. """
+    """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
     pattern: 'GlobPattern'
-    """ A glob pattern. """
+    """A glob pattern."""
 
 
 class NotebookCellArrayChange(TypedDict):
-    """ A change describing how to move a `NotebookCell`
+    """
+    A change describing how to move a `NotebookCell`
     array from state S to S'.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     start: Uint
-    """ The start oftest of the cell that changed. """
+    """The start oftest of the cell that changed."""
     deleteCount: Uint
-    """ The deleted cells """
+    """The deleted cells"""
     cells: NotRequired[List['NotebookCell']]
-    """ The new cells, if any """
+    """The new cells, if any"""
 
 
 class WorkspaceEditClientCapabilities(TypedDict):
     documentChanges: NotRequired[bool]
-    """ The client supports versioned document changes in `WorkspaceEdit`s """
+    """The client supports versioned document changes in `WorkspaceEdit`s"""
     resourceOperations: NotRequired[List['ResourceOperationKind']]
-    """ The resource operations the client supports. Clients should at least
+    """
+    The resource operations the client supports. Clients should at least
     support 'create', 'rename' and 'delete' files and folders.
 
-    @since 3.13.0 """
+    @since 3.13.0
+    """
     failureHandling: NotRequired['FailureHandlingKind']
-    """ The failure handling strategy of a client if applying the workspace edit
+    """
+    The failure handling strategy of a client if applying the workspace edit
     fails.
 
-    @since 3.13.0 """
+    @since 3.13.0
+    """
     normalizesLineEndings: NotRequired[bool]
-    """ Whether the client normalizes line endings to the client specific
+    """
+    Whether the client normalizes line endings to the client specific
     setting.
     If set to `true` the client will normalize line ending characters
     in a workspace edit to the client-specified new line
     character.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     changeAnnotationSupport: NotRequired['ChangeAnnotationsSupportOptions']
-    """ Whether the client in general supports change annotations on text edits,
+    """
+    Whether the client in general supports change annotations on text edits,
     create file, rename file and delete file changes.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     metadataSupport: NotRequired[bool]
-    """ Whether the client supports `WorkspaceEditMetadata` in `WorkspaceEdit`s.
+    """
+    Whether the client supports `WorkspaceEditMetadata` in `WorkspaceEdit`s.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     snippetEditSupport: NotRequired[bool]
-    """ Whether the client supports snippets as text edits.
+    """
+    Whether the client supports snippets as text edits.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class DidChangeConfigurationClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Did change configuration notification supports dynamic registration. """
+    """Did change configuration notification supports dynamic registration."""
 
 
 class DidChangeWatchedFilesClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Did change watched files notification supports dynamic registration. Please note
+    """
+    Did change watched files notification supports dynamic registration. Please note
     that the current protocol doesn't support static configuration for file changes
-    from the server side. """
+    from the server side.
+    """
     relativePatternSupport: NotRequired[bool]
-    """ Whether the client has support for {@link  RelativePattern relative pattern}
+    """
+    Whether the client has support for {@link  RelativePattern relative pattern}
     or not.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class WorkspaceSymbolClientCapabilities(TypedDict):
-    """ Client capabilities for a {@link WorkspaceSymbolRequest}. """
+    """Client capabilities for a {@link WorkspaceSymbolRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Symbol request supports dynamic registration. """
+    """Symbol request supports dynamic registration."""
     symbolKind: NotRequired['ClientSymbolKindOptions']
-    """ Specific capabilities for the `SymbolKind` in the `workspace/symbol` request. """
+    """Specific capabilities for the `SymbolKind` in the `workspace/symbol` request."""
     tagSupport: NotRequired['ClientSymbolTagOptions']
-    """ The client supports tags on `SymbolInformation`.
+    """
+    The client supports tags on `SymbolInformation`.
     Clients supporting tags have to handle unknown tags gracefully.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     resolveSupport: NotRequired['ClientSymbolResolveOptions']
-    """ The client support partial workspace symbols. The client will send the
+    """
+    The client support partial workspace symbols. The client will send the
     request `workspaceSymbol/resolve` to the server to resolve additional
     properties.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class ExecuteCommandClientCapabilities(TypedDict):
-    """ The client capabilities of a {@link ExecuteCommandRequest}. """
+    """The client capabilities of a {@link ExecuteCommandRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Execute command supports dynamic registration. """
+    """Execute command supports dynamic registration."""
 
 
 class SemanticTokensWorkspaceClientCapabilities(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from
+    """
+    Whether the client implementation supports a refresh request sent from
     the server to the client.
 
     Note that this event is global and will force the client to refresh all
     semantic tokens currently shown. It should be used with absolute care
     and is useful for situation where a server for example detects a project
-    wide change that requires such a calculation. """
+    wide change that requires such a calculation.
+    """
 
 
 class CodeLensWorkspaceClientCapabilities(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from the
+    """
+    Whether the client implementation supports a refresh request sent from the
     server to the client.
 
     Note that this event is global and will force the client to refresh all
     code lenses currently shown. It should be used with absolute care and is
     useful for situation where a server for example detect a project wide
-    change that requires such a calculation. """
+    change that requires such a calculation.
+    """
 
 
 class FileOperationClientCapabilities(TypedDict):
-    """ Capabilities relating to events from file operations by the user in the client.
+    """
+    Capabilities relating to events from file operations by the user in the client.
 
     These events do not come from the file system, they come from user operations
     like renaming a file in the UI.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether the client supports dynamic registration for file requests/notifications. """
+    """Whether the client supports dynamic registration for file requests/notifications."""
     didCreate: NotRequired[bool]
-    """ The client has support for sending didCreateFiles notifications. """
+    """The client has support for sending didCreateFiles notifications."""
     willCreate: NotRequired[bool]
-    """ The client has support for sending willCreateFiles requests. """
+    """The client has support for sending willCreateFiles requests."""
     didRename: NotRequired[bool]
-    """ The client has support for sending didRenameFiles notifications. """
+    """The client has support for sending didRenameFiles notifications."""
     willRename: NotRequired[bool]
-    """ The client has support for sending willRenameFiles requests. """
+    """The client has support for sending willRenameFiles requests."""
     didDelete: NotRequired[bool]
-    """ The client has support for sending didDeleteFiles notifications. """
+    """The client has support for sending didDeleteFiles notifications."""
     willDelete: NotRequired[bool]
-    """ The client has support for sending willDeleteFiles requests. """
+    """The client has support for sending willDeleteFiles requests."""
 
 
 class InlineValueWorkspaceClientCapabilities(TypedDict):
-    """ Client workspace capabilities specific to inline values.
+    """
+    Client workspace capabilities specific to inline values.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from the
+    """
+    Whether the client implementation supports a refresh request sent from the
     server to the client.
 
     Note that this event is global and will force the client to refresh all
     inline values currently shown. It should be used with absolute care and is
     useful for situation where a server for example detects a project wide
-    change that requires such a calculation. """
+    change that requires such a calculation.
+    """
 
 
 class InlayHintWorkspaceClientCapabilities(TypedDict):
-    """ Client workspace capabilities specific to inlay hints.
+    """
+    Client workspace capabilities specific to inlay hints.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from
+    """
+    Whether the client implementation supports a refresh request sent from
     the server to the client.
 
     Note that this event is global and will force the client to refresh all
     inlay hints currently shown. It should be used with absolute care and
     is useful for situation where a server for example detects a project wide
-    change that requires such a calculation. """
+    change that requires such a calculation.
+    """
 
 
 class DiagnosticWorkspaceClientCapabilities(TypedDict):
-    """ Workspace client capabilities specific to diagnostic pull requests.
+    """
+    Workspace client capabilities specific to diagnostic pull requests.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from
+    """
+    Whether the client implementation supports a refresh request sent from
     the server to the client.
 
     Note that this event is global and will force the client to refresh all
     pulled diagnostics currently shown. It should be used with absolute care and
     is useful for situation where a server for example detects a project wide
-    change that requires such a calculation. """
+    change that requires such a calculation.
+    """
 
 
 class FoldingRangeWorkspaceClientCapabilities(TypedDict):
-    """ Client workspace capabilities specific to folding ranges
+    """
+    Client workspace capabilities specific to folding ranges
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     refreshSupport: NotRequired[bool]
-    """ Whether the client implementation supports a refresh request sent from the
+    """
+    Whether the client implementation supports a refresh request sent from the
     server to the client.
 
     Note that this event is global and will force the client to refresh all
@@ -5369,389 +6934,506 @@ class FoldingRangeWorkspaceClientCapabilities(TypedDict):
     change that requires such a calculation.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class TextDocumentContentClientCapabilities(TypedDict):
-    """ Client capabilities for a text document content provider.
+    """
+    Client capabilities for a text document content provider.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Text document content provider supports dynamic registration. """
+    """Text document content provider supports dynamic registration."""
 
 
 class TextDocumentSyncClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether text document synchronization supports dynamic registration. """
+    """Whether text document synchronization supports dynamic registration."""
     willSave: NotRequired[bool]
-    """ The client supports sending will save notifications. """
+    """The client supports sending will save notifications."""
     willSaveWaitUntil: NotRequired[bool]
-    """ The client supports sending a will save request and
+    """
+    The client supports sending a will save request and
     waits for a response providing text edits which will
-    be applied to the document before it is saved. """
+    be applied to the document before it is saved.
+    """
     didSave: NotRequired[bool]
-    """ The client supports did save notifications. """
+    """The client supports did save notifications."""
 
 
 class TextDocumentFilterClientCapabilities(TypedDict):
     relativePatternSupport: NotRequired[bool]
-    """ The client supports Relative Patterns.
+    """
+    The client supports Relative Patterns.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
 
 
 class CompletionClientCapabilities(TypedDict):
-    """ Completion client capabilities """
+    """Completion client capabilities"""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether completion supports dynamic registration. """
+    """Whether completion supports dynamic registration."""
     completionItem: NotRequired['ClientCompletionItemOptions']
-    """ The client supports the following `CompletionItem` specific
-    capabilities. """
+    """
+    The client supports the following `CompletionItem` specific
+    capabilities.
+    """
     completionItemKind: NotRequired['ClientCompletionItemOptionsKind']
     insertTextMode: NotRequired['InsertTextMode']
-    """ Defines how the client handles whitespace and indentation
+    """
+    Defines how the client handles whitespace and indentation
     when accepting a completion item that uses multi line
     text in either `insertText` or `textEdit`.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     contextSupport: NotRequired[bool]
-    """ The client supports to send additional context information for a
-    `textDocument/completion` request. """
+    """
+    The client supports to send additional context information for a
+    `textDocument/completion` request.
+    """
     completionList: NotRequired['CompletionListCapabilities']
-    """ The client supports the following `CompletionList` specific
+    """
+    The client supports the following `CompletionList` specific
     capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class HoverClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether hover supports dynamic registration. """
+    """Whether hover supports dynamic registration."""
     contentFormat: NotRequired[List['MarkupKind']]
-    """ Client supports the following content formats for the content
-    property. The order describes the preferred format of the client. """
+    """
+    Client supports the following content formats for the content
+    property. The order describes the preferred format of the client.
+    """
 
 
 class SignatureHelpClientCapabilities(TypedDict):
-    """ Client Capabilities for a {@link SignatureHelpRequest}. """
+    """Client Capabilities for a {@link SignatureHelpRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether signature help supports dynamic registration. """
+    """Whether signature help supports dynamic registration."""
     signatureInformation: NotRequired['ClientSignatureInformationOptions']
-    """ The client supports the following `SignatureInformation`
-    specific properties. """
+    """
+    The client supports the following `SignatureInformation`
+    specific properties.
+    """
     contextSupport: NotRequired[bool]
-    """ The client supports to send additional context information for a
+    """
+    The client supports to send additional context information for a
     `textDocument/signatureHelp` request. A client that opts into
     contextSupport will also support the `retriggerCharacters` on
     `SignatureHelpOptions`.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
 
 
 class DeclarationClientCapabilities(TypedDict):
-    """ @since 3.14.0 """
+    """@since 3.14.0"""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether declaration supports dynamic registration. If this is set to `true`
+    """
+    Whether declaration supports dynamic registration. If this is set to `true`
     the client supports the new `DeclarationRegistrationOptions` return value
-    for the corresponding server capability as well. """
+    for the corresponding server capability as well.
+    """
     linkSupport: NotRequired[bool]
-    """ The client supports additional metadata in the form of declaration links. """
+    """The client supports additional metadata in the form of declaration links."""
 
 
 class DefinitionClientCapabilities(TypedDict):
-    """ Client Capabilities for a {@link DefinitionRequest}. """
-    dynamicRegistration: NotRequired[bool]
-    """ Whether definition supports dynamic registration. """
-    linkSupport: NotRequired[bool]
-    """ The client supports additional metadata in the form of definition links.
+    """Client Capabilities for a {@link DefinitionRequest}."""
 
-    @since 3.14.0 """
+    dynamicRegistration: NotRequired[bool]
+    """Whether definition supports dynamic registration."""
+    linkSupport: NotRequired[bool]
+    """
+    The client supports additional metadata in the form of definition links.
+
+    @since 3.14.0
+    """
 
 
 class TypeDefinitionClientCapabilities(TypedDict):
-    """ Since 3.6.0 """
-    dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
-    the client supports the new `TypeDefinitionRegistrationOptions` return value
-    for the corresponding server capability as well. """
-    linkSupport: NotRequired[bool]
-    """ The client supports additional metadata in the form of definition links.
+    """Since 3.6.0"""
 
-    Since 3.14.0 """
+    dynamicRegistration: NotRequired[bool]
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
+    the client supports the new `TypeDefinitionRegistrationOptions` return value
+    for the corresponding server capability as well.
+    """
+    linkSupport: NotRequired[bool]
+    """
+    The client supports additional metadata in the form of definition links.
+
+    Since 3.14.0
+    """
 
 
 class ImplementationClientCapabilities(TypedDict):
-    """ @since 3.6.0 """
-    dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
-    the client supports the new `ImplementationRegistrationOptions` return value
-    for the corresponding server capability as well. """
-    linkSupport: NotRequired[bool]
-    """ The client supports additional metadata in the form of definition links.
+    """@since 3.6.0"""
 
-    @since 3.14.0 """
+    dynamicRegistration: NotRequired[bool]
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
+    the client supports the new `ImplementationRegistrationOptions` return value
+    for the corresponding server capability as well.
+    """
+    linkSupport: NotRequired[bool]
+    """
+    The client supports additional metadata in the form of definition links.
+
+    @since 3.14.0
+    """
 
 
 class ReferenceClientCapabilities(TypedDict):
-    """ Client Capabilities for a {@link ReferencesRequest}. """
+    """Client Capabilities for a {@link ReferencesRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether references supports dynamic registration. """
+    """Whether references supports dynamic registration."""
 
 
 class DocumentHighlightClientCapabilities(TypedDict):
-    """ Client Capabilities for a {@link DocumentHighlightRequest}. """
+    """Client Capabilities for a {@link DocumentHighlightRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether document highlight supports dynamic registration. """
+    """Whether document highlight supports dynamic registration."""
 
 
 class DocumentSymbolClientCapabilities(TypedDict):
-    """ Client Capabilities for a {@link DocumentSymbolRequest}. """
+    """Client Capabilities for a {@link DocumentSymbolRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether document symbol supports dynamic registration. """
+    """Whether document symbol supports dynamic registration."""
     symbolKind: NotRequired['ClientSymbolKindOptions']
-    """ Specific capabilities for the `SymbolKind` in the
-    `textDocument/documentSymbol` request. """
+    """
+    Specific capabilities for the `SymbolKind` in the
+    `textDocument/documentSymbol` request.
+    """
     hierarchicalDocumentSymbolSupport: NotRequired[bool]
-    """ The client supports hierarchical document symbols. """
+    """The client supports hierarchical document symbols."""
     tagSupport: NotRequired['ClientSymbolTagOptions']
-    """ The client supports tags on `SymbolInformation`. Tags are supported on
+    """
+    The client supports tags on `SymbolInformation`. Tags are supported on
     `DocumentSymbol` if `hierarchicalDocumentSymbolSupport` is set to true.
     Clients supporting tags have to handle unknown tags gracefully.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     labelSupport: NotRequired[bool]
-    """ The client supports an additional label presented in the UI when
+    """
+    The client supports an additional label presented in the UI when
     registering a document symbol provider.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class CodeActionClientCapabilities(TypedDict):
-    """ The Client Capabilities of a {@link CodeActionRequest}. """
+    """The Client Capabilities of a {@link CodeActionRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether code action supports dynamic registration. """
+    """Whether code action supports dynamic registration."""
     codeActionLiteralSupport: NotRequired['ClientCodeActionLiteralOptions']
-    """ The client support code action literals of type `CodeAction` as a valid
+    """
+    The client support code action literals of type `CodeAction` as a valid
     response of the `textDocument/codeAction` request. If the property is not
     set the request can only return `Command` literals.
 
-    @since 3.8.0 """
+    @since 3.8.0
+    """
     isPreferredSupport: NotRequired[bool]
-    """ Whether code action supports the `isPreferred` property.
+    """
+    Whether code action supports the `isPreferred` property.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     disabledSupport: NotRequired[bool]
-    """ Whether code action supports the `disabled` property.
+    """
+    Whether code action supports the `disabled` property.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     dataSupport: NotRequired[bool]
-    """ Whether code action supports the `data` property which is
+    """
+    Whether code action supports the `data` property which is
     preserved between a `textDocument/codeAction` and a
     `codeAction/resolve` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     resolveSupport: NotRequired['ClientCodeActionResolveOptions']
-    """ Whether the client supports resolving additional code action
+    """
+    Whether the client supports resolving additional code action
     properties via a separate `codeAction/resolve` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     honorsChangeAnnotations: NotRequired[bool]
-    """ Whether the client honors the change annotations in
+    """
+    Whether the client honors the change annotations in
     text edits and resource operations returned via the
     `CodeAction#edit` property by for example presenting
     the workspace edit in the user interface and asking
     for confirmation.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     documentationSupport: NotRequired[bool]
-    """ Whether the client supports documentation for a class of
+    """
+    Whether the client supports documentation for a class of
     code actions.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
     tagSupport: NotRequired['CodeActionTagOptions']
-    """ Client supports the tag property on a code action. Clients
+    """
+    Client supports the tag property on a code action. Clients
     supporting tags have to handle unknown tags gracefully.
 
-    @since 3.18.0 - proposed """
+    @since 3.18.0 - proposed
+    """
 
 
 class CodeLensClientCapabilities(TypedDict):
-    """ The client capabilities  of a {@link CodeLensRequest}. """
+    """The client capabilities  of a {@link CodeLensRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether code lens supports dynamic registration. """
+    """Whether code lens supports dynamic registration."""
     resolveSupport: NotRequired['ClientCodeLensResolveOptions']
-    """ Whether the client supports resolving additional code lens
+    """
+    Whether the client supports resolving additional code lens
     properties via a separate `codeLens/resolve` request.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
 
 
 class DocumentLinkClientCapabilities(TypedDict):
-    """ The client capabilities of a {@link DocumentLinkRequest}. """
-    dynamicRegistration: NotRequired[bool]
-    """ Whether document link supports dynamic registration. """
-    tooltipSupport: NotRequired[bool]
-    """ Whether the client supports the `tooltip` property on `DocumentLink`.
+    """The client capabilities of a {@link DocumentLinkRequest}."""
 
-    @since 3.15.0 """
+    dynamicRegistration: NotRequired[bool]
+    """Whether document link supports dynamic registration."""
+    tooltipSupport: NotRequired[bool]
+    """
+    Whether the client supports the `tooltip` property on `DocumentLink`.
+
+    @since 3.15.0
+    """
 
 
 class DocumentColorClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `DocumentColorRegistrationOptions` return value
-    for the corresponding server capability as well. """
+    for the corresponding server capability as well.
+    """
 
 
 class DocumentFormattingClientCapabilities(TypedDict):
-    """ Client capabilities of a {@link DocumentFormattingRequest}. """
+    """Client capabilities of a {@link DocumentFormattingRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether formatting supports dynamic registration. """
+    """Whether formatting supports dynamic registration."""
 
 
 class DocumentRangeFormattingClientCapabilities(TypedDict):
-    """ Client capabilities of a {@link DocumentRangeFormattingRequest}. """
+    """Client capabilities of a {@link DocumentRangeFormattingRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether range formatting supports dynamic registration. """
+    """Whether range formatting supports dynamic registration."""
     rangesSupport: NotRequired[bool]
-    """ Whether the client supports formatting multiple ranges at once.
+    """
+    Whether the client supports formatting multiple ranges at once.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class DocumentOnTypeFormattingClientCapabilities(TypedDict):
-    """ Client capabilities of a {@link DocumentOnTypeFormattingRequest}. """
+    """Client capabilities of a {@link DocumentOnTypeFormattingRequest}."""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether on type formatting supports dynamic registration. """
+    """Whether on type formatting supports dynamic registration."""
 
 
 class RenameClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether rename supports dynamic registration. """
+    """Whether rename supports dynamic registration."""
     prepareSupport: NotRequired[bool]
-    """ Client supports testing for validity of rename operations
+    """
+    Client supports testing for validity of rename operations
     before execution.
 
-    @since 3.12.0 """
+    @since 3.12.0
+    """
     prepareSupportDefaultBehavior: NotRequired['PrepareSupportDefaultBehavior']
-    """ Client supports the default behavior result.
+    """
+    Client supports the default behavior result.
 
     The value indicates the default behavior used by the
     client.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     honorsChangeAnnotations: NotRequired[bool]
-    """ Whether the client honors the change annotations in
+    """
+    Whether the client honors the change annotations in
     text edits and resource operations returned via the
     rename request's workspace edit by for example presenting
     the workspace edit in the user interface and asking
     for confirmation.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class FoldingRangeClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration for folding range
+    """
+    Whether implementation supports dynamic registration for folding range
     providers. If this is set to `true` the client supports the new
     `FoldingRangeRegistrationOptions` return value for the corresponding
-    server capability as well. """
+    server capability as well.
+    """
     rangeLimit: NotRequired[Uint]
-    """ The maximum number of folding ranges that the client prefers to receive
+    """
+    The maximum number of folding ranges that the client prefers to receive
     per document. The value serves as a hint, servers are free to follow the
-    limit. """
+    limit.
+    """
     lineFoldingOnly: NotRequired[bool]
-    """ If set, the client signals that it only supports folding complete lines.
+    """
+    If set, the client signals that it only supports folding complete lines.
     If set, client will ignore specified `startCharacter` and `endCharacter`
-    properties in a FoldingRange. """
+    properties in a FoldingRange.
+    """
     foldingRangeKind: NotRequired['ClientFoldingRangeKindOptions']
-    """ Specific options for the folding range kind.
+    """
+    Specific options for the folding range kind.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     foldingRange: NotRequired['ClientFoldingRangeOptions']
-    """ Specific options for the folding range.
+    """
+    Specific options for the folding range.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class SelectionRangeClientCapabilities(TypedDict):
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration for selection range providers. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration for selection range providers. If this is set to `true`
     the client supports the new `SelectionRangeRegistrationOptions` return value for the corresponding server
-    capability as well. """
+    capability as well.
+    """
 
 
 class PublishDiagnosticsClientCapabilities(TypedDict):
-    """ The publish diagnostic client capabilities. """
+    """The publish diagnostic client capabilities."""
+
     versionSupport: NotRequired[bool]
-    """ Whether the client interprets the version property of the
+    """
+    Whether the client interprets the version property of the
     `textDocument/publishDiagnostics` notification's parameter.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     relatedInformation: NotRequired[bool]
-    """ Whether the clients accepts diagnostics with related information. """
+    """Whether the clients accepts diagnostics with related information."""
     tagSupport: NotRequired['ClientDiagnosticsTagOptions']
-    """ Client supports the tag property to provide meta data about a diagnostic.
+    """
+    Client supports the tag property to provide meta data about a diagnostic.
     Clients supporting tags have to handle unknown tags gracefully.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     codeDescriptionSupport: NotRequired[bool]
-    """ Client supports a codeDescription property
+    """
+    Client supports a codeDescription property
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     dataSupport: NotRequired[bool]
-    """ Whether code action supports the `data` property which is
+    """
+    Whether code action supports the `data` property which is
     preserved between a `textDocument/publishDiagnostics` and
     `textDocument/codeAction` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class CallHierarchyClientCapabilities(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
 
 
 class SemanticTokensClientCapabilities(TypedDict):
-    """ @since 3.16.0 """
+    """@since 3.16.0"""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
     requests: 'ClientSemanticTokensRequestOptions'
-    """ Which requests the client supports and might send to the server
+    """
+    Which requests the client supports and might send to the server
     depending on the server's capability. Please note that clients might not
     show semantic tokens or degrade some of the user experience if a range
     or full request is advertised by the client but not provided by the
     server. If for example the client capability `requests.full` and
     `request.range` are both set to true but the server only provides a
     range provider the client might not render a minimap correctly or might
-    even decide to not show any semantic tokens at all. """
+    even decide to not show any semantic tokens at all.
+    """
     tokenTypes: List[str]
-    """ The token types that the client supports. """
+    """The token types that the client supports."""
     tokenModifiers: List[str]
-    """ The token modifiers that the client supports. """
+    """The token modifiers that the client supports."""
     formats: List['TokenFormat']
-    """ The token formats the clients supports. """
+    """The token formats the clients supports."""
     overlappingTokenSupport: NotRequired[bool]
-    """ Whether the client supports tokens that can overlap each other. """
+    """Whether the client supports tokens that can overlap each other."""
     multilineTokenSupport: NotRequired[bool]
-    """ Whether the client supports tokens that can span multiple lines. """
+    """Whether the client supports tokens that can span multiple lines."""
     serverCancelSupport: NotRequired[bool]
-    """ Whether the client allows the server to actively cancel a
+    """
+    Whether the client allows the server to actively cancel a
     semantic token request, e.g. supports returning
     LSPErrorCodes.ServerCancelled. If a server does the client
     needs to retrigger the request.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     augmentsSyntaxTokens: NotRequired[bool]
-    """ Whether the client uses semantic tokens to augment existing
+    """
+    Whether the client uses semantic tokens to augment existing
     syntax tokens. If set to `true` client side created syntax
     tokens and semantic tokens are both used for colorization. If
     set to `false` the client only uses the returned semantic tokens
@@ -5760,269 +7442,361 @@ class SemanticTokensClientCapabilities(TypedDict):
     If the value is `undefined` then the client behavior is not
     specified.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class LinkedEditingRangeClientCapabilities(TypedDict):
-    """ Client capabilities for the linked editing range request.
+    """
+    Client capabilities for the linked editing range request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
 
 
 class MonikerClientCapabilities(TypedDict):
-    """ Client capabilities specific to the moniker request.
+    """
+    Client capabilities specific to the moniker request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether moniker supports dynamic registration. If this is set to `true`
+    """
+    Whether moniker supports dynamic registration. If this is set to `true`
     the client supports the new `MonikerRegistrationOptions` return value
-    for the corresponding server capability as well. """
+    for the corresponding server capability as well.
+    """
 
 
 class TypeHierarchyClientCapabilities(TypedDict):
-    """ @since 3.17.0 """
+    """@since 3.17.0"""
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
 
 
 class InlineValueClientCapabilities(TypedDict):
-    """ Client capabilities specific to inline values.
+    """
+    Client capabilities specific to inline values.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration for inline value providers. """
+    """Whether implementation supports dynamic registration for inline value providers."""
 
 
 class InlayHintClientCapabilities(TypedDict):
-    """ Inlay hint client capabilities.
+    """
+    Inlay hint client capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether inlay hints support dynamic registration. """
+    """Whether inlay hints support dynamic registration."""
     resolveSupport: NotRequired['ClientInlayHintResolveOptions']
-    """ Indicates which properties a client can resolve lazily on an inlay
-    hint. """
+    """
+    Indicates which properties a client can resolve lazily on an inlay
+    hint.
+    """
 
 
 class DiagnosticClientCapabilities(TypedDict):
-    """ Client capabilities specific to diagnostic pull requests.
+    """
+    Client capabilities specific to diagnostic pull requests.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is set to `true`
+    """
+    Whether implementation supports dynamic registration. If this is set to `true`
     the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
     relatedDocumentSupport: NotRequired[bool]
-    """ Whether the clients supports related documents for document diagnostic pulls. """
+    """Whether the clients supports related documents for document diagnostic pulls."""
     relatedInformation: NotRequired[bool]
-    """ Whether the clients accepts diagnostics with related information. """
+    """Whether the clients accepts diagnostics with related information."""
     tagSupport: NotRequired['ClientDiagnosticsTagOptions']
-    """ Client supports the tag property to provide meta data about a diagnostic.
+    """
+    Client supports the tag property to provide meta data about a diagnostic.
     Clients supporting tags have to handle unknown tags gracefully.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     codeDescriptionSupport: NotRequired[bool]
-    """ Client supports a codeDescription property
+    """
+    Client supports a codeDescription property
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     dataSupport: NotRequired[bool]
-    """ Whether code action supports the `data` property which is
+    """
+    Whether code action supports the `data` property which is
     preserved between a `textDocument/publishDiagnostics` and
     `textDocument/codeAction` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class InlineCompletionClientCapabilities(TypedDict):
-    """ Client capabilities specific to inline completions.
+    """
+    Client capabilities specific to inline completions.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration for inline completion providers. """
+    """Whether implementation supports dynamic registration for inline completion providers."""
 
 
 class NotebookDocumentSyncClientCapabilities(TypedDict):
-    """ Notebook specific client capabilities.
+    """
+    Notebook specific client capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     dynamicRegistration: NotRequired[bool]
-    """ Whether implementation supports dynamic registration. If this is
+    """
+    Whether implementation supports dynamic registration. If this is
     set to `true` the client supports the new
     `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-    return value for the corresponding server capability as well. """
+    return value for the corresponding server capability as well.
+    """
     executionSummarySupport: NotRequired[bool]
-    """ The client supports sending execution summary data per cell. """
+    """The client supports sending execution summary data per cell."""
 
 
 class ShowMessageRequestClientCapabilities(TypedDict):
-    """ Show message request client capabilities """
+    """Show message request client capabilities"""
+
     messageActionItem: NotRequired['ClientShowMessageActionItemOptions']
-    """ Capabilities specific to the `MessageActionItem` type. """
+    """Capabilities specific to the `MessageActionItem` type."""
 
 
 class ShowDocumentClientCapabilities(TypedDict):
-    """ Client capabilities for the showDocument request.
+    """
+    Client capabilities for the showDocument request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     support: bool
-    """ The client has support for the showDocument
-    request. """
+    """
+    The client has support for the showDocument
+    request.
+    """
 
 
 class StaleRequestSupportOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     cancel: bool
-    """ The client will actively cancel the request. """
+    """The client will actively cancel the request."""
     retryOnContentModified: List[str]
-    """ The list of requests for which the client
+    """
+    The list of requests for which the client
     will retry the request if it receives a
-    response with error code `ContentModified` """
+    response with error code `ContentModified`
+    """
 
 
 class RegularExpressionsClientCapabilities(TypedDict):
-    """ Client capabilities specific to regular expressions.
+    """
+    Client capabilities specific to regular expressions.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     engine: 'RegularExpressionEngineKind'
-    """ The engine's name. """
+    """The engine's name."""
     version: NotRequired[str]
-    """ The engine's version. """
+    """The engine's version."""
 
 
 class MarkdownClientCapabilities(TypedDict):
-    """ Client capabilities specific to the used markdown parser.
+    """
+    Client capabilities specific to the used markdown parser.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
+
     parser: str
-    """ The name of the parser. """
+    """The name of the parser."""
     version: NotRequired[str]
-    """ The version of the parser. """
+    """The version of the parser."""
     allowedTags: NotRequired[List[str]]
-    """ A list of HTML tags that the client allows / supports in
+    """
+    A list of HTML tags that the client allows / supports in
     Markdown.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class ChangeAnnotationsSupportOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     groupsOnLabel: NotRequired[bool]
-    """ Whether the client groups edits with equal labels into tree nodes,
+    """
+    Whether the client groups edits with equal labels into tree nodes,
     for instance all edits labelled with "Changes in Strings" would
-    be a tree node. """
+    be a tree node.
+    """
 
 
 class ClientSymbolKindOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: NotRequired[List['SymbolKind']]
-    """ The symbol kind values the client supports. When this
+    """
+    The symbol kind values the client supports. When this
     property exists the client also guarantees that it will
     handle values outside its set gracefully and falls back
     to a default value when unknown.
 
     If this property is not present the client only supports
     the symbol kinds from `File` to `Array` as defined in
-    the initial version of the protocol. """
+    the initial version of the protocol.
+    """
 
 
 class ClientSymbolTagOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: List['SymbolTag']
-    """ The tags supported by the client. """
+    """The tags supported by the client."""
 
 
 class ClientSymbolResolveOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     properties: List[str]
-    """ The properties that a client can resolve lazily. Usually
-    `location.range` """
+    """
+    The properties that a client can resolve lazily. Usually
+    `location.range`
+    """
 
 
 class ClientCompletionItemOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     snippetSupport: NotRequired[bool]
-    """ Client supports snippets as insert text.
+    """
+    Client supports snippets as insert text.
 
     A snippet can define tab stops and placeholders with `$1`, `$2`
     and `${3:foo}`. `$0` defines the final tab stop, it defaults to
     the end of the snippet. Placeholders with equal identifiers are linked,
-    that is typing in one will update others too. """
+    that is typing in one will update others too.
+    """
     commitCharactersSupport: NotRequired[bool]
-    """ Client supports commit characters on a completion item. """
+    """Client supports commit characters on a completion item."""
     documentationFormat: NotRequired[List['MarkupKind']]
-    """ Client supports the following content formats for the documentation
-    property. The order describes the preferred format of the client. """
+    """
+    Client supports the following content formats for the documentation
+    property. The order describes the preferred format of the client.
+    """
     deprecatedSupport: NotRequired[bool]
-    """ Client supports the deprecated property on a completion item. """
+    """Client supports the deprecated property on a completion item."""
     preselectSupport: NotRequired[bool]
-    """ Client supports the preselect property on a completion item. """
+    """Client supports the preselect property on a completion item."""
     tagSupport: NotRequired['CompletionItemTagOptions']
-    """ Client supports the tag property on a completion item. Clients supporting
+    """
+    Client supports the tag property on a completion item. Clients supporting
     tags have to handle unknown tags gracefully. Clients especially need to
     preserve unknown tags when sending a completion item back to the server in
     a resolve call.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     insertReplaceSupport: NotRequired[bool]
-    """ Client support insert replace edit to control different behavior if a
+    """
+    Client support insert replace edit to control different behavior if a
     completion item is inserted in the text or should replace text.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     resolveSupport: NotRequired['ClientCompletionItemResolveOptions']
-    """ Indicates which properties a client can resolve lazily on a completion
+    """
+    Indicates which properties a client can resolve lazily on a completion
     item. Before version 3.16.0 only the predefined properties `documentation`
     and `details` could be resolved lazily.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     insertTextModeSupport: NotRequired['ClientCompletionItemInsertTextModeOptions']
-    """ The client supports the `insertTextMode` property on
+    """
+    The client supports the `insertTextMode` property on
     a completion item to override the whitespace handling mode
     as defined by the client (see `insertTextMode`).
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     labelDetailsSupport: NotRequired[bool]
-    """ The client has support for completion item label
+    """
+    The client has support for completion item label
     details (see also `CompletionItemLabelDetails`).
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class ClientCompletionItemOptionsKind(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: NotRequired[List['CompletionItemKind']]
-    """ The completion item kind values the client supports. When this
+    """
+    The completion item kind values the client supports. When this
     property exists the client also guarantees that it will
     handle values outside its set gracefully and falls back
     to a default value when unknown.
 
     If this property is not present the client only supports
     the completion items kinds from `Text` to `Reference` as defined in
-    the initial version of the protocol. """
+    the initial version of the protocol.
+    """
 
 
 class CompletionListCapabilities(TypedDict):
-    """ The client supports the following `CompletionList` specific
+    """
+    The client supports the following `CompletionList` specific
     capabilities.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
+
     itemDefaults: NotRequired[List[str]]
-    """ The client supports the following itemDefaults on
+    """
+    The client supports the following itemDefaults on
     a completion list.
 
     The value lists the supported property names of the
     `CompletionList.itemDefaults` object. If omitted
     no properties are supported.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
     applyKindSupport: NotRequired[bool]
-    """ Specifies whether the client supports `CompletionList.applyKind` to
+    """
+    Specifies whether the client supports `CompletionList.applyKind` to
     indicate how supported values from `completionList.itemDefaults`
     and `completion` will be combined.
 
@@ -6032,161 +7806,210 @@ class CompletionListCapabilities(TypedDict):
     items the MUST also support merge for them if those fields are
     defined in `CompletionList.applyKind`.
 
-    @since 3.18.0 """
+    @since 3.18.0
+    """
 
 
 class ClientSignatureInformationOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     documentationFormat: NotRequired[List['MarkupKind']]
-    """ Client supports the following content formats for the documentation
-    property. The order describes the preferred format of the client. """
+    """
+    Client supports the following content formats for the documentation
+    property. The order describes the preferred format of the client.
+    """
     parameterInformation: NotRequired['ClientSignatureParameterInformationOptions']
-    """ Client capabilities specific to parameter information. """
+    """Client capabilities specific to parameter information."""
     activeParameterSupport: NotRequired[bool]
-    """ The client supports the `activeParameter` property on `SignatureInformation`
+    """
+    The client supports the `activeParameter` property on `SignatureInformation`
     literal.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     noActiveParameterSupport: NotRequired[bool]
-    """ The client supports the `activeParameter` property on
+    """
+    The client supports the `activeParameter` property on
     `SignatureHelp`/`SignatureInformation` being set to `null` to
     indicate that no parameter should be active.
 
     @since 3.18.0
-    @proposed """
+    @proposed
+    """
 
 
 class ClientCodeActionLiteralOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     codeActionKind: 'ClientCodeActionKindOptions'
-    """ The code action kind is support with the following value
-    set. """
+    """
+    The code action kind is support with the following value
+    set.
+    """
 
 
 class ClientCodeActionResolveOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     properties: List[str]
-    """ The properties that a client can resolve lazily. """
+    """The properties that a client can resolve lazily."""
 
 
 class CodeActionTagOptions(TypedDict):
-    """ @since 3.18.0 - proposed """
+    """@since 3.18.0 - proposed"""
+
     valueSet: List['CodeActionTag']
-    """ The tags supported by the client. """
+    """The tags supported by the client."""
 
 
 class ClientCodeLensResolveOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     properties: List[str]
-    """ The properties that a client can resolve lazily. """
+    """The properties that a client can resolve lazily."""
 
 
 class ClientFoldingRangeKindOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: NotRequired[List['FoldingRangeKind']]
-    """ The folding range kind values the client supports. When this
+    """
+    The folding range kind values the client supports. When this
     property exists the client also guarantees that it will
     handle values outside its set gracefully and falls back
-    to a default value when unknown. """
+    to a default value when unknown.
+    """
 
 
 class ClientFoldingRangeOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     collapsedText: NotRequired[bool]
-    """ If set, the client signals that it supports setting collapsedText on
+    """
+    If set, the client signals that it supports setting collapsedText on
     folding ranges to display custom labels instead of the default text.
 
-    @since 3.17.0 """
+    @since 3.17.0
+    """
 
 
 class DiagnosticsCapabilities(TypedDict):
-    """ General diagnostics capabilities for pull and push model. """
+    """General diagnostics capabilities for pull and push model."""
+
     relatedInformation: NotRequired[bool]
-    """ Whether the clients accepts diagnostics with related information. """
+    """Whether the clients accepts diagnostics with related information."""
     tagSupport: NotRequired['ClientDiagnosticsTagOptions']
-    """ Client supports the tag property to provide meta data about a diagnostic.
+    """
+    Client supports the tag property to provide meta data about a diagnostic.
     Clients supporting tags have to handle unknown tags gracefully.
 
-    @since 3.15.0 """
+    @since 3.15.0
+    """
     codeDescriptionSupport: NotRequired[bool]
-    """ Client supports a codeDescription property
+    """
+    Client supports a codeDescription property
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
     dataSupport: NotRequired[bool]
-    """ Whether code action supports the `data` property which is
+    """
+    Whether code action supports the `data` property which is
     preserved between a `textDocument/publishDiagnostics` and
     `textDocument/codeAction` request.
 
-    @since 3.16.0 """
+    @since 3.16.0
+    """
 
 
 class ClientSemanticTokensRequestOptions(TypedDict):
-    """ @since 3.18.0 """
-    range: NotRequired[Union[bool, dict]]
-    """ The client will send the `textDocument/semanticTokens/range` request if
-    the server provides a corresponding handler. """
+    """@since 3.18.0"""
+
+    range: NotRequired[Union[bool, Dict[str, LSPAny]]]
+    """
+    The client will send the `textDocument/semanticTokens/range` request if
+    the server provides a corresponding handler.
+    """
     full: NotRequired[Union[bool, 'ClientSemanticTokensRequestFullDelta']]
-    """ The client will send the `textDocument/semanticTokens/full` request if
-    the server provides a corresponding handler. """
+    """
+    The client will send the `textDocument/semanticTokens/full` request if
+    the server provides a corresponding handler.
+    """
 
 
 class ClientInlayHintResolveOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     properties: List[str]
-    """ The properties that a client can resolve lazily. """
+    """The properties that a client can resolve lazily."""
 
 
 class ClientShowMessageActionItemOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     additionalPropertiesSupport: NotRequired[bool]
-    """ Whether the client supports additional attributes which
+    """
+    Whether the client supports additional attributes which
     are preserved and send back to the server in the
-    request's response. """
+    request's response.
+    """
 
 
 class CompletionItemTagOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: List['CompletionItemTag']
-    """ The tags supported by the client. """
+    """The tags supported by the client."""
 
 
 class ClientCompletionItemResolveOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     properties: List[str]
-    """ The properties that a client can resolve lazily. """
+    """The properties that a client can resolve lazily."""
 
 
 class ClientCompletionItemInsertTextModeOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: List['InsertTextMode']
 
 
 class ClientSignatureParameterInformationOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     labelOffsetSupport: NotRequired[bool]
-    """ The client supports processing label offsets instead of a
+    """
+    The client supports processing label offsets instead of a
     simple label string.
 
-    @since 3.14.0 """
+    @since 3.14.0
+    """
 
 
 class ClientCodeActionKindOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: List['CodeActionKind']
-    """ The code action kind values the client supports. When this
+    """
+    The code action kind values the client supports. When this
     property exists the client also guarantees that it will
     handle values outside its set gracefully and falls back
-    to a default value when unknown. """
+    to a default value when unknown.
+    """
 
 
 class ClientDiagnosticsTagOptions(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     valueSet: List['DiagnosticTag']
-    """ The tags supported by the client. """
+    """The tags supported by the client."""
 
 
 class ClientSemanticTokensRequestFullDelta(TypedDict):
-    """ @since 3.18.0 """
+    """@since 3.18.0"""
+
     delta: NotRequired[bool]
-    """ The client will send the `textDocument/semanticTokens/full/delta` request if
-    the server provides a corresponding handler. """
+    """
+    The client will send the `textDocument/semanticTokens/full/delta` request if
+    the server provides a corresponding handler.
+    """

@@ -224,7 +224,6 @@ class LspCallHierarchyCommand(LspHierarchyCommand):
     def request(
         cls, params: CallHierarchyPrepareParams, view: sublime.View
     ) -> Request[CallHierarchyPrepareParams, list[CallHierarchyItem] | None]:
-        print(params)
         return Request.prepareCallHierarchy(params, view)
 
 

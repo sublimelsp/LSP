@@ -170,7 +170,7 @@ class DottedDict:
 
     def _merge(self, path: str, value: Any) -> None:
         """
-        Update a value in the dictionary (merge if target is a dict).
+        Update a value in the dictionary (merge if value is a dict).
 
         :param      path:   The path, e.g. foo.bar.baz
         :param      value:  The value

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .core.edit import show_summary_message
+from .core.logging import debug
 from .core.open import open_file_uri
 from .core.promise import Promise
 from .core.protocol import Error, Notification, Request
@@ -129,7 +130,7 @@ class LspRenamePathCommand(LspWindowCommand):
         for response, weak_session in responses:
             if (session := weak_session()) and response:
                 if isinstance(response, Error):
-                    print(f'LSP: Error response during rename: {response}')
+                    debug(f'LSP: Error response during rename: {response}')
                     return
                 prompt_for_workspace_edits(session, response, label=label) \
                     .then(partial(self.on_prompt_for_workspace_edits_concluded, weak_session, response, label)) \

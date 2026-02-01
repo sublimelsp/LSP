@@ -32,7 +32,7 @@ class NotificationMessage(TypedDict):
     params: NotRequired[Any]
 
 
-JSONRpcPayload = Union[RequestMessage, ResponseMessage, NotificationMessage]
+JSONRPCMessage = Union[RequestMessage, ResponseMessage, NotificationMessage]
 
 
 class Request(Generic[P, R]):

@@ -1,27 +1,51 @@
 from __future__ import annotations
 from ...protocol import *  # For backward compatibility with LSP packages.
 from functools import total_ordering
-from typing import Any, Callable, Generic, Iterable, Mapping, TypedDict, TypeVar, Union
+from typing import Any, Callable, Generic, TypedDict, TypeVar, Union
 from typing_extensions import NotRequired
 import sublime
 
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX
 
-R = TypeVar('R')
+P = TypeVar('P', bound=LSPAny)
+R = TypeVar('R', bound=LSPAny)
 
 
-class Request(Generic[R]):
+class RequestMessage(TypedDict):
+    jsonrpc: str
+    id: str | int
+    method: str
+    params: NotRequired[Any]
+
+
+class ResponseMessage(TypedDict):
+    jsonrpc: str
+    id: str | int
+    result: NotRequired[Any]
+    error: NotRequired[ResponseError]
+
+
+class NotificationMessage(TypedDict):
+    jsonrpc: str
+    method: str
+    params: NotRequired[Any]
+
+
+JSONRPCMessage = Union[RequestMessage, ResponseMessage, NotificationMessage]
+
+
+class Request(Generic[P, R]):
 
     __slots__ = ('method', 'params', 'view', 'progress', 'on_partial_result')
 
     def __init__(
         self,
         method: str,
-        params: Any = None,
+        params: P = None,
         view: sublime.View | None = None,
         progress: bool = False,
-        on_partial_result: Callable[[Any], None] | None = None,
+        on_partial_result: Callable[[R], None] | None = None,
     ) -> None:
         self.method = method
         self.params = params
@@ -30,148 +54,218 @@ class Request(Generic[R]):
         self.on_partial_result = on_partial_result
 
     @classmethod
-    def initialize(cls, params: InitializeParams) -> Request:
+    def initialize(cls, params: InitializeParams) -> Request[InitializeParams, InitializeResult]:
         return Request("initialize", params)
 
     @classmethod
-    def complete(cls, params: CompletionParams, view: sublime.View) -> Request:
+    def complete(
+        cls, params: CompletionParams, view: sublime.View
+    ) -> Request[CompletionParams, list[CompletionItem] | CompletionList | None]:
         return Request("textDocument/completion", params, view)
 
     @classmethod
-    def signatureHelp(cls, params: SignatureHelpParams, view: sublime.View) -> Request:
+    def signatureHelp(
+        cls, params: SignatureHelpParams, view: sublime.View
+    ) -> Request[SignatureHelpParams, SignatureHelp | None]:
         return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
-    def codeAction(cls, params: CodeActionParams, view: sublime.View) -> Request:
+    def codeAction(
+        cls, params: CodeActionParams, view: sublime.View
+    ) -> Request[CodeActionParams, list[Command | CodeAction] | None]:
         return Request("textDocument/codeAction", params, view)
 
     @classmethod
-    def documentColor(cls, params: DocumentColorParams, view: sublime.View) -> Request:
+    def documentColor(
+        cls, params: DocumentColorParams, view: sublime.View
+    ) -> Request[DocumentColorParams, list[ColorInformation]]:
         return Request('textDocument/documentColor', params, view)
 
     @classmethod
-    def colorPresentation(cls, params: ColorPresentationParams, view: sublime.View) -> Request:
+    def colorPresentation(
+        cls, params: ColorPresentationParams, view: sublime.View
+    ) -> Request[ColorPresentationParams, list[ColorPresentation]]:
         return Request('textDocument/colorPresentation', params, view)
 
     @classmethod
-    def willSaveWaitUntil(cls, params: WillSaveTextDocumentParams, view: sublime.View) -> Request:
+    def executeCommand(
+        cls, params: ExecuteCommandParams, *, progress: bool = False
+    ) -> Request[ExecuteCommandParams, R]:
+        return Request("workspace/executeCommand", params, progress=progress)
+
+    @classmethod
+    def willSaveWaitUntil(
+        cls, params: WillSaveTextDocumentParams, view: sublime.View
+    ) -> Request[WillSaveTextDocumentParams, list[TextEdit] | None]:
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
-    def willRenameFiles(cls, params: RenameFilesParams) -> Request:
+    def willRenameFiles(cls, params: RenameFilesParams) -> Request[RenameFilesParams, WorkspaceEdit | None]:
         return Request("workspace/willRenameFiles", params)
 
     @classmethod
-    def documentSymbols(cls, params: DocumentSymbolParams, view: sublime.View) -> Request:
+    def documentSymbols(
+        cls, params: DocumentSymbolParams, view: sublime.View
+    ) -> Request[DocumentSymbolParams, list[DocumentSymbol] | list[SymbolInformation] | None]:
         return Request("textDocument/documentSymbol", params, view, progress=True)
 
     @classmethod
-    def documentHighlight(cls, params: DocumentHighlightParams, view: sublime.View) -> Request:
+    def documentHighlight(
+        cls, params: DocumentHighlightParams, view: sublime.View
+    ) -> Request[DocumentHighlightParams, list[DocumentHighlight] | None]:
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def documentLink(cls, params: DocumentLinkParams, view: sublime.View) -> Request:
+    def documentLink(
+        cls, params: DocumentLinkParams, view: sublime.View
+    ) -> Request[DocumentLinkParams, list[DocumentLink]]:
         return Request("textDocument/documentLink", params, view)
 
     @classmethod
-    def semanticTokensFull(cls, params: SemanticTokensParams, view: sublime.View) -> Request:
+    def semanticTokensFull(
+        cls, params: SemanticTokensParams, view: sublime.View
+    ) -> Request[SemanticTokensParams, SemanticTokens | None]:
         return Request("textDocument/semanticTokens/full", params, view)
 
     @classmethod
-    def semanticTokensFullDelta(cls, params: SemanticTokensDeltaParams, view: sublime.View) -> Request:
+    def semanticTokensFullDelta(
+        cls, params: SemanticTokensDeltaParams, view: sublime.View
+    ) -> Request[SemanticTokensDeltaParams, SemanticTokens | SemanticTokensDelta | None]:
         return Request("textDocument/semanticTokens/full/delta", params, view)
 
     @classmethod
-    def semanticTokensRange(cls, params: SemanticTokensRangeParams, view: sublime.View) -> Request:
+    def semanticTokensRange(
+        cls, params: SemanticTokensRangeParams, view: sublime.View
+    ) -> Request[SemanticTokensRangeParams, SemanticTokens | None]:
         return Request("textDocument/semanticTokens/range", params, view)
 
     @classmethod
     def prepareCallHierarchy(
         cls, params: CallHierarchyPrepareParams, view: sublime.View
-    ) -> Request[list[CallHierarchyItem] | Error | None]:
+    ) -> Request[CallHierarchyPrepareParams, list[CallHierarchyItem] | None]:
         return Request("textDocument/prepareCallHierarchy", params, view, progress=True)
 
     @classmethod
-    def incomingCalls(cls, params: CallHierarchyIncomingCallsParams) -> Request:
+    def incomingCalls(
+        cls, params: CallHierarchyIncomingCallsParams
+    ) -> Request[CallHierarchyIncomingCallsParams, list[CallHierarchyIncomingCall] | None]:
         return Request("callHierarchy/incomingCalls", params, None)
 
     @classmethod
-    def outgoingCalls(cls, params: CallHierarchyOutgoingCallsParams) -> Request:
+    def outgoingCalls(
+        cls, params: CallHierarchyOutgoingCallsParams
+    ) -> Request[CallHierarchyOutgoingCallsParams, list[CallHierarchyOutgoingCall] | None]:
         return Request("callHierarchy/outgoingCalls", params, None)
 
     @classmethod
-    def prepareTypeHierarchy(cls, params: TypeHierarchyPrepareParams, view: sublime.View) -> Request:
+    def prepareTypeHierarchy(
+        cls, params: TypeHierarchyPrepareParams, view: sublime.View
+    ) -> Request[TypeHierarchyPrepareParams, list[TypeHierarchyItem] | None]:
         return Request("textDocument/prepareTypeHierarchy", params, view, progress=True)
 
     @classmethod
-    def supertypes(cls, params: TypeHierarchySupertypesParams) -> Request:
+    def supertypes(
+        cls, params: TypeHierarchySupertypesParams
+    ) -> Request[TypeHierarchySupertypesParams, list[TypeHierarchyItem] | None]:
         return Request("typeHierarchy/supertypes", params, None)
 
     @classmethod
-    def subtypes(cls, params: TypeHierarchySubtypesParams) -> Request:
+    def subtypes(
+        cls, params: TypeHierarchySubtypesParams
+    ) -> Request[TypeHierarchySubtypesParams, list[TypeHierarchyItem] | None]:
         return Request("typeHierarchy/subtypes", params, None)
 
     @classmethod
-    def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> Request:
+    def resolveCompletionItem(
+        cls, params: CompletionItem, view: sublime.View
+    ) -> Request[CompletionItem, CompletionItem]:
         return Request("completionItem/resolve", params, view)
 
     @classmethod
-    def resolveDocumentLink(cls, params: DocumentLink, view: sublime.View) -> Request:
+    def resolveDocumentLink(cls, params: DocumentLink, view: sublime.View) -> Request[DocumentLink, DocumentLink]:
         return Request("documentLink/resolve", params, view)
 
     @classmethod
-    def inlayHint(cls, params: InlayHintParams, view: sublime.View) -> Request:
+    def inlayHint(cls, params: InlayHintParams, view: sublime.View) -> Request[InlayHintParams, list[InlayHint] | None]:
         return Request('textDocument/inlayHint', params, view)
 
     @classmethod
-    def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> Request:
+    def resolveInlayHint(cls, params: InlayHint, view: sublime.View) -> Request[InlayHint, InlayHint]:
         return Request('inlayHint/resolve', params, view)
 
     @classmethod
-    def rename(cls, params: RenameParams, view: sublime.View, progress: bool = False) -> Request:
+    def rename(
+        cls, params: RenameParams, view: sublime.View, *, progress: bool = False
+    ) -> Request[RenameParams, WorkspaceEdit | None]:
         return Request('textDocument/rename', params, view, progress)
 
     @classmethod
-    def prepareRename(cls, params: PrepareRenameParams, view: sublime.View, progress: bool = False) -> Request:
+    def prepareRename(
+        cls, params: PrepareRenameParams, view: sublime.View, progress: bool = False
+    ) -> Request[PrepareRenameParams, PrepareRenameResult | None]:
         return Request('textDocument/prepareRename', params, view, progress)
 
     @classmethod
-    def selectionRange(cls, params: SelectionRangeParams) -> Request:
+    def selectionRange(cls, params: SelectionRangeParams) -> Request[SelectionRangeParams, list[SelectionRange] | None]:
         return Request('textDocument/selectionRange', params)
 
     @classmethod
-    def foldingRange(cls, params: FoldingRangeParams, view: sublime.View) -> Request:
+    def foldingRange(
+        cls, params: FoldingRangeParams, view: sublime.View
+    ) -> Request[FoldingRangeParams, list[FoldingRange] | None]:
         return Request('textDocument/foldingRange', params, view)
 
     @classmethod
-    def workspaceSymbol(cls, params: WorkspaceSymbolParams) -> Request:
+    def formatting(
+        cls, params: DocumentFormattingParams, view: sublime.View
+    ) -> Request[DocumentFormattingParams, list[TextEdit] | None]:
+        return Request('textDocument/formatting', params, view, progress=True)
+
+    @classmethod
+    def range_formatting(
+        cls, params: DocumentRangeFormattingParams, view: sublime.View
+    ) -> Request[DocumentRangeFormattingParams, list[TextEdit] | None]:
+        return Request('textDocument/rangeFormatting', params, view, progress=True)
+
+    @classmethod
+    def ranges_formatting(
+        cls, params: DocumentRangesFormattingParams, view: sublime.View
+    ) -> Request[DocumentRangesFormattingParams, list[TextEdit] | None]:
+        return Request('textDocument/rangesFormatting', params, view, progress=True)
+
+    @classmethod
+    def workspaceSymbol(
+        cls, params: WorkspaceSymbolParams
+    ) -> Request[WorkspaceSymbolParams, list[SymbolInformation] | list[WorkspaceSymbol] | None]:
         return Request("workspace/symbol", params, None, progress=True)
 
     @classmethod
-    def resolveWorkspaceSymbol(cls, params: WorkspaceSymbol) -> Request:
+    def resolveWorkspaceSymbol(cls, params: WorkspaceSymbol) -> Request[WorkspaceSymbol, WorkspaceSymbol]:
         return Request('workspaceSymbol/resolve', params)
 
     @classmethod
-    def documentDiagnostic(cls, params: DocumentDiagnosticParams, view: sublime.View) -> Request:
+    def documentDiagnostic(
+        cls, params: DocumentDiagnosticParams, view: sublime.View
+    ) -> Request[DocumentDiagnosticParams, DocumentDiagnosticReport]:
         return Request('textDocument/diagnostic', params, view)
 
     @classmethod
     def workspaceDiagnostic(
         cls, params: WorkspaceDiagnosticParams, on_partial_result: Callable[[WorkspaceDiagnosticReport], None]
-    ) -> Request:
+    ) -> Request[WorkspaceDiagnosticParams, WorkspaceDiagnosticReport]:
         return Request('workspace/diagnostic', params, on_partial_result=on_partial_result)
 
     @classmethod
-    def shutdown(cls) -> Request:
+    def shutdown(cls) -> Request[None, None]:
         return Request("shutdown")
 
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id: int) -> dict[str, Any]:
-        payload = {
+    def to_payload(self, request_id: int) -> RequestMessage:
+        payload: RequestMessage = {
             "jsonrpc": "2.0",
-            "id": id,
+            "id": request_id,
             "method": self.method,
         }
         if self.params is not None:
@@ -190,8 +284,8 @@ class Error(Exception):
     def from_lsp(cls, params: ResponseError) -> Error:
         return Error(params["code"], params["message"], params.get("data"))
 
-    def to_lsp(self) -> dict[str, Any]:
-        result = {"code": self.code, "message": super().__str__()}
+    def to_lsp(self) -> ResponseError:
+        result: ResponseError = {"code": self.code, "message": super().__str__()}
         if self.data:
             result["data"] = self.data
         return result
@@ -204,18 +298,15 @@ class Error(Exception):
         return Error(ErrorCodes.InternalError, str(ex))
 
 
-T = TypeVar('T', bound=Union[None, bool, int, Uint, float, str, Mapping[str, Any], Iterable[Any]])
-
-
-class Response(Generic[T]):
+class Response(Generic[P]):
 
     __slots__ = ('request_id', 'result')
 
-    def __init__(self, request_id: Any, result: T) -> None:
+    def __init__(self, request_id: str | int, result: P) -> None:
         self.request_id = request_id
         self.result = result
 
-    def to_payload(self) -> dict[str, Any]:
+    def to_payload(self) -> ResponseMessage:
         return {
             "id": self.request_id,
             "jsonrpc": "2.0",
@@ -223,63 +314,65 @@ class Response(Generic[T]):
         }
 
 
-class Notification:
+class Notification(Generic[P]):
 
     __slots__ = ('method', 'params')
 
-    def __init__(self, method: str, params: Any = None) -> None:
+    def __init__(self, method: str, params: P = None) -> None:
         self.method = method
         self.params = params
 
     @classmethod
-    def initialized(cls) -> Notification:
+    def initialized(cls) -> Notification[InitializedParams]:
         return Notification("initialized", {})
 
     @classmethod
-    def didOpen(cls, params: DidOpenTextDocumentParams) -> Notification:
+    def didOpen(cls, params: DidOpenTextDocumentParams) -> Notification[DidOpenTextDocumentParams]:
         return Notification("textDocument/didOpen", params)
 
     @classmethod
-    def didChange(cls, params: DidChangeTextDocumentParams) -> Notification:
+    def didChange(cls, params: DidChangeTextDocumentParams) -> Notification[DidChangeTextDocumentParams]:
         return Notification("textDocument/didChange", params)
 
     @classmethod
-    def willSave(cls, params: WillSaveTextDocumentParams) -> Notification:
+    def willSave(cls, params: WillSaveTextDocumentParams) -> Notification[WillSaveTextDocumentParams]:
         return Notification("textDocument/willSave", params)
 
     @classmethod
-    def didSave(cls, params: DidSaveTextDocumentParams) -> Notification:
+    def didSave(cls, params: DidSaveTextDocumentParams) -> Notification[DidSaveTextDocumentParams]:
         return Notification("textDocument/didSave", params)
 
     @classmethod
-    def didClose(cls, params: DidCloseTextDocumentParams) -> Notification:
+    def didClose(cls, params: DidCloseTextDocumentParams) -> Notification[DidCloseTextDocumentParams]:
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didRenameFiles(cls, params: RenameFilesParams) -> Notification:
+    def didRenameFiles(cls, params: RenameFilesParams) -> Notification[RenameFilesParams]:
         return Notification("workspace/didRenameFiles", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> Notification:
+    def didChangeConfiguration(cls, params: DidChangeConfigurationParams) -> Notification[DidChangeConfigurationParams]:
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
-    def didChangeWatchedFiles(cls, params: DidChangeWatchedFilesParams) -> Notification:
+    def didChangeWatchedFiles(cls, params: DidChangeWatchedFilesParams) -> Notification[DidChangeWatchedFilesParams]:
         return Notification("workspace/didChangeWatchedFiles", params)
 
     @classmethod
-    def didChangeWorkspaceFolders(cls, params: DidChangeWorkspaceFoldersParams) -> Notification:
+    def didChangeWorkspaceFolders(
+        cls, params: DidChangeWorkspaceFoldersParams
+    ) -> Notification[DidChangeWorkspaceFoldersParams]:
         return Notification("workspace/didChangeWorkspaceFolders", params)
 
     @classmethod
-    def exit(cls) -> Notification:
+    def exit(cls) -> Notification[None]:
         return Notification("exit")
 
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> dict[str, Any]:
-        payload = {
+    def to_payload(self) -> NotificationMessage:
+        payload: NotificationMessage = {
             "jsonrpc": "2.0",
             "method": self.method,
         }
@@ -321,7 +414,7 @@ class Point:
 class ResponseError(TypedDict):
     code: int
     message: str
-    data: NotRequired['LSPAny']
+    data: NotRequired[LSPAny]
 
 
 class ResolvedCodeLens(TypedDict):

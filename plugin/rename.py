@@ -14,7 +14,6 @@ from .core.views import text_document_position_params
 from .edit import prompt_for_workspace_edits
 from functools import partial
 from typing import Any
-from typing import cast
 from typing_extensions import TypeGuard
 import sublime
 import sublime_plugin
@@ -111,7 +110,9 @@ class LspSymbolRenameCommand(LspTextCommand):
             raise TypeError("required positional argument")
         if location is None:
             return
-        params = cast(PrepareRenameParams, text_document_position_params(self.view, location))
+        params: PrepareRenameParams = {
+            **text_document_position_params(self.view, location)
+        }
         request = Request.prepareRename(params, self.view, progress=True)
         session.send_request(
             request, partial(self._on_prepare_result, location, session.config.name), self._on_prepare_error)

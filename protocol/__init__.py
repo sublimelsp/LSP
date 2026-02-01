@@ -3,7 +3,8 @@
 # LSP v3.17.0
 
 from __future__ import annotations
-from enum import IntEnum, IntFlag, StrEnum
+from ..plugin.core.typing import StrEnum
+from enum import IntEnum, IntFlag
 from typing import Any, Dict, List, Literal, Mapping, Sequence, TypedDict, Union
 from typing_extensions import NotRequired
 
@@ -6079,7 +6080,7 @@ class ParameterInformation(TypedDict):
     have a label and a doc-comment.
     """
 
-    label: Union[str, tuple[Uint, Uint]]
+    label: Union[str, list[Uint | Uint]]
     """
     The label of this parameter information.
 

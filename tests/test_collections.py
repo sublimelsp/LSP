@@ -25,6 +25,11 @@ class DottedDictTests(TestCase):
         d.set("foo.bar.baz", {"some": "dict"})
         self.verify(d, "foo.bar.baz.some", "dict")
 
+    def test_does_not_expand_at_second_nesting_level(self) -> None:
+        d = DottedDict({"editor.codeActionsOnSave": {"source.fixAll": "explicit"}})
+        self.assertIsNone(d.get("editor.codeActionsOnSave.source"))
+        self.assertIsNone(d.get("editor.codeActionsOnSave.source.fixAll"))
+
     def test_overwrite_int_with_dict(self) -> None:
         d = DottedDict({'foo.bar': 1})
         d.set('foo.bar', {

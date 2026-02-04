@@ -7,6 +7,15 @@ from typing import Any, Generator
 import sublime
 
 
+def deep_merge(base: dict[str, Any], update: dict[str, Any]) -> None:
+    """Recursively merge update dict with base dict."""
+    for key, value in update.items():
+        if isinstance(value, dict) and key in base and isinstance(base[key], dict):
+            deep_merge(base[key], value)
+        else:
+            base[key] = deepcopy(value)
+
+
 class DottedDict:
 
     __slots__ = ('_d',)
@@ -14,6 +23,9 @@ class DottedDict:
     def __init__(self, d: dict[str, Any] | None = None) -> None:
         """
         Construct a DottedDict, optionally from an existing dictionary.
+
+        The dots within the first-level keys (only) of the passed dict will be interpreted as nesting triggers and the
+        resulting dict will have those transformed into nested keys.
 
         :param      d:    An existing dictionary.
         """
@@ -138,13 +150,13 @@ class DottedDict:
         """
         Overwrite and/or add new key-value pairs to the collection.
 
+        The dots within the first-level keys (only) of the passed dict will be interpreted as nesting triggers and the
+        resulting dict will have those transformed into nested keys.
+
         :param      d:    The overriding dictionary. Can contain nested dictionaries.
         """
         for key, value in d.items():
-            if isinstance(value, dict):
-                self._update_recursive(value, key)
-            else:
-                self.set(key, value)
+            self._merge(key, value)
 
     def get_resolved(self, variables: dict[str, str]) -> dict[str, Any]:
         """
@@ -156,15 +168,29 @@ class DottedDict:
         """
         return sublime.expand_variables(self._d, variables)
 
-    def _update_recursive(self, current: dict[str, Any], prefix: str) -> None:
-        if not current or any(filter(lambda key: isinstance(key, str) and (":" in key or "/" in key), current.keys())):
-            return self.set(prefix, current)
-        for key, value in current.items():
-            path = f"{prefix}.{key}"
-            if isinstance(value, dict):
-                self._update_recursive(value, path)
-            else:
-                self.set(path, value)
+    def _merge(self, path: str, value: Any) -> None:
+        """
+        Update a value in the dictionary (merge if value is a dict).
+
+        :param      path:   The path, e.g. foo.bar.baz
+        :param      value:  The value
+        """
+        current = self._d
+        keys = path.split('.')
+        for i in range(0, len(keys) - 1):
+            key = keys[i]
+            next_current = current.get(key)
+            if not isinstance(next_current, dict):
+                next_current = {}
+                current[key] = next_current
+            current = next_current
+        last_key = keys[-1]
+        if isinstance(value, dict):
+            if not isinstance(current.get(last_key), dict):
+                current[last_key] = {}
+            deep_merge(current[last_key], value)
+        else:
+            current[last_key] = value
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({repr(self._d)})"

@@ -99,11 +99,7 @@ class SaveTasksRunner:
         self._process_next_task()
 
 
-class LspSaveCommand(LspTextCommand):
-    """
-    A command used as a substitute for native save command. Runs code actions and document
-    formatting before triggering the native save command.
-    """
+class LspTextCommandWithTasks(LspTextCommand):
     _tasks: list[type[SaveTask]] = []
 
     @classmethod
@@ -115,19 +111,39 @@ class LspSaveCommand(LspTextCommand):
         super().__init__(view)
         self._save_tasks_runner: SaveTasksRunner | None = None
 
+    def on_before_tasks(self) -> None:
+        """Override this to execute code before the task handler starts"""
+        ...
+
+    def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
+        """Override this to execute code when all tasks are completed"""
+        ...
+
+    def _on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
+        self._save_tasks_runner = None
+        self.on_tasks_completed(**kwargs)
+
     def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
         if self._save_tasks_runner:
             self._save_tasks_runner.cancel()
-        sublime.set_timeout_async(self._trigger_on_pre_save_async)
-        self._save_tasks_runner = SaveTasksRunner(self, self._tasks, partial(self._on_tasks_completed, kwargs))
+        self.on_before_tasks()
+        self._save_tasks_runner = SaveTasksRunner(self, self._tasks, partial(self._on_tasks_completed, **kwargs))
         self._save_tasks_runner.run()
+
+
+class LspSaveCommand(LspTextCommandWithTasks):
+    """
+    A command used as a substitute for native save command. Runs code actions and document
+    formatting before triggering the native save command.
+    """
+    def on_before_tasks(self) -> None:
+        sublime.set_timeout_async(self._trigger_on_pre_save_async)
 
     def _trigger_on_pre_save_async(self) -> None:
         if listener := self.get_listener():
             listener.trigger_on_pre_save_async()
 
-    def _on_tasks_completed(self, kwargs: dict[str, Any]) -> None:
-        self._save_tasks_runner = None
+    def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', kwargs))
 

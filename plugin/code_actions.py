@@ -23,7 +23,7 @@ from .save_command import SaveTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import TYPE_CHECKING, Any, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Tuple, Union, final
 from typing import cast
 import sublime
 
@@ -219,9 +219,10 @@ def get_matching_on_save_kinds(
 
 
 class CodeActionTaskBase(SaveTask):
-    # Override and change to the specific setting in CodeActionOnSaveTask (lsp_code_actions_on_save)
-    # and CodeActionsOnFormatTask (lsp_code_actions_on_format)
-    SETTING_NAME: str = ""
+    """The base task that requests code actions from sessions and runs them."""
+
+    SETTING_NAME: str
+    """Override in your subclass to specific `lsp_code_actions_on_*` setting that should be read."""
 
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
@@ -267,23 +268,24 @@ class CodeActionTaskBase(SaveTask):
         Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
 
 
+@final
 class CodeActionOnSaveTask(CodeActionTaskBase):
-    """
-    The main task that requests code actions from sessions and runs them.
+    """Request code actions from sessions before save and run them.
 
     The amount of time the task is allowed to run is defined by user-controlled setting. If the task
     runs longer, the native save will be triggered before waiting for results.
     """
+
     SETTING_NAME = "lsp_code_actions_on_save"
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)
 
 
+@final
 class CodeActionsOnFormatTask(CodeActionTaskBase):
-    """
-    The main task that runs code actions on format.
-    """
+    """Run code actions on format."""
+
     SETTING_NAME = "lsp_code_actions_on_format"
 
 

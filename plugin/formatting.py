@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
+from .code_actions import CodeActionsOnFormatTask
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise
@@ -16,7 +17,6 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
-from .code_actions import CodeActionsOnFormatTask
 from .save_command import LspSaveCommand, SaveTask, LspTextCommandWithTasks
 from functools import partial
 from typing import Any, Callable, Iterator, List, Union

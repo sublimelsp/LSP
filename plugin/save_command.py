@@ -112,12 +112,10 @@ class LspTextCommandWithTasks(LspTextCommand):
         self._save_tasks_runner: SaveTasksRunner | None = None
 
     def on_before_tasks(self) -> None:
-        """Override this to execute code before the task handler starts"""
-        ...
+        """Override this to execute code before the task handler starts."""
 
     def on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
-        """Override this to execute code when all tasks are completed"""
-        ...
+        """Override this to execute code when all tasks are completed."""
 
     def _on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
         self._save_tasks_runner = None

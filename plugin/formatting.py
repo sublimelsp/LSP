@@ -16,9 +16,10 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
-from .save_command import LspSaveCommand, SaveTask
+from .code_actions import CodeActionsOnFormatTask
+from .save_command import LspSaveCommand, SaveTask, LspTextCommandWithTasks
 from functools import partial
-from typing import Callable, Iterator, List, Union
+from typing import Any, Callable, Iterator, List, Union
 import sublime
 
 
@@ -108,7 +109,7 @@ LspSaveCommand.register_task(WillSaveWaitTask)
 LspSaveCommand.register_task(FormattingTask)
 
 
-class LspFormatDocumentCommand(LspTextCommand):
+class LspFormatDocumentCommand(LspTextCommandWithTasks):
 
     capability = 'documentFormattingProvider'
 
@@ -117,7 +118,7 @@ class LspFormatDocumentCommand(LspTextCommand):
             return len(list(self.sessions(self.capability))) > 1
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
-    def run(self, edit: sublime.Edit, event: dict | None = None, select: bool = False) -> None:
+    def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         syntax = self.view.syntax()
         if not syntax:
@@ -171,6 +172,9 @@ class LspFormatDocumentCommand(LspTextCommand):
             if listener := self.get_listener():
                 listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result_async)
+
+
+LspFormatDocumentCommand.register_task(CodeActionsOnFormatTask)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):

@@ -318,6 +318,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 ### JETLS
 
 JETLS is a new language server for Julia that is under active development and with frequent releases.
+JETLS requires Julia 1.12 or higher.
 
 1. Install the [Julia](https://packages.sublimetext.io/packages/Julia) package from Package Control for syntax highlighting.
 2. Install or update the JETLS executable app:

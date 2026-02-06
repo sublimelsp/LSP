@@ -320,14 +320,15 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 JETLS is a new language server for Julia that is under active development and with frequent releases.
 
 1. Install the [Julia](https://packages.sublimetext.io/packages/Julia) package from Package Control for syntax highlighting.
-2. Install (or update) JETLS:
+2. Install or update the JETLS executable app:
 
     ```sh
     julia -e 'using Pkg; Pkg.Apps.add(; url="https://github.com/aviatesk/JETLS.jl", rev="release")'
     ```
 
-3. (Optional) follow instructions to install [TestRunner integration](https://aviatesk.github.io/JETLS.jl/testrunner/) and/or [Formatter integration](https://aviatesk.github.io/JETLS.jl/formatting/).
-4. Open `Preferences > Package Settings > LSP > Settings` and add the `"JETLS"` client configuration to the `"clients"`:
+3. Make sure `~/.julia/bin` is available on the `PATH` so that the executable is accessible.
+4. (Optional) follow instructions to install [TestRunner integration](https://aviatesk.github.io/JETLS.jl/testrunner/) and/or [Formatter integration](https://aviatesk.github.io/JETLS.jl/formatting/).
+5. Open `Preferences > Package Settings > LSP > Settings` and add the `"JETLS"` client configuration to the `"clients"`:
 
     ```jsonc
     {

@@ -315,6 +315,44 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## Julia
 
+### JETLS
+
+JETLS is a new language server for Julia that is under active development and with frequent releases.
+JETLS requires Julia 1.12 or higher.
+
+1. Install the [Julia](https://packages.sublimetext.io/packages/Julia) package from Package Control for syntax highlighting.
+2. Install or update the JETLS executable app:
+
+    ```sh
+    julia -e 'using Pkg; Pkg.Apps.add(; url="https://github.com/aviatesk/JETLS.jl", rev="release")'
+    ```
+
+3. Make sure `~/.julia/bin` is available on the `PATH` so that the executable is accessible.
+4. (Optional) follow instructions to install [TestRunner integration](https://aviatesk.github.io/JETLS.jl/testrunner/) and/or [Formatter integration](https://aviatesk.github.io/JETLS.jl/formatting/).
+5. Open `Preferences > Package Settings > LSP > Settings` and add the `"JETLS"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "JETLS": {
+                "enabled": true,
+                "command": ["jetls", "--socket=${port}"],
+                "tcp_port": 0,
+                "selector": "source.julia",
+                "diagnostics_mode": "workspace",
+                // For all configuration options see https://aviatesk.github.io/JETLS.jl/configuration/
+                "settings": {
+                    // "jetls.full_analysis.debounce": 1.0,
+                    // "jetls.full_analysis.auto_instantiate": true,
+                    // "jetls.diagnostic.all_files": true,
+                }
+            }
+        }
+    }
+    ```
+
+### LanguageServer.jl
+
 Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LSP-julia).
 
 ## Kotlin

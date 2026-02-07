@@ -16,6 +16,16 @@
               "default": false,
               "markdownDescription": "If supported, format a file before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
             },
+            "lsp_code_actions_on_format": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              },
+              "propertyNames": {
+                "pattern": "^source\\."
+              },
+              "markdownDescription": "A dictionary of code action identifiers that should be triggered on format.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-format code actions.\n\nThis option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
+            },
             "lsp_code_actions_on_save": {
               "type": "object",
               "additionalProperties": {
@@ -460,6 +470,9 @@
             },
             "lsp_format_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_format": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format",
             },
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",

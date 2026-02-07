@@ -17,9 +17,11 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import text_document_ranges_formatting
 from .core.views import will_save_wait_until
-from .save_command import LspSaveCommand, SaveTask, LspTextCommandWithTasks
+from .lsp_task import LspTask
+from .lsp_task import LspTextCommandWithTasks
 from functools import partial
 from typing import Any, Callable, Iterator, List, Union
+from typing_extensions import override
 import sublime
 
 
@@ -49,7 +51,7 @@ def format_document(text_command: LspTextCommand, formatter: str | None = None) 
     return Promise.resolve(None)
 
 
-class WillSaveWaitTask(SaveTask):
+class WillSaveWaitTask(LspTask):
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
         return bool(view.file_name())
@@ -80,14 +82,16 @@ class WillSaveWaitTask(SaveTask):
         promise.then(lambda _: self._handle_next_session_async())
 
 
-class FormattingTask(SaveTask):
+class FormattingTask(LspTask):
     @classmethod
+    @override
     def is_applicable(cls, view: sublime.View) -> bool:
         settings = view.settings()
         view_format_on_save = settings.get('lsp_format_on_save', None)
         enabled = view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
         return enabled and bool(view.window()) and bool(view.file_name())
 
+    @override
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
@@ -105,19 +109,22 @@ class FormattingTask(SaveTask):
         promise.then(lambda _: self._on_complete())
 
 
-LspSaveCommand.register_task(WillSaveWaitTask)
-LspSaveCommand.register_task(FormattingTask)
-
-
 class LspFormatDocumentCommand(LspTextCommandWithTasks):
 
     capability = 'documentFormattingProvider'
 
+    @property
+    @override
+    def tasks(self) -> list[type[LspTask]]:
+        return [CodeActionsOnFormatTask]
+
+    @override
     def is_enabled(self, event: dict | None = None, select: bool = False) -> bool:
         if select:
             return len(list(self.sessions(self.capability))) > 1
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
+    @override
     def on_tasks_completed(self, *, select: bool = False, **kwargs: dict[str, Any]) -> None:
         session_names = [session.config.name for session in self.sessions(self.capability)]
         syntax = self.view.syntax()
@@ -172,9 +179,6 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             if listener := self.get_listener():
                 listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result_async)
-
-
-LspFormatDocumentCommand.register_task(CodeActionsOnFormatTask)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):

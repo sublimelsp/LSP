@@ -109,7 +109,7 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._save_tasks_runner: TasksRunner | None = None
+        self._tasks_runner: TasksRunner | None = None
 
     def on_before_tasks(self) -> None:
         """Override this to execute code before the task handler starts."""
@@ -118,13 +118,13 @@ class LspTextCommandWithTasks(LspTextCommand, ABC):
         """Override this to execute code when all tasks are completed."""
 
     def _on_tasks_completed(self, **kwargs: dict[str, Any]) -> None:
-        self._save_tasks_runner = None
+        self._tasks_runner = None
         self.on_tasks_completed(**kwargs)
 
     @override
     def run(self, edit: sublime.Edit, **kwargs: dict[str, Any]) -> None:
-        if self._save_tasks_runner:
-            self._save_tasks_runner.cancel()
+        if self._tasks_runner:
+            self._tasks_runner.cancel()
         self.on_before_tasks()
-        self._save_tasks_runner = TasksRunner(self, self.tasks, partial(self._on_tasks_completed, **kwargs))
-        self._save_tasks_runner.run()
+        self._tasks_runner = TasksRunner(self, self.tasks, partial(self._on_tasks_completed, **kwargs))
+        self._tasks_runner.run()

@@ -15,7 +15,11 @@ from ...protocol import DidCloseTextDocumentParams
 from ...protocol import DidOpenTextDocumentParams
 from ...protocol import DidSaveTextDocumentParams
 from ...protocol import DocumentColorParams
+from ...protocol import DocumentFormattingParams
+from ...protocol import DocumentRangeFormattingParams
+from ...protocol import DocumentRangesFormattingParams
 from ...protocol import DocumentUri
+from ...protocol import FormattingOptions
 from ...protocol import LanguageKind
 from ...protocol import Location
 from ...protocol import LocationLink
@@ -29,6 +33,7 @@ from ...protocol import TextDocumentIdentifier
 from ...protocol import TextDocumentItem
 from ...protocol import TextDocumentPositionParams
 from ...protocol import TextDocumentSaveReason
+from ...protocol import TextEdit
 from ...protocol import VersionedTextDocumentIdentifier
 from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
@@ -315,32 +320,36 @@ def did_close_text_document_params(uri: DocumentUri) -> DidCloseTextDocumentPara
     return {"textDocument": text_document_identifier(uri)}
 
 
-def did_open(view: sublime.View, language_id: str) -> Notification:
+def did_open(view: sublime.View, language_id: str) -> Notification[DidOpenTextDocumentParams]:
     return Notification.didOpen(did_open_text_document_params(view, language_id))
 
 
 def did_change(view: sublime.View, version: int,
-               changes: Iterable[sublime.TextChange] | None = None) -> Notification:
+               changes: Iterable[sublime.TextChange] | None = None) -> Notification[DidChangeTextDocumentParams]:
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 
-def will_save(uri: DocumentUri, reason: TextDocumentSaveReason) -> Notification:
+def will_save(uri: DocumentUri, reason: TextDocumentSaveReason) -> Notification[WillSaveTextDocumentParams]:
     return Notification.willSave(will_save_text_document_params(uri, reason))
 
 
-def will_save_wait_until(view: sublime.View, reason: TextDocumentSaveReason) -> Request:
+def will_save_wait_until(
+    view: sublime.View, reason: TextDocumentSaveReason
+) -> Request[WillSaveTextDocumentParams, list[TextEdit] | None]:
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
-def did_save(view: sublime.View, include_text: bool, uri: DocumentUri | None = None) -> Notification:
+def did_save(
+    view: sublime.View, include_text: bool, uri: DocumentUri | None = None
+) -> Notification[DidSaveTextDocumentParams]:
     return Notification.didSave(did_save_text_document_params(view, include_text, uri))
 
 
-def did_close(uri: DocumentUri) -> Notification:
+def did_close(uri: DocumentUri) -> Notification[DidCloseTextDocumentParams]:
     return Notification.didClose(did_close_text_document_params(uri))
 
 
-def formatting_options(settings: sublime.Settings) -> dict[str, Any]:
+def formatting_options(settings: sublime.Settings) -> FormattingOptions:
     # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
     # backwards-compatible way.
     trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, None, "none")
@@ -358,27 +367,31 @@ def formatting_options(settings: sublime.Settings) -> dict[str, Any]:
     }
 
 
-def text_document_formatting(view: sublime.View) -> Request:
-    return Request("textDocument/formatting", {
+def text_document_formatting(view: sublime.View) -> Request[DocumentFormattingParams, list[TextEdit] | None]:
+    return Request.formatting({
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings())
-    }, view, progress=True)
+    }, view)
 
 
-def text_document_range_formatting(view: sublime.View, region: sublime.Region) -> Request:
-    return Request("textDocument/rangeFormatting", {
+def text_document_range_formatting(
+    view: sublime.View, region: sublime.Region
+) -> Request[DocumentRangeFormattingParams, list[TextEdit] | None]:
+    return Request.range_formatting({
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region)
-    }, view, progress=True)
+    }, view)
 
 
-def text_document_ranges_formatting(view: sublime.View) -> Request:
-    return Request("textDocument/rangesFormatting", {
+def text_document_ranges_formatting(
+    view: sublime.View
+) -> Request[DocumentRangesFormattingParams, list[TextEdit] | None]:
+    return Request.ranges_formatting({
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
         "ranges": [region_to_range(view, region) for region in view.sel() if not region.empty()]
-    }, view, progress=True)
+    }, view)
 
 
 def selection_range_params(view: sublime.View) -> SelectionRangeParams:
@@ -730,21 +743,13 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
     return result, offset, code, href
 
 
-def format_diagnostic_source_and_code(diagnostic: Diagnostic) -> str:
-    formatted, code, href = diagnostic_source_and_code(diagnostic)
-    if href is None or code is None:
-        return formatted
-    return formatted + f"({code})"
-
-
 def diagnostic_source_and_code(diagnostic: Diagnostic) -> tuple[str, str | None, str | None]:
     formatted = diagnostic.get("source", "")
     href = None
     code = diagnostic.get("code")
     if code is not None:
         code = str(code)
-        code_description = diagnostic.get("codeDescription")
-        if code_description:
+        if code_description := diagnostic.get("codeDescription"):
             href = code_description["href"]
         else:
             formatted += f"({code})"

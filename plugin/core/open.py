@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ...protocol import DocumentUri
 from ...protocol import Range
+from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
 from .logging import exception_log
@@ -122,6 +123,23 @@ def open_file(
     # Save the promise in the first element of the tuple so that the for-loop above can return it
     opening_files[file] = (promise, tup[1])
     return promise
+
+
+def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> sublime.View | None:
+    """
+    Open a resource file.
+    It is only safe to call this function from the UI thread.
+    The provided uri MUST be a res URI
+    """
+    prefix = 'res:/Packages/'
+    if not uri.startswith(prefix):
+        return None
+    if group != -1:
+        window.focus_group(group)
+    resource_path = uri[len(prefix):]
+    window.run_command('open_file', {'file': f'${{packages}}/{resource_path}'})
+    file = os.path.join(ST_PACKAGES_PATH, *resource_path.split('/'))
+    return _find_open_file(window, file, group)
 
 
 def center_selection(view: sublime.View, r: Range) -> sublime.View:

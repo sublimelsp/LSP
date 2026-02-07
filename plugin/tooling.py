@@ -504,7 +504,7 @@ class ServerTestRunner(TransportCallbacks):
             workspace = ProjectFolders(window)
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
             cwd = None
-            if plugin_class is not None:
+            if plugin_class:
                 if plugin_class.needs_update_or_installation():
                     plugin_class.install_or_update()
                 additional_variables = plugin_class.additional_variables()

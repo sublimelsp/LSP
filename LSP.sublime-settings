@@ -23,11 +23,12 @@
   // "" - don't show code actions.
   "show_code_actions": "annotation",
 
-  // A dictionary of code action identifiers that should be triggered on save.
+  // A dictionary of code action identifiers that should be triggered on format or
+  // on save.
   //
   // Code action identifiers are not officially standardized so refer to specific
   // server's documentation on what is supported but `source.fixAll` is commonly
-  // used to apply fix-on-save code actions.
+  // used to apply fix-on-format or fix-on-save code actions.
   //
   // This option is also supported in syntax-specific settings and/or in the
   // "settings" section of project files. Settings from all those places will be
@@ -35,6 +36,10 @@
   // specific (from LSP or Sublime settings).
   //
   // Only "source.*" actions are supported.
+  "lsp_code_actions_on_format": {
+    // "source.fixAll": true,
+    // "source.organizeImports": true,
+  },
   "lsp_code_actions_on_save": {
     // "source.fixAll": true,
     // "source.organizeImports": true,

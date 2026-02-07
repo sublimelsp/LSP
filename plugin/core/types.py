@@ -1,4 +1,6 @@
 from __future__ import annotations
+from ...protocol import DocumentSelector
+from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
 from ...protocol import FileOperationPatternKind
 from ...protocol import ServerCapabilities
@@ -224,6 +226,7 @@ class Settings:
     log_debug = cast(bool, None)
     log_max_size = cast(int, None)
     log_server = cast(List[str], None)
+    lsp_code_actions_on_format = cast(Dict[str, bool], None)
     lsp_code_actions_on_save = cast(Dict[str, bool], None)
     lsp_format_on_paste = cast(bool, None)
     lsp_format_on_save = cast(bool, None)
@@ -269,6 +272,7 @@ class Settings:
         r("link_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
+        r("lsp_code_actions_on_format", {})
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_paste", False)
         r("lsp_format_on_save", False)
@@ -401,7 +405,7 @@ class ClientStates:
     STOPPING = 2
 
 
-class DocumentFilter:
+class DocumentFilter_:
     """
     A document filter denotes a document through properties like language, scheme or pattern. An example is a filter
     that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
@@ -442,7 +446,7 @@ class DocumentFilter:
         return True
 
 
-class DocumentSelector:
+class DocumentSelector_:
     """
     A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
     filters matches against the view.
@@ -450,8 +454,8 @@ class DocumentSelector:
 
     __slots__ = ("filters",)
 
-    def __init__(self, document_selector: list[dict[str, Any]]) -> None:
-        self.filters = [DocumentFilter(**document_filter) for document_filter in document_selector]
+    def __init__(self, document_selector: DocumentSelector) -> None:
+        self.filters = [DocumentFilter_(**cast(dict, document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -903,7 +907,7 @@ class ClientConfig:
                     break
         return filename_to_uri(path)
 
-    def map_server_uri_to_client_path(self, uri: str) -> str:
+    def map_server_uri_to_client_path(self, uri: DocumentUri) -> str:
         scheme, path = parse_uri(uri)
         if scheme not in ("file", "res"):
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")

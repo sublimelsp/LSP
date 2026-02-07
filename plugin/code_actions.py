@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ..protocol import CodeAction
 from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
 from ..protocol import Command
 from ..protocol import Diagnostic
 from .core.promise import Promise
@@ -22,13 +23,13 @@ from .save_command import SaveTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import TYPE_CHECKING, Any, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Tuple, Union, final
 from typing import cast
 import sublime
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator
-    from typing import TypeGuard
+    from typing_extensions import TypeGuard
 
 
 ConfigName = str
@@ -82,7 +83,7 @@ class CodeActionsManager:
             self.refactor_actions_cache.clear()
             self.source_actions_cache.clear()
 
-        def request_factory(sb: SessionBufferProtocol) -> Request | None:
+        def request_factory(sb: SessionBufferProtocol) -> Request[CodeActionParams, list[CodeActionOrCommand] | None]:
             diagnostics: list[Diagnostic] = []
             for diag_sb, diags in session_buffer_diagnostics:
                 if diag_sb == sb:
@@ -125,7 +126,7 @@ class CodeActionsManager:
     def _collect_code_actions_async(
         self,
         listener: AbstractViewListener,
-        request_factory: Callable[[SessionBufferProtocol], Request | None],
+        request_factory: Callable[[SessionBufferProtocol], Request[CodeActionParams, list[CodeActionOrCommand] | None] | None],  # noqa: E501
         response_filter: Callable[[SessionBufferProtocol, list[CodeActionOrCommand]], list[CodeActionOrCommand]],
     ) -> Promise[list[CodeActionsByConfigName]]:
 
@@ -133,7 +134,7 @@ class CodeActionsManager:
             sb: SessionBufferProtocol, response: Error | list[CodeActionOrCommand] | None
         ) -> CodeActionsByConfigName:
             actions = []
-            if response and not isinstance(response, Error) and response_filter:
+            if response and not isinstance(response, Error):
                 actions = response_filter(sb, response)
             return (sb.session.config.name, actions)
 
@@ -145,13 +146,13 @@ class CodeActionsManager:
                 listener.purge_changes_async()
                 sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
-                task: Promise[list[CodeActionOrCommand] | None | Error] = session.send_request_task(request)
+                task = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
         # Return only results for non-empty lists.
         return Promise.all(tasks) \
             .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
 
-    def request_on_save_async(
+    def request_on_save_or_format_async(
         self, view: sublime.View, on_save_actions: dict[str, bool]
     ) -> Generator[Promise[CodeActionsByConfigName]]:
         listener = windows.listener_for_view(view)
@@ -217,22 +218,20 @@ def get_matching_on_save_kinds(
     return matching_kinds
 
 
-class CodeActionOnSaveTask(SaveTask):
-    """
-    The main task that requests code actions from sessions and runs them.
+class CodeActionTaskBase(SaveTask):
+    """The base task that requests code actions from sessions and runs them."""
 
-    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
-    runs longer, the native save will be triggered before waiting for results.
-    """
+    SETTING_NAME: str
+    """Override in your subclass to specific `lsp_code_actions_on_*` setting that should be read."""
 
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
-        return bool(view.window()) and bool(cls._get_code_actions_on_save(view))
+        return bool(view.window()) and bool(cls._get_code_actions(view))
 
     @classmethod
-    def _get_code_actions_on_save(cls, view: sublime.View) -> dict[str, bool]:
-        view_code_actions = cast('dict[str, bool]', view.settings().get('lsp_code_actions_on_save') or {})
-        code_actions = userprefs().lsp_code_actions_on_save.copy()
+    def _get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
+        view_code_actions = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
+        code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
         code_actions.update(view_code_actions)
         return {
             key: value for key, value in code_actions.items() if key.startswith('source.')
@@ -241,8 +240,8 @@ class CodeActionOnSaveTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         view = self._task_runner.view
-        on_save_actions = self._get_code_actions_on_save(view)
-        request_iterator = actions_manager.request_on_save_async(view, on_save_actions)
+        code_actions = self._get_code_actions(view)
+        request_iterator = actions_manager.request_on_save_or_format_async(view, code_actions)
         self._process_next_request(request_iterator)
 
     def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
@@ -259,7 +258,7 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         view = self._task_runner.view
-        tasks: list[Promise] = []
+        tasks: list[Promise[None]] = []
         config_name, code_actions = response
         session = self._task_runner.session_by_name(config_name, 'codeActionProvider')
         if session and code_actions:
@@ -269,7 +268,25 @@ class CodeActionOnSaveTask(SaveTask):
         Promise.all(tasks).then(lambda _: self._process_next_request(request_iterator))
 
 
+@final
+class CodeActionOnSaveTask(CodeActionTaskBase):
+    """Request code actions from sessions before save and run them.
+
+    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
+    runs longer, the native save will be triggered before waiting for results.
+    """
+
+    SETTING_NAME = "lsp_code_actions_on_save"
+
+
 LspSaveCommand.register_task(CodeActionOnSaveTask)
+
+
+@final
+class CodeActionsOnFormatTask(CodeActionTaskBase):
+    """Run code actions on format."""
+
+    SETTING_NAME = "lsp_code_actions_on_format"
 
 
 class LspCodeActionsCommand(LspTextCommand):

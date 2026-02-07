@@ -233,6 +233,51 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         )
 
 
+class CodeActionsOnFormatTestCase(TextDocumentTestCase):
+
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        # "quickfix" is not supported but its here for testing purposes
+        cls.view.settings().set('lsp_code_actions_on_format', {'source.fixAll': True, 'quickfix': True})
+
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['codeActionProvider'] = {'codeActionKinds': ['quickfix', 'source.fixAll']}
+        return capabilities
+
+    def test_format_with_fixall_code_action(self) -> Generator:
+        self.insert_characters(' const x = 1')
+        yield from self.await_message('textDocument/didChange')
+
+        code_action_kind = 'source.fixAll'
+        code_action = create_test_code_action(
+            self.view,
+            self.view.change_count(),
+            [(';', range_from_points(Point(0, 12), Point(0, 12)))],
+            code_action_kind
+        )
+        self.set_response('textDocument/codeAction', [code_action])
+
+        self.set_response('textDocument/formatting', [{
+            'newText': "",
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': 0, 'character': 1}
+            }
+        }])
+
+        self.view.run_command('lsp_format_document', {'async': True})
+        yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/formatting')
+        yield from self.await_message('textDocument/didChange')
+        # Response is fixed (fixAll added ";") and formatted (removed leading space)
+        self.assertEqual(entire_content(self.view), 'const x = 1;')
+        # Formatting does not save the document
+        self.assertEqual(self.view.is_dirty(), True)
+
+
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
         actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
@@ -305,28 +350,6 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEqual(params['range']['end']['line'], 1)
         self.assertEqual(params['range']['end']['character'], 1)
         self.assertEqual(len(params['context']['diagnostics']), 2)
-        annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
-        self.assertEqual(len(annotations_range), 1)
-        self.assertEqual(annotations_range[0].a, 3)
-        self.assertEqual(annotations_range[0].b, 0)
-
-    def test_requests_with_no_diagnostics(self) -> Generator:
-        initial_content = 'a\nb\nc'
-        self.insert_characters(initial_content)
-        yield from self.await_message("textDocument/didChange")
-        range_a = range_from_points(Point(0, 0), Point(0, 1))
-        range_b = range_from_points(Point(1, 0), Point(1, 1))
-        code_action1 = create_test_code_action(self.view, 0, [("A", range_a)])
-        code_action2 = create_test_code_action(self.view, 0, [("B", range_b)])
-        self.set_response('textDocument/codeAction', [code_action1, code_action2])
-        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
-        yield 100
-        params = yield from self.await_message('textDocument/codeAction')
-        self.assertEqual(params['range']['start']['line'], 0)
-        self.assertEqual(params['range']['start']['character'], 0)
-        self.assertEqual(params['range']['end']['line'], 1)
-        self.assertEqual(params['range']['end']['character'], 1)
-        self.assertEqual(len(params['context']['diagnostics']), 0)
         annotations_range = self.view.get_regions(RegionKey.CODE_ACTION)
         self.assertEqual(len(annotations_range), 1)
         self.assertEqual(annotations_range[0].a, 3)

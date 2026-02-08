@@ -2,6 +2,7 @@ from __future__ import annotations
 from ...protocol import CodeActionKind
 from ...protocol import CompletionItemKind
 from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
 from ...protocol import DocumentHighlightKind
 from ...protocol import LanguageKind
 from ...protocol import MessageType
@@ -214,6 +215,11 @@ SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_NAVIGATION: "entity.name.definition | entity.name.label | entity.name.section",
     sublime.KIND_MARKUP: "entity.other.attribute-name | entity.name.tag | meta.toc-list.id.html",
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
+}
+
+DIAGNOSTIC_TAG_SCOPES: dict[int, str] = {
+    DiagnosticTag.Unnecessary: 'markup.unnecessary.lsp',
+    DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
 }
 
 DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {

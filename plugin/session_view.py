@@ -1,8 +1,8 @@
 from __future__ import annotations
 from ..protocol import Command
-from ..protocol import DiagnosticTag
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -25,10 +25,6 @@ from weakref import WeakValueDictionary
 import html
 import itertools
 import sublime
-
-DIAGNOSTIC_TAG_MAP: dict[int, str] = {
-    v: k.lower() for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')
-}
 
 
 class TagData:
@@ -298,11 +294,6 @@ class SessionView:
     def diagnostics_key(self, severity: int, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
-    def diagnostics_tag_scope(self, tag: int) -> str | None:
-        if tag in DIAGNOSTIC_TAG_MAP:
-            return f'markup.{DIAGNOSTIC_TAG_MAP[tag]}.lsp'
-        return None
-
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
         if listener := self.listener():
@@ -326,12 +317,12 @@ class SessionView:
     ) -> None:
         ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
-        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_MAP}
+        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
-                tag_scope = self.diagnostics_tag_scope(tag)
+                tag_scope = DIAGNOSTIC_TAG_SCOPES.get(tag)
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                 if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
                     tags[tag].regions = regions

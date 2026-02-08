@@ -214,6 +214,7 @@ def plugin_loaded() -> None:
 
         sublime.set_timeout(show_warning, 5_000)
 
+
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
     windows.disable()

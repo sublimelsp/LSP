@@ -322,9 +322,9 @@ class SessionView:
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
-                tag_scope = DIAGNOSTIC_TAG_SCOPES.get(tag)
+                tag_scope = DIAGNOSTIC_TAG_SCOPES[tag]
                 # Trick to only add tag regions if there is a corresponding color scheme scope defined.
-                if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
+                if 'background' in self.view.style_for_scope(tag_scope):
                     tags[tag].regions = regions
                     tags[tag].scope = tag_scope
                 else:

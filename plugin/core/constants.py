@@ -217,7 +217,7 @@ SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }
 
-DIAGNOSTIC_TAG_SCOPES: dict[int, str] = {
+DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
     DiagnosticTag.Unnecessary: 'markup.unnecessary.lsp',
     DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
 }

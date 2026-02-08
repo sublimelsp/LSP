@@ -26,7 +26,9 @@ import html
 import itertools
 import sublime
 
-DIAGNOSTIC_TAG_VALUES: list[int] = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+DIAGNOSTIC_TAGS_MAP: dict[int, str] = {
+    v: k.lower() for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')
+}
 
 
 class TagData:
@@ -297,9 +299,8 @@ class SessionView:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
     def diagnostics_tag_scope(self, tag: int) -> str | None:
-        for k, v in DiagnosticTag.__dict__.items():
-            if v == tag:
-                return f'markup.{k.lower()}.lsp'
+        if tag in DIAGNOSTIC_TAGS_MAP:
+            return f'markup.{DIAGNOSTIC_TAGS_MAP[tag]}.lsp'
         return None
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
@@ -325,7 +326,7 @@ class SessionView:
     ) -> None:
         ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
-        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_VALUES}
+        tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAGS_MAP}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions

@@ -208,7 +208,7 @@ For example, to add a custom rule for `Mariana` color scheme, select `UI: Custom
     "rules": [
         {
             "scope": "markup.unnecessary.lsp",
-            "foreground": "color(rgb(255, 255, 255) alpha(0.4))",
+            "foreground": "rgba(255, 255, 255, 0.4)",
             "background": "#00000101"
         }
     ]

@@ -323,8 +323,8 @@ class SessionView:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
                 tag_scope = DIAGNOSTIC_TAG_SCOPES[tag]
-                # Trick to only add tag regions if there is a corresponding color scheme scope defined.
-                if 'background' in self.view.style_for_scope(tag_scope):
+                # Only add tag regions if there is a corresponding color scheme scope defined
+                if tag in self.session_buffer.supported_diagnostic_tags:
                     tags[tag].regions = regions
                     tags[tag].scope = tag_scope
                 else:
@@ -400,7 +400,7 @@ class SessionView:
             regions = [self._code_lens_region(code_lens) for code_lens in self._code_lenses]
             flags = sublime.RegionFlags.NO_UNDO
             annotations = [self._code_lens_annotation(code_lens) for code_lens in self._code_lenses]
-            annotation_color = self.view.style_for_scope('region.greenish markup.accent.codelens.lsp')['foreground']
+            annotation_color = self.session_buffer.code_lens_annotation_color
             self.view.add_regions(key, regions, flags=flags, annotations=annotations, annotation_color=annotation_color)
         elif userprefs().show_code_lens == 'phantom':
             # Workaround for https://github.com/sublimehq/sublime_text/issues/6188

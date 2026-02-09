@@ -228,6 +228,9 @@ DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
 }
 
+CODE_ACTION_ANNOTATION_SCOPE = 'region.bluish markup.accent.codeaction.lsp'
+CODE_LENS_ANNOTATION_SCOPE = 'region.greenish markup.accent.codelens.lsp'
+
 # These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more
 # match any of the entries here, then the rule is that we split the base scope on the ".", and take the second
 # component. The resulting string is assumed to be the language ID. The official list is maintained at

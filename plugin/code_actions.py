@@ -217,7 +217,7 @@ def get_matching_on_save_kinds(
     return matching_kinds
 
 
-class CodeActionTaskBase(LspTask):
+class CodeActionsTaskBase(LspTask):
     """The base task that requests code actions from sessions and runs them."""
 
     SETTING_NAME: str
@@ -270,7 +270,7 @@ class CodeActionTaskBase(LspTask):
 
 
 @final
-class CodeActionOnSaveTask(CodeActionTaskBase):
+class CodeActionsOnSaveTask(CodeActionsTaskBase):
     """Request code actions from sessions before save and run them.
 
     The amount of time the task is allowed to run is defined by user-controlled setting. If the task
@@ -281,7 +281,7 @@ class CodeActionOnSaveTask(CodeActionTaskBase):
 
 
 @final
-class CodeActionsOnFormatTask(CodeActionTaskBase):
+class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
 
     SETTING_NAME = "lsp_code_actions_on_format"

@@ -10,6 +10,7 @@ from ...protocol import Command
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticRelatedInformation
 from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
 from ...protocol import DidChangeTextDocumentParams
 from ...protocol import DidCloseTextDocumentParams
 from ...protocol import DidOpenTextDocumentParams
@@ -82,7 +83,7 @@ class DiagnosticSeverityData:
 
     def __init__(self, severity: int) -> None:
         self.regions: list[sublime.Region] = []
-        self.regions_with_tag: dict[int, list[sublime.Region]] = {}
+        self.regions_with_tag: dict[DiagnosticTag, list[sublime.Region]] = {}
         self.annotations: list[str] = []
         _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":

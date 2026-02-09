@@ -82,7 +82,7 @@ class WillSaveWaitTask(LspTask):
         promise.then(lambda _: self._handle_next_session_async())
 
 
-class FormattingTask(LspTask):
+class FormattingOnSaveTask(LspTask):
     @classmethod
     @override
     def is_applicable(cls, view: sublime.View) -> bool:

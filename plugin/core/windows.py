@@ -2,6 +2,7 @@ from __future__ import annotations
 from ...protocol import Diagnostic
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
+from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
@@ -19,6 +20,7 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
+from .promise import Promise
 from .protocol import Error
 from .protocol import Point
 from .sessions import AbstractViewListener
@@ -328,9 +330,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: int | str) -> None:
+    def handle_message_request(
+        self, config_name: str, params: ShowMessageRequestParams
+    ) -> Promise[MessageActionItem | None]:
         if view := self._window.active_view():
-            MessageRequestHandler(view, session, request_id, params, session.config.name).show()
+            return MessageRequestHandler(view, params, config_name).show()
+        return Promise.resolve(None)
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
         self._end_sessions_async(config_names)

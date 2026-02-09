@@ -503,6 +503,13 @@ _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
 }
 
 
+def method2attr(method: str) -> str:
+    # window/messageRequest -> m_window_messageRequest
+    # $/progress -> m___progress
+    # client/registerCapability -> m_client_registerCapability
+    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
+
+
 def method_to_capability(method: str) -> tuple[str, str]:
     """
     Given a method, returns the corresponding capability path, and the associated path to stash the registration key.

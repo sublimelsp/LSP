@@ -35,6 +35,7 @@ from ...protocol import LSPAny
 from ...protocol import LSPErrorCodes
 from ...protocol import LSPObject
 from ...protocol import MarkupKind
+from ...protocol import MessageActionItem
 from ...protocol import PrepareSupportDefaultBehavior
 from ...protocol import PreviousResultId
 from ...protocol import ProgressParams
@@ -70,6 +71,7 @@ from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from .api_decorator import APIDecorator
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
@@ -111,6 +113,7 @@ from .types import ClientStates
 from .types import debounced
 from .types import diff
 from .types import DocumentSelector_
+from .types import method2attr
 from .types import method_to_capability
 from .types import SemanticToken
 from .types import SettingsRegistration
@@ -277,6 +280,12 @@ class Manager(metaclass=ABCMeta):
         The given Session has stopped with the given exit code.
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def handle_message_request(
+        self, config_name: str, params: ShowMessageRequestParams
+    ) -> Promise[MessageActionItem | None]:
+        ...
 
 
 def _int_enum_to_list(e: type[IntEnum]) -> list[int]:
@@ -1314,13 +1323,6 @@ def print_to_status_bar(error: ResponseError) -> None:
     sublime.status_message(error["message"])
 
 
-def method2attr(method: str) -> str:
-    # window/messageRequest -> m_window_messageRequest
-    # $/progress -> m___progress
-    # client/registerCapability -> m_client_registerCapability
-    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
-
-
 class _RegistrationData:
 
     __slots__ = ("registration_id", "capability_path", "registration_path", "options", "session_buffers", "selector")
@@ -1360,6 +1362,7 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
+@APIDecorator.initialize
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
@@ -2169,9 +2172,11 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    def m_window_showMessageRequest(self, params: ShowMessageRequestParams, request_id: int | str) -> None:
-        """handles the window/showMessageRequest request"""
-        self.call_manager('handle_message_request', self, params, request_id)
+    @APIDecorator.request_handler('window/showMessageRequest')
+    def on_show_message_request(self, params: ShowMessageRequestParams) -> Promise[MessageActionItem | None]:
+        if mgr := self.manager():
+            return mgr.handle_message_request(self.config.name, params)
+        return Promise.resolve(None)
 
     def m_window_showMessage(self, params: ShowMessageParams) -> None:
         """handles the window/showMessage notification"""
@@ -2623,6 +2628,7 @@ class Session(TransportCallbacks):
     def on_payload(self, payload: dict[str, Any]) -> None:
         handler, result, req_id, typestr, _method = self.deduce_payload(payload)
         if handler:
+            result_promise: Promise[Response[Any]] | None = None
             try:
                 if req_id is None:
                     # notification or response
@@ -2630,14 +2636,18 @@ class Session(TransportCallbacks):
                 else:
                     # request
                     try:
-                        handler(result, req_id)
+                        result_promise = cast('Promise[Response[Any]] | None', handler(result, req_id))
                     except Error as err:
                         self.send_error_response(req_id, err)
+                        return
                     except Exception as ex:
                         self.send_error_response(req_id, Error.from_exception(ex))
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
+                return
+            if isinstance(result_promise, Promise):
+                result_promise.then(self.send_response)
 
     def response_handler(
         self, response_id: int, response: dict[str, Any]

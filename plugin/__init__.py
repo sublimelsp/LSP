@@ -1,3 +1,4 @@
+from .core.api_decorator import APIDecorator
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -6,6 +7,7 @@ from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherEventType
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
+from .core.promise import Promise
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -32,6 +34,7 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
+    'APIDecorator',
     'apply_text_edits',
     'ClientConfig',
     'css',
@@ -48,6 +51,7 @@ __all__ = [
     'matches_pattern',
     'Notification',
     'parse_uri',
+    'Promise',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',

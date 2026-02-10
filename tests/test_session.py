@@ -10,7 +10,9 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
 from LSP.protocol import Diagnostic
 from LSP.protocol import DocumentUri
+from LSP.protocol import LogMessageParams
 from LSP.protocol import MessageActionItem
+from LSP.protocol import ShowMessageParams
 from LSP.protocol import ShowMessageRequestParams
 from LSP.protocol import TextDocumentSyncKind
 from test_mocks import TEST_CONFIG
@@ -53,6 +55,18 @@ class MockManager(Manager):
         self, config_name: str, params: ShowMessageRequestParams
     ) -> Promise[MessageActionItem | None]:
         return Promise.resolve(None)
+
+    def handle_show_message(
+        self, config_name: str, params: ShowMessageParams
+    ) -> Promise[MessageActionItem | None]:
+        return Promise.resolve(None)
+
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
+        ...
+
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
+        ...
+
 
 
 class MockLogger(Logger):

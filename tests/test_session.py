@@ -68,7 +68,6 @@ class MockManager(Manager):
         ...
 
 
-
 class MockLogger(Logger):
 
     def stderr_message(self, message: str) -> None:

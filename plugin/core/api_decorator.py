@@ -25,13 +25,13 @@ R = TypeVar('R', bound=LSPAny)
 class APIDecorator:
     """Decorate plugin class methods to handle server initiated requests and notifications.
 
-    1. Ensure plugin class is decorated with `APIDecorator.initialize`.
-    2. Add `APIDecorator.request('...')` and/or `APIDecorator.notification('...')` decorates on class methods.
+    1. Ensure class is decorated with `APIDecorator.initialize`.
+    2. Add `APIDecorator.request('...')` and/or `APIDecorator.notification('...')` decorators on chosen class methods.
 
-    Notification handlers receive one parameter containing notification parameters.
+    Notification handlers receive one parameter with notification parameters.
 
-    Request handlers receive one parameter containing request parameters and return Promise that should be resolved
-    with response value. All requests must receive a response.
+    Request handlers receive one parameter with request parameters and return a Promise that should be resolved
+    with the response value. All requests must receive a response.
     """
 
     @staticmethod

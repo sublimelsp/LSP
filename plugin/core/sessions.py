@@ -74,7 +74,7 @@ from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .api_decorator import initialize_api
+from .api_decorator import initialize_api_decorators
 from .api_decorator import notification_handler
 from .api_decorator import request_handler
 from .constants import RequestFlags
@@ -880,7 +880,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-@initialize_api
+@initialize_api_decorators
 class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
@@ -1363,7 +1363,7 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-@initialize_api
+@initialize_api_decorators
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],

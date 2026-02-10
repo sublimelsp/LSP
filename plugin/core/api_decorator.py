@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .promise import Promise
 
 __all__ = [
-    'initialize_api',
+    'initialize_api_decorators',
     'notification_handler',
     'request_handler',
 ]
@@ -24,7 +24,7 @@ P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 
 
-def initialize_api(_class: type[T]) -> type[T]:
+def initialize_api_decorators(_class: type[T]) -> type[T]:
     """Internal decorator used for processing decorated methods."""
 
     original_init = _class.__init__

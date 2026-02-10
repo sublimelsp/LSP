@@ -412,24 +412,24 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
 
-    def handle_log_message(self, session: Session, params: LogMessageParams) -> None:
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
             return
         message_type = params['type']
         level = MESSAGE_TYPE_LEVELS[message_type]
         message = params['message']
-        print(f"{session.config.name}: {level}: {message}")
+        print(f"{config_name}: {level}: {message}")
         if message_type == MessageType.Error:
-            self.window.status_message(f"{session.config.name}: {message}")
+            self.window.status_message(f"{config_name}: {message}")
 
-    def handle_stderr_log(self, session: Session, message: str) -> None:
-        self.handle_server_message_async(session.config.name, message)
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
+        self.handle_server_message_async(config_name, message)
 
-    def handle_server_message_async(self, server_name: str, message: str) -> None:
-        sublime.set_timeout(lambda: self.log_server_message(server_name, message))
+    def handle_server_message_async(self, config_name: str, message: str) -> None:
+        sublime.set_timeout(lambda: self.log_server_message(config_name, message))
 
-    def log_server_message(self, prefix: str, message: str) -> None:
-        self._server_log.append((prefix, message))
+    def log_server_message(self, config_name: str, message: str) -> None:
+        self._server_log.append((config_name, message))
         list_len = len(self._server_log)
         max_lines = self.get_log_lines_limit()
         if list_len >= max_lines:
@@ -445,10 +445,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
         level = MESSAGE_TYPE_LEVELS[params['type']]
         message = params['message']
-        msg = f"{session.config.name}: {level}: {message}"
+        msg = f"{config_name}: {level}: {message}"
         debug(msg)
         self.window.status_message(msg)
 

@@ -1,4 +1,5 @@
-from .core.api_decorator import APIDecorator
+from .core.api_decorator import notification_handler
+from .core.api_decorator import request_handler
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -34,7 +35,6 @@ from .core.workspace import WorkspaceFolder
 __all__ = [
     '__version__',
     'AbstractPlugin',
-    'APIDecorator',
     'apply_text_edits',
     'ClientConfig',
     'css',
@@ -50,11 +50,13 @@ __all__ = [
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',
+    'notification_handler',
     'parse_uri',
     'Promise',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',
+    'request_handler',
     'Response',
     'Session',
     'SessionBufferProtocol',

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ...protocol import ApplyWorkspaceEditParams
+from ...protocol import ApplyWorkspaceEditResult
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
@@ -46,6 +47,7 @@ from ...protocol import RegistrationParams
 from ...protocol import SemanticTokenModifiers
 from ...protocol import SemanticTokenTypes
 from ...protocol import ShowDocumentParams
+from ...protocol import ShowDocumentResult
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...protocol import SignatureHelpTriggerKind
@@ -67,11 +69,14 @@ from ...protocol import WorkspaceDiagnosticParams
 from ...protocol import WorkspaceDiagnosticReport
 from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
+from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .api_decorator import APIDecorator
+from .api_decorator import initialize_api
+from .api_decorator import notification_handler
+from .api_decorator import request_handler
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP
@@ -285,6 +290,20 @@ class Manager(metaclass=ABCMeta):
     def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
     ) -> Promise[MessageActionItem | None]:
+        ...
+
+    @abstractmethod
+    def handle_show_message(
+        self, config_name: str, params: ShowMessageParams
+    ) -> Promise[MessageActionItem | None]:
+        ...
+
+    @abstractmethod
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
+        ...
+
+    @abstractmethod
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
         ...
 
 
@@ -861,26 +880,8 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+@initialize_api
 class AbstractPlugin(metaclass=ABCMeta):
-    """
-    Inherit from this class to handle non-standard requests and notifications.
-    Given a request/notification, replace the non-alphabetic characters with an underscore, and prepend it with "m_".
-    This will be the name of your method.
-    For instance, to implement the non-standard eslint/openDoc request, define the Python method
-
-        def m_eslint_openDoc(self, params, request_id):
-            session = self.weaksession()
-            if session:
-                webbrowser.open_tab(params['url'])
-                session.send_response(Response(request_id, None))
-
-    To handle the non-standard eslint/status notification, define the Python method
-
-        def m_eslint_status(self, params):
-            pass
-
-    To understand how this works, see the __getattr__ method of the Session class.
-    """
 
     @classmethod
     @abstractmethod
@@ -1362,7 +1363,7 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-@APIDecorator.initialize
+@initialize_api
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
@@ -1708,12 +1709,9 @@ class Session(TransportCallbacks):
         ]
         return folder_excludes + file_excludes + ['**/node_modules/**']
 
-    def call_manager(self, method: str, *args: Any) -> None:
-        if mgr := self.manager():
-            getattr(mgr, method)(*args)
-
     def on_stderr_message(self, message: str) -> None:
-        self.call_manager('handle_stderr_log', self, message)
+        if mgr := self.manager():
+            mgr.handle_stderr_log(self.config.name, message)
         self._logger.stderr_message(message)
 
     def _supports_workspace_folders(self) -> bool:
@@ -2172,27 +2170,30 @@ class Session(TransportCallbacks):
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
-    @APIDecorator.request_handler('window/showMessageRequest')
+    @request_handler('window/showMessageRequest')
     def on_window_show_message_request(self, params: ShowMessageRequestParams) -> Promise[MessageActionItem | None]:
         if mgr := self.manager():
             return mgr.handle_message_request(self.config.name, params)
         return Promise.resolve(None)
 
-    def m_window_showMessage(self, params: ShowMessageParams) -> None:
-        """handles the window/showMessage notification"""
-        self.call_manager('handle_show_message', self, params)
+    @request_handler('window/showMessage')
+    def on_window_show_message(self, params: ShowMessageParams) -> Promise[MessageActionItem | None]:
+        if mgr := self.manager():
+            mgr.handle_show_message(self.config.name, params)
+        return Promise.resolve(None)
 
-    def m_window_logMessage(self, params: LogMessageParams) -> None:
-        """handles the window/logMessage notification"""
-        self.call_manager('handle_log_message', self, params)
+    @notification_handler('window/logMessage')
+    def on_window_log_message(self, params: LogMessageParams) -> None:
+        if mgr := self.manager():
+            mgr.handle_log_message(self.config.name, params)
 
-    def m_workspace_workspaceFolders(self, params: None, request_id: int | str) -> None:
-        """handles the workspace/workspaceFolders request"""
-        self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
+    @request_handler('workspace/workspaceFolders')
+    def on_workspace_workspace_folders(self, _: None) -> Promise[list[LspWorkspaceFolder]]:
+        return Promise.resolve([wf.to_lsp() for wf in self._workspace_folders])
 
-    def m_workspace_configuration(self, params: ConfigurationParams, request_id: int | str) -> None:
-        """handles the workspace/configuration request"""
-        items: list[Any] = []
+    @request_handler('workspace/configuration')
+    def on_workspace_configuration(self, params: ConfigurationParams) -> Promise[list[LSPAny]]:
+        items: list[LSPAny] = []
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
@@ -2200,25 +2201,24 @@ class Session(TransportCallbacks):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
-        self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
+        return Promise.resolve(sublime.expand_variables(items, self._template_variables()))
 
-    def m_workspace_applyEdit(self, params: ApplyWorkspaceEditParams, request_id: int | str) -> None:
-        """handles the workspace/applyEdit request"""
-        self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
-            .then(lambda _: self.send_response(Response(request_id, {"applied": True})))
+    @request_handler('workspace/applyEdit')
+    def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> Promise[ApplyWorkspaceEditResult]:
+        return self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
+            .then(lambda _: {"applied": True})
 
-    def m_workspace_codeLens_refresh(self, params: None, request_id: int | str) -> None:
-        """handles the workspace/codeLens/refresh request"""
-        self.send_response(Response(request_id, None))
+    @request_handler('workspace/codeLens/refresh')
+    def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
             sv.session_buffer.do_code_lenses_async(sv.view)
         for sv in not_visible_session_views:
             sv.session_buffer.set_code_lenses_pending_refresh()
+        return Promise.resolve(None)
 
-    def m_workspace_semanticTokens_refresh(self, params: None, request_id: int | str) -> None:
-        """handles the workspace/semanticTokens/refresh request"""
-        self.send_response(Response(request_id, None))
+    @request_handler('workspace/semanticTokens/refresh')
+    def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
             if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
@@ -2227,10 +2227,10 @@ class Session(TransportCallbacks):
                 sv.session_buffer.set_semantic_tokens_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_semantic_tokens_pending_refresh()
+        return Promise.resolve(None)
 
-    def m_workspace_inlayHint_refresh(self, params: None, request_id: int | str) -> None:
-        """handles the workspace/inlayHint/refresh request"""
-        self.send_response(Response(request_id, None))
+    @request_handler('workspace/inlayHint/refresh')
+    def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
             if sv.get_request_flags() & RequestFlags.INLAY_HINT:
@@ -2239,18 +2239,19 @@ class Session(TransportCallbacks):
                 sv.session_buffer.set_inlay_hints_pending_refresh()
         for sv in not_visible_session_views:
             sv.session_buffer.set_inlay_hints_pending_refresh()
+        return Promise.resolve(None)
 
-    def m_workspace_diagnostic_refresh(self, params: None, request_id: int | str) -> None:
-        """handles the workspace/diagnostic/refresh request"""
-        self.send_response(Response(request_id, None))
+    @request_handler('workspace/diagnostic/refresh')
+    def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
         visible_session_views, not_visible_session_views = self.session_views_by_visibility()
         for sv in visible_session_views:
             sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
         for sv in not_visible_session_views:
             sv.session_buffer.set_document_diagnostic_pending_refresh()
+        return Promise.resolve(None)
 
-    def m_textDocument_publishDiagnostics(self, params: PublishDiagnosticsParams) -> None:
-        """handles the textDocument/publishDiagnostics notification"""
+    @notification_handler('textDocument/publishDiagnostics')
+    def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:
         self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
 
     def handle_diagnostics_async(
@@ -2269,8 +2270,8 @@ class Session(TransportCallbacks):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 
-    def m_client_registerCapability(self, params: RegistrationParams, request_id: int | str) -> None:
-        """handles the client/registerCapability request"""
+    @request_handler('client/registerCapability')
+    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
             capability_path, registration_path = method_to_capability(registration["method"])
@@ -2307,12 +2308,12 @@ class Session(TransportCallbacks):
             if capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
-        self.send_response(Response(request_id, None))
         if new_workspace_diagnostics_provider:
             self.do_workspace_diagnostics_async()
+        return Promise.resolve(None)
 
-    def m_client_unregisterCapability(self, params: UnregistrationParams, request_id: int | str) -> None:
-        """handles the client/unregisterCapability request"""
+    @request_handler('client/unregisterCapability')
+    def on_client_unregister_capability(self, params: UnregistrationParams) -> Promise[None]:
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:
             registration_id = unregistration["id"]
@@ -2331,7 +2332,7 @@ class Session(TransportCallbacks):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
-        self.send_response(Response(request_id, None))
+        return Promise.resolve(None)
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2362,29 +2363,28 @@ class Session(TransportCallbacks):
             for file_watcher in file_watchers:
                 file_watcher.destroy()
 
-    def m_window_showDocument(self, params: ShowDocumentParams, request_id: int | str) -> None:
-        """handles the window/showDocument request"""
+    @request_handler('window/showDocument')
+    def on_window_show_document(self, params: ShowDocumentParams) -> Promise[ShowDocumentResult]:
         uri = params.get("uri")
 
-        def success(b: None | bool | sublime.View) -> None:
+        def success(b: None | bool | sublime.View) -> ShowDocumentResult:
             if isinstance(b, bool):
                 pass
             elif isinstance(b, sublime.View):
                 b = b.is_valid()
             else:
                 b = False
-            self.send_response(Response(request_id, {"success": b}))
+            return ({"success": b})
 
         if params.get("external"):
-            success(open_externally(uri, bool(params.get("takeFocus"))))
-        else:
-            # TODO: ST API does not allow us to say "do not focus this new view"
-            self.open_uri_async(uri, params.get("selection")).then(success)
+            return Promise.resolve(success(open_externally(uri, bool(params.get("takeFocus")))))
+        # TODO: ST API does not allow us to say "do not focus this new view"
+        return self.open_uri_async(uri, params.get("selection")).then(success)
 
-    def m_window_workDoneProgress_create(self, params: WorkDoneProgressCreateParams, request_id: int | str) -> None:
-        """handles the window/workDoneProgress/create request"""
+    @request_handler('window/workDoneProgress/create')
+    def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> Promise[None]:
         self._progress[params['token']] = None
-        self.send_response(Response(request_id, None))
+        return Promise.resolve(None)
 
     def _invoke_views(self, request: Request[Any, Any], method: str, *args: Any) -> None:
         if request.view:
@@ -2402,7 +2402,8 @@ class Session(TransportCallbacks):
             message=value.get("message")
         )
 
-    def m___progress(self, params: ProgressParams) -> None:
+    @notification_handler('$/progress')
+    def on_progress(self, params: ProgressParams) -> None:
         """handles the $/progress notification"""
         token = params['token']
         value = params['value']

@@ -2,6 +2,7 @@ from __future__ import annotations
 from ..protocol import CodeLens
 from ..protocol import ColorInformation
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticTag
 from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
@@ -19,6 +20,8 @@ from ..protocol import TextDocumentSyncKind
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import CODE_LENS_ANNOTATION_SCOPE
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
@@ -151,6 +154,7 @@ class SessionBuffer:
         self._diagnostics_versions: dict[DiagnosticsIdentifier, int] = {}
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
+        self.supported_diagnostic_tags: set[DiagnosticTag] = set()
         self.document_diagnostic_needs_refresh = False
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
         self._last_synced_version = 0
@@ -169,10 +173,11 @@ class SessionBuffer:
         self._is_saving = False
         self._has_changed_during_save = False
         self._code_lenses = CodeLensCache()
+        self.code_lens_annotation_color: str = ''
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
         self._update_supported_commands()
-        self.evaluate_semantic_tokens_color_scheme_support(view)
+        self._update_color_scheme_rules(view)
 
     @property
     def session(self) -> Session:
@@ -480,6 +485,37 @@ class SessionBuffer:
                 f(view, *args, **kwargs)
 
         return handler
+
+    def on_color_scheme_changed(self, view: sublime.View) -> None:
+        self._update_color_scheme_rules(view)
+
+    def _update_color_scheme_rules(self, view: sublime.View) -> None:
+        # Color scheme rules for diagnostic tags
+        self.supported_diagnostic_tags = set(
+            tag for tag, scope in DIAGNOSTIC_TAG_SCOPES.items() if 'background' in view.style_for_scope(scope)
+        )
+        # Color scheme rule for code lens annotations
+        self.code_lens_annotation_color = view.style_for_scope(CODE_LENS_ANNOTATION_SCOPE)['foreground']
+        # Color scheme rules for semantic highlighting
+        token_general_style = view.style_for_scope('meta.semantic-token')
+        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
+        self._supported_custom_tokens.clear()
+        if not self._semantic_highlighting_supported_by_color_scheme:
+            self.clear_semantic_tokens_async()
+            return
+        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
+        if not token_types:
+            return
+        source_line = token_general_style['source_line']
+        source_column = token_general_style['source_column']
+        for token_type in token_types:
+            if token_type in SEMANTIC_TOKENS_MAP:
+                continue
+            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
+            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
+                # If the source location for this token type differs from the generic semantic tokens rule, it means
+                # that there is a specific rule in the color scheme for this token type.
+                self._supported_custom_tokens.add(token_type)
 
     def _update_supported_commands(self) -> None:
         self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
@@ -820,31 +856,6 @@ class SessionBuffer:
     def clear_semantic_tokens_async(self) -> None:
         for sv in self.session_views:
             self._clear_semantic_token_regions(sv.view)
-
-    def evaluate_semantic_tokens_color_scheme_support(self, view: sublime.View) -> None:
-        """
-        Check whether semantic highlighting is supported by the color scheme and which of the custom token types from
-        this server are supported.
-        """
-        token_general_style = view.style_for_scope('meta.semantic-token')
-        self._semantic_highlighting_supported_by_color_scheme = 'background' in token_general_style
-        self._supported_custom_tokens.clear()
-        if not self._semantic_highlighting_supported_by_color_scheme:
-            self.clear_semantic_tokens_async()
-            return
-        token_types: list[str] | None = self.get_capability('semanticTokensProvider.legend.tokenTypes')
-        if not token_types:
-            return
-        source_line = token_general_style['source_line']
-        source_column = token_general_style['source_column']
-        for token_type in token_types:
-            if token_type in SEMANTIC_TOKENS_MAP:
-                continue
-            token_type_style = view.style_for_scope(f'meta.semantic-token.{token_type.lower()}')
-            if token_type_style['source_line'] != source_line or token_type_style['source_column'] != source_column:
-                # If the source location for this token type differs from the generic semantic tokens rule, it means
-                # that there is a specific rule in the color scheme for this token type.
-                self._supported_custom_tokens.add(token_type)
 
     # --- textDocument/inlayHint ----------------------------------------------------------------------------------
 

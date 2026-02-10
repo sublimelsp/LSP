@@ -97,7 +97,6 @@ ignore = [
     "DOC501",  # https://docs.astral.sh/ruff/rules/docstring-missing-exception/
     "DTZ005",  # https://docs.astral.sh/ruff/rules/call-datetime-now-without-tzinfo/
     "E241",  # https://docs.astral.sh/ruff/rules/multiple-spaces-after-comma/
-    "E501",  # https://docs.astral.sh/ruff/rules/line-too-long/
     "EM",  # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
     "ERA001",  # https://docs.astral.sh/ruff/rules/commented-out-code/
     "F403",  # https://docs.astral.sh/ruff/rules/undefined-local-with-import-star/

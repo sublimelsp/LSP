@@ -2173,7 +2173,7 @@ class Session(TransportCallbacks):
     # --- server request handlers --------------------------------------------------------------------------------------
 
     @APIDecorator.request_handler('window/showMessageRequest')
-    def on_show_message_request(self, params: ShowMessageRequestParams) -> Promise[MessageActionItem | None]:
+    def on_window_show_message_request(self, params: ShowMessageRequestParams) -> Promise[MessageActionItem | None]:
         if mgr := self.manager():
             return mgr.handle_message_request(self.config.name, params)
         return Promise.resolve(None)

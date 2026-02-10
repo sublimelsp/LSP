@@ -56,7 +56,7 @@ import threading
 
 
 if TYPE_CHECKING:
-    from tree_view import TreeViewSheet
+    from .tree_view import TreeViewSheet
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"

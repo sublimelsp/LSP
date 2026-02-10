@@ -2176,11 +2176,10 @@ class Session(TransportCallbacks):
             return mgr.handle_message_request(self.config.name, params)
         return Promise.resolve(None)
 
-    @request_handler('window/showMessage')
-    def on_window_show_message(self, params: ShowMessageParams) -> Promise[MessageActionItem | None]:
+    @notification_handler('window/showMessage')
+    def on_window_show_message(self, params: ShowMessageParams) -> None:
         if mgr := self.manager():
             mgr.handle_show_message(self.config.name, params)
-        return Promise.resolve(None)
 
     @notification_handler('window/logMessage')
     def on_window_log_message(self, params: LogMessageParams) -> None:

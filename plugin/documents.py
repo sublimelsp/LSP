@@ -16,6 +16,7 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
+from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
@@ -182,7 +183,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._uri = existing_uri
         else:
             self.set_uri(view_to_uri(view))
-        self._current_color_scheme = settings.get('color_scheme')
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
         self._registration = SettingsRegistration(settings, on_change=on_change)
@@ -204,6 +204,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._language_id = ""
         self._manager: WindowManager | None = None
         self._session_views: dict[str, SessionView] = {}
+        self._current_color_scheme: str = self.view.settings().get('color_scheme')
+        self._code_action_annotation_color: str = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
         self._lightbulb_line: int | None = None
@@ -766,7 +768,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             title = f'{action_count} code actions' if action_count > 1 else first_action_title
             code_actions_link = make_link('code-actions:', title)
             annotations = [f"<div class=\"actions\" style=\"font-family:system\">{code_actions_link}</div>"]
-            annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
+            annotation_color = self._code_action_annotation_color
         self.view.add_regions(
             RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,
             on_navigate=self._on_code_actions_annotation_click
@@ -1071,9 +1073,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             something_changed = True
         if something_changed:
             self._reset()
-        elif settings.get('color_scheme') != self._current_color_scheme:
+            return
+        color_scheme = settings.get('color_scheme')
+        if color_scheme != self._current_color_scheme:
+            self._current_color_scheme = color_scheme
+            self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
             for session_buffer in self.session_buffers_async():
-                session_buffer.evaluate_semantic_tokens_color_scheme_support(self.view)
+                session_buffer.on_color_scheme_changed(self.view)
 
     def __repr__(self) -> str:
         return f"ViewListener({self.view.id()})"

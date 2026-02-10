@@ -17,7 +17,6 @@ from test_mocks import TEST_CONFIG
 from typing import Any, Generator
 import sublime
 import unittest
-import unittest.mock
 import weakref
 
 

@@ -1080,6 +1080,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
             for session_buffer in self.session_buffers_async():
                 session_buffer.on_color_scheme_changed(self.view)
+            for session_view in self.session_views_async():
+                session_view.on_color_scheme_changed()
 
     def __repr__(self) -> str:
         return f"ViewListener({self.view.id()})"

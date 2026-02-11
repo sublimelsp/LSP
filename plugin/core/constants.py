@@ -217,6 +217,13 @@ SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }
 
+DIAGNOSTIC_SEVERITY_SCOPES: dict[DiagnosticSeverity, str] = {
+    DiagnosticSeverity.Error: 'region.redish markup.error.lsp',
+    DiagnosticSeverity.Warning: 'region.yellowish markup.warning.lsp',
+    DiagnosticSeverity.Information: 'region.bluish markup.info.lsp',
+    DiagnosticSeverity.Hint: 'region.bluish markup.info.hint.lsp'
+}
+
 DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
     DiagnosticTag.Unnecessary: 'markup.unnecessary.lsp',
     DiagnosticTag.Deprecated: 'markup.deprecated.lsp'

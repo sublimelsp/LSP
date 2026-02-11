@@ -463,6 +463,9 @@ class SessionBuffer:
         for sv in self.session_views:
             sv.on_userprefs_changed_async()
 
+    def on_color_scheme_changed(self, view: sublime.View) -> None:
+        self._update_color_scheme_rules(view)
+
     def some_view(self) -> sublime.View | None:
         if not self.session_views:
             return None
@@ -485,9 +488,6 @@ class SessionBuffer:
                 f(view, *args, **kwargs)
 
         return handler
-
-    def on_color_scheme_changed(self, view: sublime.View) -> None:
-        self._update_color_scheme_rules(view)
 
     def _update_color_scheme_rules(self, view: sublime.View) -> None:
         # Color scheme rules for diagnostic tags

@@ -73,7 +73,7 @@ def request_handler(
     Usage:
         ```py
         @request_handler('eslint/openDoc')
-        def on_hover(self, params: TextDocumentIdentifier) -> Promise[bool]:
+        def on_open_doc(self, params: TextDocumentIdentifier) -> Promise[bool]:
             ...
         ```
 

@@ -700,12 +700,7 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def format_diagnostics_for_annotation(
-    diagnostics: list[Diagnostic], severity: DiagnosticSeverity, view: sublime.View
-) -> tuple[list[str], str]:
-    css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
-    scope = DIAGNOSTIC_SEVERITY[severity - 1][2]
-    color = view.style_for_scope(scope).get('foreground') or 'red'
+def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:
     annotations = []
     for diagnostic in diagnostics:
         message = text2html(diagnostic.get('message') or '')
@@ -714,7 +709,7 @@ def format_diagnostics_for_annotation(
         content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
             lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
         annotations.append(content)
-    return (annotations, color)
+    return annotations
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None, str | None, str | None]:

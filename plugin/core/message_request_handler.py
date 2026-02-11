@@ -25,6 +25,7 @@ class MessageRequestHandler:
         self.message = params['message']
         self.message_type = params.get('type', 4)
         self.source = source
+        self._response_handled = False
 
     def show(self) -> Promise[MessageActionItem | None]:
         task: PackagedTask[MessageActionItem | None] = Promise.packaged_task()
@@ -45,10 +46,13 @@ class MessageRequestHandler:
             css=sublime.load_resource("Packages/LSP/notification.css"),
             wrapper_class='notification',
             on_navigate=lambda href: self._send_user_choice(resolve, href),
-            on_hide=lambda href: self._send_user_choice(resolve, href))
+            on_hide=lambda: self._send_user_choice(resolve))
         return promise
 
     def _send_user_choice(self, resolve: ResolveFunc[MessageActionItem | None], href: int = -1) -> None:
+        if self._response_handled:
+            return
+        self._response_handled = True
         self.view.hide_popup()
         index = int(href)
         resolve(self.actions[index] if index != -1 else None)

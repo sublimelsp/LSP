@@ -22,6 +22,9 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
+from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
+from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
+from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
@@ -35,6 +38,7 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
+from .core.signature_help import SignatureHelpStyle
 from .core.types import basescope2languageid
 from .core.types import ClientConfig
 from .core.types import debounced
@@ -206,6 +210,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views: dict[str, SessionView] = {}
         self._current_color_scheme: str = self.view.settings().get('color_scheme')
         self._code_action_annotation_color: str = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
+        self._signature_help_style = self._get_signature_help_style()
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
         self._lightbulb_line: int | None = None
@@ -686,13 +691,32 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         position = self._stored_selection[0].a
         return self.session_async("signatureHelpProvider", position)
 
+    def _get_signature_help_style(self) -> SignatureHelpStyle:
+        function_color = self.view.style_for_scope(SIGNATURE_HELP_FUNCTION_SCOPE)['foreground']
+        active_parameter_style = self.view.style_for_scope(SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE)
+        active_parameter_color = active_parameter_style['foreground']
+        inactive_parameter_color = self.view.style_for_scope(SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE)['foreground']
+        if active_parameter_color == inactive_parameter_color:
+            active_parameter_bold = True
+            active_parameter_underline = True
+        else:
+            active_parameter_bold = active_parameter_style.get('bold', False)
+            active_parameter_underline = active_parameter_style.get('underline', False)
+        return {
+            'function_color': function_color,
+            'active_parameter_color': active_parameter_color,
+            'active_parameter_bold': active_parameter_bold,
+            'active_parameter_underline': active_parameter_underline,
+            'inactive_parameter_color': inactive_parameter_color
+        }
+
     def _on_signature_help(
         self,
         response: SignatureHelp | None,
         point: int,
         language_map: MarkdownLangMap | None
     ) -> None:
-        new_sighelp = SigHelp.from_lsp(response, language_map)
+        new_sighelp = SigHelp.from_lsp(response, language_map, self._signature_help_style)
         if not new_sighelp:
             if self._sighelp and not self.view.match_selector(point, 'meta.function-call.arguments'):
                 self.view.hide_popup()
@@ -1078,6 +1102,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if color_scheme != self._current_color_scheme:
             self._current_color_scheme = color_scheme
             self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
+            self._signature_help_style = self._get_signature_help_style()
             for session_buffer in self.session_buffers_async():
                 session_buffer.on_color_scheme_changed(self.view)
 

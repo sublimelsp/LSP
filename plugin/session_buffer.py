@@ -465,8 +465,6 @@ class SessionBuffer:
 
     def on_color_scheme_changed(self, view: sublime.View) -> None:
         self._update_color_scheme_rules(view)
-        for sv in self.session_views:
-            sv.on_color_scheme_changed()
 
     def some_view(self) -> sublime.View | None:
         if not self.session_views:

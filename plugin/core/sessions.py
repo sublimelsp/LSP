@@ -2209,44 +2209,60 @@ class Session(TransportCallbacks):
 
     @request_handler('workspace/codeLens/refresh')
     def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
-        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-        for sv in visible_session_views:
-            sv.session_buffer.do_code_lenses_async(sv.view)
-        for sv in not_visible_session_views:
-            sv.session_buffer.set_code_lenses_pending_refresh()
+
+        def continue_after_return() -> None:
+            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+            for sv in visible_session_views:
+                sv.session_buffer.do_code_lenses_async(sv.view)
+            for sv in not_visible_session_views:
+                sv.session_buffer.set_code_lenses_pending_refresh()
+
+        sublime.set_timeout_async(continue_after_return)
         return Promise.resolve(None)
 
     @request_handler('workspace/semanticTokens/refresh')
     def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
-        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-        for sv in visible_session_views:
-            if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                sv.session_buffer.do_semantic_tokens_async(sv.view)
-            else:
+
+        def continue_after_return() -> None:
+            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+            for sv in visible_session_views:
+                if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                    sv.session_buffer.do_semantic_tokens_async(sv.view)
+                else:
+                    sv.session_buffer.set_semantic_tokens_pending_refresh()
+            for sv in not_visible_session_views:
                 sv.session_buffer.set_semantic_tokens_pending_refresh()
-        for sv in not_visible_session_views:
-            sv.session_buffer.set_semantic_tokens_pending_refresh()
+
+        sublime.set_timeout_async(continue_after_return)
         return Promise.resolve(None)
 
     @request_handler('workspace/inlayHint/refresh')
     def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
-        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-        for sv in visible_session_views:
-            if sv.get_request_flags() & RequestFlags.INLAY_HINT:
-                sv.session_buffer.do_inlay_hints_async(sv.view)
-            else:
+
+        def continue_after_return() -> None:
+            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+            for sv in visible_session_views:
+                if sv.get_request_flags() & RequestFlags.INLAY_HINT:
+                    sv.session_buffer.do_inlay_hints_async(sv.view)
+                else:
+                    sv.session_buffer.set_inlay_hints_pending_refresh()
+            for sv in not_visible_session_views:
                 sv.session_buffer.set_inlay_hints_pending_refresh()
-        for sv in not_visible_session_views:
-            sv.session_buffer.set_inlay_hints_pending_refresh()
+
+        sublime.set_timeout_async(continue_after_return)
         return Promise.resolve(None)
 
     @request_handler('workspace/diagnostic/refresh')
     def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
-        visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-        for sv in visible_session_views:
-            sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
-        for sv in not_visible_session_views:
-            sv.session_buffer.set_document_diagnostic_pending_refresh()
+
+        def continue_after_return() -> None:
+            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
+            for sv in visible_session_views:
+                sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
+            for sv in not_visible_session_views:
+                sv.session_buffer.set_document_diagnostic_pending_refresh()
+
+        sublime.set_timeout_async(continue_after_return)
         return Promise.resolve(None)
 
     @notification_handler('textDocument/publishDiagnostics')
@@ -2307,8 +2323,12 @@ class Session(TransportCallbacks):
             if capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
-        if new_workspace_diagnostics_provider:
-            self.do_workspace_diagnostics_async()
+
+        def continue_after_return() -> None:
+            if new_workspace_diagnostics_provider:
+                self.do_workspace_diagnostics_async()
+
+        sublime.set_timeout_async(continue_after_return)
         return Promise.resolve(None)
 
     @request_handler('client/unregisterCapability')

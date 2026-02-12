@@ -682,6 +682,9 @@ class SessionViewProtocol(Protocol):
     def on_userprefs_changed_async(self) -> None:
         ...
 
+    def on_color_scheme_changed(self) -> None:
+        ...
+
     def get_request_flags(self) -> RequestFlags:
         ...
 

@@ -381,6 +381,9 @@ class SessionView:
         self._redraw_diagnostics_async()
         self._redraw_code_lenses_async(clear=True)
 
+    def on_color_scheme_changed(self) -> None:
+        self._diagnostic_annotations.on_color_scheme_changed()
+
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def handle_code_lenses_async(self, code_lenses: list[ResolvedCodeLens]) -> None:

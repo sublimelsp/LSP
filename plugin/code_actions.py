@@ -234,7 +234,7 @@ class CodeActionsTaskBase(LspTask):
         code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
         code_actions.update(view_code_actions)
         return {
-            key: value for key, value in code_actions.items() if key.startswith('source.')
+            key: value for key, value in code_actions.items() if key.startswith(CodeActionKind.Source)
         }
 
     @override

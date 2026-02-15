@@ -79,7 +79,7 @@ The port number can be inserted into the server's startup `command` in your clie
 
 ## Per-project overrides
 
-Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_paste` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
+Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_paste`, `lsp_code_actions_on_save` and `lsp_code_actions_on_format`) can be overridden per-project in `.sublime-project` file:
 
 ```jsonc
 {
@@ -91,6 +91,9 @@ Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_pa
   ],
   "settings": {
     "lsp_format_on_save": true,
+    "lsp_code_actions_on_format": {
+      "source.fixAll": true,
+    },
   }
 }
 ```

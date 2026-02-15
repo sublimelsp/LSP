@@ -337,6 +337,12 @@ class CodeActionsFormatOnSaveTaskTestCase(unittest.TestCase):
         userprefs().lsp_format_on_save = True
         self.assertTrue(CodeActionsFormatOnSaveTask.is_applicable(self.view))
 
+    def test_code_actions_format_on_save_task_get_code_actions__no_duplicate_actions(self):
+        self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True, "source.sort.json": True})
+        # No source.fixAll action as it is already run via the CodeActionsOnSaveTask task
+        assert CodeActionsFormatOnSaveTask.get_code_actions(view=self.view) == {"source.sort.json": True}
+
 
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:

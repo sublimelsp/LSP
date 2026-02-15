@@ -1,11 +1,10 @@
 from __future__ import annotations
+from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageRequestParams
-from .protocol import Response
-from .sessions import Session
+from .promise import PackagedTask, Promise, ResolveFunc
 from .views import show_lsp_popup
 from .views import text2html
-from typing import Any
 import sublime
 
 
@@ -19,20 +18,18 @@ ICONS: dict[MessageType, str] = {
 
 
 class MessageRequestHandler:
-    def __init__(
-        self, view: sublime.View, session: Session, request_id: Any, params: ShowMessageRequestParams, source: str
-    ) -> None:
-        self.session = session
-        self.request_id = request_id
-        self.request_sent = False
+    def __init__(self, view: sublime.View, params: ShowMessageRequestParams, source: str) -> None:
         self.view = view
         self.actions = params.get("actions", [])
         self.action_titles = list(action.get("title") for action in self.actions)
         self.message = params['message']
         self.message_type = params.get('type', 4)
         self.source = source
+        self._response_handled = False
 
-    def show(self) -> None:
+    def show(self) -> Promise[MessageActionItem | None]:
+        task: PackagedTask[MessageActionItem | None] = Promise.packaged_task()
+        promise, resolve = task
         formatted: list[str] = []
         formatted.append(f"<h2>{self.source}</h2>")
         icon = ICONS.get(self.message_type, '')
@@ -48,15 +45,14 @@ class MessageRequestHandler:
             location=self.view.layout_to_text(self.view.viewport_position()),
             css=sublime.load_resource("Packages/LSP/notification.css"),
             wrapper_class='notification',
-            on_navigate=self._send_user_choice,
-            on_hide=self._send_user_choice)
+            on_navigate=lambda href: self._send_user_choice(resolve, href),
+            on_hide=lambda: self._send_user_choice(resolve))
+        return promise
 
-    def _send_user_choice(self, href: int = -1) -> None:
-        if self.request_sent:
+    def _send_user_choice(self, resolve: ResolveFunc[MessageActionItem | None], href: int = -1) -> None:
+        if self._response_handled:
             return
-        self.request_sent = True
+        self._response_handled = True
         self.view.hide_popup()
         index = int(href)
-        param = self.actions[index] if index != -1 else None
-        response = Response(self.request_id, param)
-        self.session.send_response(response)
+        resolve(self.actions[index] if index != -1 else None)

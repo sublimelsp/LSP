@@ -74,7 +74,7 @@ from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .api_decorator import initialize_api_decorators
+from .api_decorator import APIHandler
 from .api_decorator import notification_handler
 from .api_decorator import request_handler
 from .constants import RequestFlags
@@ -883,8 +883,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-@initialize_api_decorators
-class AbstractPlugin(metaclass=ABCMeta):
+class AbstractPlugin(APIHandler, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
@@ -1090,6 +1089,8 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
                                   self.weaksession(), but don't hold on to that reference.
         """
+
+        super().__init__()
         self.weaksession = weaksession
 
     def on_settings_changed(self, settings: DottedDict) -> None:
@@ -1366,8 +1367,7 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-@initialize_api_decorators
-class Session(TransportCallbacks):
+class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
@@ -1403,6 +1403,7 @@ class Session(TransportCallbacks):
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
         self._logged_unsupported_commands: set[str] = set()
+        super().__init__()
 
     def __getattr__(self, name: str) -> Any:
         """

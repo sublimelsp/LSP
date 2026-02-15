@@ -4,41 +4,33 @@ from .protocol import Response
 from .types import method2attr
 from functools import wraps
 from typing import Any, Callable, TypeVar, TYPE_CHECKING
-from typing_extensions import ParamSpec
+import inspect
 
 if TYPE_CHECKING:
     from .promise import Promise
 
 __all__ = [
-    'initialize_api_decorators',
+    'APIHandler',
     'notification_handler',
     'request_handler',
 ]
 
 HANDLER_MARKER = '__HANDLER_MARKER'
 
-T = TypeVar('T')
-Params = ParamSpec('Params')
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 
 
-def initialize_api_decorators(_class: type[T]) -> type[T]:
-    """Internal decorator used for processing decorated methods."""
+class APIHandler:
+    """Trigger initialization of decorated API methods."""
 
-    original_init = _class.__init__
-
-    @wraps(original_init)
-    def init_wrapper(self: T, *args: Params.args, **kwargs: Params.kwargs) -> None:
-        original_init(self, *args, **kwargs)
-        for attr in dir(self):
-            if (func := getattr(self, attr)) and callable(func) and hasattr(func, HANDLER_MARKER):
+    def __init__(self) -> None:
+        super().__init__()
+        for _, method in inspect.getmembers(self, inspect.ismethod):
+            if hasattr(method, HANDLER_MARKER):
                 # Set method with transformed name on the class instance.
-                setattr(self, method2attr(getattr(func, HANDLER_MARKER)), func)
-
-    _class.__init__ = init_wrapper
-    return _class
+                setattr(self, method2attr(getattr(method, HANDLER_MARKER)), method)
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:

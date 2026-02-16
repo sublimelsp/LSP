@@ -2,6 +2,7 @@ from __future__ import annotations
 from ...protocol import Diagnostic
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
+from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
@@ -19,6 +20,7 @@ from .panels import MAX_LOG_LINES_LIMIT_OFF
 from .panels import MAX_LOG_LINES_LIMIT_ON
 from .panels import PanelManager
 from .panels import PanelName
+from .promise import Promise
 from .protocol import Error
 from .protocol import Point
 from .sessions import AbstractViewListener
@@ -54,7 +56,7 @@ import threading
 
 
 if TYPE_CHECKING:
-    from tree_view import TreeViewSheet
+    from .tree_view import TreeViewSheet
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -328,9 +330,12 @@ class WindowManager(Manager, WindowConfigChangeListener):
                 router_logger.append(logger(self, config_name))
             return router_logger
 
-    def handle_message_request(self, session: Session, params: ShowMessageRequestParams, request_id: int | str) -> None:
+    def handle_message_request(
+        self, config_name: str, params: ShowMessageRequestParams
+    ) -> Promise[MessageActionItem | None]:
         if view := self._window.active_view():
-            MessageRequestHandler(view, session, request_id, params, session.config.name).show()
+            return MessageRequestHandler(view, params, config_name).show()
+        return Promise.resolve(None)
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
         self._end_sessions_async(config_names)
@@ -407,24 +412,24 @@ class WindowManager(Manager, WindowConfigChangeListener):
             self.panel_manager.destroy_output_panels()
             self.panel_manager = None
 
-    def handle_log_message(self, session: Session, params: LogMessageParams) -> None:
+    def handle_log_message(self, config_name: str, params: LogMessageParams) -> None:
         if not userprefs().log_debug:
             return
         message_type = params['type']
         level = MESSAGE_TYPE_LEVELS[message_type]
         message = params['message']
-        print(f"{session.config.name}: {level}: {message}")
+        print(f"{config_name}: {level}: {message}")
         if message_type == MessageType.Error:
-            self.window.status_message(f"{session.config.name}: {message}")
+            self.window.status_message(f"{config_name}: {message}")
 
-    def handle_stderr_log(self, session: Session, message: str) -> None:
-        self.handle_server_message_async(session.config.name, message)
+    def handle_stderr_log(self, config_name: str, message: str) -> None:
+        self.handle_server_message_async(config_name, message)
 
-    def handle_server_message_async(self, server_name: str, message: str) -> None:
-        sublime.set_timeout(lambda: self.log_server_message(server_name, message))
+    def handle_server_message_async(self, config_name: str, message: str) -> None:
+        sublime.set_timeout(lambda: self.log_server_message(config_name, message))
 
-    def log_server_message(self, prefix: str, message: str) -> None:
-        self._server_log.append((prefix, message))
+    def log_server_message(self, config_name: str, message: str) -> None:
+        self._server_log.append((config_name, message))
         list_len = len(self._server_log)
         max_lines = self.get_log_lines_limit()
         if list_len >= max_lines:
@@ -440,10 +445,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
         panel = self.panel_manager and self.panel_manager.get_panel(PanelName.Log)
         return bool(panel and panel.settings().get(LOG_LINES_LIMIT_SETTING_NAME, True))
 
-    def handle_show_message(self, session: Session, params: ShowMessageParams) -> None:
+    def handle_show_message(self, config_name: str, params: ShowMessageParams) -> None:
         level = MESSAGE_TYPE_LEVELS[params['type']]
         message = params['message']
-        msg = f"{session.config.name}: {level}: {message}"
+        msg = f"{config_name}: {level}: {message}"
         debug(msg)
         self.window.status_message(msg)
 

@@ -1,3 +1,5 @@
+from .api import notification_handler
+from .api import request_handler
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits
@@ -6,6 +8,7 @@ from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherEventType
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
+from .core.promise import Promise
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -47,10 +50,13 @@ __all__ = [
     'MarkdownLangMap',
     'matches_pattern',
     'Notification',
+    'notification_handler',
     'parse_uri',
+    'Promise',
     'register_file_watcher_implementation',
     'register_plugin',
     'Request',
+    'request_handler',
     'Response',
     'Session',
     'SessionBufferProtocol',

@@ -80,6 +80,7 @@ class WindowConfigManager:
             else:
                 overrides = {}
             if name in self._disabled_for_session:
+                printf(f"current session has '{name}' disabled")
                 overrides["enabled"] = False
             updated_config = ClientConfig.from_config(config, overrides)
             self.all[name] = updated_config

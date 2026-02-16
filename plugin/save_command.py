@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .code_actions import CodeActionsFormatOnSaveTask
 from .code_actions import CodeActionsOnSaveTask
-from .formatting import FormattingOnSaveTask
+from .formatting import FormatOnSaveTask
 from .formatting import WillSaveWaitTask
 from .lsp_task import LspTask
 from .lsp_task import LspTextCommandWithTasks
@@ -23,7 +23,7 @@ class LspSaveCommand(LspTextCommandWithTasks):
         return [
             CodeActionsOnSaveTask,
             CodeActionsFormatOnSaveTask,
-            FormattingOnSaveTask,
+            FormatOnSaveTask,
             WillSaveWaitTask,
         ]
 

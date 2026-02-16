@@ -280,7 +280,6 @@ class CodeActionsOnSaveTask(CodeActionsTaskBase):
     SETTING_NAME = "lsp_code_actions_on_save"
 
 
-@final
 class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
 
@@ -288,10 +287,8 @@ class CodeActionsOnFormatTask(CodeActionsTaskBase):
 
 
 @final
-class CodeActionsFormatOnSaveTask(CodeActionsTaskBase):
+class CodeActionsFormatOnSaveTask(CodeActionsOnFormatTask):
     """Run code actions on format when format_on_save is enabled."""
-
-    SETTING_NAME = "lsp_code_actions_on_format"
 
     @classmethod
     @override

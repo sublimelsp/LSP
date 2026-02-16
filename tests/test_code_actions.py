@@ -306,10 +306,7 @@ class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
         self.assertEqual(self.view.is_dirty(), False)
 
 
-class CodeActionsOnFormatOnSaveTaskTestCase(unittest.TestCase):
-    def setUp(self):
-        self.view = sublime.active_window().active_view()
-
+class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
     def test_code_actions_format_on_save_task_enabled__unset(self):
         self.view.settings().set('lsp_code_actions_on_format', {})
         self.view.settings().set("lsp_format_on_save", False)

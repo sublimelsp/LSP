@@ -25,7 +25,7 @@
 
   // A dictionary of code action identifiers that should be triggered on format or
   // on save. Code actions defined in "lsp_code_actions_on_format" will also be triggered
-  // when "lsp_format_on_save" is enabled.
+  // on save if "lsp_format_on_save" is enabled.
   //
   // Code action identifiers are not officially standardized so refer to specific
   // server's documentation on what is supported but `source.fixAll` is commonly

@@ -95,7 +95,7 @@ def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:
     }
 
 
-class CodeActionsTestCaseBae(TextDocumentTestCase):
+class CodeActionsTestCaseBase(TextDocumentTestCase):
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()
@@ -114,7 +114,7 @@ class CodeActionsTestCaseBae(TextDocumentTestCase):
         yield from super().doCleanups()
 
 
-class CodeActionsOnSaveTestCase(CodeActionsTestCaseBae):
+class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
     def test_applies_matching_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
@@ -237,7 +237,7 @@ class CodeActionsOnSaveTestCase(CodeActionsTestCaseBae):
         )
 
 
-class CodeActionsOnFormatTestCase(CodeActionsTestCaseBae):
+class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()

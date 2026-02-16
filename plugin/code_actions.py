@@ -18,13 +18,12 @@ from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
-from .save_command import LspSaveCommand
-from .save_command import SaveTask
+from .lsp_task import LspTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import TYPE_CHECKING, Any, List, Tuple, Union, final
-from typing import cast
+from typing import cast, TYPE_CHECKING, Any, List, Tuple, Union, final
+from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
@@ -218,13 +217,14 @@ def get_matching_on_save_kinds(
     return matching_kinds
 
 
-class CodeActionTaskBase(SaveTask):
+class CodeActionsTaskBase(LspTask):
     """The base task that requests code actions from sessions and runs them."""
 
     SETTING_NAME: str
     """Override in your subclass to specific `lsp_code_actions_on_*` setting that should be read."""
 
     @classmethod
+    @override
     def is_applicable(cls, view: sublime.View) -> bool:
         return bool(view.window()) and bool(cls._get_code_actions(view))
 
@@ -237,6 +237,7 @@ class CodeActionTaskBase(SaveTask):
             key: value for key, value in code_actions.items() if key.startswith('source.')
         }
 
+    @override
     def run_async(self) -> None:
         super().run_async()
         view = self._task_runner.view
@@ -269,7 +270,7 @@ class CodeActionTaskBase(SaveTask):
 
 
 @final
-class CodeActionOnSaveTask(CodeActionTaskBase):
+class CodeActionsOnSaveTask(CodeActionsTaskBase):
     """Request code actions from sessions before save and run them.
 
     The amount of time the task is allowed to run is defined by user-controlled setting. If the task
@@ -279,11 +280,8 @@ class CodeActionOnSaveTask(CodeActionTaskBase):
     SETTING_NAME = "lsp_code_actions_on_save"
 
 
-LspSaveCommand.register_task(CodeActionOnSaveTask)
-
-
 @final
-class CodeActionsOnFormatTask(CodeActionTaskBase):
+class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
 
     SETTING_NAME = "lsp_code_actions_on_format"

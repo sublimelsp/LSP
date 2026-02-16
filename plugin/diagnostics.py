@@ -5,11 +5,13 @@ from ..protocol import DiagnosticRegistrationOptions
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentUri
 from .core.constants import DIAGNOSTIC_KINDS
+from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Point
 from .core.settings import userprefs
 from .core.types import DocumentSelector_
 from .core.url import normalize_uri
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
 from functools import lru_cache
@@ -118,6 +120,7 @@ class DiagnosticsAnnotationsView:
     def __init__(self, view: sublime.View, config_name: str) -> None:
         self._view = view
         self._config_name = config_name
+        self._severity_colors = self._get_severity_colors()
 
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
@@ -140,9 +143,20 @@ class DiagnosticsAnnotationsView:
                         continue
                     matching_diagnostics[0].append(diagnostic)
                     matching_diagnostics[1].append(region)
-                annotations, color = format_diagnostics_for_annotation(matching_diagnostics[0], severity, self._view)
+                css_class = DIAGNOSTIC_SEVERITY[severity - 1][1]
+                annotations = format_diagnostics_for_annotation(matching_diagnostics[0], css_class)
+                color = self._severity_colors[severity]
                 self._view.add_regions(
                     self._annotation_region_key(severity), matching_diagnostics[1], flags=flags,
                     annotations=annotations, annotation_color=color)
             else:
                 self._view.erase_regions(self._annotation_region_key(severity))
+
+    def on_color_scheme_changed(self) -> None:
+        self._severity_colors = self._get_severity_colors()
+
+    def _get_severity_colors(self) -> dict[DiagnosticSeverity, str]:
+        return {
+            severity: self._view.style_for_scope(scope)['foreground']
+            for severity, scope in DIAGNOSTIC_SEVERITY_SCOPES.items()
+        }

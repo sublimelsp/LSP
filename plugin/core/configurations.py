@@ -84,12 +84,14 @@ class WindowConfigManager:
             updated_config = ClientConfig.from_config(config, overrides)
             self.all[name] = updated_config
             updated_configs.append(updated_config)
-        for name, c in project_settings.items():
+        for name, config in project_settings.items():
             if updated_config_name and updated_config_name != name:
                 continue
             debug("loading project-only configuration", name)
+            if name in self._disabled_for_session:
+                config["enabled"] = False
             try:
-                updated_config = ClientConfig.from_dict(name, c)
+                updated_config = ClientConfig.from_dict(name, config)
                 self.all[name] = updated_config
                 updated_configs.append(updated_config)
             except Exception as ex:

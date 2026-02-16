@@ -1,5 +1,6 @@
 from __future__ import annotations
 from LSP.plugin.core.signature_help import SigHelp
+from LSP.plugin.core.signature_help import SignatureHelpStyle
 from LSP.protocol import SignatureHelp
 import sublime
 import unittest
@@ -9,17 +10,24 @@ class SignatureHelpTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self.view = sublime.active_window().active_view()
+        self.style: SignatureHelpStyle = {
+            'function_color': '#ffffff',
+            'active_parameter_color': '#ffffff',
+            'active_parameter_bold': True,
+            'active_parameter_underline': True,
+            'inactive_parameter_color': '#ffffff'
+        }
 
     def test_no_signature(self) -> None:
-        help = SigHelp.from_lsp(None, None)
+        help = SigHelp.from_lsp(None, None, self.style)
         self.assertIsNone(help)
 
     def test_empty_signature_list(self) -> None:
-        help = SigHelp.from_lsp({"signatures": []}, None)
+        help = SigHelp.from_lsp({"signatures": []}, None, self.style)
         self.assertIsNone(help)
 
     def assert_render(self, input: SignatureHelp, regex: str) -> None:
-        help = SigHelp(input, None)
+        help = SigHelp(input, None, self.style)
         assert self.view
         self.assertRegex(help.render(self.view), regex.replace("\n", "").replace("            ", ""))
 

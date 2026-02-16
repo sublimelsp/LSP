@@ -336,7 +336,7 @@ JETLS requires Julia 1.12 or higher.
         "clients": {
             "JETLS": {
                 "enabled": true,
-                "command": ["jetls", "--socket=${port}"],
+                "command": ["jetls", "serve", "--socket=${port}"],
                 "tcp_port": 0,
                 "selector": "source.julia",
                 "diagnostics_mode": "workspace",

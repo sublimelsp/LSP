@@ -8,9 +8,18 @@ from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import MarkdownLangMap
 from .views import minihtml
+from typing import TypedDict
 import html
 import re
 import sublime
+
+
+class SignatureHelpStyle(TypedDict):
+    function_color: str
+    active_parameter_color: str
+    active_parameter_bold: bool
+    active_parameter_underline: bool
+    inactive_parameter_color: str
 
 
 class LspSignatureHelpNavigateCommand(LspTextCommand):
@@ -39,28 +48,25 @@ class SigHelp:
     determined by what the end-user is doing.
     """
 
-    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap | None) -> None:
+    def __init__(self, state: SignatureHelp, language_map: MarkdownLangMap | None, style: SignatureHelpStyle) -> None:
         self._state = state
         self._language_map = language_map
         self._signatures = self._state["signatures"]
         self._active_signature_index = self._state.get("activeSignature") or 0
         self._active_parameter_index = self._state.get("activeParameter") or 0
-        self._function_color = "white"
-        self._active_parameter_color = "white"
-        self._active_parameter_bold = True
-        self._active_parameter_underline = True
-        self._inactive_parameter_color = "white"
+        self._style = style
 
     @classmethod
     def from_lsp(
         cls,
         sighelp: SignatureHelp | None,
-        language_map: MarkdownLangMap | None
+        language_map: MarkdownLangMap | None,
+        style: SignatureHelpStyle
     ) -> SigHelp | None:
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
         if sighelp is None or not sighelp.get("signatures"):
             return None
-        return cls(sighelp, language_map)
+        return cls(sighelp, language_map, style)
 
     def render(self, view: sublime.View) -> str:
         """Render the signature help content as minihtml."""
@@ -71,16 +77,6 @@ class SigHelp:
         formatted: list[str] = []
         if self.has_multiple_signatures():
             formatted.append(self._render_intro())
-        self._function_color = view.style_for_scope("entity.name.function.sighelp.lsp")["foreground"]
-        active_parameter_style = view.style_for_scope("variable.parameter.sighelp.active.lsp")
-        self._active_parameter_color = active_parameter_style["foreground"]
-        self._inactive_parameter_color = view.style_for_scope("variable.parameter.sighelp.lsp")["foreground"]
-        if self._active_parameter_color == self._inactive_parameter_color:
-            self._active_parameter_bold = True
-            self._active_parameter_underline = True
-        else:
-            self._active_parameter_bold = active_parameter_style.get('bold', False)
-            self._active_parameter_underline = active_parameter_style.get('underline', False)
         formatted.extend(self._render_label(signature))
         formatted.extend(self._render_docs(view, signature))
         return "".join(formatted)
@@ -179,13 +175,17 @@ class SigHelp:
         return None
 
     def _function(self, content: str) -> str:
-        return _wrap_with_color(content, self._function_color)
+        return _wrap_with_color(content, self._style['function_color'])
 
     def _parameter(self, content: str, active: bool) -> str:
         if active:
             return _wrap_with_color(
-                content, self._active_parameter_color, self._active_parameter_bold, self._active_parameter_underline)
-        return _wrap_with_color(content, self._inactive_parameter_color)
+                content,
+                self._style['active_parameter_color'],
+                self._style['active_parameter_bold'],
+                self._style['active_parameter_underline']
+            )
+        return _wrap_with_color(content, self._style['inactive_parameter_color'])
 
 
 def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:

@@ -217,6 +217,13 @@ SUBLIME_KIND_SCOPES: dict[SublimeKind, str] = {
     sublime.KIND_VARIABLE: "entity.name.constant | constant.other | support.constant | variable.other | variable.parameter | variable.other.member | variable.other.readwrite.member"  # noqa: E501
 }
 
+DIAGNOSTIC_SEVERITY_SCOPES: dict[DiagnosticSeverity, str] = {
+    DiagnosticSeverity.Error: 'region.redish markup.error.lsp',
+    DiagnosticSeverity.Warning: 'region.yellowish markup.warning.lsp',
+    DiagnosticSeverity.Information: 'region.bluish markup.info.lsp',
+    DiagnosticSeverity.Hint: 'region.bluish markup.info.hint.lsp'
+}
+
 DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
     DiagnosticTag.Unnecessary: 'markup.unnecessary.lsp',
     DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
@@ -227,6 +234,12 @@ DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
     DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
 }
+
+CODE_ACTION_ANNOTATION_SCOPE = 'region.bluish markup.accent.codeaction.lsp'
+CODE_LENS_ANNOTATION_SCOPE = 'region.greenish markup.accent.codelens.lsp'
+SIGNATURE_HELP_FUNCTION_SCOPE = 'entity.name.function.sighelp.lsp'
+SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.active.lsp'
+SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.lsp'
 
 # These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more
 # match any of the entries here, then the rule is that we split the base scope on the ".", and take the second

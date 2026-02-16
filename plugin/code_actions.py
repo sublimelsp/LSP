@@ -287,7 +287,7 @@ class CodeActionsOnFormatTask(CodeActionsTaskBase):
 
 
 @final
-class CodeActionsFormatOnSaveTask(CodeActionsOnFormatTask):
+class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
     """Run code actions on format when format_on_save is enabled."""
 
     @classmethod

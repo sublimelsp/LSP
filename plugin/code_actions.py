@@ -277,13 +277,13 @@ class CodeActionsOnSaveTask(CodeActionsTaskBase):
     runs longer, the native save will be triggered before waiting for results.
     """
 
-    SETTING_NAME = "lsp_code_actions_on_save"
+    SETTING_NAME: str = "lsp_code_actions_on_save"
 
 
 class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
 
-    SETTING_NAME = "lsp_code_actions_on_format"
+    SETTING_NAME: str = "lsp_code_actions_on_format"
 
 
 @final

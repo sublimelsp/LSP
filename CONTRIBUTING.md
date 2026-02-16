@@ -17,18 +17,19 @@ The issues also allow you to gather some feedback and help from other contributo
 
 ## Coding
 
-Sublime Text bundles a Python 3.3, please be sure to set up your environment to match.
-LSP uses `LSP-pyright`, `flake8` and `mypy` to provide some code quality assurances.
+Sublime Text bundles Python 3.8, please be sure to set up your environment to match.
+LSP uses [Pyright](https://microsoft.github.io/pyright), [Ruff](https://docs.astral.sh/ruff/) and [mypy](https://mypy-lang.org/) to provide some code quality assurances.
 Run `tox` to check your work.
-Consider using `LSP-pyright` or `LSP-pylsp` as a language server.
-To reload the plugin, save the file boot.py.
+Consider using [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and/or [LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) as a language server.
+To reload the plugin, save the file `boot.py`.
 Saving any other file does not reload the plugin.
 
 ## Testing
 
 Please consider testing your work with other language servers, even if you do not use them.
-There is also a test suite in tests/. To run the tests, use the UnitTesting package from randy3k.
-The configuration file for the tests is in unittesting.json.
+There is also a test suite in `tests/`.
+To run the tests, use the [UnitTesting](https://packages.sublimetext.io/packages/UnitTesting) package.
+The configuration file for the tests is in `unittesting.json`.
 
 ## Submitting
 

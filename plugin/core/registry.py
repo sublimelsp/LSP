@@ -244,7 +244,7 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
                 debug(f'No listener for view {self.view}')
                 return
             scheme, _ = parse_uri(uri_from_view(self.view))
-            is_applicable = config.match_view(self.view, scheme)
+            is_applicable = config.match_view(self.view, scheme, wm.window, wm.workspace_folders)
             if session := wm.get_session(session_name, self.view.file_name() or ''):
                 session_view = session.session_view_for_view_async(self.view)
                 if is_applicable and not session_view:

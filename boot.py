@@ -89,7 +89,7 @@ from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspOnDoubleClickCommand
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 __all__ = (
     "DocumentSyncListener",
@@ -186,7 +186,7 @@ def _register_all_plugins() -> None:
     _get_final_subclasses(LspPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:
-            if not plugin_class.name():
+            if issubclass(plugin_class, AbstractPlugin) and not plugin_class.name():
                 continue
         except NotImplementedError:
             continue

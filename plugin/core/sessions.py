@@ -122,7 +122,6 @@ from .types import DocumentSelector_
 from .types import method2attr
 from .types import method_to_capability
 from .types import SemanticToken
-from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
 from .url import normalize_uri
@@ -1206,19 +1205,20 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
         pass
 
 
-_plugins: dict[str, tuple[type[AbstractPlugin | LspPlugin], SettingsRegistration]] = {}
+_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 
 def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool) -> None:
-    global _plugins
-    name = plugin.name()
+    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.__module__.split('.')[0]
     if name in _plugins:
         return
     try:
-        settings, base_file = plugin.configuration()
-        if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = partial(client_configs.update_external_config, name, settings, base_file)
-            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+        if issubclass(plugin, AbstractPlugin):
+            _, settings_path = plugin.configuration()
+        else:
+            settings_path = f"Packages/{name}/{name}.sublime-settings"
+        if client_configs.add_external_config(name, settings_path, notify_listener):
+            _plugins[name] = plugin
     except Exception as ex:
         exception_log(f'Failed to register plugin "{name}"', ex)
 
@@ -1276,7 +1276,6 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    global _plugins
     name = plugin.name()
     try:
         _plugins.pop(name, None)
@@ -1286,9 +1285,7 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
 
 
 def get_plugin(name: str) -> type[AbstractPlugin | LspPlugin] | None:
-    global _plugins
-    tup = _plugins.get(name, None)
-    return tup[0] if tup else None
+    return _plugins.get(name)
 
 
 class Logger(metaclass=ABCMeta):
@@ -1550,7 +1547,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return False
             elif not self.handles_path(file_name, inside_workspace):
                 return False
-        if self.config.match_view(view, scheme):
+        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True

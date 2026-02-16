@@ -45,6 +45,7 @@ from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from .workspace import WorkspaceFolder
 from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
@@ -102,6 +103,10 @@ class WindowManager(Manager, WindowConfigChangeListener):
     @property
     def window(self) -> sublime.Window:
         return self._window
+
+    @property
+    def workspace_folders(self) -> list[WorkspaceFolder]:
+        return self._workspace.get_workspace_folders()
 
     def get_and_clear_server_log(self) -> list[tuple[str, str]]:
         log = self._server_log
@@ -219,7 +224,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         return None
 
     def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        configs = self._config_manager.match_view(view)
+        configs = self._config_manager.match_view(view, self._workspace.get_workspace_folders())
         handled = False
         file_name = view.file_name()
         inside = self._workspace.contains(view)
@@ -231,9 +236,11 @@ class WindowManager(Manager, WindowConfigChangeListener):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO remove after next release
-                        debug(view, "ignored by plugin", plugin.__name__)
-                    elif plugin.is_applicable(view, config):
+                    plugin_context = PluginContext(config, view, self._window, self._workspace.get_workspace_folders())
+                    if issubclass(plugin, AbstractPlugin):
+                        if plugin.is_applicable(view, config):
+                            return config
+                    elif plugin.is_applicable(plugin_context):
                         return config
                 else:
                     return config

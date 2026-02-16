@@ -5,8 +5,6 @@ from .core.protocol import Response
 from .core.types import method2attr
 from .core.url import parse_uri
 from .core.views import uri_from_view
-from abc import ABCMeta
-from abc import abstractmethod
 from functools import wraps
 from typing import Any, Callable, TypedDict, TypeVar, final, TYPE_CHECKING
 import inspect
@@ -128,68 +126,13 @@ class PluginContext:
         self.workspace_folders = workspace_folders
 
 
-class LspPlugin(metaclass=ABCMeta):
+class LspPlugin:
     """
     TODO: doc
     """
 
     @classmethod
-    @abstractmethod
-    def name(cls) -> str:
-        """
-        A human-friendly name. If your plugin is called "LSP-foobar", then this should return "foobar". If you also
-        have your settings file called "LSP-foobar.sublime-settings", then you don't even need to re-implement the
-        configuration method (see below).
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def configuration(cls) -> tuple[sublime.Settings, str]:
-        """
-        Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",
-        "default_settings", "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
-        filename as the second element in the tuple.
-
-        The second element in the tuple is used to handle "settings" overrides from users properly. For example, if your
-        plugin is called LSP-foobar, you would return "Packages/LSP-foobar/LSP-foobar.sublime-settings".
-
-        The "command", "initializationOptions" and "env" are subject to template string substitution. The following
-        template strings are recognized:
-
-        $file
-        $file_base_name
-        $file_extension
-        $file_name
-        $file_path
-        $platform
-        $project
-        $project_base_name
-        $project_extension
-        $project_name
-        $project_path
-
-        These are just the values from window.extract_variables(). Additionally,
-
-        $storage_path The path to the package storage (see AbstractPlugin.storage_path)
-        $cache_path   sublime.cache_path()
-        $temp_dir     tempfile.gettempdir()
-        $home         os.path.expanduser('~')
-        $port         A random free TCP-port on localhost in case "tcp_port" is set to 0. This string template can only
-                      be used in the "command"
-
-        The "command" and "env" are expanded upon starting the subprocess of the Session. The "initializationOptions"
-        are expanded upon doing the initialize request. "initializationOptions" does not expand $port.
-
-        When you're managing your own server binary, you would typically place it in sublime.cache_path(). So your
-        "command" should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
-        """
-        name = cls.name()
-        basename = f"LSP-{name}.sublime-settings"
-        filepath = f"Packages/LSP-{name}/{basename}"
-        return sublime.load_settings(basename), filepath
-
-    @classmethod
-    def is_applicable(cls, context: PluginContext, view: sublime.View) -> bool:
+    def is_applicable(cls, context: PluginContext) -> bool:
         """
         Determine whether the server should run on the given view.
 
@@ -202,9 +145,9 @@ class LspPlugin(metaclass=ABCMeta):
         This method is called when the view gets opened. To manually trigger this method again, run the
         `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
 
-        :param      view:             The view
-        :param      config:           The config
+        :param      context:           The plugin context
         """
+        view = context.initiating_view
         if (syntax := view.syntax()) and (selector := context.configuration.selector.strip()):
             scheme, _ = parse_uri(uri_from_view(view))
             return scheme in context.configuration.schemes and sublime.score_selector(syntax.scope, selector) > 0
@@ -399,7 +342,7 @@ class LspPlugin(metaclass=ABCMeta):
         """
         return
 
-    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
+    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
         invoke the passed-in callback some time.

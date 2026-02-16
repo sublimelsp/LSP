@@ -9,12 +9,13 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
-from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
+from functools import partial
+from typing import Any, Callable, Dict, Generator, Iterable, List, TypedDict, TypeVar, Union, TYPE_CHECKING
 from typing import cast
+from typing_extensions import NotRequired
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -27,6 +28,10 @@ import socket
 import sublime
 import time
 
+if TYPE_CHECKING:
+    from .file_watcher import FileWatcherEventType
+    from .workspace import WorkspaceFolder
+
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
@@ -35,11 +40,11 @@ WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
-FileWatcherConfig = TypedDict("FileWatcherConfig", {
-    "patterns": List[str],
-    "events": Optional[List[FileWatcherEventType]],
-    "ignores": Optional[List[str]],
-}, total=False)
+
+class FileWatcherConfig(TypedDict, total=False):
+    patterns: list[str]
+    events: NotRequired[list[FileWatcherEventType]]
+    ignores: NotRequired[list[str]]
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -146,11 +151,22 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("_settings",)
+    __slots__ = ("_settings", "_settings_path")
 
-    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
+    def __init__(
+        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
+    ) -> None:
         self._settings = settings
-        settings.add_on_change("LSP", on_change)
+        self._settings_path = settings_path
+        settings.add_on_change("LSP", partial(on_change, self))
+
+    @property
+    def settings(self) -> sublime.Settings:
+        return self._settings
+
+    @property
+    def settings_path(self) -> str:
+        return self._settings_path
 
     def __del__(self) -> None:
         self._settings.clear_on_change("LSP")
@@ -898,10 +914,17 @@ class ClientConfig:
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
-    def match_view(self, view: sublime.View, scheme: str) -> bool:
-        from .sessions import get_plugin
+    def match_view(
+        self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
+    ) -> bool:
+        from ..api import PluginContext
+        from .sessions import AbstractPlugin, get_plugin
         if plugin := get_plugin(self.name):
-            return plugin.is_applicable(view, self)
+            if issubclass(plugin, AbstractPlugin):
+                return plugin.is_applicable(view, self)
+            else:
+                plugin_context = PluginContext(self, view, window, workspace_folders)
+                return plugin.is_applicable(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

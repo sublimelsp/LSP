@@ -1,5 +1,5 @@
-from .core.api_decorator import notification_handler
-from .core.api_decorator import request_handler
+from .core.api import notification_handler
+from .core.api import request_handler
 from .core.collections import DottedDict
 from .core.css import css
 from .core.edit import apply_text_edits

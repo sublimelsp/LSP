@@ -74,9 +74,9 @@ from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .api_decorator import APIHandler
-from .api_decorator import notification_handler
-from .api_decorator import request_handler
+from .api import APIHandler
+from .api import notification_handler
+from .api import request_handler
 from .constants import RequestFlags
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import SEMANTIC_TOKENS_MAP

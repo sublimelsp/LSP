@@ -2214,20 +2214,20 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     @request_handler('workspace/codeLens/refresh')
     def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
 
-        def continue_after_return() -> None:
+        def continue_after_response() -> None:
             visible_session_views, not_visible_session_views = self.session_views_by_visibility()
             for sv in visible_session_views:
                 sv.session_buffer.do_code_lenses_async(sv.view)
             for sv in not_visible_session_views:
                 sv.session_buffer.set_code_lenses_pending_refresh()
 
-        sublime.set_timeout_async(continue_after_return)
+        sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @request_handler('workspace/semanticTokens/refresh')
     def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
 
-        def continue_after_return() -> None:
+        def continue_after_response() -> None:
             visible_session_views, not_visible_session_views = self.session_views_by_visibility()
             for sv in visible_session_views:
                 if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
@@ -2237,13 +2237,13 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             for sv in not_visible_session_views:
                 sv.session_buffer.set_semantic_tokens_pending_refresh()
 
-        sublime.set_timeout_async(continue_after_return)
+        sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @request_handler('workspace/inlayHint/refresh')
     def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
 
-        def continue_after_return() -> None:
+        def continue_after_response() -> None:
             visible_session_views, not_visible_session_views = self.session_views_by_visibility()
             for sv in visible_session_views:
                 if sv.get_request_flags() & RequestFlags.INLAY_HINT:
@@ -2253,20 +2253,20 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             for sv in not_visible_session_views:
                 sv.session_buffer.set_inlay_hints_pending_refresh()
 
-        sublime.set_timeout_async(continue_after_return)
+        sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @request_handler('workspace/diagnostic/refresh')
     def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
 
-        def continue_after_return() -> None:
+        def continue_after_response() -> None:
             visible_session_views, not_visible_session_views = self.session_views_by_visibility()
             for sv in visible_session_views:
                 sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
             for sv in not_visible_session_views:
                 sv.session_buffer.set_document_diagnostic_pending_refresh()
 
-        sublime.set_timeout_async(continue_after_return)
+        sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @notification_handler('textDocument/publishDiagnostics')
@@ -2328,11 +2328,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 capability_options = cast('DidChangeWatchedFilesRegistrationOptions', options)
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
 
-        def continue_after_return() -> None:
+        def continue_after_response() -> None:
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 
-        sublime.set_timeout_async(continue_after_return)
+        sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @request_handler('client/unregisterCapability')

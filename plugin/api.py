@@ -1,13 +1,13 @@
 from __future__ import annotations
-from ...protocol import LSPAny
-from .protocol import Response
-from .types import method2attr
+from ..protocol import LSPAny
+from .core.protocol import Response
+from .core.types import method2attr
 from functools import wraps
 from typing import Any, Callable, TypeVar, TYPE_CHECKING
 import inspect
 
 if TYPE_CHECKING:
-    from .promise import Promise
+    from .core.promise import Promise
 
 __all__ = [
     'APIHandler',

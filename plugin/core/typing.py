@@ -1,15 +1,16 @@
 from __future__ import annotations
-import sys
+
 from enum import Enum, IntEnum, IntFlag  # noqa: F401
 from typing import (  # noqa: F401
-    IO,
-    TYPE_CHECKING,
     Any,
     Callable,
+    cast,
     Deque,
     Dict,
+    final,
     Generator,
     Generic,
+    IO,
     Iterable,
     Iterator,
     List,
@@ -21,11 +22,10 @@ from typing import (  # noqa: F401
     Set,
     Tuple,
     Type,
+    TYPE_CHECKING,
     TypedDict,
     TypeVar,
     Union,
-    cast,
-    final,
 )
 from typing_extensions import (  # noqa: F401
     NotRequired,
@@ -33,6 +33,7 @@ from typing_extensions import (  # noqa: F401
     Required,
     TypeGuard,
 )
+import sys
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum  # noqa: F401

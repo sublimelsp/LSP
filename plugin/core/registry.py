@@ -1,24 +1,22 @@
 from __future__ import annotations
-from ...protocol import Diagnostic
-from ...protocol import Location
-from ...protocol import LocationLink
+
+from ...protocol import Diagnostic, Location, LocationLink
 from .logging import debug
-from .sessions import AbstractViewListener
-from .sessions import Session
+from .sessions import AbstractViewListener, Session
 from .url import parse_uri
-from .views import first_selection_region
-from .views import get_uri_and_position_from_location
-from .views import MissingUriError
-from .views import position_to_offset
-from .views import uri_from_view
-from .windows import WindowManager
-from .windows import WindowRegistry
+from .views import (
+    first_selection_region,
+    get_uri_and_position_from_location,
+    MissingUriError,
+    position_to_offset,
+    uri_from_view,
+)
+from .windows import WindowManager, WindowRegistry
 from functools import partial
 from typing import Generator, Iterable
 import operator
 import sublime
 import sublime_plugin
-
 
 windows = WindowRegistry()
 

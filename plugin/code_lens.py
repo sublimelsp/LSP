@@ -1,13 +1,9 @@
 from __future__ import annotations
-from ..protocol import CodeLens
-from ..protocol import Command
-from ..protocol import Range
+
+from ..protocol import CodeLens, Command, Range
 from .core.constants import CODE_LENS_ENABLED_KEY
-from .core.protocol import Error
-from .core.protocol import ResolvedCodeLens
-from .core.registry import LspTextCommand
-from .core.registry import LspWindowCommand
-from .core.registry import windows
+from .core.protocol import Error, ResolvedCodeLens
+from .core.registry import LspTextCommand, LspWindowCommand, windows
 from .core.views import range_to_region
 from functools import partial
 from typing import cast

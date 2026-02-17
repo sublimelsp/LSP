@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from .core.registry import windows
 from .core.settings import client_configs
 from .core.windows import WindowManager

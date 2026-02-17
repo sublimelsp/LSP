@@ -1,9 +1,9 @@
 from __future__ import annotations
+
 from .core.registry import LspTextCommand
-from typing import Any, Callable, List, Tuple
-from typing import cast
-import sublime
+from typing import Any, Callable, cast, List, Tuple
 import os
+import sublime
 
 SemanticTokensInfo = Tuple[str, str, str]
 

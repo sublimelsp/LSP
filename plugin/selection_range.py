@@ -1,10 +1,9 @@
 from __future__ import annotations
+
 from ..protocol import SelectionRange
 from .core.protocol import Request
-from .core.registry import get_position
-from .core.registry import LspTextCommand
-from .core.views import range_to_region
-from .core.views import selection_range_params
+from .core.registry import get_position, LspTextCommand
+from .core.views import range_to_region, selection_range_params
 from typing import Any
 import sublime
 

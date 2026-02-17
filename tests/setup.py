@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from collections.abc import Generator
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification, Request
@@ -13,7 +14,6 @@ from test_mocks import basic_responses
 from typing import Any
 from unittesting import DeferrableTestCase
 import sublime
-
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 

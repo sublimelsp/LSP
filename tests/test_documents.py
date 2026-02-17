@@ -1,17 +1,12 @@
 from __future__ import annotations
+
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.types import ClientStates
 from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
-from setup import add_config
-from setup import close_test_view
-from setup import expand
-from setup import make_stdio_test_config
-from setup import remove_config
-from setup import TIMEOUT_TIME
-from setup import YieldPromise
+from setup import add_config, close_test_view, expand, make_stdio_test_config, remove_config, TIMEOUT_TIME, YieldPromise
 from sublime_plugin import view_event_listeners
 from typing import Any, Generator
 from unittesting import DeferrableTestCase

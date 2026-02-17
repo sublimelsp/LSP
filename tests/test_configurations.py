@@ -1,7 +1,7 @@
 from __future__ import annotations
+
 from LSP.plugin.core.configurations import WindowConfigManager
-from test_mocks import DISABLED_CONFIG
-from test_mocks import TEST_CONFIG
+from test_mocks import DISABLED_CONFIG, TEST_CONFIG
 from unittest import TestCase
 from unittest.mock import MagicMock
 from unittesting import ViewTestCase

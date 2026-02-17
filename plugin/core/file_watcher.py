@@ -1,8 +1,7 @@
 from __future__ import annotations
-from ...protocol import FileChangeType
-from ...protocol import WatchKind
-from abc import ABCMeta
-from abc import abstractmethod
+
+from ...protocol import FileChangeType, WatchKind
+from abc import ABCMeta, abstractmethod
 from typing import Literal, Protocol, Tuple, Union
 
 DEFAULT_WATCH_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete

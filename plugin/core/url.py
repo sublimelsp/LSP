@@ -1,16 +1,13 @@
 from __future__ import annotations
+
 from ...protocol import DocumentUri
-from .constants import ST_INSTALLED_PACKAGES_PATH
-from .constants import ST_PACKAGES_PATH
+from .constants import ST_INSTALLED_PACKAGES_PATH, ST_PACKAGES_PATH
 from typing import Any
 from typing_extensions import deprecated
-from urllib.parse import urljoin
-from urllib.parse import urlparse
-from urllib.request import pathname2url
-from urllib.request import url2pathname
+from urllib.parse import urljoin, urlparse
+from urllib.request import pathname2url, url2pathname
 import os
 import re
-
 import sublime
 
 

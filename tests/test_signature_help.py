@@ -1,6 +1,6 @@
 from __future__ import annotations
-from LSP.plugin.core.signature_help import SigHelp
-from LSP.plugin.core.signature_help import SignatureHelpStyle
+
+from LSP.plugin.core.signature_help import SigHelp, SignatureHelpStyle
 from LSP.protocol import SignatureHelp
 import sublime
 import unittest

@@ -1,8 +1,8 @@
 from __future__ import annotations
+
 from .constants import ST_PLATFORM
-from .logging import exception_log, debug
-from .types import TCP_CONNECT_TIMEOUT
-from .types import TransportConfig
+from .logging import debug, exception_log
+from .types import TCP_CONNECT_TIMEOUT, TransportConfig
 from contextlib import closing
 from functools import partial
 from queue import Queue

@@ -1,10 +1,8 @@
 from __future__ import annotations
-from .code_actions import CodeActionsOnFormatOnSaveTask
-from .code_actions import CodeActionsOnSaveTask
-from .formatting import FormatOnSaveTask
-from .formatting import WillSaveWaitTask
-from .lsp_task import LspTask
-from .lsp_task import LspTextCommandWithTasks
+
+from .code_actions import CodeActionsOnFormatOnSaveTask, CodeActionsOnSaveTask
+from .formatting import FormatOnSaveTask, WillSaveWaitTask
+from .lsp_task import LspTask, LspTextCommandWithTasks
 from typing import Any
 from typing_extensions import override
 import sublime

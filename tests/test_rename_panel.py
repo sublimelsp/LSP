@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.edit import utf16_to_code_points
 import unittest
 

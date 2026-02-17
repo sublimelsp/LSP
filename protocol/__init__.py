@@ -3,11 +3,11 @@
 # LSP v3.17.0
 
 from __future__ import annotations
+
 from ..plugin.core.typing import StrEnum
 from enum import IntEnum, IntFlag
 from typing import Any, Dict, List, Literal, Mapping, Sequence, TypedDict, Union
 from typing_extensions import NotRequired
-
 
 URI = str
 DocumentUri = str

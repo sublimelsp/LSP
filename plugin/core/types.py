@@ -1,24 +1,22 @@
 from __future__ import annotations
-from ...protocol import DocumentSelector
-from ...protocol import DocumentUri
-from ...protocol import FileOperationFilter
-from ...protocol import FileOperationPatternKind
-from ...protocol import ServerCapabilities
-from ...protocol import TextDocumentSyncKind
-from ...protocol import TextDocumentSyncOptions
-from ...protocol import URI
+
+from ...protocol import (
+    DocumentSelector,
+    DocumentUri,
+    FileOperationFilter,
+    FileOperationPatternKind,
+    ServerCapabilities,
+    TextDocumentSyncKind,
+    TextDocumentSyncOptions,
+    URI,
+)
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
-from .url import filename_to_uri
-from .url import parse_uri
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
-from typing import cast
-from wcmatch.glob import BRACE
-from wcmatch.glob import globmatch
-from wcmatch.glob import GLOBSTAR
-from wcmatch.glob import IGNORECASE
+from .url import filename_to_uri, parse_uri
+from typing import Any, Callable, cast, Dict, Generator, Iterable, List, Optional, TypedDict, TypeVar, Union
+from wcmatch.glob import BRACE, globmatch, GLOBSTAR, IGNORECASE
 import contextlib
 import fnmatch
 import os
@@ -26,7 +24,6 @@ import posixpath
 import socket
 import sublime
 import time
-
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds

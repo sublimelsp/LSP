@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import *  # For backward compatibility with LSP packages.
 from functools import total_ordering
 from typing import Any, Callable, Generic, TypedDict, TypeVar, Union

@@ -1,16 +1,14 @@
 from __future__ import annotations
+
 from .constants import ST_VERSION
-from abc import ABCMeta
-from abc import abstractmethod
-from typing import Any, Callable, List, Tuple, Union
-from typing import final
+from abc import ABCMeta, abstractmethod
+from typing import Any, Callable, final, List, Tuple, Union
 from typing_extensions import ParamSpec
 import functools
 import sublime
 import sublime_plugin
 import time
 import weakref
-
 
 ListItemsReturn = Union[List[str], Tuple[List[str], int], List[Tuple[str, Any]], Tuple[List[Tuple[str, Any]], int],
                         List[sublime.ListInputItem], Tuple[List[sublime.ListInputItem], int]]

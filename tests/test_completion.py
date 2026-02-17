@@ -1,18 +1,19 @@
 from __future__ import annotations
+
 from copy import deepcopy
-from LSP.plugin.completion import format_completion
-from LSP.plugin.completion import completion_with_defaults
-from LSP.protocol import CompletionItem
-from LSP.protocol import CompletionItemDefaults
-from LSP.protocol import CompletionItemKind
-from LSP.protocol import CompletionItemLabelDetails
-from LSP.protocol import CompletionItemTag
-from LSP.protocol import InsertTextFormat
+from LSP.plugin.completion import completion_with_defaults, format_completion
+from LSP.protocol import (
+    CompletionItem,
+    CompletionItemDefaults,
+    CompletionItemKind,
+    CompletionItemLabelDetails,
+    CompletionItemTag,
+    InsertTextFormat,
+)
 from setup import TextDocumentTestCase
 from typing import Any, Callable, Generator
 from unittest import TestCase
 import sublime
-
 
 additional_edits = {
     'label': 'asdf',

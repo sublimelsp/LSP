@@ -1,11 +1,9 @@
 from __future__ import annotations
+
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification
-from LSP.plugin.core.protocol import Request
-from LSP.plugin.core.protocol import Response
+from LSP.plugin.core.protocol import Notification, Request, Response
 from LSP.plugin.core.types import ClientConfig
 from typing import Any, Callable
-
 
 TEST_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None)
 DISABLED_CONFIG = ClientConfig("test", command=[], selector="text.plain", tcp_port=None, enabled=False)

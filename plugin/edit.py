@@ -1,14 +1,11 @@
 from __future__ import annotations
-from ..protocol import TextEdit
-from ..protocol import WorkspaceEdit
-from .core.edit import parse_range
-from .core.edit import parse_workspace_edit
-from .core.edit import WorkspaceChanges
+
+from ..protocol import TextEdit, WorkspaceEdit
+from .core.edit import parse_range, parse_workspace_edit, WorkspaceChanges
 from .core.logging import debug
 from .core.panels import PanelName
 from .core.promise import Promise
-from .core.registry import LspWindowCommand
-from .core.registry import windows
+from .core.registry import LspWindowCommand, windows
 from .core.url import parse_uri
 from .core.views import get_line
 from .core.windows import WindowManager
@@ -19,6 +16,7 @@ import os
 import re
 import sublime
 import sublime_plugin
+
 if TYPE_CHECKING:
     from .core.sessions import Session
 

@@ -1,58 +1,60 @@
 from __future__ import annotations
-from ...protocol import CodeAction
-from ...protocol import CodeActionContext
-from ...protocol import CodeActionKind
-from ...protocol import CodeActionParams
-from ...protocol import CodeActionTriggerKind
-from ...protocol import Color
-from ...protocol import ColorInformation
-from ...protocol import Command
-from ...protocol import Diagnostic
-from ...protocol import DiagnosticRelatedInformation
-from ...protocol import DiagnosticSeverity
-from ...protocol import DiagnosticTag
-from ...protocol import DidChangeTextDocumentParams
-from ...protocol import DidCloseTextDocumentParams
-from ...protocol import DidOpenTextDocumentParams
-from ...protocol import DidSaveTextDocumentParams
-from ...protocol import DocumentColorParams
-from ...protocol import DocumentFormattingParams
-from ...protocol import DocumentRangeFormattingParams
-from ...protocol import DocumentRangesFormattingParams
-from ...protocol import DocumentUri
-from ...protocol import FormattingOptions
-from ...protocol import LanguageKind
-from ...protocol import Location
-from ...protocol import LocationLink
-from ...protocol import MarkedString
-from ...protocol import MarkupContent
-from ...protocol import Position
-from ...protocol import Range
-from ...protocol import SelectionRangeParams
-from ...protocol import TextDocumentContentChangeEvent
-from ...protocol import TextDocumentIdentifier
-from ...protocol import TextDocumentItem
-from ...protocol import TextDocumentPositionParams
-from ...protocol import TextDocumentSaveReason
-from ...protocol import TextEdit
-from ...protocol import VersionedTextDocumentIdentifier
-from ...protocol import WillSaveTextDocumentParams
-from .constants import CODE_ACTION_KINDS
-from .constants import MARKO_MD_PARSER_VERSION
-from .constants import ST_CACHE_PATH
-from .constants import ST_STORAGE_PATH
-from .constants import SUBLIME_KIND_SCOPES
-from .constants import SublimeKind
+
+from ...protocol import (
+    CodeAction,
+    CodeActionContext,
+    CodeActionKind,
+    CodeActionParams,
+    CodeActionTriggerKind,
+    Color,
+    ColorInformation,
+    Command,
+    Diagnostic,
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
+    DiagnosticTag,
+    DidChangeTextDocumentParams,
+    DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams,
+    DidSaveTextDocumentParams,
+    DocumentColorParams,
+    DocumentFormattingParams,
+    DocumentRangeFormattingParams,
+    DocumentRangesFormattingParams,
+    DocumentUri,
+    FormattingOptions,
+    LanguageKind,
+    Location,
+    LocationLink,
+    MarkedString,
+    MarkupContent,
+    Position,
+    Range,
+    SelectionRangeParams,
+    TextDocumentContentChangeEvent,
+    TextDocumentIdentifier,
+    TextDocumentItem,
+    TextDocumentPositionParams,
+    TextDocumentSaveReason,
+    TextEdit,
+    VersionedTextDocumentIdentifier,
+    WillSaveTextDocumentParams,
+)
+from .constants import (
+    CODE_ACTION_KINDS,
+    MARKO_MD_PARSER_VERSION,
+    ST_CACHE_PATH,
+    ST_STORAGE_PATH,
+    SUBLIME_KIND_SCOPES,
+    SublimeKind,
+)
 from .css import css as lsp_css
-from .protocol import Notification
-from .protocol import Point
-from .protocol import Request
+from .protocol import Notification, Point, Request
 from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
-from typing import Any, Callable, Dict, Iterable, Tuple
-from typing import cast
+from typing import Any, Callable, cast, Dict, Iterable, Tuple
 import html
 import itertools
 import linecache

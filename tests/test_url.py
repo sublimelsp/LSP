@@ -1,7 +1,6 @@
 from __future__ import annotations
-from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.core.url import parse_uri
-from LSP.plugin.core.url import view_to_uri
+
+from LSP.plugin.core.url import filename_to_uri, parse_uri, view_to_uri
 import os
 import sublime
 import sys

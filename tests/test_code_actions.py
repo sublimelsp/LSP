@@ -1,21 +1,19 @@
 from __future__ import annotations
+
 from copy import deepcopy
-from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask
-from LSP.plugin.code_actions import get_matching_on_save_kinds
+from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask, get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.settings import userprefs
 from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.core.views import entire_content
-from LSP.plugin.core.views import kind_contains_other_kind
-from LSP.plugin.core.views import versioned_text_document_identifier
+from LSP.plugin.core.views import entire_content, kind_contains_other_kind, versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
 from LSP.protocol import Range
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 from typing import Any, Generator
-import unittest
 import sublime
+import unittest
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 

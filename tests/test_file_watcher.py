@@ -1,19 +1,22 @@
 from __future__ import annotations
-from LSP.plugin import filename_to_uri
-from LSP.plugin import FileWatcher
-from LSP.plugin import FileWatcherEvent
-from LSP.plugin import FileWatcherEventType
-from LSP.plugin import FileWatcherProtocol
-from LSP.plugin import parse_uri
-from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
-from LSP.plugin.core.file_watcher import register_file_watcher_implementation
-from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import sublime_pattern_to_glob
+
+from LSP.plugin import (
+    filename_to_uri,
+    FileWatcher,
+    FileWatcherEvent,
+    FileWatcherEventType,
+    FileWatcherProtocol,
+    parse_uri,
+)
+from LSP.plugin.core.file_watcher import (
+    file_watcher_event_type_to_lsp_file_change_type,
+    register_file_watcher_implementation,
+)
+from LSP.plugin.core.types import ClientConfig, sublime_pattern_to_glob
 from LSP.protocol import WatchKind
 from os.path import join
-from setup import expand
-from setup import TextDocumentTestCase
-from typing import TYPE_CHECKING, Generator
+from setup import expand, TextDocumentTestCase
+from typing import Generator, TYPE_CHECKING
 import sublime
 import unittest
 

@@ -1,33 +1,39 @@
 from __future__ import annotations
-from ..protocol import EditRangeWithInsertReplace
-from ..protocol import CompletionItem
-from ..protocol import CompletionItemDefaults
-from ..protocol import CompletionItemKind
-from ..protocol import CompletionItemTag
-from ..protocol import CompletionList
-from ..protocol import CompletionParams
-from ..protocol import InsertReplaceEdit
-from ..protocol import InsertTextFormat
-from ..protocol import MarkupContent, MarkedString, MarkupKind
-from ..protocol import Range
-from ..protocol import TextEdit
+
+from ..protocol import (
+    CompletionItem,
+    CompletionItemDefaults,
+    CompletionItemKind,
+    CompletionItemTag,
+    CompletionList,
+    CompletionParams,
+    EditRangeWithInsertReplace,
+    InsertReplaceEdit,
+    InsertTextFormat,
+    MarkedString,
+    MarkupContent,
+    MarkupKind,
+    Range,
+    TextEdit,
+)
 from .core.constants import COMPLETION_KINDS
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import Error
-from .core.protocol import Request
+from .core.protocol import Error, Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT
-from .core.views import MarkdownLangMap
-from .core.views import minihtml
-from .core.views import range_to_region
-from .core.views import show_lsp_popup
-from .core.views import text_document_position_params
-from typing import Any, Callable, Generator, List, Tuple, Union
-from typing import cast
+from .core.views import (
+    FORMAT_MARKUP_CONTENT,
+    FORMAT_STRING,
+    MarkdownLangMap,
+    minihtml,
+    range_to_region,
+    show_lsp_popup,
+    text_document_position_params,
+)
+from typing import Any, Callable, cast, Generator, List, Tuple, Union
 from typing_extensions import TypeAlias, TypeGuard
 import functools
 import html

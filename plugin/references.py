@@ -1,26 +1,25 @@
 from __future__ import annotations
+
 from ..protocol import Location
 from .core.constants import RegionKey
-from .core.protocol import Point
-from .core.protocol import Request
-from .core.registry import get_position
-from .core.registry import LspTextCommand
-from .core.registry import windows
+from .core.protocol import Point, Request
+from .core.registry import get_position, LspTextCommand, windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import ClientConfig
-from .core.views import get_line
-from .core.views import get_symbol_kind_from_scope
-from .core.views import get_uri_and_position_from_location
-from .core.views import position_to_offset
-from .core.views import text_document_position_params
+from .core.views import (
+    get_line,
+    get_symbol_kind_from_scope,
+    get_uri_and_position_from_location,
+    position_to_offset,
+    text_document_position_params,
+)
 from .locationpicker import LocationPicker
 from typing import Literal
 import functools
 import linecache
 import os
 import sublime
-
 
 OutputMode = Literal['output_panel', 'quick_panel']
 

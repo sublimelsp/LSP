@@ -1,43 +1,32 @@
 from __future__ import annotations
-from ..protocol import Diagnostic
-from ..protocol import DocumentLink
-from ..protocol import Hover
-from ..protocol import Position
-from ..protocol import Range
-from .code_actions import actions_manager
-from .code_actions import CodeActionOrCommand
-from .code_actions import CodeActionsByConfigName
-from .core.constants import HOVER_ENABLED_KEY
-from .core.constants import RegionKey
-from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.open import lsp_range_from_uri_fragment
-from .core.open import open_file_uri
-from .core.open import open_in_browser
+
+from ..protocol import Diagnostic, DocumentLink, Hover, Position, Range
+from .code_actions import actions_manager, CodeActionOrCommand, CodeActionsByConfigName
+from .core.constants import HOVER_ENABLED_KEY, RegionKey, SHOW_DEFINITIONS_KEY
+from .core.open import lsp_range_from_uri_fragment, open_file_uri, open_in_browser
 from .core.promise import Promise
-from .core.protocol import Error
-from .core.protocol import Request
-from .core.registry import get_position
-from .core.registry import LspTextCommand
-from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
+from .core.protocol import Error, Request
+from .core.registry import get_position, LspTextCommand, windows
+from .core.sessions import AbstractViewListener, SessionBufferProtocol
 from .core.settings import userprefs
 from .core.url import parse_uri
-from .core.views import diagnostic_severity
-from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_diagnostic_for_html
-from .core.views import FORMAT_MARKED_STRING
-from .core.views import FORMAT_MARKUP_CONTENT
-from .core.views import is_location_href
-from .core.views import make_command_link
-from .core.views import make_link
-from .core.views import MarkdownLangMap
-from .core.views import minihtml
-from .core.views import range_to_region
-from .core.views import show_lsp_popup
-from .core.views import text_document_position_params
-from .core.views import unpack_href_location
-from .core.views import update_lsp_popup
+from .core.views import (
+    diagnostic_severity,
+    format_code_actions_for_quick_panel,
+    format_diagnostic_for_html,
+    FORMAT_MARKED_STRING,
+    FORMAT_MARKUP_CONTENT,
+    is_location_href,
+    make_command_link,
+    make_link,
+    MarkdownLangMap,
+    minihtml,
+    range_to_region,
+    show_lsp_popup,
+    text_document_position_params,
+    unpack_href_location,
+    update_lsp_popup,
+)
 from functools import partial
 from typing import Sequence, Union
 from urllib.parse import urlparse
@@ -45,7 +34,6 @@ import html
 import mdpopups
 import sublime
 import sublime_plugin
-
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]

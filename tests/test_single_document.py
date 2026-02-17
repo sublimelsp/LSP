@@ -1,20 +1,18 @@
 from __future__ import annotations
+
 from copy import deepcopy
 from LSP.plugin import apply_text_edits, Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase
-from setup import TIMEOUT_TIME
-from setup import YieldPromise
+from setup import TextDocumentTestCase, TIMEOUT_TIME, YieldPromise
 from unittest import skip
 import os
 import sublime
 
-
 try:
-    from typing import Generator, Optional, Iterable, Tuple, List
+    from typing import Generator, Iterable, List, Optional, Tuple
     assert Generator and Optional and Iterable and Tuple and List
 except ImportError:
     pass

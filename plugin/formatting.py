@@ -1,29 +1,28 @@
 from __future__ import annotations
-from ..protocol import TextDocumentSaveReason
-from ..protocol import TextEdit
+
+from ..protocol import TextDocumentSaveReason, TextEdit
 from .code_actions import CodeActionsOnFormatTask
 from .core.collections import DottedDict
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
-from .core.registry import LspTextCommand
-from .core.registry import windows
+from .core.registry import LspTextCommand, windows
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import entire_content_region
-from .core.views import first_selection_region
-from .core.views import has_single_nonempty_selection
-from .core.views import text_document_formatting
-from .core.views import text_document_range_formatting
-from .core.views import text_document_ranges_formatting
-from .core.views import will_save_wait_until
-from .lsp_task import LspTask
-from .lsp_task import LspTextCommandWithTasks
+from .core.views import (
+    entire_content_region,
+    first_selection_region,
+    has_single_nonempty_selection,
+    text_document_formatting,
+    text_document_range_formatting,
+    text_document_ranges_formatting,
+    will_save_wait_until,
+)
+from .lsp_task import LspTask, LspTextCommandWithTasks
 from functools import partial
 from typing import Any, Callable, Iterator, List, Union
 from typing_extensions import override
 import sublime
-
 
 FormatResponse = Union[List[TextEdit], None, Error]
 

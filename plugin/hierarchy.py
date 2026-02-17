@@ -1,33 +1,28 @@
 from __future__ import annotations
-from ..protocol import CallHierarchyIncomingCall
-from ..protocol import CallHierarchyItem
-from ..protocol import CallHierarchyOutgoingCall
-from ..protocol import CallHierarchyPrepareParams
-from ..protocol import Range
-from ..protocol import TextDocumentPositionParams
-from ..protocol import TypeHierarchyItem
-from ..protocol import TypeHierarchyPrepareParams
+
+from ..protocol import (
+    CallHierarchyIncomingCall,
+    CallHierarchyItem,
+    CallHierarchyOutgoingCall,
+    CallHierarchyPrepareParams,
+    Range,
+    TextDocumentPositionParams,
+    TypeHierarchyItem,
+    TypeHierarchyPrepareParams,
+)
 from .core.constants import SYMBOL_KINDS
 from .core.paths import simple_path
 from .core.promise import Promise
-from .core.protocol import Error
-from .core.protocol import Request
-from .core.registry import get_position
-from .core.registry import LspTextCommand
-from .core.registry import LspWindowCommand
+from .core.protocol import Error, Request
+from .core.registry import get_position, LspTextCommand, LspWindowCommand
 from .core.sessions import Session
-from .core.tree_view import new_tree_view_sheet
-from .core.tree_view import TreeDataProvider
-from .core.tree_view import TreeItem
-from .core.views import make_command_link
-from .core.views import text_document_position_params
-from abc import ABCMeta
-from abc import abstractmethod
+from .core.tree_view import new_tree_view_sheet, TreeDataProvider, TreeItem
+from .core.views import make_command_link, text_document_position_params
+from abc import ABCMeta, abstractmethod
 from functools import partial
 from typing import Any, Callable, TypedDict, Union
 import sublime
 import weakref
-
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 

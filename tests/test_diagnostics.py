@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase

@@ -1,24 +1,18 @@
 from __future__ import annotations
+
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
 from .core.sessions import get_plugin
-from .core.transports import create_transport
-from .core.transports import Transport
-from .core.transports import TransportCallbacks
-from .core.types import Capabilities
-from .core.types import ClientConfig
+from .core.transports import create_transport, Transport, TransportCallbacks
+from .core.types import Capabilities, ClientConfig
 from .core.version import __version__
-from .core.views import extract_variables
-from .core.views import make_command_link
-from .core.workspace import ProjectFolders
-from .core.workspace import sorted_workspace_folders
+from .core.views import extract_variables, make_command_link
+from .core.workspace import ProjectFolders, sorted_workspace_folders
 from .session_buffer import SessionBuffer
-from base64 import b64decode
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from subprocess import list2cmdline
-from typing import Any, Callable
-from typing import cast
+from typing import Any, Callable, cast
 import json
 import mdpopups
 import os

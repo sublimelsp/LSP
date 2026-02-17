@@ -1,28 +1,22 @@
 from __future__ import annotations
-from ..protocol import CodeAction
-from ..protocol import CodeActionKind
-from ..protocol import CodeActionParams
-from ..protocol import Command
-from ..protocol import Diagnostic
+
+from ..protocol import CodeAction, CodeActionKind, CodeActionParams, Command, Diagnostic
 from .core.promise import Promise
-from .core.protocol import Error
-from .core.protocol import Request
-from .core.registry import LspTextCommand
-from .core.registry import LspWindowCommand
-from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
+from .core.protocol import Error, Request
+from .core.registry import LspTextCommand, LspWindowCommand, windows
+from .core.sessions import AbstractViewListener, SessionBufferProtocol
 from .core.settings import userprefs
-from .core.views import entire_content_region
-from .core.views import first_selection_region
-from .core.views import format_code_actions_for_quick_panel
-from .core.views import kind_contains_other_kind
-from .core.views import text_document_code_action_params
+from .core.views import (
+    entire_content_region,
+    first_selection_region,
+    format_code_actions_for_quick_panel,
+    kind_contains_other_kind,
+    text_document_code_action_params,
+)
 from .lsp_task import LspTask
-from abc import ABCMeta
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from functools import partial
-from typing import cast, TYPE_CHECKING, Any, List, Tuple, Union, final
+from typing import Any, cast, final, List, Tuple, TYPE_CHECKING, Union
 from typing_extensions import override
 import sublime
 

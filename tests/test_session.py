@@ -1,20 +1,20 @@
 from __future__ import annotations
+
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.edit import Promise
 from LSP.plugin.core.protocol import Error
-from LSP.plugin.core.sessions import get_initialize_params
-from LSP.plugin.core.sessions import Logger
-from LSP.plugin.core.sessions import Manager
-from LSP.plugin.core.sessions import Session
+from LSP.plugin.core.sessions import get_initialize_params, Logger, Manager, Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.workspace import WorkspaceFolder
-from LSP.protocol import Diagnostic
-from LSP.protocol import DocumentUri
-from LSP.protocol import LogMessageParams
-from LSP.protocol import MessageActionItem
-from LSP.protocol import ShowMessageParams
-from LSP.protocol import ShowMessageRequestParams
-from LSP.protocol import TextDocumentSyncKind
+from LSP.protocol import (
+    Diagnostic,
+    DocumentUri,
+    LogMessageParams,
+    MessageActionItem,
+    ShowMessageParams,
+    ShowMessageRequestParams,
+    TextDocumentSyncKind,
+)
 from test_mocks import TEST_CONFIG
 from typing import Any, Generator
 import sublime

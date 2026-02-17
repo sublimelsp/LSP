@@ -1843,7 +1843,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
-            return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+            if isinstance(self._plugin, LspPlugin):
+                if promise := self._plugin.on_open_uri_async(uri):
+                    return promise.then(lambda sheet: sheet.view())
+            else:
+                return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
 
     def open_uri_async(
@@ -1892,7 +1896,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def _open_uri_with_plugin_async(
         self,
-        plugin: AbstractPlugin | LspPlugin,
+        plugin: AbstractPlugin,
         uri: DocumentUri,
         r: Range | None,
         flags: sublime.NewFileFlags,

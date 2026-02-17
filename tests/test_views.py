@@ -4,32 +4,32 @@ from copy import deepcopy
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.core.views import (
-    did_change,
-    did_open,
-    did_save,
-    document_color_params,
-    format_diagnostic_for_html,
-    FORMAT_MARKED_STRING,
-    FORMAT_MARKUP_CONTENT,
-    FORMAT_STRING,
-    lsp_color_to_html,
-    lsp_color_to_phantom,
-    minihtml,
-    MissingUriError,
-    point_to_offset,
-    range_to_region,
-    selection_range_params,
-    text2html,
-    text_document_code_action_params,
-    text_document_formatting,
-    text_document_position_params,
-    text_document_range_formatting,
-    uri_from_view,
-    will_save,
-    will_save_wait_until,
-)
-from LSP.protocol import CodeActionKind, Diagnostic, DiagnosticSeverity
+from LSP.plugin.core.views import did_change
+from LSP.plugin.core.views import did_open
+from LSP.plugin.core.views import did_save
+from LSP.plugin.core.views import document_color_params
+from LSP.plugin.core.views import format_diagnostic_for_html
+from LSP.plugin.core.views import FORMAT_MARKED_STRING
+from LSP.plugin.core.views import FORMAT_MARKUP_CONTENT
+from LSP.plugin.core.views import FORMAT_STRING
+from LSP.plugin.core.views import lsp_color_to_html
+from LSP.plugin.core.views import lsp_color_to_phantom
+from LSP.plugin.core.views import minihtml
+from LSP.plugin.core.views import MissingUriError
+from LSP.plugin.core.views import point_to_offset
+from LSP.plugin.core.views import range_to_region
+from LSP.plugin.core.views import selection_range_params
+from LSP.plugin.core.views import text2html
+from LSP.plugin.core.views import text_document_code_action_params
+from LSP.plugin.core.views import text_document_formatting
+from LSP.plugin.core.views import text_document_position_params
+from LSP.plugin.core.views import text_document_range_formatting
+from LSP.plugin.core.views import uri_from_view
+from LSP.plugin.core.views import will_save
+from LSP.plugin.core.views import will_save_wait_until
+from LSP.protocol import CodeActionKind
+from LSP.protocol import Diagnostic
+from LSP.protocol import DiagnosticSeverity
 from setup import make_stdio_test_config
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase

@@ -1,68 +1,85 @@
 from __future__ import annotations
 
-from ..protocol import (
-    Diagnostic,
-    DiagnosticSeverity,
-    DocumentHighlight,
-    DocumentHighlightKind,
-    DocumentHighlightParams,
-    DocumentUri,
-    FoldingRange,
-    FoldingRangeParams,
-    SignatureHelp,
-    SignatureHelpContext,
-    SignatureHelpParams,
-    SignatureHelpTriggerKind,
-)
-from .code_actions import actions_manager, CodeActionOrCommand, CodeActionsByConfigName
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentHighlight
+from ..protocol import DocumentHighlightKind
+from ..protocol import DocumentHighlightParams
+from ..protocol import DocumentUri
+from ..protocol import FoldingRange
+from ..protocol import FoldingRangeParams
+from ..protocol import SignatureHelp
+from ..protocol import SignatureHelpContext
+from ..protocol import SignatureHelpParams
+from ..protocol import SignatureHelpTriggerKind
+from .code_actions import actions_manager
+from .code_actions import CodeActionOrCommand
+from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
-from .core.constants import (
-    CODE_ACTION_ANNOTATION_SCOPE,
-    DOCUMENT_HIGHLIGHT_KIND_NAMES,
-    DOCUMENT_HIGHLIGHT_KIND_SCOPES,
-    HOVER_ENABLED_KEY,
-    RegionKey,
-    RequestFlags,
-    SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE,
-    SIGNATURE_HELP_FUNCTION_SCOPE,
-    SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE,
-    ST_VERSION,
-)
+from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
+from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import RegionKey
+from .core.constants import RequestFlags
+from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
+from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
+from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
+from .core.constants import ST_VERSION
 from .core.logging import debug
 from .core.open import open_in_browser
 from .core.panels import PanelName
 from .core.protocol import Request
-from .core.registry import best_session, get_position, windows
-from .core.sessions import AbstractViewListener, Session, SessionBufferProtocol
+from .core.registry import best_session
+from .core.registry import get_position
+from .core.registry import windows
+from .core.sessions import AbstractViewListener
+from .core.sessions import Session
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.signature_help import SigHelp, SignatureHelpStyle
-from .core.types import basescope2languageid, ClientConfig, debounced, FEATURES_TIMEOUT, SettingsRegistration
-from .core.url import parse_uri, view_to_uri
-from .core.views import (
-    diagnostic_severity,
-    first_selection_region,
-    format_code_actions_for_quick_panel,
-    format_diagnostic_for_html,
-    make_link,
-    MarkdownLangMap,
-    range_to_region,
-    show_lsp_popup,
-    text_document_identifier,
-    text_document_position_params,
-    update_lsp_popup,
-)
+from .core.signature_help import SigHelp
+from .core.signature_help import SignatureHelpStyle
+from .core.types import basescope2languageid
+from .core.types import ClientConfig
+from .core.types import debounced
+from .core.types import FEATURES_TIMEOUT
+from .core.types import SettingsRegistration
+from .core.url import parse_uri
+from .core.url import view_to_uri
+from .core.views import diagnostic_severity
+from .core.views import first_selection_region
+from .core.views import format_code_actions_for_quick_panel
+from .core.views import format_diagnostic_for_html
+from .core.views import make_link
+from .core.views import MarkdownLangMap
+from .core.views import range_to_region
+from .core.views import show_lsp_popup
+from .core.views import text_document_identifier
+from .core.views import text_document_position_params
+from .core.views import update_lsp_popup
 from .core.windows import WindowManager
 from .diagnostics import get_diagnostics_identifiers
 from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
-from functools import partial, wraps
+from functools import partial
+from functools import wraps
 from os.path import basename
-from typing import Any, Callable, cast, Generator, Iterable, Literal, overload, TypeVar
-from typing_extensions import Concatenate, override, ParamSpec
-from weakref import WeakSet, WeakValueDictionary
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Generator
+from typing import Iterable
+from typing import Literal
+from typing import overload
+from typing import TypeVar
+from typing_extensions import Concatenate
+from typing_extensions import override
+from typing_extensions import ParamSpec
+from weakref import WeakSet
+from weakref import WeakValueDictionary
 import itertools
 import sublime
 import sublime_plugin

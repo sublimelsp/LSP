@@ -27,6 +27,7 @@ line-ending = "auto"
 
 [tool.ruff.lint.isort]
 case-sensitive = false
+force-single-line = true
 from-first = true
 no-sections = true
 order-by-type = false

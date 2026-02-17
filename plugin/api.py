@@ -4,7 +4,10 @@ from ..protocol import LSPAny
 from .core.protocol import Response
 from .core.types import method2attr
 from functools import wraps
-from typing import Any, Callable, TYPE_CHECKING, TypeVar
+from typing import Any
+from typing import Callable
+from typing import TYPE_CHECKING
+from typing import TypeVar
 import inspect
 
 if TYPE_CHECKING:

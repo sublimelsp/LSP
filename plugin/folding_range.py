@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-from ..protocol import FoldingRange, FoldingRangeKind, FoldingRangeParams, Range
-from .core.protocol import Request, UINT_MAX
+from ..protocol import FoldingRange
+from ..protocol import FoldingRangeKind
+from ..protocol import FoldingRangeParams
+from ..protocol import Range
+from .core.protocol import Request
+from .core.protocol import UINT_MAX
 from .core.registry import LspTextCommand
-from .core.views import range_to_region, text_document_identifier
+from .core.views import range_to_region
+from .core.views import text_document_identifier
 from functools import partial
 import sublime
 

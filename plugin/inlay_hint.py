@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from ..protocol import InlayHint, InlayHintLabelPart, MarkupContent
-from .core.constants import RequestFlags, ST_VERSION
+from ..protocol import InlayHint
+from ..protocol import InlayHintLabelPart
+from ..protocol import MarkupContent
+from .core.constants import RequestFlags
+from .core.constants import ST_VERSION
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.protocol import Request
-from .core.registry import LspTextCommand, LspWindowCommand
+from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import position_to_offset

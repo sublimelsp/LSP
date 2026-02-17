@@ -1,31 +1,38 @@
 from __future__ import annotations
 
-from ..protocol import Diagnostic, DiagnosticSeverity, DocumentUri, Location, LocationLink
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentUri
+from ..protocol import Location
+from ..protocol import LocationLink
 from .core.constants import DIAGNOSTIC_KINDS
 from .core.input_handlers import PreselectedListInputHandler
 from .core.paths import simple_project_path
-from .core.protocol import Point, Request
-from .core.registry import get_position, LspTextCommand, LspWindowCommand
+from .core.protocol import Point
+from .core.protocol import Request
+from .core.registry import get_position
+from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import method_to_capability
 from .core.url import parse_uri
-from .core.views import (
-    diagnostic_severity,
-    first_selection_region,
-    get_symbol_kind_from_scope,
-    position_to_offset,
-    range_to_region,
-    text_document_position_params,
-    to_encoded_filename,
-    uri_from_view,
-)
-from .locationpicker import LocationPicker, open_location_async
+from .core.views import diagnostic_severity
+from .core.views import first_selection_region
+from .core.views import get_symbol_kind_from_scope
+from .core.views import position_to_offset
+from .core.views import range_to_region
+from .core.views import text_document_position_params
+from .core.views import to_encoded_filename
+from .core.views import uri_from_view
+from .locationpicker import LocationPicker
+from .locationpicker import open_location_async
 from collections import Counter
 from functools import partial
 from os.path import basename
 from pathlib import Path
-from typing import cast, TypedDict
+from typing import cast
+from typing import TypedDict
 import sublime
 import sublime_plugin
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from .progress import ProgressReporter, ViewProgressReporter, WindowProgressReporter
+from .progress import ProgressReporter
+from .progress import ViewProgressReporter
+from .progress import WindowProgressReporter
 from .protocol import Request
 from .sessions import SessionViewProtocol
 from typing import Any

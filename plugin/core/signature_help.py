@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-from ...protocol import SignatureHelp, SignatureHelpTriggerKind, SignatureInformation
+from ...protocol import SignatureHelp
+from ...protocol import SignatureHelpTriggerKind
+from ...protocol import SignatureInformation
 from .logging import debug
 from .registry import LspTextCommand
-from .views import FORMAT_MARKUP_CONTENT, FORMAT_STRING, MarkdownLangMap, minihtml
+from .views import FORMAT_MARKUP_CONTENT
+from .views import FORMAT_STRING
+from .views import MarkdownLangMap
+from .views import minihtml
 from typing import TypedDict
 import html
 import re

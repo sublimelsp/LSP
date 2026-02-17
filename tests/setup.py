@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from LSP.plugin.core.promise import Promise
-from LSP.plugin.core.protocol import Notification, Request
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import ClientConfig, ClientStates
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import ClientStates
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join

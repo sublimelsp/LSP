@@ -1,16 +1,25 @@
 from __future__ import annotations
 
-from ..protocol import TextEdit, WorkspaceEdit
-from .core.edit import parse_range, parse_workspace_edit, WorkspaceChanges
+from ..protocol import TextEdit
+from ..protocol import WorkspaceEdit
+from .core.edit import parse_range
+from .core.edit import parse_workspace_edit
+from .core.edit import WorkspaceChanges
 from .core.logging import debug
 from .core.panels import PanelName
 from .core.promise import Promise
-from .core.registry import LspWindowCommand, windows
+from .core.registry import LspWindowCommand
+from .core.registry import windows
 from .core.url import parse_uri
 from .core.views import get_line
 from .core.windows import WindowManager
 from contextlib import contextmanager
-from typing import Any, Callable, Generator, Iterable, Tuple, TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Generator
+from typing import Iterable
+from typing import Tuple
+from typing import TYPE_CHECKING
 import operator
 import os
 import re

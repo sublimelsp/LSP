@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from ..protocol import DocumentUri, Location, LocationLink, Position
-from .core.constants import ST_PACKAGES_PATH, SublimeKind
+from ..protocol import DocumentUri
+from ..protocol import Location
+from ..protocol import LocationLink
+from ..protocol import Position
+from .core.constants import ST_PACKAGES_PATH
+from .core.constants import SublimeKind
 from .core.logging import debug
 from .core.sessions import Session
-from .core.views import get_uri_and_position_from_location, location_to_human_readable, to_encoded_filename
+from .core.views import get_uri_and_position_from_location
+from .core.views import location_to_human_readable
+from .core.views import to_encoded_filename
 from urllib.request import url2pathname
 import functools
 import sublime

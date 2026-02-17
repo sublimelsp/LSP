@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from .constants import ST_VERSION
-from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, final, List, Tuple, Union
+from abc import ABCMeta
+from abc import abstractmethod
+from typing import Any
+from typing import Callable
+from typing import final
+from typing import List
+from typing import Tuple
+from typing import Union
 from typing_extensions import ParamSpec
 import functools
 import sublime

@@ -1,84 +1,90 @@
 from __future__ import annotations
 
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.code_actions import LspCodeActionsCommand, LspRefactorCommand, LspSourceActionCommand
-from .plugin.code_lens import LspCodeLensCommand, LspToggleCodeLensesCommand
+from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_actions import LspRefactorCommand
+from .plugin.code_actions import LspSourceActionCommand
+from .plugin.code_lens import LspCodeLensCommand
+from .plugin.code_lens import LspToggleCodeLensesCommand
 from .plugin.color import LspColorPresentationCommand
-from .plugin.completion import (
-    LspCommitCompletionWithOppositeInsertMode,
-    LspResolveDocsCommand,
-    LspSelectCompletionCommand,
-)
-from .plugin.configuration import (
-    LspDisableLanguageServerGloballyCommand,
-    LspDisableLanguageServerInProjectCommand,
-    LspEnableLanguageServerGloballyCommand,
-    LspEnableLanguageServerInProjectCommand,
-)
+from .plugin.completion import LspCommitCompletionWithOppositeInsertMode
+from .plugin.completion import LspResolveDocsCommand
+from .plugin.completion import LspSelectCompletionCommand
+from .plugin.configuration import LspDisableLanguageServerGloballyCommand
+from .plugin.configuration import LspDisableLanguageServerInProjectCommand
+from .plugin.configuration import LspEnableLanguageServerGloballyCommand
+from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
 from .plugin.core.open import opening_files
 from .plugin.core.panels import PanelName
-from .plugin.core.registry import (
-    LspCheckApplicableCommand,
-    LspNextDiagnosticCommand,
-    LspOpenLocationCommand,
-    LspPrevDiagnosticCommand,
-    LspRestartServerCommand,
-    windows,
-)
-from .plugin.core.sessions import AbstractPlugin, register_plugin
-from .plugin.core.settings import client_configs, load_settings, unload_settings
-from .plugin.core.signature_help import LspSignatureHelpNavigateCommand, LspSignatureHelpShowCommand
+from .plugin.core.registry import LspCheckApplicableCommand
+from .plugin.core.registry import LspNextDiagnosticCommand
+from .plugin.core.registry import LspOpenLocationCommand
+from .plugin.core.registry import LspPrevDiagnosticCommand
+from .plugin.core.registry import LspRestartServerCommand
+from .plugin.core.registry import windows
+from .plugin.core.sessions import AbstractPlugin
+from .plugin.core.sessions import register_plugin
+from .plugin.core.settings import client_configs
+from .plugin.core.settings import load_settings
+from .plugin.core.settings import unload_settings
+from .plugin.core.signature_help import LspSignatureHelpNavigateCommand
+from .plugin.core.signature_help import LspSignatureHelpShowCommand
 from .plugin.core.transports import kill_all_subprocesses
-from .plugin.core.tree_view import LspCollapseTreeItemCommand, LspExpandTreeItemCommand
+from .plugin.core.tree_view import LspCollapseTreeItemCommand
+from .plugin.core.tree_view import LspExpandTreeItemCommand
 from .plugin.core.views import LspRunTextCommandHelperCommand
 from .plugin.document_link import LspOpenLinkCommand
-from .plugin.documents import DocumentSyncListener, TextChangeListener
-from .plugin.edit import LspApplyDocumentEditCommand, LspApplyWorkspaceEditCommand, LspConcludeWorkspaceEditPanelCommand
+from .plugin.documents import DocumentSyncListener
+from .plugin.documents import TextChangeListener
+from .plugin.edit import LspApplyDocumentEditCommand
+from .plugin.edit import LspApplyWorkspaceEditCommand
+from .plugin.edit import LspConcludeWorkspaceEditPanelCommand
 from .plugin.execute_command import LspExecuteCommand
-from .plugin.folding_range import LspFoldAllCommand, LspFoldCommand
-from .plugin.formatting import LspFormatCommand, LspFormatDocumentCommand, LspFormatDocumentRangeCommand
-from .plugin.goto import (
-    LspGotoDiagnosticCommand,
-    LspSymbolDeclarationCommand,
-    LspSymbolDefinitionCommand,
-    LspSymbolImplementationCommand,
-    LspSymbolTypeDefinitionCommand,
-)
-from .plugin.hierarchy import LspCallHierarchyCommand, LspHierarchyToggleCommand, LspTypeHierarchyCommand
-from .plugin.hover import LspCopyTextCommand, LspHoverCommand, LspToggleHoverPopupsCommand
-from .plugin.inlay_hint import LspInlayHintClickCommand, LspToggleInlayHintsCommand
-from .plugin.panels import (
-    LspClearLogPanelCommand,
-    LspClearPanelCommand,
-    LspShowDiagnosticsPanelCommand,
-    LspToggleLogPanelLinesLimitCommand,
-    LspToggleServerPanelCommand,
-    LspUpdateLogPanelCommand,
-    LspUpdatePanelCommand,
-)
+from .plugin.folding_range import LspFoldAllCommand
+from .plugin.folding_range import LspFoldCommand
+from .plugin.formatting import LspFormatCommand
+from .plugin.formatting import LspFormatDocumentCommand
+from .plugin.formatting import LspFormatDocumentRangeCommand
+from .plugin.goto import LspGotoDiagnosticCommand
+from .plugin.goto import LspSymbolDeclarationCommand
+from .plugin.goto import LspSymbolDefinitionCommand
+from .plugin.goto import LspSymbolImplementationCommand
+from .plugin.goto import LspSymbolTypeDefinitionCommand
+from .plugin.hierarchy import LspCallHierarchyCommand
+from .plugin.hierarchy import LspHierarchyToggleCommand
+from .plugin.hierarchy import LspTypeHierarchyCommand
+from .plugin.hover import LspCopyTextCommand
+from .plugin.hover import LspHoverCommand
+from .plugin.hover import LspToggleHoverPopupsCommand
+from .plugin.inlay_hint import LspInlayHintClickCommand
+from .plugin.inlay_hint import LspToggleInlayHintsCommand
+from .plugin.panels import LspClearLogPanelCommand
+from .plugin.panels import LspClearPanelCommand
+from .plugin.panels import LspShowDiagnosticsPanelCommand
+from .plugin.panels import LspToggleLogPanelLinesLimitCommand
+from .plugin.panels import LspToggleServerPanelCommand
+from .plugin.panels import LspUpdateLogPanelCommand
+from .plugin.panels import LspUpdatePanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.rename_file import LspRenamePathCommand
-from .plugin.save_command import LspSaveAllCommand, LspSaveCommand
+from .plugin.save_command import LspSaveAllCommand
+from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand
 from .plugin.semantic_highlighting import LspShowScopeNameCommand
-from .plugin.symbols import (
-    LspDocumentSymbolsCommand,
-    LspSelectionAddCommand,
-    LspSelectionClearCommand,
-    LspSelectionSetCommand,
-    LspWorkspaceSymbolsCommand,
-)
-from .plugin.tooling import (
-    LspCopyToClipboardFromBase64Command,
-    LspDumpBufferCapabilities,
-    LspDumpWindowConfigs,
-    LspOnDoubleClickCommand,
-    LspParseVscodePackageJson,
-    LspTroubleshootServerCommand,
-)
+from .plugin.symbols import LspDocumentSymbolsCommand
+from .plugin.symbols import LspSelectionAddCommand
+from .plugin.symbols import LspSelectionClearCommand
+from .plugin.symbols import LspSelectionSetCommand
+from .plugin.symbols import LspWorkspaceSymbolsCommand
+from .plugin.tooling import LspCopyToClipboardFromBase64Command
+from .plugin.tooling import LspDumpBufferCapabilities
+from .plugin.tooling import LspDumpWindowConfigs
+from .plugin.tooling import LspOnDoubleClickCommand
+from .plugin.tooling import LspParseVscodePackageJson
+from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
 import os
 import sublime

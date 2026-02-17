@@ -1,10 +1,18 @@
 from __future__ import annotations
 
-from ...protocol import AnnotatedTextEdit, Position, TextEdit, WorkspaceEdit
+from ...protocol import AnnotatedTextEdit
+from ...protocol import Position
+from ...protocol import TextEdit
+from ...protocol import WorkspaceEdit
 from .logging import debug
 from .promise import Promise
 from .protocol import UINT_MAX
-from typing import Dict, List, Optional, Tuple, TypedDict, Union
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypedDict
+from typing import Union
 from typing_extensions import NotRequired
 import sublime
 

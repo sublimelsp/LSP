@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from ..protocol import ColorInformation, ColorPresentation, ColorPresentationParams
+from ..protocol import ColorInformation
+from ..protocol import ColorPresentation
+from ..protocol import ColorPresentationParams
 from .core.edit import apply_text_edits
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.views import range_to_region, text_document_identifier
+from .core.views import range_to_region
+from .core.views import text_document_identifier
 import sublime
 
 

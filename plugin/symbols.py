@@ -1,25 +1,34 @@
 from __future__ import annotations
 
-from ..protocol import (
-    DocumentSymbol,
-    DocumentSymbolParams,
-    Location,
-    Range,
-    SymbolInformation,
-    SymbolKind,
-    SymbolTag,
-    WorkspaceSymbol,
-)
+from ..protocol import DocumentSymbol
+from ..protocol import DocumentSymbolParams
+from ..protocol import Location
+from ..protocol import Range
+from ..protocol import SymbolInformation
+from ..protocol import SymbolKind
+from ..protocol import SymbolTag
+from ..protocol import WorkspaceSymbol
 from .core.constants import SYMBOL_KINDS
-from .core.input_handlers import DynamicListInputHandler, PreselectedListInputHandler
+from .core.input_handlers import DynamicListInputHandler
+from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
-from .core.protocol import Error, Point, Request, ResponseError
-from .core.registry import LspTextCommand, LspWindowCommand
+from .core.protocol import Error
+from .core.protocol import Point
+from .core.protocol import Request
+from .core.protocol import ResponseError
+from .core.registry import LspTextCommand
+from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
-from .core.views import offset_to_point, range_to_region, text_document_identifier
+from .core.views import offset_to_point
+from .core.views import range_to_region
+from .core.views import text_document_identifier
 from functools import partial
-from typing import Any, cast, List, TypedDict
-from typing_extensions import NotRequired, TypeGuard
+from typing import Any
+from typing import cast
+from typing import List
+from typing import TypedDict
+from typing_extensions import NotRequired
+from typing_extensions import TypeGuard
 import os
 import sublime
 import sublime_plugin

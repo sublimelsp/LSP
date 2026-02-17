@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from ..protocol import PrepareRenameParams, PrepareRenameResult, Range, RenameParams, WorkspaceEdit
+from ..protocol import PrepareRenameParams
+from ..protocol import PrepareRenameResult
+from ..protocol import Range
+from ..protocol import RenameParams
+from ..protocol import WorkspaceEdit
 from .core.edit import show_summary_message
 from .core.protocol import Request
-from .core.registry import get_position, LspTextCommand
+from .core.registry import get_position
+from .core.registry import LspTextCommand
 from .core.sessions import Session
-from .core.views import range_to_region, text_document_position_params
+from .core.views import range_to_region
+from .core.views import text_document_position_params
 from .edit import prompt_for_workspace_edits
 from functools import partial
 from typing import Any

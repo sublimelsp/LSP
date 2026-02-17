@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from LSP.plugin.core.url import filename_to_uri
-from LSP.protocol import DiagnosticSeverity, DiagnosticTag, PublishDiagnosticsParams
+from LSP.protocol import DiagnosticSeverity
+from LSP.protocol import DiagnosticTag
+from LSP.protocol import PublishDiagnosticsParams
 from setup import TextDocumentTestCase
 from typing import Generator
 import sublime

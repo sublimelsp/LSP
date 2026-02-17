@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from typing import Callable, Generic, Protocol, Tuple, TypeVar, Union
+from typing import Callable
+from typing import Generic
+from typing import Protocol
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
 import functools
 import threading
 

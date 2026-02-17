@@ -1,24 +1,29 @@
 from __future__ import annotations
 
-from ..protocol import Command, DocumentUri
+from ..protocol import Command
+from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
-from .core.constants import (
-    DIAGNOSTIC_TAG_SCOPES,
-    DOCUMENT_HIGHLIGHT_KIND_NAMES,
-    HOVER_ENABLED_KEY,
-    RegionKey,
-    REGIONS_INITIALIZE_FLAGS,
-    RequestFlags,
-    SHOW_DEFINITIONS_KEY,
-)
-from .core.protocol import Request, ResolvedCodeLens
-from .core.sessions import AbstractViewListener, Session
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
+from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
+from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import RegionKey
+from .core.constants import REGIONS_INITIALIZE_FLAGS
+from .core.constants import RequestFlags
+from .core.constants import SHOW_DEFINITIONS_KEY
+from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
+from .core.sessions import AbstractViewListener
+from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import DIAGNOSTIC_SEVERITY, make_command_link, range_to_region
+from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import make_command_link
+from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
-from typing import Any, Iterable
-from weakref import ref, WeakValueDictionary
+from typing import Any
+from typing import Iterable
+from weakref import ref
+from weakref import WeakValueDictionary
 import html
 import itertools
 import sublime

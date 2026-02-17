@@ -1,41 +1,57 @@
 from __future__ import annotations
 
-from ...protocol import (
-    Diagnostic,
-    DocumentUri,
-    LogMessageParams,
-    MessageActionItem,
-    MessageType,
-    ShowMessageParams,
-    ShowMessageRequestParams,
-)
+from ...protocol import Diagnostic
+from ...protocol import DocumentUri
+from ...protocol import LogMessageParams
+from ...protocol import MessageActionItem
+from ...protocol import MessageType
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
-from .configurations import RETRY_COUNT_TIMEDELTA, RETRY_MAX_COUNT, WindowConfigChangeListener, WindowConfigManager
+from .configurations import RETRY_COUNT_TIMEDELTA
+from .configurations import RETRY_MAX_COUNT
+from .configurations import WindowConfigChangeListener
+from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .logging import debug, exception_log
+from .logging import debug
+from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .panels import (
-    LOG_LINES_LIMIT_SETTING_NAME,
-    MAX_LOG_LINES_LIMIT_OFF,
-    MAX_LOG_LINES_LIMIT_ON,
-    PanelManager,
-    PanelName,
-)
+from .panels import LOG_LINES_LIMIT_SETTING_NAME
+from .panels import MAX_LOG_LINES_LIMIT_OFF
+from .panels import MAX_LOG_LINES_LIMIT_ON
+from .panels import PanelManager
+from .panels import PanelName
 from .promise import Promise
-from .protocol import Error, Point
-from .sessions import AbstractViewListener, get_plugin, Logger, Manager, Session
-from .settings import client_configs, LspSettingsChangeListener, userprefs
+from .protocol import Error
+from .protocol import Point
+from .sessions import AbstractViewListener
+from .sessions import get_plugin
+from .sessions import Logger
+from .sessions import Manager
+from .sessions import Session
+from .settings import client_configs
+from .settings import LspSettingsChangeListener
+from .settings import userprefs
 from .transports import create_transport
-from .types import ClientConfig, matches_pattern, sublime_pattern_to_glob
+from .types import ClientConfig
+from .types import matches_pattern
+from .types import sublime_pattern_to_glob
 from .url import parse_uri
-from .views import diagnostic_severity, extract_variables, format_diagnostic_for_panel, make_link
-from .workspace import ProjectFolders, sorted_workspace_folders
+from .views import diagnostic_severity
+from .views import extract_variables
+from .views import format_diagnostic_for_panel
+from .views import make_link
+from .workspace import ProjectFolders
+from .workspace import sorted_workspace_folders
 from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
-from typing import Any, Generator, TYPE_CHECKING
-from weakref import ref, WeakSet
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
+from weakref import ref
+from weakref import WeakSet
 import functools
 import json
 import sublime

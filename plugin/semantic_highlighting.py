@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from .core.registry import LspTextCommand
-from typing import Any, Callable, cast, List, Tuple
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import List
+from typing import Tuple
 import os
 import sublime
 

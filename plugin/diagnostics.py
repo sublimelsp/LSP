@@ -1,14 +1,23 @@
 from __future__ import annotations
 
-from ..protocol import Diagnostic, DiagnosticOptions, DiagnosticRegistrationOptions, DiagnosticSeverity, DocumentUri
-from .core.constants import DIAGNOSTIC_KINDS, DIAGNOSTIC_SEVERITY_SCOPES, REGIONS_INITIALIZE_FLAGS
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticOptions
+from ..protocol import DiagnosticRegistrationOptions
+from ..protocol import DiagnosticSeverity
+from ..protocol import DocumentUri
+from .core.constants import DIAGNOSTIC_KINDS
+from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
+from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Point
 from .core.settings import userprefs
 from .core.types import DocumentSelector_
 from .core.url import normalize_uri
-from .core.views import DIAGNOSTIC_SEVERITY, diagnostic_severity, format_diagnostics_for_annotation
+from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import diagnostic_severity
+from .core.views import format_diagnostics_for_annotation
 from functools import lru_cache
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
+from typing import Union
 import itertools
 import sublime
 

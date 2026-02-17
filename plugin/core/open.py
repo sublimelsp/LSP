@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from ...protocol import DocumentUri, Range
-from .constants import ST_PACKAGES_PATH, ST_PLATFORM, ST_VERSION
+from ...protocol import DocumentUri
+from ...protocol import Range
+from .constants import ST_PACKAGES_PATH
+from .constants import ST_PLATFORM
+from .constants import ST_VERSION
 from .logging import exception_log
-from .promise import Promise, ResolveFunc
+from .promise import Promise
+from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote
+from urllib.parse import urlparse
 import os
 import re
 import sublime

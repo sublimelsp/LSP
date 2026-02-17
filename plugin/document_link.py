@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from ..protocol import DocumentLink, URI
+from ..protocol import DocumentLink
+from ..protocol import URI
 from .core.logging import debug
-from .core.open import open_file_uri, open_in_browser
+from .core.open import open_file_uri
+from .core.open import open_in_browser
 from .core.protocol import Request
-from .core.registry import get_position, LspTextCommand
+from .core.registry import get_position
+from .core.registry import LspTextCommand
 import sublime
 
 

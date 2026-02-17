@@ -1,126 +1,160 @@
 from __future__ import annotations
 
-from ...protocol import (
-    ApplyWorkspaceEditParams,
-    ApplyWorkspaceEditResult,
-    ClientCapabilities,
-    CodeAction,
-    CodeActionKind,
-    Command,
-    CompletionItemKind,
-    CompletionItemTag,
-    ConfigurationItem,
-    ConfigurationParams,
-    Diagnostic,
-    DiagnosticOptions,
-    DiagnosticServerCancellationData,
-    DiagnosticSeverity,
-    DiagnosticTag,
-    DidChangeWatchedFilesRegistrationOptions,
-    DidChangeWorkspaceFoldersParams,
-    DocumentDiagnosticReportKind,
-    DocumentLink,
-    DocumentUri,
-    ErrorCodes,
-    ExecuteCommandParams,
-    FailureHandlingKind,
-    FileEvent,
-    FileSystemWatcher,
-    FoldingRangeKind,
-    GeneralClientCapabilities,
-    InitializeParams,
-    InitializeResult,
-    InsertTextMode,
-    Location,
-    LocationLink,
-    LogMessageParams,
-    LSPAny,
-    LSPErrorCodes,
-    LSPObject,
-    MarkupKind,
-    MessageActionItem,
-    PrepareSupportDefaultBehavior,
-    PreviousResultId,
-    ProgressParams,
-    ProgressToken,
-    PublishDiagnosticsParams,
-    Range,
-    RegistrationParams,
-    SemanticTokenModifiers,
-    SemanticTokenTypes,
-    ShowDocumentParams,
-    ShowDocumentResult,
-    ShowMessageParams,
-    ShowMessageRequestParams,
-    SignatureHelpTriggerKind,
-    SymbolKind,
-    SymbolTag,
-    TextDocumentClientCapabilities,
-    TextDocumentSyncKind,
-    TextEdit,
-    TokenFormat,
-    UnregistrationParams,
-    WatchKind,
-    WindowClientCapabilities,
-    WorkDoneProgressBegin,
-    WorkDoneProgressCreateParams,
-    WorkDoneProgressEnd,
-    WorkDoneProgressReport,
-    WorkspaceClientCapabilities,
-    WorkspaceDiagnosticParams,
-    WorkspaceDiagnosticReport,
-    WorkspaceDocumentDiagnosticReport,
-    WorkspaceEdit,
-    WorkspaceFullDocumentDiagnosticReport,
-)
+from ...protocol import ApplyWorkspaceEditParams
+from ...protocol import ApplyWorkspaceEditResult
+from ...protocol import ClientCapabilities
+from ...protocol import CodeAction
+from ...protocol import CodeActionKind
+from ...protocol import Command
+from ...protocol import CompletionItemKind
+from ...protocol import CompletionItemTag
+from ...protocol import ConfigurationItem
+from ...protocol import ConfigurationParams
+from ...protocol import Diagnostic
+from ...protocol import DiagnosticOptions
+from ...protocol import DiagnosticServerCancellationData
+from ...protocol import DiagnosticSeverity
+from ...protocol import DiagnosticTag
+from ...protocol import DidChangeWatchedFilesRegistrationOptions
+from ...protocol import DidChangeWorkspaceFoldersParams
+from ...protocol import DocumentDiagnosticReportKind
+from ...protocol import DocumentLink
+from ...protocol import DocumentUri
+from ...protocol import ErrorCodes
+from ...protocol import ExecuteCommandParams
+from ...protocol import FailureHandlingKind
+from ...protocol import FileEvent
+from ...protocol import FileSystemWatcher
+from ...protocol import FoldingRangeKind
+from ...protocol import GeneralClientCapabilities
+from ...protocol import InitializeParams
+from ...protocol import InitializeResult
+from ...protocol import InsertTextMode
+from ...protocol import Location
+from ...protocol import LocationLink
+from ...protocol import LogMessageParams
+from ...protocol import LSPAny
+from ...protocol import LSPErrorCodes
+from ...protocol import LSPObject
+from ...protocol import MarkupKind
+from ...protocol import MessageActionItem
+from ...protocol import PrepareSupportDefaultBehavior
+from ...protocol import PreviousResultId
+from ...protocol import ProgressParams
+from ...protocol import ProgressToken
+from ...protocol import PublishDiagnosticsParams
+from ...protocol import Range
+from ...protocol import RegistrationParams
+from ...protocol import SemanticTokenModifiers
+from ...protocol import SemanticTokenTypes
+from ...protocol import ShowDocumentParams
+from ...protocol import ShowDocumentResult
+from ...protocol import ShowMessageParams
+from ...protocol import ShowMessageRequestParams
+from ...protocol import SignatureHelpTriggerKind
+from ...protocol import SymbolKind
+from ...protocol import SymbolTag
+from ...protocol import TextDocumentClientCapabilities
+from ...protocol import TextDocumentSyncKind
+from ...protocol import TextEdit
+from ...protocol import TokenFormat
+from ...protocol import UnregistrationParams
+from ...protocol import WatchKind
+from ...protocol import WindowClientCapabilities
+from ...protocol import WorkDoneProgressBegin
+from ...protocol import WorkDoneProgressCreateParams
+from ...protocol import WorkDoneProgressEnd
+from ...protocol import WorkDoneProgressReport
+from ...protocol import WorkspaceClientCapabilities
+from ...protocol import WorkspaceDiagnosticParams
+from ...protocol import WorkspaceDiagnosticReport
+from ...protocol import WorkspaceDocumentDiagnosticReport
+from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
-from ..api import APIHandler, notification_handler, request_handler
-from ..diagnostics import DiagnosticsIdentifier, DiagnosticsStorage, WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .constants import MARKO_MD_PARSER_VERSION, RequestFlags, SEMANTIC_TOKENS_MAP, ST_STORAGE_PATH
-from .edit import apply_text_edits, parse_workspace_edit, WorkspaceChanges, WorkspaceEditSummary
-from .file_watcher import (
-    DEFAULT_WATCH_KIND,
-    file_watcher_event_type_to_lsp_file_change_type,
-    FileWatcher,
-    FileWatcherEvent,
-    get_file_watcher_implementation,
-    lsp_watch_kind_to_file_watcher_event_types,
-)
-from .logging import debug, exception_log
-from .open import center_selection, open_externally, open_file, open_resource
+from ...protocol import WorkspaceFullDocumentDiagnosticReport
+from ..api import APIHandler
+from ..api import notification_handler
+from ..api import request_handler
+from ..diagnostics import DiagnosticsIdentifier
+from ..diagnostics import DiagnosticsStorage
+from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from .constants import MARKO_MD_PARSER_VERSION
+from .constants import RequestFlags
+from .constants import SEMANTIC_TOKENS_MAP
+from .constants import ST_STORAGE_PATH
+from .edit import apply_text_edits
+from .edit import parse_workspace_edit
+from .edit import WorkspaceChanges
+from .edit import WorkspaceEditSummary
+from .file_watcher import DEFAULT_WATCH_KIND
+from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
+from .file_watcher import FileWatcher
+from .file_watcher import FileWatcherEvent
+from .file_watcher import get_file_watcher_implementation
+from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
+from .logging import debug
+from .logging import exception_log
+from .open import center_selection
+from .open import open_externally
+from .open import open_file
+from .open import open_resource
 from .progress import WindowProgressReporter
-from .promise import PackagedTask, Promise
-from .protocol import Error, JSONRPCMessage, Notification, Request, ResolvedCodeLens, Response, ResponseError
-from .settings import client_configs, globalprefs, userprefs
-from .transports import Transport, TransportCallbacks
-from .types import (
-    Capabilities,
-    ClientConfig,
-    ClientStates,
-    debounced,
-    diff,
-    DocumentSelector_,
-    method2attr,
-    method_to_capability,
-    SemanticToken,
-    SettingsRegistration,
-    sublime_pattern_to_glob,
-)
-from .url import filename_to_uri, normalize_uri, parse_uri
+from .promise import PackagedTask
+from .promise import Promise
+from .protocol import Error
+from .protocol import JSONRPCMessage
+from .protocol import Notification
+from .protocol import Request
+from .protocol import ResolvedCodeLens
+from .protocol import Response
+from .protocol import ResponseError
+from .settings import client_configs
+from .settings import globalprefs
+from .settings import userprefs
+from .transports import Transport
+from .transports import TransportCallbacks
+from .types import Capabilities
+from .types import ClientConfig
+from .types import ClientStates
+from .types import debounced
+from .types import diff
+from .types import DocumentSelector_
+from .types import method2attr
+from .types import method_to_capability
+from .types import SemanticToken
+from .types import SettingsRegistration
+from .types import sublime_pattern_to_glob
+from .url import filename_to_uri
+from .url import normalize_uri
+from .url import parse_uri
 from .version import __version__
-from .views import (
-    extract_variables,
-    get_uri_and_range_from_location,
-    kind_contains_other_kind,
-    MarkdownLangMap,
-    uri_from_view,
-)
-from .workspace import is_subpath_of, WorkspaceFolder
-from abc import ABCMeta, abstractmethod
-from enum import IntEnum, IntFlag
-from functools import lru_cache, partial
-from typing import Any, Callable, cast, Generator, List, Literal, overload, Protocol, TYPE_CHECKING, TypeVar, Union
-from typing_extensions import deprecated, TypeAlias, TypeGuard
+from .views import extract_variables
+from .views import get_uri_and_range_from_location
+from .views import kind_contains_other_kind
+from .views import MarkdownLangMap
+from .views import uri_from_view
+from .workspace import is_subpath_of
+from .workspace import WorkspaceFolder
+from abc import ABCMeta
+from abc import abstractmethod
+from enum import IntEnum
+from enum import IntFlag
+from functools import lru_cache
+from functools import partial
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Generator
+from typing import List
+from typing import Literal
+from typing import overload
+from typing import Protocol
+from typing import TYPE_CHECKING
+from typing import TypeVar
+from typing import Union
+from typing_extensions import deprecated
+from typing_extensions import TypeAlias
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import itertools
 import mdpopups

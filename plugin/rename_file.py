@@ -4,21 +4,26 @@ from .core.edit import show_summary_message
 from .core.logging import debug
 from .core.open import open_file_uri
 from .core.promise import Promise
-from .core.protocol import Error, Notification, Request
+from .core.protocol import Error
+from .core.protocol import Notification
+from .core.protocol import Request
 from .core.registry import LspWindowCommand
 from .core.types import match_file_operation_filters
 from .core.url import filename_to_uri
 from .edit import prompt_for_workspace_edits
 from functools import partial
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, TypedDict
+from typing import Any
+from typing import TYPE_CHECKING
+from typing import TypedDict
 from typing_extensions import NotRequired
 import sublime
 import sublime_plugin
 import weakref
 
 if TYPE_CHECKING:
-    from ..protocol import FileRename, WorkspaceEdit
+    from ..protocol import FileRename
+    from ..protocol import WorkspaceEdit
     from .core.sessions import Session
     from collections.abc import Generator
 

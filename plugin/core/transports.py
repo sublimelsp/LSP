@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from .constants import ST_PLATFORM
-from .logging import debug, exception_log
-from .types import TCP_CONNECT_TIMEOUT, TransportConfig
+from .logging import debug
+from .logging import exception_log
+from .types import TCP_CONNECT_TIMEOUT
+from .types import TransportConfig
 from contextlib import closing
 from functools import partial
 from queue import Queue
-from typing import Any, Callable, Dict, Generic, IO, Protocol, TypeVar
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generic
+from typing import IO
+from typing import Protocol
+from typing import TypeVar
 import http
 import json
 import os

@@ -1,63 +1,75 @@
 from __future__ import annotations
 
-from ..protocol import (
-    CodeLens,
-    ColorInformation,
-    Diagnostic,
-    DiagnosticTag,
-    DocumentDiagnosticParams,
-    DocumentDiagnosticReport,
-    DocumentDiagnosticReportKind,
-    DocumentLink,
-    DocumentUri,
-    FullDocumentDiagnosticReport,
-    InlayHint,
-    InlayHintParams,
-    LSPErrorCodes,
-    RelatedFullDocumentDiagnosticReport,
-    SemanticTokens,
-    SemanticTokensDelta,
-    TextDocumentSaveReason,
-    TextDocumentSyncKind,
-    UnchangedDocumentDiagnosticReport,
-)
-from .code_lens import CodeLensCache, LspToggleCodeLensesCommand
-from .core.constants import (
-    CODE_LENS_ANNOTATION_SCOPE,
-    DIAGNOSTIC_TAG_SCOPES,
-    DOCUMENT_LINK_FLAGS,
-    RegionKey,
-    RequestFlags,
-    SEMANTIC_TOKEN_FLAGS,
-    SEMANTIC_TOKENS_MAP,
-)
+from ..protocol import CodeLens
+from ..protocol import ColorInformation
+from ..protocol import Diagnostic
+from ..protocol import DiagnosticTag
+from ..protocol import DocumentDiagnosticParams
+from ..protocol import DocumentDiagnosticReport
+from ..protocol import DocumentDiagnosticReportKind
+from ..protocol import DocumentLink
+from ..protocol import DocumentUri
+from ..protocol import FullDocumentDiagnosticReport
+from ..protocol import InlayHint
+from ..protocol import InlayHintParams
+from ..protocol import LSPErrorCodes
+from ..protocol import RelatedFullDocumentDiagnosticReport
+from ..protocol import SemanticTokens
+from ..protocol import SemanticTokensDelta
+from ..protocol import TextDocumentSaveReason
+from ..protocol import TextDocumentSyncKind
+from ..protocol import UnchangedDocumentDiagnosticReport
+from .code_lens import CodeLensCache
+from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import CODE_LENS_ANNOTATION_SCOPE
+from .core.constants import DIAGNOSTIC_TAG_SCOPES
+from .core.constants import DOCUMENT_LINK_FLAGS
+from .core.constants import RegionKey
+from .core.constants import RequestFlags
+from .core.constants import SEMANTIC_TOKEN_FLAGS
+from .core.constants import SEMANTIC_TOKENS_MAP
 from .core.promise import Promise
-from .core.protocol import Request, ResolvedCodeLens, ResponseError
-from .core.sessions import is_diagnostic_server_cancellation_data, Session, SessionViewProtocol
+from .core.protocol import Request
+from .core.protocol import ResolvedCodeLens
+from .core.protocol import ResponseError
+from .core.sessions import is_diagnostic_server_cancellation_data
+from .core.sessions import Session
+from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
-from .core.types import Capabilities, debounced, DebouncerNonThreadSafe, FEATURES_TIMEOUT, SemanticToken
+from .core.types import Capabilities
+from .core.types import debounced
+from .core.types import DebouncerNonThreadSafe
+from .core.types import FEATURES_TIMEOUT
+from .core.types import SemanticToken
 from .core.url import normalize_uri
-from .core.views import (
-    diagnostic_severity,
-    DiagnosticSeverityData,
-    did_change,
-    did_close,
-    did_open,
-    did_save,
-    document_color_params,
-    entire_content_range,
-    lsp_color_to_phantom,
-    MissingUriError,
-    range_to_region,
-    region_to_range,
-    text_document_identifier,
-    will_save,
-)
-from .diagnostics import DiagnosticsIdentifier, DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY, get_diagnostics_identifiers
+from .core.views import diagnostic_severity
+from .core.views import DiagnosticSeverityData
+from .core.views import did_change
+from .core.views import did_close
+from .core.views import did_open
+from .core.views import did_save
+from .core.views import document_color_params
+from .core.views import entire_content_range
+from .core.views import lsp_color_to_phantom
+from .core.views import MissingUriError
+from .core.views import range_to_region
+from .core.views import region_to_range
+from .core.views import text_document_identifier
+from .core.views import will_save
+from .diagnostics import DiagnosticsIdentifier
+from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
+from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from functools import partial
-from typing import Any, Callable, cast, Iterable, List
-from typing_extensions import Concatenate, deprecated, ParamSpec, TypeGuard
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Iterable
+from typing import List
+from typing_extensions import Concatenate
+from typing_extensions import deprecated
+from typing_extensions import ParamSpec
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import itertools
 import sublime

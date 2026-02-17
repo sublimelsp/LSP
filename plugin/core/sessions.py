@@ -958,16 +958,11 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
         :param      view:             The view
         :param      config:           The config
         """
-        if (syntax := view.syntax()) and (selector := cls.selector(view, config).strip()):
+        if (syntax := view.syntax()) and (selector := config.selector.strip()):
             # TODO replace `cls.selector(view, config)` with `config.selector` after the next release
             scheme, _ = parse_uri(uri_from_view(view))
             return scheme in config.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False
-
-    @classmethod
-    @deprecated("Use `is_applicable(view, config)` instead.")
-    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
-        return config.selector
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:

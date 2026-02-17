@@ -112,7 +112,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         if not open_view:
             self.__class__.view = window.open_file(filename)
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-            self.assertTrue(self.wm.get_config_manager().match_view(self.view))
+            self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
         self.init_view_settings()
         yield self.ensure_document_listener_created
         params = yield from self.await_message("textDocument/didOpen")

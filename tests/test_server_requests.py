@@ -50,7 +50,7 @@ class ServerRequests(TextDocumentTestCase):
             def additional_variables(cls) -> dict[str, str] | None:
                 return {"hello": "X", "world": "Y"}
 
-        self.session._plugin_class = TempPlugin  # type: ignore
+        self.session._plugin_data = (TempPlugin, None)  # type: ignore
         method = "workspace/configuration"
         params = {"items": [{"section": "foo"}]}
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]

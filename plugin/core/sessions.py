@@ -1363,8 +1363,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
-                 plugin_context: PluginContext) -> None:
+                 config: ClientConfig, plugin_data: tuple[type[AbstractPlugin | LspPlugin], PluginContext] | None,
+    ) -> None:
         self.transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -1391,8 +1391,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self._watcher_impl = get_file_watcher_implementation()
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
-        self._plugin_class = plugin_class
-        self._plugin_context = plugin_context
+        self._plugin_data = plugin_data
         self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
@@ -1663,11 +1662,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        if self._plugin_class is not None:
-            if issubclass(self._plugin_class, LspPlugin):
-                self._plugin = self._plugin_class(weakref.ref(self), self._plugin_context)
+        if self._plugin_data:
+            if issubclass(self._plugin_data[0], LspPlugin):
+                self._plugin = self._plugin_data[0](weakref.ref(self), self._plugin_data[1])
             else:
-                self._plugin = self._plugin_class(weakref.ref(self))
+                self._plugin = self._plugin_data[0](weakref.ref(self))
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             self._plugin.on_server_response_async('initialize', Response(-1, result))
@@ -1730,11 +1729,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
-        if self._plugin_class:
-            if issubclass(self._plugin_class, LspPlugin):
-                if extra_vars := self._plugin_class.additional_variables(self._plugin_context):
+        if self._plugin_data:
+            if issubclass(self._plugin_data[0], LspPlugin):
+                if extra_vars := self._plugin_data[0].additional_variables(self._plugin_data[1]):
                     variables.update(extra_vars)
-            elif extra_vars := self._plugin_class.additional_variables():
+            elif extra_vars := self._plugin_data[0].additional_variables():
                 variables.update(extra_vars)
         return variables
 

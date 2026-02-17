@@ -959,7 +959,6 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
         :param      config:           The config
         """
         if (syntax := view.syntax()) and (selector := config.selector.strip()):
-            # TODO replace `cls.selector(view, config)` with `config.selector` after the next release
             scheme, _ = parse_uri(uri_from_view(view))
             return scheme in config.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

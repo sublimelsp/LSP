@@ -332,18 +332,12 @@ class LspPlugin:
         """
         return
 
-    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
+    def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
         """
-        Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
-        invoke the passed-in callback some time.
-
-        The arguments of the provided callback work as follows:
-
-        - The first argument is the title of the view that will be populated with the content of a new scratch view
-        - The second argument is the content of the view
-        - The third argument is the syntax to apply for the new view
+        Called when a language server reports to open an URI. If you know how to handle this URI, then return a Promise
+        resolved with `sublime.Sheet` instance.
         """
-        return False
+        return None
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """

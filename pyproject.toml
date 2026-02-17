@@ -31,6 +31,9 @@ from-first = true
 no-sections = true
 order-by-type = false
 
+[tool.ruff.lint.per-file-ignores]
+"plugin/core/typing.py" = ["F401"]
+
 [tool.ruff.lint]
 # Enable preview rules.
 preview = true

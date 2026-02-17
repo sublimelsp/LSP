@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from enum import Enum, IntEnum, IntFlag  # noqa: F401
-from typing import (  # noqa: F401
+from enum import Enum, IntEnum, IntFlag
+from typing import (
     Any,
     Callable,
     cast,
@@ -27,7 +27,7 @@ from typing import (  # noqa: F401
     TypeVar,
     Union,
 )
-from typing_extensions import (  # noqa: F401
+from typing_extensions import (
     NotRequired,
     ParamSpec,
     Required,
@@ -36,7 +36,7 @@ from typing_extensions import (  # noqa: F401
 import sys
 
 if sys.version_info >= (3, 11):
-    from enum import StrEnum  # noqa: F401
+    from enum import StrEnum
 else:
     class StrEnum(str, Enum):
         """

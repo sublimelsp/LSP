@@ -294,7 +294,7 @@ class LspPlugin:
         """
         return None
 
-    def on_pre_send_request_async(self, request_id: int, request: Request) -> None:
+    def on_pre_send_request_async(self, request_id: int, request: Request[Any, Any]) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
         This API is triggered on async thread.
@@ -304,7 +304,7 @@ class LspPlugin:
         """
         return
 
-    def on_pre_send_notification_async(self, notification: Notification) -> None:
+    def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
         """
         Notifies about a notification that is about to be sent to the language server.
         This API is triggered on async thread.
@@ -313,7 +313,7 @@ class LspPlugin:
         """
         return
 
-    def on_server_response_async(self, method: str, response: Response) -> None:
+    def on_server_response_async(self, method: str, response: Response[Any]) -> None:
         """
         Notifies about a response message that has been received from the language server.
         Only successful responses are passed to this method.
@@ -324,7 +324,7 @@ class LspPlugin:
         """
         return
 
-    def on_server_notification_async(self, notification: Notification) -> None:
+    def on_server_notification_async(self, notification: Notification[Any]) -> None:
         """
         Notifies about a notification message that has been received from the language server.
 

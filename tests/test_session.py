@@ -180,7 +180,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 
     def test_document_sync_capabilities(self) -> None:
-        config = ClientConfig(name="test", command=[""], selector="", tcp_port=None, experimental_capabilities=None)
         manager = MockManager(sublime.active_window())
         session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
                           plugin_data=None)

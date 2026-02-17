@@ -284,17 +284,15 @@ class LspPlugin:
         """
         return configuration
 
-    def on_execute_command(self, command: ExecuteCommandParams, done_callback: Callable[[], None]) -> bool:
+    def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | None:
         """
         Intercept a command that is about to be sent to the language server.
 
         :param    command:        The payload containing a "command" and optionally "arguments".
-        :param    done_callback:  The callback that you promise to invoke when you return true.
 
-        :returns: True if *YOU* will handle this command plugin-side, false otherwise. You must invoke the
-                  passed `done_callback` when you're done.
+        :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
         """
-        return False
+        return None
 
     def on_pre_send_request_async(self, request_id: int, request: Request) -> None:
         """

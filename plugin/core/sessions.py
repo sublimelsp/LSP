@@ -1744,13 +1744,16 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     ) -> Promise[R | Error | None]:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task: PackagedTask[R | Error | None] = Promise.packaged_task()
-            promise, resolve = task
             if isinstance(self._plugin, LspPlugin):
-                if self._plugin.on_execute_command(command, lambda: resolve(None)):
+                if promise := self._plugin.on_execute_command(command):
+                    return promise.then(lambda _: None)
+            else:
+                task: PackagedTask[R | Error | None] = Promise.packaged_task()
+                promise, resolve = task
+                if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return promise
-            elif self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                return promise
+                else:
+                    resolve(None)
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:

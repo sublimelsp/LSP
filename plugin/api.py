@@ -6,6 +6,7 @@ from .core.types import method2attr
 from .core.url import parse_uri
 from .core.views import uri_from_view
 from functools import wraps
+from pathlib import Path
 from typing import Any, Callable, ClassVar, TypedDict, TypeVar, final, TYPE_CHECKING
 import inspect
 import sublime
@@ -128,22 +129,22 @@ class PluginContext:
 
 class LspPlugin:
 
-    storage_path: ClassVar[str] = ST_STORAGE_PATH
+    storage_path: ClassVar[Path] = Path(ST_STORAGE_PATH)
     """
     The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
     You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
     ```py
     from LSP.plugin import LspPlugin
-    import os
+    from pathlib import Path
 
 
     class MyPlugin(LspPlugin):
 
         @classmethod
-        def basedir(cls) -> str:
+        def basedir(cls) -> Path:
             # Do everything relative to this directory
-            return os.path.join(cls.storage_path(), cls.name())
+            return cls.storage_path / 'LSP-myplugin'
     ```
     """
 

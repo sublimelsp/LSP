@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 
 class RenamePathInputHandler(sublime_plugin.TextInputHandler):
+
     def __init__(self, path: str) -> None:
         self.path = Path(path)
 
@@ -55,14 +56,15 @@ class LspRenamePathInputArgs(TypedDict):
 
 
 class LspRenamePathCommand(LspWindowCommand):
+
     capability = 'workspace.fileOperations.willRename'
 
     @staticmethod
     def is_case_change(path_a: str, path_b: str) -> bool:
         return path_a.lower() == path_b.lower() and Path(path_a).stat().st_ino == Path(path_b).stat().st_ino
 
-    def is_enabled(self) -> bool:
-        return True
+    def is_visible(self, **kwargs: dict[str, Any]) -> bool:
+        return self.is_enabled()
 
     def want_event(self) -> bool:
         return False

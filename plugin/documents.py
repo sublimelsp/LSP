@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlight
@@ -22,8 +23,8 @@ from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
-from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
+from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
@@ -66,9 +67,17 @@ from .session_view import SessionView
 from functools import partial
 from functools import wraps
 from os.path import basename
-from typing import Any, Callable, Generator, Iterable, Literal, TypeVar, overload
+from typing import Any
+from typing import Callable
 from typing import cast
-from typing_extensions import Concatenate, ParamSpec, override
+from typing import Generator
+from typing import Iterable
+from typing import Literal
+from typing import overload
+from typing import TypeVar
+from typing_extensions import Concatenate
+from typing_extensions import override
+from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
@@ -76,7 +85,6 @@ import sublime
 import sublime_plugin
 import weakref
 import webbrowser
-
 
 P = ParamSpec('P')
 R = TypeVar('R')

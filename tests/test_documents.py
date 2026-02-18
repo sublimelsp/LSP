@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -13,7 +14,8 @@ from setup import remove_config
 from setup import TIMEOUT_TIME
 from setup import YieldPromise
 from sublime_plugin import view_event_listeners
-from typing import Any, Generator
+from typing import Any
+from typing import Generator
 from unittesting import DeferrableTestCase
 import sublime
 

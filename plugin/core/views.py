@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import CodeAction
 from ...protocol import CodeActionContext
 from ...protocol import CodeActionKind
@@ -51,8 +52,12 @@ from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
-from typing import Any, Callable, Dict, Iterable, Tuple
+from typing import Any
+from typing import Callable
 from typing import cast
+from typing import Dict
+from typing import Iterable
+from typing import Tuple
 import html
 import itertools
 import linecache

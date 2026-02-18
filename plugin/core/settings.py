@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from .collections import DottedDict
 from .logging import debug
-from .types import ClientConfig, debounced
+from .types import ClientConfig
+from .types import debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration

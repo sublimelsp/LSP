@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import TextEdit
 from ..protocol import WorkspaceEdit
 from .core.edit import parse_range
@@ -13,12 +14,18 @@ from .core.url import parse_uri
 from .core.views import get_line
 from .core.windows import WindowManager
 from contextlib import contextmanager
-from typing import Any, Callable, Generator, Iterable, Tuple, TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Generator
+from typing import Iterable
+from typing import Tuple
+from typing import TYPE_CHECKING
 import operator
 import os
 import re
 import sublime
 import sublime_plugin
+
 if TYPE_CHECKING:
     from .core.sessions import Session
 

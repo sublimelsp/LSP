@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ApplyWorkspaceEditResult
 from ...protocol import ClientCapabilities
@@ -71,14 +72,14 @@ from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
-from ..diagnostics import DiagnosticsIdentifier
-from ..diagnostics import DiagnosticsStorage
-from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..api import APIHandler
 from ..api import notification_handler
 from ..api import request_handler
-from .constants import RequestFlags
+from ..diagnostics import DiagnosticsIdentifier
+from ..diagnostics import DiagnosticsStorage
+from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .constants import MARKO_MD_PARSER_VERSION
+from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
 from .constants import ST_STORAGE_PATH
 from .edit import apply_text_edits
@@ -136,21 +137,30 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
 from abc import abstractmethod
-from enum import IntEnum, IntFlag
+from enum import IntEnum
+from enum import IntFlag
 from functools import lru_cache
 from functools import partial
-from typing import Any, Callable, Generator, List, Literal, Protocol, TypeVar, Union, overload
+from typing import Any
+from typing import Callable
 from typing import cast
+from typing import Generator
+from typing import List
+from typing import Literal
+from typing import overload
+from typing import Protocol
 from typing import TYPE_CHECKING
-from typing_extensions import TypeAlias, TypeGuard
+from typing import TypeVar
+from typing import Union
 from typing_extensions import deprecated
+from typing_extensions import TypeAlias
+from typing_extensions import TypeGuard
 from weakref import WeakSet
 import itertools
 import mdpopups
 import os
 import sublime
 import weakref
-
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest

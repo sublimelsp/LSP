@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import Diagnostic
 from ...protocol import DocumentUri
 from ...protocol import LogMessageParams
@@ -46,14 +47,15 @@ from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
 from time import perf_counter
-from typing import Any, Generator, TYPE_CHECKING
+from typing import Any
+from typing import Generator
+from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakSet
 import functools
 import json
 import sublime
 import threading
-
 
 if TYPE_CHECKING:
     from .tree_view import TreeViewSheet

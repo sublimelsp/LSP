@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Location
 from .core.constants import RegionKey
 from .core.protocol import Point
@@ -20,7 +21,6 @@ import functools
 import linecache
 import os
 import sublime
-
 
 OutputMode = Literal['output_panel', 'quick_panel']
 

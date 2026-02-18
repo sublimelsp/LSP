@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextEdit
 from .code_actions import CodeActionsOnFormatTask
@@ -20,10 +21,13 @@ from .core.views import will_save_wait_until
 from .lsp_task import LspTask
 from .lsp_task import LspTextCommandWithTasks
 from functools import partial
-from typing import Any, Callable, Iterator, List, Union
+from typing import Any
+from typing import Callable
+from typing import Iterator
+from typing import List
+from typing import Union
 from typing_extensions import override
 import sublime
-
 
 FormatResponse = Union[List[TextEdit], None, Error]
 

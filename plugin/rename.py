@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import PrepareRenameParams
 from ..protocol import PrepareRenameResult
 from ..protocol import Range
@@ -18,7 +19,6 @@ from typing_extensions import TypeGuard
 import sublime
 import sublime_plugin
 import weakref
-
 
 PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
 

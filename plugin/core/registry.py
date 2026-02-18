@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import Diagnostic
 from ...protocol import Location
 from ...protocol import LocationLink
@@ -14,11 +15,11 @@ from .views import uri_from_view
 from .windows import WindowManager
 from .windows import WindowRegistry
 from functools import partial
-from typing import Generator, Iterable
+from typing import Generator
+from typing import Iterable
 import operator
 import sublime
 import sublime_plugin
-
 
 windows = WindowRegistry()
 

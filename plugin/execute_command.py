@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import ExecuteCommandParams
 from .core.logging import debug
 from .core.protocol import Error

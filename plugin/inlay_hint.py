@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import InlayHint
 from ..protocol import InlayHintLabelPart
 from ..protocol import MarkupContent

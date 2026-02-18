@@ -21,15 +21,21 @@ resumes (since response to request will arrive after requested notification).
 TODO: Untested on Windows.
 """
 from __future__ import annotations
+
 from argparse import ArgumentParser
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Union, Iterable, Awaitable
+from typing import Any
+from typing import Awaitable
+from typing import Callable
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Union
 import asyncio
 import json
 import os
 import sys
 import uuid
-
 
 __package__ = "server"
 __version__ = "1.0.0"

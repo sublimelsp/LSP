@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import DocumentSymbol
 from ..protocol import DocumentSymbolParams
 from ..protocol import Location
@@ -13,8 +14,8 @@ from .core.input_handlers import PreselectedListInputHandler
 from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Point
-from .core.protocol import ResponseError
 from .core.protocol import Request
+from .core.protocol import ResponseError
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import print_to_status_bar
@@ -22,13 +23,15 @@ from .core.views import offset_to_point
 from .core.views import range_to_region
 from .core.views import text_document_identifier
 from functools import partial
-from typing import Any, List, TypedDict
+from typing import Any
 from typing import cast
-from typing_extensions import NotRequired, TypeGuard
+from typing import List
+from typing import TypedDict
+from typing_extensions import NotRequired
+from typing_extensions import TypeGuard
 import os
 import sublime
 import sublime_plugin
-
 
 SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 

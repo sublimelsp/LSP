@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import CodeAction
 from ..protocol import CodeActionKind
 from ..protocol import CodeActionParams
@@ -22,12 +23,20 @@ from .lsp_task import LspTask
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import cast, TYPE_CHECKING, Any, List, Tuple, Union, final
+from typing import Any
+from typing import cast
+from typing import final
+from typing import List
+from typing import Tuple
+from typing import TYPE_CHECKING
+from typing import Union
 from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator
+    from collections.abc import Callable
+    from collections.abc import Generator
+    from collections.abc import Iterator
     from typing_extensions import TypeGuard
 
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from .core.panels import LOG_LINES_LIMIT_SETTING_NAME
 from .core.panels import PanelName
 from .core.registry import windows

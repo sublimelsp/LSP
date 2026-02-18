@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import CallHierarchyIncomingCall
 from ..protocol import CallHierarchyItem
 from ..protocol import CallHierarchyOutgoingCall
@@ -24,10 +25,12 @@ from .core.views import text_document_position_params
 from abc import ABCMeta
 from abc import abstractmethod
 from functools import partial
-from typing import Any, Callable, TypedDict, Union
+from typing import Any
+from typing import Callable
+from typing import TypedDict
+from typing import Union
 import sublime
 import weakref
-
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 

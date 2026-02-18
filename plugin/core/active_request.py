@@ -1,9 +1,10 @@
 from __future__ import annotations
-from .sessions import SessionViewProtocol
+
 from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
 from .protocol import Request
+from .sessions import SessionViewProtocol
 from typing import Any
 from weakref import ref
 import sublime

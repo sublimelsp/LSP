@@ -1,6 +1,7 @@
 from __future__ import annotations
-from LSP.plugin.core.types import diff
+
 from LSP.plugin.core.types import basescope2languageid
+from LSP.plugin.core.types import diff
 from LSP.plugin.core.types import DocumentSelector_
 from unittest.mock import MagicMock
 import sublime

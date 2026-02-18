@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.collections import DottedDict
 from typing import Any
 from unittest import TestCase

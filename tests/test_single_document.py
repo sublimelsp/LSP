@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from copy import deepcopy
-from LSP.plugin import apply_text_edits, Request
+from LSP.plugin import apply_text_edits
+from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
@@ -12,9 +14,12 @@ from unittest import skip
 import os
 import sublime
 
-
 try:
-    from typing import Generator, Optional, Iterable, Tuple, List
+    from typing import Generator
+    from typing import Iterable
+    from typing import List
+    from typing import Optional
+    from typing import Tuple
     assert Generator and Optional and Iterable and Tuple and List
 except ImportError:
     pass

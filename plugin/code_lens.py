@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import CodeLens
 from ..protocol import Command
 from ..protocol import Range

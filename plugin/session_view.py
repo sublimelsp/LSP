@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Command
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
@@ -19,7 +20,8 @@ from .core.views import make_command_link
 from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
-from typing import Any, Iterable
+from typing import Any
+from typing import Iterable
 from weakref import ref
 from weakref import WeakValueDictionary
 import html

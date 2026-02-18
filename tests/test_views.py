@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from copy import deepcopy
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.types import Any
@@ -8,9 +9,12 @@ from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import document_color_params
 from LSP.plugin.core.views import format_diagnostic_for_html
-from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from LSP.plugin.core.views import FORMAT_MARKED_STRING
+from LSP.plugin.core.views import FORMAT_MARKUP_CONTENT
+from LSP.plugin.core.views import FORMAT_STRING
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
+from LSP.plugin.core.views import minihtml
 from LSP.plugin.core.views import MissingUriError
 from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import range_to_region

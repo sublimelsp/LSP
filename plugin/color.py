@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import ColorInformation
 from ..protocol import ColorPresentation
 from ..protocol import ColorPresentationParams

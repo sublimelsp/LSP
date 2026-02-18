@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import DocumentLink
 from ..protocol import URI
 from .core.logging import debug

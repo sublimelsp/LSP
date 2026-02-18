@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
 from typing import Any
-import sublime
 import os
+import sublime
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:

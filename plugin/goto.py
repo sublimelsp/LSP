@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentUri
@@ -30,8 +31,8 @@ from collections import Counter
 from functools import partial
 from os.path import basename
 from pathlib import Path
-from typing import TypedDict
 from typing import cast
+from typing import TypedDict
 import sublime
 import sublime_plugin
 

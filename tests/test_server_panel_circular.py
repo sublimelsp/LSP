@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.panels import MAX_LOG_LINES_LIMIT_ON
 from LSP.plugin.core.panels import PanelName
 from LSP.plugin.core.registry import windows

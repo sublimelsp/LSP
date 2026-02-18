@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticOptions
 from ..protocol import DiagnosticRegistrationOptions
@@ -19,7 +20,6 @@ from typing import TYPE_CHECKING
 from typing import Union
 import itertools
 import sublime
-
 
 if TYPE_CHECKING:
     from .core.sessions import Session

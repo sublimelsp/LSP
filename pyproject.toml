@@ -25,6 +25,16 @@ skip-magic-trailing-comma = false
 # Automatically detect the appropriate line ending.
 line-ending = "auto"
 
+[tool.ruff.lint.isort]
+case-sensitive = false
+force-single-line = true
+from-first = true
+no-sections = true
+order-by-type = false
+
+[tool.ruff.lint.per-file-ignores]
+"plugin/core/typing.py" = ["F401"]
+
 [tool.ruff.lint]
 # Enable preview rules.
 preview = true
@@ -115,7 +125,6 @@ ignore = [
     "FURB140",  # https://docs.astral.sh/ruff/rules/reimplemented-starmap/
     "FURB154",  # https://docs.astral.sh/ruff/rules/repeated-global/
     "FURB180",  # https://docs.astral.sh/ruff/rules/meta-class-abc-meta/
-    "I001",  # https://docs.astral.sh/ruff/rules/unsorted-imports/
     "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
     "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
     "ISC003",  # https://docs.astral.sh/ruff/rules/explicit-string-concatenation/

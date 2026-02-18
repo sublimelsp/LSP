@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from .api import PluginContext
 from .core.css import css
 from .core.logging import debug
@@ -19,7 +20,8 @@ from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
-from typing import Any, Callable
+from typing import Any
+from typing import Callable
 from typing import cast
 import json
 import mdpopups

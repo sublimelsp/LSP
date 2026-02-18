@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
@@ -9,7 +10,9 @@ import sublime
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from LSP.protocol import Diagnostic, PublishDiagnosticsParams, Range
+    from LSP.protocol import Diagnostic
+    from LSP.protocol import PublishDiagnosticsParams
+    from LSP.protocol import Range
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 

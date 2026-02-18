@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from .constants import SublimeKind
 from .css import css
 from .promise import Promise

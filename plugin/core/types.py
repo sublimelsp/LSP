@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import DocumentSelector
 from ...protocol import DocumentUri
 from ...protocol import FileOperationFilter
@@ -9,12 +10,23 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
-from .logging import debug, set_debug_logging
+from .file_watcher import FileWatcherEventType
+from .logging import debug
+from .logging import set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
 from functools import partial
-from typing import Any, Callable, Dict, Generator, Iterable, List, TypedDict, TypeVar, Union, TYPE_CHECKING
+from typing import Any
+from typing import Callable
 from typing import cast
+from typing import Dict
+from typing import Generator
+from typing import Iterable
+from typing import List
+from typing import TYPE_CHECKING
+from typing import TypedDict
+from typing import TypeVar
+from typing import Union
 from typing_extensions import NotRequired
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -29,9 +41,7 @@ import sublime
 import time
 
 if TYPE_CHECKING:
-    from .file_watcher import FileWatcherEventType
     from .workspace import WorkspaceFolder
-
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
@@ -918,7 +928,8 @@ class ClientConfig:
         self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
     ) -> bool:
         from ..api import PluginContext
-        from .sessions import AbstractPlugin, get_plugin
+        from .sessions import AbstractPlugin
+        from .sessions import get_plugin
         if plugin := get_plugin(self.name):
             if issubclass(plugin, AbstractPlugin):
                 return plugin.is_applicable(view, self)

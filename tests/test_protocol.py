@@ -1,9 +1,12 @@
 from __future__ import annotations
-from LSP.plugin.core.protocol import Point, Request, Notification
-from LSP.plugin.core.transports import JsonRpcProcessor
-from LSP.protocol import Position, Range
-import unittest
 
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Point
+from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.transports import JsonRpcProcessor
+from LSP.protocol import Position
+from LSP.protocol import Range
+import unittest
 
 LSP_START_POSITION: Position = {'line': 10, 'character': 4}
 LSP_END_POSITION: Position = {'line': 11, 'character': 3}

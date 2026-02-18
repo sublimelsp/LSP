@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 from ...protocol import MessageActionItem
 from ...protocol import MessageType
 from ...protocol import ShowMessageRequestParams
-from .promise import PackagedTask, Promise, ResolveFunc
+from .promise import PackagedTask
+from .promise import Promise
+from .promise import ResolveFunc
 from .views import show_lsp_popup
 from .views import text2html
 import sublime
-
 
 ICONS: dict[MessageType, str] = {
     MessageType.Error: '❗',

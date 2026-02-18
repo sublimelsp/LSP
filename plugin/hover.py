@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ..protocol import Diagnostic
 from ..protocol import DocumentLink
 from ..protocol import Hover
@@ -39,13 +40,13 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
-from typing import Sequence, Union
+from typing import Sequence
+from typing import Union
 from urllib.parse import urlparse
 import html
 import mdpopups
 import sublime
 import sublime_plugin
-
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]

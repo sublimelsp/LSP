@@ -1,13 +1,16 @@
 from __future__ import annotations
-import sublime
-from LSP.plugin.core.settings import read_client_config, update_client_config
+
+from LSP.plugin.core.settings import read_client_config
+from LSP.plugin.core.settings import update_client_config
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
 from os import environ
-from os.path import dirname, pathsep
+from os.path import dirname
+from os.path import pathsep
 from unittesting import DeferrableTestCase
-import unittest
+import sublime
 import sys
+import unittest
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 

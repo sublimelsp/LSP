@@ -1,9 +1,9 @@
 from __future__ import annotations
+
 from .types import PANEL_FILE_REGEX
 from .types import PANEL_LINE_REGEX
 from typing import Iterable
 import sublime
-
 
 LOG_LINES_LIMIT_SETTING_NAME = 'lsp_limit_lines'
 MAX_LOG_LINES_LIMIT_ON = 500

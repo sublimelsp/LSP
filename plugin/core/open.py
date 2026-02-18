@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import DocumentUri
 from ...protocol import Range
 from .constants import ST_PACKAGES_PATH
@@ -10,14 +11,14 @@ from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote
+from urllib.parse import urlparse
 import os
 import re
 import sublime
 import sublime_plugin
 import subprocess
 import webbrowser
-
 
 opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...protocol import DocumentUri
 from .constants import ST_INSTALLED_PACKAGES_PATH
 from .constants import ST_PACKAGES_PATH
@@ -10,7 +11,6 @@ from urllib.request import pathname2url
 from urllib.request import url2pathname
 import os
 import re
-
 import sublime
 
 

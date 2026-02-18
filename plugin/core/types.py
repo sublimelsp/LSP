@@ -725,25 +725,28 @@ class TransportConfig:
 
 
 class ClientConfig:
-    def __init__(self,
-                 name: str,
-                 selector: str,
-                 priority_selector: str | None = None,
-                 schemes: list[str] | None = None,
-                 command: list[str] | None = None,
-                 binary_args: list[str] | None = None,  # DEPRECATED
-                 tcp_port: int | None = None,
-                 auto_complete_selector: str | None = None,
-                 enabled: bool = True,
-                 init_options: DottedDict = DottedDict(),
-                 settings: DottedDict = DottedDict(),
-                 env: dict[str, str | list[str]] = {},
-                 experimental_capabilities: dict[str, Any] | None = None,
-                 disabled_capabilities: DottedDict = DottedDict(),
-                 file_watcher: FileWatcherConfig = {},
-                 semantic_tokens: dict[str, str] | None = None,
-                 diagnostics_mode: str = "open_files",
-                 path_maps: list[PathMap] | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        selector: str,
+        priority_selector: str | None = None,
+        schemes: list[str] | None = None,
+        command: list[str] | None = None,
+        binary_args: list[str] | None = None,  # DEPRECATED
+        tcp_port: int | None = None,
+        auto_complete_selector: str | None = None,
+        enabled: bool = True,
+        init_options: DottedDict = DottedDict(),
+        settings: DottedDict = DottedDict(),
+        env: dict[str, str | list[str]] = {},
+        experimental_capabilities: dict[str, Any] | None = None,
+        disabled_capabilities: DottedDict = DottedDict(),
+        file_watcher: FileWatcherConfig = {},
+        semantic_tokens: dict[str, str] | None = None,
+        diagnostics_mode: str = "open_files",
+        path_maps: list[PathMap] | None = None,
+        all_settings: dict[str, Any] = {}
+    ) -> None:
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
@@ -769,6 +772,18 @@ class ClientConfig:
         self.status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
+        # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
+        self._all_settings = all_settings
+
+    def __getattr__(self, name: str, /) -> Any:
+        return self._all_settings.get(name)
+
+    def __getitem__(self, key: str) -> Any:
+        if key in self._all_settings:
+            return self._all_settings[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._all_settings
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
@@ -802,7 +817,8 @@ class ClientConfig:
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
-            path_maps=PathMap.parse(s.get("path_maps"))
+            path_maps=PathMap.parse(s.get("path_maps")),
+            all_settings=s.to_dict()
         )
 
     @classmethod
@@ -832,7 +848,8 @@ class ClientConfig:
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
             diagnostics_mode=d.get("diagnostics_mode", "open_files"),
-            path_maps=PathMap.parse(d.get("path_maps"))
+            path_maps=PathMap.parse(d.get("path_maps")),
+            all_settings=d
         )
 
     @classmethod
@@ -862,7 +879,8 @@ class ClientConfig:
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override if path_map_override else src_config.path_maps
+            path_maps=path_map_override if path_map_override else src_config.path_maps,
+            all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
     def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:

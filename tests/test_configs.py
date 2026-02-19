@@ -176,7 +176,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = update_client_config(read_client_config("test", settings), overriddes)
         self.assertEqual(config.unknown, overriddes['unknown'])
 
-    def test_prefers_native_keys_through_attribute_access(self):
+    def test_attribute_access_prefers_native_keys(self):
         settings = {
             "settings": {
                 "setting1": 1
@@ -185,7 +185,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("test", settings)
         self.assertIsInstance(config.settings, DottedDict)
 
-    def test_only_exposes_unknown_keys_through_subscription_access(self):
+    def test_subscription_access_only_exposes_unknown_keys(self):
         settings = {
             "settings": {
                 "setting1": 1

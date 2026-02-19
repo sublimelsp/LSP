@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import DottedDict
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
 from os import environ
@@ -151,29 +152,52 @@ class ConfigParsingTests(DeferrableTestCase):
 
     def test_exposes_unknown_root_keys(self):
         settings = {
-            "something": {
+            "unknown": {
                 "foo": 1
             },
         }
         config = read_client_config("test", settings)
-        self.assertIn("something", config)
+        self.assertIn("unknown", config)
         self.assertNotIn("else", config)
-        self.assertEqual(config.something, settings['something'])
-        self.assertEqual(config['something'], settings['something'])
+        self.assertEqual(config.unknown, settings['unknown'])
+        self.assertEqual(config['unknown'], settings['unknown'])
 
     def test_shallow_merges_overrides_for_unknown_root_keys(self):
         settings = {
-            "something": {
+            "unknown": {
                 "foo": 1
             },
         }
         overriddes = {
-            "something": {
+            "unknown": {
                 "bar": 2
             }
         }
         config = update_client_config(read_client_config("test", settings), overriddes)
-        self.assertEqual(config.something, overriddes['something'])
+        self.assertEqual(config.unknown, overriddes['unknown'])
+
+    def test_prefers_native_keys_through_attribute_access(self):
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertIsInstance(config.settings, DottedDict)
+
+    def test_only_exposes_unknown_keys_through_subscription_access(self):
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+            "unknown": {
+                "foo": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertNotIn('settings', config)
+        self.assertIn('unknown', config)
+        self.assertEqual(config['unknown'], settings['unknown'])
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):

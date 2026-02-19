@@ -776,14 +776,21 @@ class ClientConfig:
         self._all_settings = all_settings
 
     def __getattr__(self, name: str, /) -> Any:
-        return self._all_settings.get(name)
+        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
+        if name in self._all_settings:
+            return self._all_settings[name]
+        raise AttributeError(name)
 
     def __getitem__(self, key: str) -> Any:
+        """Get property through subscription access (`['foo']`). Don't expose "native" properties."""
+        if key in self.__dict__:
+            raise KeyError(key)
         if key in self._all_settings:
             return self._all_settings[key]
+        raise KeyError(key)
 
     def __contains__(self, key: str) -> bool:
-        return key in self._all_settings
+        return key not in self.__dict__ and key in self._all_settings
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:

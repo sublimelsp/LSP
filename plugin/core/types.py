@@ -782,15 +782,15 @@ class ClientConfig:
         raise AttributeError(name)
 
     def __getitem__(self, key: str) -> Any:
-        """Get property through subscription access (`['foo']`). Don't expose "native" properties."""
+        """Get property through subscription access (`['foo']`)."""
         if key in self.__dict__:
-            raise KeyError(key)
+            return self.__dict__[key]
         if key in self._all_settings:
             return self._all_settings[key]
         raise KeyError(key)
 
     def __contains__(self, key: str) -> bool:
-        return key not in self.__dict__ and key in self._all_settings
+        return key in self.__dict__ or key in self._all_settings
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:

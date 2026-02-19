@@ -195,7 +195,8 @@ class ConfigParsingTests(DeferrableTestCase):
             },
         }
         config = read_client_config("test", settings)
-        self.assertNotIn('settings', config)
+        self.assertIn('settings', config)
+        self.assertIsInstance(config['settings'], DottedDict)
         self.assertIn('unknown', config)
         self.assertEqual(config['unknown'], settings['unknown'])
 

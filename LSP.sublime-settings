@@ -366,10 +366,9 @@
     },
     "ocaml": {
       "command": [
-        "ocaml-language-server",
-        "--stdio"
+        "ocamllsp"
       ],
-      "selector": "source.reason | source.ocaml",
+      "selector": "source.ocaml | source.reason",
     },
     "polymer-ide": {
       "command": [

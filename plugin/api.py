@@ -10,7 +10,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import ClassVar
 from typing import final
 from typing import TYPE_CHECKING
 from typing import TypedDict
@@ -136,24 +135,14 @@ class PluginContext:
 
 class LspPlugin:
 
-    storage_path: ClassVar[Path] = Path(ST_STORAGE_PATH)
-    """
-    The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
-    You should have an additional subdirectory preferably the same name as your plugin. For instance:
+    @classmethod
+    def plugin_storage_path(cls) -> Path:
+        """
+        The storage path for the plugin.
 
-    ```py
-    from LSP.plugin import LspPlugin
-    from pathlib import Path
-
-
-    class MyPlugin(LspPlugin):
-
-        @classmethod
-        def basedir(cls) -> Path:
-            # Do everything relative to this directory
-            return cls.storage_path / 'LSP-myplugin'
-    ```
-    """
+        Use this as your directory to install server files. Its path is '$DATA/Package Storage/[Package Name]'.
+        """
+        return Path(ST_STORAGE_PATH, cls.__module__.split('.')[0])
 
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:

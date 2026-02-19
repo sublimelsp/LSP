@@ -916,7 +916,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Public utility methods ---------------------------------------------------------------------------------------
 
     def session_async(self, capability: str, point: int | None = None) -> Session | None:
-        return best_session(self.view, self.sessions_async(capability), point)
+        return best_session(self.view, self.sessions_async(capability), capability, point)
 
     def sessions_async(self, capability: str | None = None) -> list[Session]:
         return [

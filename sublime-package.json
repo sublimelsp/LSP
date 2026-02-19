@@ -327,6 +327,109 @@
               "default": "open_files"
             },
             "ClientPrioritySelector": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "*": {
+                      "type": "string"
+                    },
+                    "callHierarchyProvider": {
+                      "type": "string"
+                    },
+                    "codeActionProvider": {
+                      "type": "string"
+                    },
+                    "codeLensProvider": {
+                      "type": "string"
+                    },
+                    "colorProvider": {
+                      "type": "string"
+                    },
+                    "completionProvider": {
+                      "type": "string"
+                    },
+                    "declarationProvider": {
+                      "type": "string"
+                    },
+                    "definitionProvider": {
+                      "type": "string"
+                    },
+                    "diagnosticProvider": {
+                      "type": "string"
+                    },
+                    "documentFormattingProvider": {
+                      "type": "string"
+                    },
+                    "documentHighlightProvider": {
+                      "type": "string"
+                    },
+                    "documentLinkProvider": {
+                      "type": "string"
+                    },
+                    "documentOnTypeFormattingProvider": {
+                      "type": "string"
+                    },
+                    "documentRangeFormattingProvider": {
+                      "type": "string"
+                    },
+                    "documentSymbolProvider": {
+                      "type": "string"
+                    },
+                    "executeCommandProvider": {
+                      "type": "string"
+                    },
+                    "foldingRangeProvider": {
+                      "type": "string"
+                    },
+                    "hoverProvider": {
+                      "type": "string"
+                    },
+                    "implementationProvider": {
+                      "type": "string"
+                    },
+                    "inlayHintProvider": {
+                      "type": "string"
+                    },
+                    "inlineValueProvider": {
+                      "type": "string"
+                    },
+                    "linkedEditingRangeProvider": {
+                      "type": "string"
+                    },
+                    "monikerProvider": {
+                      "type": "string"
+                    },
+                    "referencesProvider": {
+                      "type": "string"
+                    },
+                    "renameProvider": {
+                      "type": "string"
+                    },
+                    "selectionRangeProvider": {
+                      "type": "string"
+                    },
+                    "semanticTokensProvider": {
+                      "type": "string"
+                    },
+                    "signatureHelpProvider": {
+                      "type": "string"
+                    },
+                    "typeDefinitionProvider": {
+                      "type": "string"
+                    },
+                    "typeHierarchyProvider": {
+                      "type": "string"
+                    },
+                    "workspaceSymbolProvider": {
+                      "type": "string"
+                    },
+                  }
+                },
+                {
+                  "type": "string",
+                }
+              ],
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
             // The ClientConfig class

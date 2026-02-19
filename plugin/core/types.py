@@ -728,7 +728,7 @@ class ClientConfig:
     def __init__(self,
                  name: str,
                  selector: str,
-                 priority_selector: str | None = None,
+                 priority_selector: str | dict[str, str] | None = None,
                  schemes: list[str] | None = None,
                  command: list[str] | None = None,
                  binary_args: list[str] | None = None,  # DEPRECATED
@@ -953,6 +953,17 @@ class ClientConfig:
                 result[k] = v
         return result
 
+    def priority_selector_for_capability(self, capability_path: str | None = None) -> str:
+        if isinstance(self.priority_selector, str):
+            return self.priority_selector
+        if capability_path:
+            capability = capability_path.split('.')[0]
+            if capability in self.priority_selector:
+                return self.priority_selector[capability]
+        if '*' in self.priority_selector:
+            return self.priority_selector['*']
+        return self.selector
+
     def __repr__(self) -> str:
         items: list[str] = []
         for k, v in self.__dict__.items():
@@ -1016,10 +1027,10 @@ def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
     return ""
 
 
-def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
+def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str | dict[str, str]:
     # Best case scenario
     selector = config.get("priority_selector")
-    if isinstance(selector, str):
+    if isinstance(selector, (str, dict)):
         return selector
     # Otherwise, look for "languages": [...]
     languages = config.get("languages")

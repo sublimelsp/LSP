@@ -13,7 +13,7 @@ stubPath = "./stubs"
 env_list = ["py3"]
 skipsdist = true
 
-[tool.tox.env_run_base]
+[tool.tox.testenv]
 deps = [
     "mypy==1.18.2",
     "pyright==1.1.408",

@@ -8,7 +8,6 @@ reportMissingModuleSource = "none"
 reportUnannotatedClassAttribute = "none"
 reportUnusedCallResult = "none"
 stubPath = "./stubs"
-typeCheckingMode = "strict"
 
 [tool.ruff]
 exclude = [

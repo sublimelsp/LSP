@@ -909,8 +909,8 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:
         """
-        Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",
-        "default_settings", "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
+        Return the Settings object that defines the "command", "selector", and optionally the "initializationOptions",
+        "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
         filename as the second element in the tuple.
 
         The second element in the tuple is used to handle "settings" overrides from users properly. For example, if your
@@ -1493,8 +1493,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def _publish_diagnostics_to_session_buffer_async(
         self, sb: SessionBufferProtocol, diagnostics: list[Diagnostic], version: int | None = None
     ) -> None:
-        visible_session_views, _ = self.session_views_by_visibility()
-        sb.on_diagnostics_async(diagnostics, version, visible_session_views)
+        sb.on_diagnostics_async(diagnostics, version, self.visible_session_views())
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -2110,24 +2109,25 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         return decode_semantic_token(
             types_legend, modifiers_legend, self._semantic_tokens_map, token_type_encoded, token_modifiers_encoded)
 
-    def session_views_by_visibility(self) -> tuple[set[SessionViewProtocol], set[SessionViewProtocol]]:
-        visible_session_views: set[SessionViewProtocol] = set()
-        not_visible_session_views: set[SessionViewProtocol] = set()
-        selected_sheets: set[sublime.Sheet] = set()
-        for group in range(self.window.num_groups()):
-            selected_sheets = selected_sheets.union(self.window.selected_sheets_in_group(group))
-        for sheet in self.window.sheets():
-            view = sheet.view()
-            if not view:
-                continue
-            sv = self.session_view_for_view_async(view)
-            if not sv:
-                continue
-            if sheet in selected_sheets:
-                visible_session_views.add(sv)
+    def session_buffers_by_visibility(
+        self
+    ) -> tuple[list[tuple[SessionBufferProtocol, SessionViewProtocol]], list[SessionBufferProtocol]]:
+        selected_sheets = set(itertools.chain.from_iterable(
+            self.window.selected_sheets_in_group(group) for group in range(self.window.num_groups())
+        ))
+        visible_session_buffers: list[tuple[SessionBufferProtocol, SessionViewProtocol]] = []
+        not_visible_session_buffers: list[SessionBufferProtocol] = []
+        for session_buffer in self.session_buffers_async():
+            for session_view in session_buffer.session_views:
+                if (sheet := session_view.view.sheet()) and sheet in selected_sheets:
+                    visible_session_buffers.append((session_buffer, session_view))
+                    break
             else:
-                not_visible_session_views.add(sv)
-        return visible_session_views, not_visible_session_views
+                not_visible_session_buffers.append(session_buffer)
+        return visible_session_buffers, not_visible_session_buffers
+
+    def visible_session_views(self) -> set[SessionViewProtocol]:
+        return set(sv for sv in self.session_views_async() if (sheet := sv.view.sheet()) and sheet.is_selected())
 
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
@@ -2236,11 +2236,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
 
         def continue_after_response() -> None:
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                sv.session_buffer.do_code_lenses_async(sv.view)
-            for sv in not_visible_session_views:
-                sv.session_buffer.set_code_lenses_pending_refresh()
+            visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
+            for session_buffer, session_view in visible_session_buffers:
+                session_buffer.do_code_lenses_async(session_view.view)
+            for session_buffer in not_visible_session_buffers:
+                session_buffer.set_code_lenses_pending_refresh()
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
@@ -2249,14 +2249,14 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
 
         def continue_after_response() -> None:
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                if sv.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                    sv.session_buffer.do_semantic_tokens_async(sv.view)
+            visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
+            for session_buffer, session_view in visible_session_buffers:
+                if session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
+                    session_buffer.do_semantic_tokens_async(session_view.view)
                 else:
-                    sv.session_buffer.set_semantic_tokens_pending_refresh()
-            for sv in not_visible_session_views:
-                sv.session_buffer.set_semantic_tokens_pending_refresh()
+                    session_buffer.set_semantic_tokens_pending_refresh()
+            for session_buffer in not_visible_session_buffers:
+                session_buffer.set_semantic_tokens_pending_refresh()
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
@@ -2265,30 +2265,30 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
 
         def continue_after_response() -> None:
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                if sv.get_request_flags() & RequestFlags.INLAY_HINT:
-                    sv.session_buffer.do_inlay_hints_async(sv.view)
+            visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
+            for session_buffer, session_view in visible_session_buffers:
+                if session_view.get_request_flags() & RequestFlags.INLAY_HINT:
+                    session_buffer.do_inlay_hints_async(session_view.view)
                 else:
-                    sv.session_buffer.set_inlay_hints_pending_refresh()
-            for sv in not_visible_session_views:
-                sv.session_buffer.set_inlay_hints_pending_refresh()
+                    session_buffer.set_inlay_hints_pending_refresh()
+            for session_buffer in not_visible_session_buffers:
+                session_buffer.set_inlay_hints_pending_refresh()
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
 
     @request_handler('workspace/diagnostic/refresh')
     def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
-
-        def continue_after_response() -> None:
-            visible_session_views, not_visible_session_views = self.session_views_by_visibility()
-            for sv in visible_session_views:
-                sv.session_buffer.do_document_diagnostic_async(sv.view, sv.view.change_count(), forced_update=True)
-            for sv in not_visible_session_views:
-                sv.session_buffer.set_document_diagnostic_pending_refresh()
-
-        sublime.set_timeout_async(continue_after_response)
+        sublime.set_timeout_async(self._refresh_diagnostics)
         return Promise.resolve(None)
+
+    def _refresh_diagnostics(self) -> None:
+        visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
+        for session_buffer, session_view in visible_session_buffers:
+            view = session_view.view
+            session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
+        for session_buffer in not_visible_session_buffers:
+            session_buffer.set_document_diagnostic_pending_refresh()
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:
@@ -2312,6 +2312,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     @request_handler('client/registerCapability')
     def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
+        new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
             capability_path, registration_path = method_to_capability(registration["method"])
@@ -2323,6 +2324,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             options = self.config.filter_out_disabled_capabilities(capability_path, options)
             registration_id = registration["id"]
             if capability_path == 'diagnosticProvider':
+                new_diagnostics_provider = True
                 options = cast(DiagnosticOptions, options)
                 self.diagnostics.register_provider(registration_id, options)
                 if options['workspaceDiagnostics']:
@@ -2350,6 +2352,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 self.register_file_system_watchers(registration_id, capability_options['watchers'])
 
         def continue_after_response() -> None:
+            if new_diagnostics_provider:
+                self._refresh_diagnostics()
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 

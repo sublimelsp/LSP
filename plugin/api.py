@@ -135,14 +135,12 @@ class PluginContext:
 
 class LspPlugin:
 
-    @classmethod
-    def plugin_storage_path(cls) -> Path:
-        """
-        The storage path for the plugin.
+    plugin_storage_path: Path = Path(ST_STORAGE_PATH)  # Path is updated on registering the plugin class.
+    """
+    The storage path for the plugin.
 
-        Use this as your directory to install server files. Its path is '$DATA/Package Storage/[Package Name]'.
-        """
-        return Path(ST_STORAGE_PATH, cls.__module__.split('.')[0])
+    Use this as your directory to install server files. Its path is '$DATA/Package Storage/[Package Name]'.
+    """
 
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:

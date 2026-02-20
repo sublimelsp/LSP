@@ -141,6 +141,7 @@ from enum import IntEnum
 from enum import IntFlag
 from functools import lru_cache
 from functools import partial
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -1220,6 +1221,7 @@ def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_liste
         if issubclass(plugin, AbstractPlugin):
             _, settings_path = plugin.configuration()
         else:
+            plugin.plugin_storage_path = Path(ST_STORAGE_PATH, name)
             settings_path = f"Packages/{name}/{name}.sublime-settings"
         if client_configs.add_external_config(name, settings_path, notify_listener):
             _plugins[name] = plugin
@@ -1272,7 +1274,7 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
         _register_plugin_impl(plugin, notify_listener)
 
 
-def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
+def unregister_plugin(plugin: type[AbstractPlugin | LspPlugin]) -> None:
     """
     Unregister an LSP plugin in LSP.
 
@@ -1280,7 +1282,10 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    name = plugin.name()
+    if issubclass(plugin, AbstractPlugin):
+        name = plugin.name()
+    else:
+        name = plugin.__module__.split('.')[0]
     try:
         _plugins.pop(name, None)
         client_configs.remove_external_config(name)

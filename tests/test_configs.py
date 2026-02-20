@@ -200,6 +200,14 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertIn('unknown', config)
         self.assertEqual(config['unknown'], settings['unknown'])
 
+    def test_does_not_expose_internal_properties(self):
+        settings = {
+            "unknown": 1,
+        }
+        config = read_client_config("test", settings)
+        self.assertNotIn('_all_settings', config)
+        self.assertRaises(KeyError, lambda: config['_all_settings'])
+
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):
         config = read_client_config("asdf", {

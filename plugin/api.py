@@ -50,7 +50,7 @@ P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 
 
-g_plugins: dict[str, type[AbstractPlugin]] = {}
+g_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
 
 
 def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
@@ -98,6 +98,19 @@ def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) 
         _register_plugin_impl(plugin, notify_listener)
 
 
+def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
+    name = plugin.name()
+    if name in g_plugins:
+        return
+    try:
+        settings, base_file = plugin.configuration()
+        if client_configs.add_external_config(name, settings, base_file, notify_listener):
+            on_change = partial(client_configs.update_external_config, name, settings, base_file)
+            g_plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+    except Exception as ex:
+        exception_log(f'Failed to register plugin "{name}"', ex)
+
+
 def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     """
     Unregister an LSP plugin in LSP.
@@ -106,18 +119,18 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    global _plugins
+    global g_plugins
     name = plugin.name()
     try:
-        _plugins.pop(name, None)
+        g_plugins.pop(name, None)
         client_configs.remove_external_config(name)
     except Exception as ex:
         exception_log(f'Failed to unregister plugin "{name}"', ex)
 
 
 def get_plugin(name: str) -> type[AbstractPlugin] | None:
-    global _plugins
-    tup = _plugins.get(name, None)
+    global g_plugins
+    tup = g_plugins.get(name, None)
     return tup[0] if tup else None
 
 
@@ -508,20 +521,3 @@ class AbstractPlugin(APIHandler, ABC):
         This API is triggered on async thread.
         """
         pass
-
-
-_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
-
-
-def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
-    global _plugins
-    name = plugin.name()
-    if name in _plugins:
-        return
-    try:
-        settings, base_file = plugin.configuration()
-        if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = partial(client_configs.update_external_config, name, settings, base_file)
-            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
-    except Exception as ex:
-        exception_log(f'Failed to register plugin "{name}"', ex)

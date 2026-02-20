@@ -908,8 +908,8 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:
         """
-        Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",
-        "default_settings", "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
+        Return the Settings object that defines the "command", "selector", and optionally the "initializationOptions",
+        "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
         filename as the second element in the tuple.
 
         The second element in the tuple is used to handle "settings" overrides from users properly. For example, if your

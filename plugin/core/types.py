@@ -752,8 +752,7 @@ class ClientConfig:
             self.schemes: list[str] = schemes
         else:
             self.schemes = ["file"]
-        if isinstance(command, list):
-            self.command = command
+        self.command = command
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled

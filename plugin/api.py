@@ -119,7 +119,6 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    global g_plugins
     name = plugin.name()
     try:
         g_plugins.pop(name, None)
@@ -129,7 +128,6 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
 
 
 def get_plugin(name: str) -> type[AbstractPlugin] | None:
-    global g_plugins
     tup = g_plugins.get(name, None)
     return tup[0] if tup else None
 

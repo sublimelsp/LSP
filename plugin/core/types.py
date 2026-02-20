@@ -732,16 +732,15 @@ class ClientConfig:
         priority_selector: str | None = None,
         schemes: list[str] | None = None,
         command: list[str] | None = None,
-        binary_args: list[str] | None = None,  # DEPRECATED
         tcp_port: int | None = None,
         auto_complete_selector: str | None = None,
         enabled: bool = True,
-        init_options: DottedDict = DottedDict(),
-        settings: DottedDict = DottedDict(),
-        env: dict[str, str | list[str]] = {},
+        init_options: DottedDict | None = None,
+        settings: DottedDict | None = None,
+        env: dict[str, str | list[str]] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
-        disabled_capabilities: DottedDict = DottedDict(),
-        file_watcher: FileWatcherConfig = {},
+        disabled_capabilities: DottedDict | None = None,
+        file_watcher: FileWatcherConfig | None = None,
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "open_files",
         path_maps: list[PathMap] | None = None,
@@ -754,20 +753,16 @@ class ClientConfig:
             self.schemes: list[str] = schemes
         else:
             self.schemes = ["file"]
-        if isinstance(command, list):
-            self.command = command
-        else:
-            assert isinstance(binary_args, list)
-            self.command = binary_args
+        self.command = command
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled
-        self.init_options = init_options
-        self.settings = settings
-        self.env = env
+        self.init_options = init_options or DottedDict()
+        self.settings = settings or DottedDict()
+        self.env = env or {}
         self.experimental_capabilities = experimental_capabilities
-        self.disabled_capabilities = disabled_capabilities
-        self.file_watcher = file_watcher
+        self.disabled_capabilities = disabled_capabilities or DottedDict()
+        self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
         self.status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
@@ -995,88 +990,16 @@ class ClientConfig:
 
 
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
-    # Best base scenario,
     selector = config.get("selector")
     if isinstance(selector, str):
         return selector
-    # Otherwise, look for "languages": [...]
-    languages = config.get("languages")
-    if isinstance(languages, list):
-        selectors = []
-        for language in languages:
-            # First priority is document_selector,
-            document_selector = language.get("document_selector")
-            if isinstance(document_selector, str):
-                selectors.append(document_selector)
-                continue
-            # After that syntaxes has priority,
-            syntaxes = language.get("syntaxes")
-            if isinstance(syntaxes, list):
-                for path in syntaxes:
-                    syntax = sublime.syntax_from_path(path)
-                    if syntax:
-                        selectors.append(syntax.scope)
-                continue
-            # No syntaxes and no document_selector... then there must exist a languageId.
-            language_id = language.get("languageId")
-            if isinstance(language_id, str):
-                selectors.append(f"source.{language_id}")
-        return "|".join(map("({})".format, selectors))
-    # Otherwise, look for "document_selector"
-    document_selector = config.get("document_selector")
-    if isinstance(document_selector, str):
-        return document_selector
-    # Otherwise, look for "syntaxes": [...]
-    syntaxes = config.get("syntaxes")
-    if isinstance(syntaxes, list):
-        selectors = []
-        for path in syntaxes:
-            syntax = sublime.syntax_from_path(path)
-            if syntax:
-                selectors.append(syntax.scope)
-        return "|".join(selectors)
-    # No syntaxes and no document_selector... then there must exist a languageId.
-    if language_id := config.get("languageId"):
-        return f"source.{language_id}"
     return ""
 
 
 def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
-    # Best case scenario
     selector = config.get("priority_selector")
     if isinstance(selector, str):
         return selector
-    # Otherwise, look for "languages": [...]
-    languages = config.get("languages")
-    if isinstance(languages, list):
-        selectors = []
-        for language in languages:
-            # First priority is feature_selector.
-            feature_selector = language.get("feature_selector")
-            if isinstance(feature_selector, str):
-                selectors.append(feature_selector)
-                continue
-            # After that scopes has priority.
-            scopes = language.get("scopes")
-            if isinstance(scopes, list):
-                selectors.extend(scopes)
-                continue
-            # No scopes and no feature_selector. So there must be a languageId
-            language_id = language.get("languageId")
-            if isinstance(language_id, str):
-                selectors.append(f"source.{language_id}")
-        return "|".join(map("({})".format, selectors))
-    # Otherwise, look for "feature_selector"
-    feature_selector = config.get("feature_selector")
-    if isinstance(feature_selector, str):
-        return feature_selector
-    # Otherwise, look for "scopes": [...]
-    scopes = config.get("scopes")
-    if isinstance(scopes, list):
-        return "|".join(map("({})".format, scopes))
-    # No scopes and no feature_selector... then there must exist a languageId
-    if language_id := config.get("languageId"):
-        return f"source.{language_id}"
     return ""
 
 

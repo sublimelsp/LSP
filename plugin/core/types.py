@@ -725,6 +725,16 @@ class TransportConfig:
 
 
 class ClientConfig:
+    """Represents the configuration for an LSP client (language server).
+
+    Holds all settings needed to start and communicate with a language server, including the command to launch it, the
+    file types it applies to, transport options, and LSP-level options such as initialization options and capability
+    overrides.
+
+    All configuration keys are also accessible through attribute access (`config.foo`) or subscription
+    access (`config["foo"]`).
+    """
+
     def __init__(
         self,
         name: str,
@@ -744,8 +754,40 @@ class ClientConfig:
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "open_files",
         path_maps: list[PathMap] | None = None,
-        all_settings: dict[str, Any] = {}
+        all_settings: dict[str, Any] | None = None
     ) -> None:
+        """
+        :param name: Unique identifier for this language server client.
+        :param selector: Sublime Text scope selector that determines which views this client is active for (e.g.
+            `"source.python"`).
+        :param priority_selector: Selector used when multiple clients match the same view; the highest-scoring client
+            takes precedence. Falls back to `selector` when not provided.
+        :param schemes: URI schemes this client handles (e.g. `["file", "untitled"]`). Defaults to `["file"]`.
+        :param command: Command and arguments used to launch the language server process.
+        :param tcp_port: Port for TCP transport. `None` uses stdio. `0` picks a free port. Negative values cause LSP to
+            host a TCP server (the language server connects to LSP rather than the other way around); `-1` picks any
+            free port, and `-N` binds to port `N`.
+        :param auto_complete_selector: Scope selector that restricts when auto-complete suggestions are shown. `None`
+             means that the default Sublime Text's value is used.
+        :param enabled: Whether this client is enabled.
+        :param init_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
+        :param settings: Server-specific settings sent via `workspace/didChangeConfiguration`.
+        :param env: Additional environment variables for the server process. A list value for the special `"PATH"` key
+            is joined with `os.pathsep` and prepended to the existing `PATH`.
+        :param experimental_capabilities: Extra capabilities advertised to the server under
+            `capabilities.experimental`.
+        :param disabled_capabilities: Dotted-path map of capability paths to disable, even if the server advertises
+            them.
+        :param file_watcher: Configuration for LSP file-watching (glob patterns, etc.).
+        :param semantic_tokens: Mapping of semantic token types/modifiers to Sublime Text scopes for syntax
+            highlighting.
+        :param diagnostics_mode: When to show diagnostics. `"open_files"` (default) shows them only for open views;
+            `"workspace"` shows them for the whole workspace.
+        :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
+            server (e.g. inside a container).
+        :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
+            settings not explicitly modelled above.
+        """
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
@@ -768,7 +810,7 @@ class ClientConfig:
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
-        self._all_settings = all_settings
+        self._all_settings = all_settings or {}
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
@@ -789,6 +831,16 @@ class ClientConfig:
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
+        """Create a ClientConfig from a Sublime Text `Settings` object.
+
+        Plugin-defined defaults are read from `file` (a resource path to the plugin's `.sublime-settings` file) and user
+        overrides are layered on top from `s`.
+
+        :param name: Unique client name.
+        :param s: The resolved `sublime.Settings` object for this client.
+        :param file: Resource path to the base `.sublime-settings` file shipped with the LSP plugin (e.g.
+            `"Packages/LSP-pyright/LSP-pyright.sublime-settings"`).
+        """
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
@@ -825,6 +877,11 @@ class ClientConfig:
 
     @classmethod
     def from_dict(cls, name: str, d: dict[str, Any]) -> ClientConfig:
+        """Create a ClientConfig from a plain dictionary.
+
+        :param name: Unique client name.
+        :param d: Dictionary of configuration values.
+        """
         disabled_capabilities = d.get("disabled_capabilities")
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
@@ -856,6 +913,15 @@ class ClientConfig:
 
     @classmethod
     def from_config(cls, src_config: ClientConfig, override: dict[str, Any]) -> ClientConfig:
+        """Create a ClientConfig by applying overrides to an existing config.
+
+        Values present in `override` take precedence over those in `src_config`. Structured
+        values (`initializationOptions`, `settings`) are deep-merged rather than replaced wholesale. The raw
+        `_all_settings` dict is shallow-merged.
+
+        :param src_config: The base configuration to start from.
+        :param override: Dictionary of values to override.
+        """
         path_map_override = PathMap.parse(override.get("path_maps"))
         disabled_capabilities = override.get("disabled_capabilities")
         if isinstance(disabled_capabilities, dict):
@@ -886,6 +952,14 @@ class ClientConfig:
         )
 
     def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
+        """Build a :class:`TransportConfig` ready for starting the language server.
+
+        Expands variables in the command arguments and environment, resolves the TCP port (including binding a listener
+        socket when LSP is hosting the server), and returns the resulting transport configuration.
+
+        :param variables: Sublime Text variable substitution dict (e.g. from `window.extract_variables()`). A `"port"`
+            key is added automatically when a TCP port is in use.
+        """
         tcp_port: int | None = None
         listener_socket: socket.socket | None = None
         if self.tcp_port is not None:
@@ -917,6 +991,14 @@ class ClientConfig:
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
+        """Update the view status bar entry for this client.
+
+        Shows `"<name> (<message>)"` when `message` is non-empty, or just `"<name>"` otherwise. Does nothing (and erases
+        any existing entry) when `show_view_status` is disabled in `LSP.sublime-settings`.
+
+        :param view: The view whose status bar should be updated.
+        :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
+        """
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
             status = f"{self.name} ({message})" if message else self.name
             view.set_status(self.status_key, status)
@@ -924,9 +1006,21 @@ class ClientConfig:
             self.erase_view_status(view)
 
     def erase_view_status(self, view: sublime.View) -> None:
+        """Remove this client's entry from the view's status bar.
+
+        :param view: The view whose status bar entry should be cleared.
+        """
         view.erase_status(self.status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
+        """Return `True` if this client should be active for the given view.
+
+        Delegates to the registered plugin's `is_applicable` method when one is available; otherwise checks that
+        `scheme` is in :attr:`schemes` and that the view's syntax scope matches :attr:`selector`.
+
+        :param view: The view to test.
+        :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
+        """
         from .sessions import get_plugin
         if plugin := get_plugin(self.name):
             return plugin.is_applicable(view, self)
@@ -935,6 +1029,14 @@ class ClientConfig:
         return False
 
     def map_client_path_to_server_uri(self, path: str) -> str:
+        """Convert a local filesystem path to the URI the language server expects.
+
+        Applies any configured :attr:`path_maps` to translate the path (e.g. from a local path to a container path),
+        then converts the result to a `file://` URI.
+
+        :param path: Absolute local filesystem path.
+        :returns: URI suitable for sending to the language server.
+        """
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_local_to_remote(path)
@@ -943,6 +1045,15 @@ class ClientConfig:
         return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: DocumentUri) -> str:
+        """Convert a URI from the language server to a local filesystem path.
+
+        Only `file://` and `res://` URIs are supported; other schemes raise :exc:`ValueError`. Applies any
+        configured :attr:`path_maps` in reverse to translate the server path back to the local path.
+
+        :param uri: URI received from the language server.
+        :returns: Absolute local filesystem path.
+        :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
+        """
         scheme, path = parse_uri(uri)
         if scheme not in ("file", "res"):
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
@@ -954,6 +1065,14 @@ class ClientConfig:
         return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:
+        """Return `True` if the given capability has been disabled in the config.
+
+        Walks :attr:`disabled_capabilities` along `capability_path` (a dotted string such as `"textDocument.hover"`). A
+        capability is considered disabled when the value at that path is `True`, or an empty dict (leaf node with no
+        sub-keys).
+
+        :param capability_path: Dotted capability path to check.
+        """
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value

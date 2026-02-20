@@ -762,7 +762,7 @@ class ClientConfig:
         self.env = env or {}
         self.experimental_capabilities = experimental_capabilities
         self.disabled_capabilities = disabled_capabilities or DottedDict()
-        self.file_watcher = file_watcher or None
+        self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
         self.status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens

@@ -904,7 +904,7 @@ class ClientConfig:
         view.erase_status(self.status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
-        from .sessions import get_plugin
+        from ..api import get_plugin
         if plugin := get_plugin(self.name):
             return plugin.is_applicable(view, self)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):

@@ -763,7 +763,7 @@ class ClientConfig:
             `"source.python"`).
         :param priority_selector: Selector used when multiple servers match the same view; the highest-scoring server
             takes precedence. Falls back to `selector` when not provided.
-        :param schemes: URI schemes this client handles (e.g. `["file", "untitled"]`). Defaults to `["file"]`.
+        :param schemes: URI schemes this client handles (e.g. `["file", "buffer"]`). Defaults to `["file"]`.
         :param command: Command and arguments used to launch the language server process.
         :param tcp_port: Port for TCP transport. `None` uses stdio. `0` picks a free port. Negative values cause LSP to
             host a TCP server (the language server connects to LSP rather than the other way around); `-1` picks any

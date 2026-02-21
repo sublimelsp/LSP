@@ -367,7 +367,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand):
         line(f' - selector\n{self.code_block(config.selector)}')
         line(f' - priority_selector\n{self.code_block(config.priority_selector)}')
         line(' - init_options')
-        line(self.json_dump(config.init_options.get()))
+        line(self.json_dump(config.initialization_options.get()))
         line(' - settings')
         line(self.json_dump(config.settings.get()))
         line(' - env')

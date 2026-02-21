@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from LSP.plugin.core.settings import read_client_config
-from LSP.plugin.core.settings import update_client_config
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import DottedDict
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
 from os import environ
 from os.path import dirname
 from os.path import pathsep
+from typing import Any
 from unittesting import DeferrableTestCase
 import sublime
 import sys
 import unittest
 
 test_file_path = dirname(__file__) + "/testfile.txt"
+
+
+def read_client_config(name: str, d: dict[str, Any]) -> ClientConfig:
+    return ClientConfig.from_dict(name, d)
+
+
+def update_client_config(external_config: ClientConfig, user_override_config: dict[str, Any]) -> ClientConfig:
+    return ClientConfig.from_config(external_config, user_override_config)
 
 
 class ConfigParsingTests(DeferrableTestCase):
@@ -115,6 +124,52 @@ class ConfigParsingTests(DeferrableTestCase):
         options = config.filter_out_disabled_capabilities(capability_path, options)
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
+
+    def test_exposes_unknown_root_keys(self):
+        settings = {
+            "unknown": {
+                "foo": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertEqual(config.unknown, settings['unknown'])
+
+    def test_shallow_merges_overrides_for_unknown_root_keys(self):
+        settings = {
+            "unknown": {
+                "foo": 1
+            },
+        }
+        overriddes = {
+            "unknown": {
+                "bar": 2
+            }
+        }
+        config = update_client_config(read_client_config("test", settings), overriddes)
+        self.assertEqual(config.unknown, overriddes['unknown'])
+
+    def test_attribute_access_prefers_native_keys(self):
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertIsInstance(config.settings, DottedDict)
+
+    def test_does_not_have_subscription_access(self):
+        settings = {
+            "settings": {
+                "setting1": 1
+            },
+            "unknown": {
+                "foo": 1
+            },
+        }
+        config = read_client_config("test", settings)
+        self.assertRaises(TypeError, lambda: 'settings' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: 'unknown' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: config['unknown'])  # pyright: ignore[reportIndexIssue]
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):

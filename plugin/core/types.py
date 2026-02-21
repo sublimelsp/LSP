@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -741,6 +742,16 @@ class TransportConfig:
 
 
 class ClientConfig:
+    """Represents the configuration for a language server.
+
+    Holds all settings needed to start and communicate with a language server, including the command to launch it, the
+    file types it applies to, transport options, and LSP-level options such as initialization options and capability
+    overrides.
+
+    All root configuration keys from corresponding server configuration (for example the backing LSP-*.sublime-settings
+    file) are accessible through attribute access (`.foo`).
+    """
+
     def __init__(
         self,
         name: str,
@@ -751,7 +762,7 @@ class ClientConfig:
         tcp_port: int | None = None,
         auto_complete_selector: str | None = None,
         enabled: bool = True,
-        init_options: DottedDict | None = None,
+        initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
         env: dict[str, str | list[str]] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
@@ -759,8 +770,42 @@ class ClientConfig:
         file_watcher: FileWatcherConfig | None = None,
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "open_files",
-        path_maps: list[PathMap] | None = None
+        path_maps: list[PathMap] | None = None,
+        all_settings: dict[str, Any] | None = None
     ) -> None:
+        """
+        :param name: Unique identifier for this language server.
+        :param selector: Sublime Text scope selector that determines which views this server is active for (e.g.
+            `"source.python"`).
+        :param priority_selector: Selector used when multiple servers match the same view; the highest-scoring server
+            takes precedence. Falls back to `selector` when not provided.
+        :param schemes: URI schemes this client handles (e.g. `["file", "buffer"]`). Defaults to `["file"]`.
+        :param command: Command and arguments used to launch the language server process.
+        :param tcp_port: Port for TCP transport. `None` uses stdio. `0` picks a free port. Negative values cause LSP to
+            host a TCP server (the language server connects to LSP rather than the other way around); `-1` picks any
+            free port, and `-N` binds to port `N`.
+        :param auto_complete_selector: Scope selector that restricts when auto-complete suggestions are shown. `None`
+             means that the value from the Sublime Text setting of the same name is used.
+        :param enabled: Whether this server is enabled.
+        :param initialization_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
+        :param settings: Server-specific settings sent via `workspace/didChangeConfiguration` and for
+            `workspace/configuration` requests.
+        :param env: Additional environment variables for the server process. A list value for the special `"PATH"` key
+            is joined with `os.pathsep` and prepended to the existing `PATH`.
+        :param experimental_capabilities: Extra capabilities advertised to the server under
+            `capabilities.experimental`.
+        :param disabled_capabilities: Dotted-path map of capability paths to disable, even if the server advertises
+            them.
+        :param file_watcher: Configuration for LSP file-watching (glob patterns, etc.).
+        :param semantic_tokens: Mapping of semantic token types/modifiers to Sublime Text scopes for syntax
+            highlighting.
+        :param diagnostics_mode: When to show diagnostics. `"open_files"` (default) shows them only for open views;
+            `"workspace"` shows them for the whole workspace.
+        :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
+            server (e.g. inside a container).
+        :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
+            settings not explicitly modelled above.
+        """
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
@@ -772,24 +817,47 @@ class ClientConfig:
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled
-        self.init_options = init_options or DottedDict()
+        self.initialization_options = initialization_options or DottedDict()
         self.settings = settings or DottedDict()
         self.env = env or {}
         self.experimental_capabilities = experimental_capabilities
         self.disabled_capabilities = disabled_capabilities or DottedDict()
         self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
-        self.status_key = f"lsp_{self.name}"
+        self._status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
+        # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
+        self._all_settings = all_settings or {}
+
+    @property
+    @deprecated('Use initialization_options instead')
+    def init_options(self) -> DottedDict:
+        return self.initialization_options
+
+    def __getattr__(self, name: str, /) -> Any:
+        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
+        if name in self._all_settings:
+            return self._all_settings[name]
+        raise AttributeError(name)
 
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
+        """Create a ClientConfig from a Sublime Text `Settings` object.
+
+        Plugin-defined defaults are read from `file` (a resource path to the plugin's `.sublime-settings` file) and user
+        overrides are layered on top from `s`.
+
+        :param name: Unique server name.
+        :param s: The resolved `sublime.Settings` object for this client.
+        :param file: Resource path to the base `.sublime-settings` file shipped with the LSP plugin (e.g.
+            `"Packages/LSP-pyright/LSP-pyright.sublime-settings"`).
+        """
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
-        init_options = DottedDict(base.get("initializationOptions", {}))
-        init_options.update(read_dict_setting(s, "initializationOptions", {}))
+        initialization_options = DottedDict(base.get("initializationOptions", {}))
+        initialization_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
@@ -807,7 +875,7 @@ class ClientConfig:
             auto_complete_selector=s.get("auto_complete_selector"),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
-            init_options=init_options,
+            initialization_options=initialization_options,
             settings=settings,
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
@@ -815,11 +883,17 @@ class ClientConfig:
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
-            path_maps=PathMap.parse(s.get("path_maps"))
+            path_maps=PathMap.parse(s.get("path_maps")),
+            all_settings=s.to_dict()
         )
 
     @classmethod
     def from_dict(cls, name: str, d: dict[str, Any]) -> ClientConfig:
+        """Create a ClientConfig from a plain dictionary.
+
+        :param name: Unique server name.
+        :param d: Dictionary of configuration values.
+        """
         disabled_capabilities = d.get("disabled_capabilities")
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
@@ -837,7 +911,7 @@ class ClientConfig:
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
             enabled=d.get("enabled", False),
-            init_options=DottedDict(d.get("initializationOptions")),
+            initialization_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
             experimental_capabilities=d.get("experimental_capabilities"),
@@ -845,11 +919,21 @@ class ClientConfig:
             file_watcher=d.get("file_watcher", dict()),
             semantic_tokens=d.get("semantic_tokens", dict()),
             diagnostics_mode=d.get("diagnostics_mode", "open_files"),
-            path_maps=PathMap.parse(d.get("path_maps"))
+            path_maps=PathMap.parse(d.get("path_maps")),
+            all_settings=d
         )
 
     @classmethod
     def from_config(cls, src_config: ClientConfig, override: dict[str, Any]) -> ClientConfig:
+        """Create a ClientConfig by applying overrides to an existing config.
+
+        Values present in `override` take precedence over those in `src_config`. Structured
+        values (`initializationOptions`, `settings`) are deep-merged rather than replaced wholesale. The raw
+        `_all_settings` dict is shallow-merged.
+
+        :param src_config: The base configuration to start from.
+        :param override: Dictionary of values to override.
+        """
         path_map_override = PathMap.parse(override.get("path_maps"))
         disabled_capabilities = override.get("disabled_capabilities")
         if isinstance(disabled_capabilities, dict):
@@ -865,8 +949,8 @@ class ClientConfig:
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             enabled=override.get("enabled", src_config.enabled),
-            init_options=DottedDict.from_base_and_override(
-                src_config.init_options, override.get("initializationOptions")),
+            initialization_options=DottedDict.from_base_and_override(
+                src_config.initialization_options, override.get("initializationOptions")),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
             env=override.get("env", src_config.env),
             experimental_capabilities=override.get(
@@ -875,10 +959,19 @@ class ClientConfig:
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override if path_map_override else src_config.path_maps
+            path_maps=path_map_override if path_map_override else src_config.path_maps,
+            all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
     def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
+        """Build a :class:`TransportConfig` ready for starting the language server.
+
+        Expands variables in the command arguments and environment, resolves the TCP port (including binding a listener
+        socket when LSP is hosting the server), and returns the resulting transport configuration.
+
+        :param variables: Sublime Text variable substitution dict (e.g. from `window.extract_variables()`). A `"port"`
+            key is added automatically when a TCP port is in use.
+        """
         tcp_port: int | None = None
         listener_socket: socket.socket | None = None
         if self.tcp_port is not None:
@@ -910,18 +1003,38 @@ class ClientConfig:
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
+        """Update the view status bar entry for this server.
+
+        Shows `"<name> (<message>)"` when `message` is non-empty, or just `"<name>"` otherwise. Does nothing (and erases
+        any existing entry) when `show_view_status` is disabled in `LSP.sublime-settings`.
+
+        :param view: The view whose status bar should be updated.
+        :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
+        """
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
             status = f"{self.name} ({message})" if message else self.name
-            view.set_status(self.status_key, status)
+            view.set_status(self._status_key, status)
         else:
             self.erase_view_status(view)
 
     def erase_view_status(self, view: sublime.View) -> None:
-        view.erase_status(self.status_key)
+        """Remove this server's entry from the view's status bar.
+
+        :param view: The view whose status bar entry should be cleared.
+        """
+        view.erase_status(self._status_key)
 
     def match_view(
         self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
     ) -> bool:
+        """Return `True` if this server should be active for the given view.
+
+        Delegates to the registered plugin's `is_applicable` method when one is available; otherwise checks that
+        `scheme` is in :attr:`schemes` and that the view's syntax scope matches :attr:`selector`.
+
+        :param view: The view to test.
+        :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
+        """
         from ..api import PluginContext
         from .sessions import AbstractPlugin
         from .sessions import get_plugin
@@ -936,6 +1049,14 @@ class ClientConfig:
         return False
 
     def map_client_path_to_server_uri(self, path: str) -> str:
+        """Convert a local filesystem path to the URI the language server expects.
+
+        Applies any configured :attr:`path_maps` to translate the path (e.g. from a local path to a container path),
+        then converts the result to a `file://` URI.
+
+        :param path: Absolute local filesystem path.
+        :returns: URI suitable for sending to the language server.
+        """
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_local_to_remote(path)
@@ -944,6 +1065,15 @@ class ClientConfig:
         return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: DocumentUri) -> str:
+        """Convert a URI from the language server to a local filesystem path.
+
+        Only `file://` and `res://` URIs are supported; other schemes raise :exc:`ValueError`. Applies any
+        configured :attr:`path_maps` in reverse to translate the server path back to the local path.
+
+        :param uri: URI received from the language server.
+        :returns: Absolute local filesystem path.
+        :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
+        """
         scheme, path = parse_uri(uri)
         if scheme not in ("file", "res"):
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
@@ -955,6 +1085,14 @@ class ClientConfig:
         return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:
+        """Return `True` if the given capability has been disabled in the config.
+
+        Walks :attr:`disabled_capabilities` along `capability_path` (a string such as `"hoverProvider"` or dotted string
+        like `textDocumentSync.didOpen`). A capability is considered disabled when the value at that path is `True`, or
+        an empty dict (leaf node with no sub-keys).
+
+        :param capability_path: Dotted capability path to check.
+        """
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value

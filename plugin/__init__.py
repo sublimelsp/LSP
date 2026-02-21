@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .api import HandleUpdateOrInstallationParams
 from .api import LspPlugin
 from .api import notification_handler

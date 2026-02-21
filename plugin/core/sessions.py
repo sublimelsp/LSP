@@ -620,7 +620,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
+        "initializationOptions": cast(LSPAny, config.initialization_options.get_resolved(variables))
     }
 
 
@@ -1045,9 +1045,9 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
                      workspace_folders: list[WorkspaceFolder], configuration: ClientConfig) -> str | None:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
-        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
-        language server should not care about the working directory.
+        adjustments to your "command" or "initialization_options" in the passed-in "configuration" argument, or change
+        the order of the workspace folders. You can also choose to return a custom working directory, but consider that
+        a language server should not care about the working directory.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view

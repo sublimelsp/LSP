@@ -172,12 +172,14 @@ class SessionTest(unittest.TestCase):
     def test_initialize_params(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(
-            {}, [wf], ClientConfig(name="test", command=[""], selector="", tcp_port=None, init_options=DottedDict()))
+            {}, [wf], ClientConfig(name="test", command=[""], selector="", tcp_port=None,
+                                   initialization_options=DottedDict()))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {})
         params = get_initialize_params(
             {}, [wf], ClientConfig(
-                name="test", command=[""], selector="", tcp_port=None, init_options=DottedDict({"foo": "bar"})))
+                name="test", command=[""], selector="", tcp_port=None,
+                initialization_options=DottedDict({"foo": "bar"})))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 

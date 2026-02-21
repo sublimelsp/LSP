@@ -770,7 +770,7 @@ class ClientConfig:
             free port, and `-N` binds to port `N`.
         :param auto_complete_selector: Scope selector that restricts when auto-complete suggestions are shown. `None`
              means that the value from the Sublime Text setting of the same name is used.
-        :param enabled: Whether this client is enabled.
+        :param enabled: Whether this server is enabled.
         :param initialization_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
         :param settings: Server-specific settings sent via `workspace/didChangeConfiguration`.
         :param env: Additional environment variables for the server process. A list value for the special `"PATH"` key

@@ -758,7 +758,7 @@ class ClientConfig:
         all_settings: dict[str, Any] | None = None
     ) -> None:
         """
-        :param name: Unique identifier for this language server client.
+        :param name: Unique identifier for this language server.
         :param selector: Sublime Text scope selector that determines which views this client is active for (e.g.
             `"source.python"`).
         :param priority_selector: Selector used when multiple clients match the same view; the highest-scoring client

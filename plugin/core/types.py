@@ -732,8 +732,8 @@ class ClientConfig:
     file types it applies to, transport options, and LSP-level options such as initialization options and capability
     overrides.
 
-    All root configuration keys from corresponding server configuration are accessible through attribute
-    access (`config.foo`).
+    All root configuration keys from corresponding server configuration (for example the backing LSP-*.sublime-settings
+    file) are accessible through attribute access (`.foo`).
     """
 
     def __init__(

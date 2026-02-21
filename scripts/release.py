@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 from typing import Generator
-from typing import List
-from typing import Optional
-from typing import Tuple
 import argparse
 import json
 import os
@@ -42,7 +40,7 @@ def put_message(fname: str, text: str) -> None:
         file.write(text)
 
 
-def build_messages_json(version_history: List[str]) -> None:
+def build_messages_json(version_history: list[str]) -> None:
     """Write the version history to the messages.json file."""
     output = os.path.join(PACKAGE_PATH, 'messages.json')
     with open(output, 'w+', encoding='utf-8') as file:
@@ -52,7 +50,7 @@ def build_messages_json(version_history: List[str]) -> None:
         file.write('\n')
 
 
-def version_history() -> List[str]:
+def version_history() -> list[str]:
     """Return a list of all releases."""
     def generator() -> Generator[str, None, None]:
         for filename in os.listdir(MESSAGE_PATH):
@@ -63,7 +61,7 @@ def version_history() -> List[str]:
     return sorted(tuple(generator()), key=parse_version)
 
 
-def parse_version(version: str) -> Tuple[int, int, int]:
+def parse_version(version: str) -> tuple[int, int, int]:
     """Convert filename to version tuple (major, minor, patch)."""
     match = re.match(
         r'(?:(?P<prefix>[^.-]+)\-)?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-.+)?', version)
@@ -80,7 +78,7 @@ def get_version_with_prefix(version: str) -> str:
     return version
 
 
-def git(*args: str) -> Optional[str]:
+def git(*args: str) -> str | None:
     """Run git command within current package path."""
     if os.name == 'nt':
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
@@ -102,14 +100,14 @@ def commit_release(version: str) -> None:
     git('tag', '-a', '-m', commit_message, get_version_with_prefix(version))
 
 
-def build_release(args: argparse.Namespace) -> None:
+def build_release(_: argparse.Namespace) -> None:
     """Build the new release locally."""
     history = version_history()
     version = history[-1]
     put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
     if PYTHON_VERSION_PATH:
         version_tuple = parse_version(version)
-        put_message(PYTHON_VERSION_PATH, f'__version__ = {version_tuple}\n')
+        put_message(PYTHON_VERSION_PATH, f'from __future__ import annotations\n\n__version__ = {version_tuple}\n')
     build_messages_json(history)
     commit_release(version)
     print("Release %s created!" % version)

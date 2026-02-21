@@ -759,7 +759,7 @@ class ClientConfig:
     ) -> None:
         """
         :param name: Unique identifier for this language server.
-        :param selector: Sublime Text scope selector that determines which views this client is active for (e.g.
+        :param selector: Sublime Text scope selector that determines which views this server is active for (e.g.
             `"source.python"`).
         :param priority_selector: Selector used when multiple clients match the same view; the highest-scoring client
             takes precedence. Falls back to `selector` when not provided.

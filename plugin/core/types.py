@@ -832,7 +832,7 @@ class ClientConfig:
         Plugin-defined defaults are read from `file` (a resource path to the plugin's `.sublime-settings` file) and user
         overrides are layered on top from `s`.
 
-        :param name: Unique client name.
+        :param name: Unique server name.
         :param s: The resolved `sublime.Settings` object for this client.
         :param file: Resource path to the base `.sublime-settings` file shipped with the LSP plugin (e.g.
             `"Packages/LSP-pyright/LSP-pyright.sublime-settings"`).

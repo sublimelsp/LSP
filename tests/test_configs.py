@@ -135,7 +135,6 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertIn("unknown", config)
         self.assertNotIn("else", config)
         self.assertEqual(config.unknown, settings['unknown'])
-        self.assertEqual(config['unknown'], settings['unknown'])
 
     def test_shallow_merges_overrides_for_unknown_root_keys(self):
         settings = {
@@ -160,7 +159,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("test", settings)
         self.assertIsInstance(config.settings, DottedDict)
 
-    def test_subscription_access_only_exposes_unknown_keys(self):
+    def test_does_not_have_subscription_access(self):
         settings = {
             "settings": {
                 "setting1": 1
@@ -171,9 +170,8 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         config = read_client_config("test", settings)
         self.assertIn('settings', config)
-        self.assertIsInstance(config['settings'], DottedDict)
         self.assertIn('unknown', config)
-        self.assertEqual(config['unknown'], settings['unknown'])
+        self.assertRaises(TypeError, lambda: config['unknown'])
 
     def test_does_not_expose_internal_properties(self):
         settings = {
@@ -181,7 +179,6 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         config = read_client_config("test", settings)
         self.assertNotIn('_all_settings', config)
-        self.assertRaises(KeyError, lambda: config['_all_settings'])
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):

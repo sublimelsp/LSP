@@ -769,7 +769,7 @@ class ClientConfig:
             host a TCP server (the language server connects to LSP rather than the other way around); `-1` picks any
             free port, and `-N` binds to port `N`.
         :param auto_complete_selector: Scope selector that restricts when auto-complete suggestions are shown. `None`
-             means that the default Sublime Text's value is used.
+             means that the value from the Sublime Text setting of the same name is used.
         :param enabled: Whether this client is enabled.
         :param initialization_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
         :param settings: Server-specific settings sent via `workspace/didChangeConfiguration`.

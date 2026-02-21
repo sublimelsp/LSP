@@ -1063,9 +1063,9 @@ class ClientConfig:
     def is_disabled_capability(self, capability_path: str) -> bool:
         """Return `True` if the given capability has been disabled in the config.
 
-        Walks :attr:`disabled_capabilities` along `capability_path` (a string such as `"hoverProvider"`). A
-        capability is considered disabled when the value at that path is `True`, or an empty dict (leaf node with no
-        sub-keys).
+        Walks :attr:`disabled_capabilities` along `capability_path` (a string such as `"hoverProvider"` or dotted string
+        like `textDocumentSync.didOpen`). A capability is considered disabled when the value at that path is `True`, or
+        an empty dict (leaf node with no sub-keys).
 
         :param capability_path: Dotted capability path to check.
         """

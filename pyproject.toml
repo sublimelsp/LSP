@@ -49,6 +49,7 @@ force-single-line = true
 from-first = true
 no-sections = true
 order-by-type = false
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "plugin/core/typing.py" = ["F401"]

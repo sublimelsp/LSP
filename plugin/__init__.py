@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .api import notification_handler
 from .api import request_handler
 from .core.collections import DottedDict

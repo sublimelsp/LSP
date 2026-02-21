@@ -987,7 +987,7 @@ class ClientConfig:
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
-        """Update the view status bar entry for this client.
+        """Update the view status bar entry for this server.
 
         Shows `"<name> (<message>)"` when `message` is non-empty, or just `"<name>"` otherwise. Does nothing (and erases
         any existing entry) when `show_view_status` is disabled in `LSP.sublime-settings`.

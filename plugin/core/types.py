@@ -1002,7 +1002,7 @@ class ClientConfig:
             self.erase_view_status(view)
 
     def erase_view_status(self, view: sublime.View) -> None:
-        """Remove this client's entry from the view's status bar.
+        """Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """

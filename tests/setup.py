@@ -94,7 +94,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         open_view = window.find_open_file(filename)
         yield from close_test_view(open_view)
         cls.config = cls.get_stdio_test_config()
-        cls.config.init_options.set("serverResponse", server_capabilities)
+        cls.config.initialization_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
         cls.wm = windows.lookup(window)
         cls.view = window.open_file(filename)

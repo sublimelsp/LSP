@@ -26,6 +26,7 @@ from typing import Optional
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+from typing_extensions import deprecated
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -725,14 +726,14 @@ class TransportConfig:
 
 
 class ClientConfig:
-    """Represents the configuration for an LSP client (language server).
+    """Represents the configuration for a language server.
 
     Holds all settings needed to start and communicate with a language server, including the command to launch it, the
     file types it applies to, transport options, and LSP-level options such as initialization options and capability
     overrides.
 
-    All configuration keys are also accessible through attribute access (`config.foo`) or subscription
-    access (`config["foo"]`).
+    All root configuration keys from corresponding server configuration are accessible through attribute
+    access (`config.foo`).
     """
 
     def __init__(
@@ -745,7 +746,7 @@ class ClientConfig:
         tcp_port: int | None = None,
         auto_complete_selector: str | None = None,
         enabled: bool = True,
-        init_options: DottedDict | None = None,
+        initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
         env: dict[str, str | list[str]] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
@@ -770,7 +771,7 @@ class ClientConfig:
         :param auto_complete_selector: Scope selector that restricts when auto-complete suggestions are shown. `None`
              means that the default Sublime Text's value is used.
         :param enabled: Whether this client is enabled.
-        :param init_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
+        :param initialization_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
         :param settings: Server-specific settings sent via `workspace/didChangeConfiguration`.
         :param env: Additional environment variables for the server process. A list value for the special `"PATH"` key
             is joined with `os.pathsep` and prepended to the existing `PATH`.
@@ -799,7 +800,7 @@ class ClientConfig:
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.enabled = enabled
-        self.init_options = init_options or DottedDict()
+        self.initialization_options = initialization_options or DottedDict()
         self.settings = settings or DottedDict()
         self.env = env or {}
         self.experimental_capabilities = experimental_capabilities
@@ -811,6 +812,11 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._all_settings = all_settings or {}
+
+    @property
+    @deprecated('Use initialization_options instead')
+    def init_options(self) -> DottedDict:
+        return self.initialization_options
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
@@ -844,8 +850,8 @@ class ClientConfig:
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
-        init_options = DottedDict(base.get("initializationOptions", {}))
-        init_options.update(read_dict_setting(s, "initializationOptions", {}))
+        initialization_options = DottedDict(base.get("initializationOptions", {}))
+        initialization_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
@@ -863,7 +869,7 @@ class ClientConfig:
             auto_complete_selector=s.get("auto_complete_selector"),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
-            init_options=init_options,
+            initialization_options=initialization_options,
             settings=settings,
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
@@ -899,7 +905,7 @@ class ClientConfig:
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
             enabled=d.get("enabled", False),
-            init_options=DottedDict(d.get("initializationOptions")),
+            initialization_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
             experimental_capabilities=d.get("experimental_capabilities"),
@@ -937,8 +943,8 @@ class ClientConfig:
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             enabled=override.get("enabled", src_config.enabled),
-            init_options=DottedDict.from_base_and_override(
-                src_config.init_options, override.get("initializationOptions")),
+            initialization_options=DottedDict.from_base_and_override(
+                src_config.initialization_options, override.get("initializationOptions")),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
             env=override.get("env", src_config.env),
             experimental_capabilities=override.get(

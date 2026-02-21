@@ -55,7 +55,6 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.config2 = make_stdio_test_config()
         self.config2.initialization_options.assign(initialization_options)
         self.config2.name = "TEST-2"
-        self.config2._status_key = "lsp_TEST-2"
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)

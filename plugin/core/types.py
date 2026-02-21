@@ -15,6 +15,8 @@ from .logging import debug
 from .logging import set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
+from abc import ABC
+from abc import abstractmethod
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -51,6 +53,13 @@ FileWatcherConfig = TypedDict("FileWatcherConfig", {
     "events": Optional[List[FileWatcherEventType]],
     "ignores": Optional[List[str]],
 }, total=False)
+
+
+class ViewStatusListener(ABC):
+
+    @abstractmethod
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        ...
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -808,11 +817,11 @@ class ClientConfig:
         self.disabled_capabilities = disabled_capabilities or DottedDict()
         self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
-        self._status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._all_settings = all_settings or {}
+        self._view_status_listener: ViewStatusListener | None = None
 
     @property
     @deprecated('Use initialization_options instead')
@@ -986,6 +995,9 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
+    def set_view_status_listener(self, listener: ViewStatusListener) -> None:
+        self._view_status_listener = listener
+
     def set_view_status(self, view: sublime.View, message: str) -> None:
         """Update the view status bar entry for this server.
 
@@ -995,18 +1007,16 @@ class ClientConfig:
         :param view: The view whose status bar should be updated.
         :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
         """
-        if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = f"{self.name} ({message})" if message else self.name
-            view.set_status(self._status_key, status)
-        else:
-            self.erase_view_status(view)
+        if self._view_status_listener:
+            self._view_status_listener.on_view_status_changed(self.name, view, message)
 
     def erase_view_status(self, view: sublime.View) -> None:
         """Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """
-        view.erase_status(self._status_key)
+        if self._view_status_listener:
+            self._view_status_listener.on_view_status_changed(self.name, view, None)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         """Return `True` if this server should be active for the given view.

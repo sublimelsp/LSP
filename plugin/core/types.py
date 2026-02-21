@@ -761,7 +761,7 @@ class ClientConfig:
         :param name: Unique identifier for this language server.
         :param selector: Sublime Text scope selector that determines which views this server is active for (e.g.
             `"source.python"`).
-        :param priority_selector: Selector used when multiple clients match the same view; the highest-scoring client
+        :param priority_selector: Selector used when multiple servers match the same view; the highest-scoring server
             takes precedence. Falls back to `selector` when not provided.
         :param schemes: URI schemes this client handles (e.g. `["file", "untitled"]`). Defaults to `["file"]`.
         :param command: Command and arguments used to launch the language server process.

@@ -772,7 +772,8 @@ class ClientConfig:
              means that the value from the Sublime Text setting of the same name is used.
         :param enabled: Whether this server is enabled.
         :param initialization_options: `initializationOptions` sent to the server during the LSP `initialize` handshake.
-        :param settings: Server-specific settings sent via `workspace/didChangeConfiguration`.
+        :param settings: Server-specific settings sent via `workspace/didChangeConfiguration` and for
+            `workspace/configuration` requests.
         :param env: Additional environment variables for the server process. A list value for the special `"PATH"` key
             is joined with `os.pathsep` and prepended to the existing `PATH`.
         :param experimental_capabilities: Extra capabilities advertised to the server under

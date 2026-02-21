@@ -806,7 +806,7 @@ class ClientConfig:
         self.disabled_capabilities = disabled_capabilities or DottedDict()
         self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
-        self.status_key = f"lsp_{self.name}"
+        self._status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
@@ -1001,7 +1001,7 @@ class ClientConfig:
         """
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
             status = f"{self.name} ({message})" if message else self.name
-            view.set_status(self.status_key, status)
+            view.set_status(self._status_key, status)
         else:
             self.erase_view_status(view)
 
@@ -1010,7 +1010,7 @@ class ClientConfig:
 
         :param view: The view whose status bar entry should be cleared.
         """
-        view.erase_status(self.status_key)
+        view.erase_status(self._status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         """Return `True` if this client should be active for the given view.

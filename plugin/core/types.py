@@ -1009,7 +1009,7 @@ class ClientConfig:
         view.erase_status(self._status_key)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
-        """Return `True` if this client should be active for the given view.
+        """Return `True` if this server should be active for the given view.
 
         Delegates to the registered plugin's `is_applicable` method when one is available; otherwise checks that
         `scheme` is in :attr:`schemes` and that the view's syntax scope matches :attr:`selector`.

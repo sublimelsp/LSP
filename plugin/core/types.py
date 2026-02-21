@@ -875,7 +875,7 @@ class ClientConfig:
     def from_dict(cls, name: str, d: dict[str, Any]) -> ClientConfig:
         """Create a ClientConfig from a plain dictionary.
 
-        :param name: Unique client name.
+        :param name: Unique server name.
         :param d: Dictionary of configuration values.
         """
         disabled_capabilities = d.get("disabled_capabilities")

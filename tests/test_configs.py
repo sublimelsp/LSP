@@ -132,8 +132,6 @@ class ConfigParsingTests(DeferrableTestCase):
             },
         }
         config = read_client_config("test", settings)
-        self.assertIn("unknown", config)
-        self.assertNotIn("else", config)
         self.assertEqual(config.unknown, settings['unknown'])
 
     def test_shallow_merges_overrides_for_unknown_root_keys(self):
@@ -169,16 +167,9 @@ class ConfigParsingTests(DeferrableTestCase):
             },
         }
         config = read_client_config("test", settings)
-        self.assertIn('settings', config)
-        self.assertIn('unknown', config)
-        self.assertRaises(TypeError, lambda: config['unknown'])
-
-    def test_does_not_expose_internal_properties(self):
-        settings = {
-            "unknown": 1,
-        }
-        config = read_client_config("test", settings)
-        self.assertNotIn('_all_settings', config)
+        self.assertRaises(TypeError, lambda: 'settings' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: 'unknown' in config)  # pyright: ignore[reportOperatorIssue]
+        self.assertRaises(TypeError, lambda: config['unknown'])  # pyright: ignore[reportIndexIssue]
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):

@@ -824,9 +824,6 @@ class ClientConfig:
             return self._all_settings[name]
         raise AttributeError(name)
 
-    def __contains__(self, key: str) -> bool:
-        return key in self._all_settings
-
     @classmethod
     def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
         """Create a ClientConfig from a Sublime Text `Settings` object.

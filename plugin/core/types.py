@@ -807,7 +807,7 @@ class ClientConfig:
         self.command = command
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
-        self.enabled = enabled
+        self._enabled = enabled
         self.initialization_options = initialization_options or DottedDict()
         self.settings = settings or DottedDict()
         self.env = env or {}
@@ -826,6 +826,20 @@ class ClientConfig:
     @deprecated('Use initialization_options instead')
     def init_options(self) -> DottedDict:
         return self.initialization_options
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+        if enabled == self._enabled:
+            return
+        if self._settings_registration:
+            settings_basename = os.path.basename(self._settings_registration.settings_path)
+            self._settings_registration.settings.set("enabled", enabled)
+            sublime.save_settings(settings_basename)
+        self._enabled = enabled
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
@@ -1069,13 +1083,6 @@ class ClientConfig:
                 if mapped:
                     break
         return path
-
-    def toggle_enable(self, enable: bool) -> None:
-        if self._settings_registration:
-            settings_basename = os.path.basename(self._settings_registration.settings_path)
-            self._settings_registration.settings.set("enabled", enable)
-            sublime.save_settings(settings_basename)
-        self.enabled = enable
 
     def is_disabled_capability(self, capability_path: str) -> bool:
         """Return `True` if the given capability has been disabled in the config.

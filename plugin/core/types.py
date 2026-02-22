@@ -30,6 +30,7 @@ from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
+from typing_extensions import override
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -56,7 +57,7 @@ class FileWatcherConfig(TypedDict, total=False):
     ignores: NotRequired[list[str]]
 
 
-class ViewStatusListener(ABC):
+class ViewStatusHandler(ABC):
 
     @abstractmethod
     def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
@@ -746,6 +747,21 @@ class TransportConfig:
         self.listener_socket = listener_socket
 
 
+class DefaultViewStatusHandler(ViewStatusHandler):
+
+    @override
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        status_key = f"lsp_{config_name}"
+        if status is not None and sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
+            status = f"{config_name} ({status})" if status else config_name
+            view.set_status(status_key, status)
+        else:
+            view.erase_status(status_key)
+
+
+default_status_view_handler = DefaultViewStatusHandler()
+
+
 class ClientConfig:
     """Represents the configuration for a language server.
 
@@ -833,7 +849,7 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._all_settings = all_settings or {}
-        self._view_status_listener: ViewStatusListener | None = None
+        self._view_status_handler: ViewStatusHandler = default_status_view_handler
 
     @property
     @deprecated('Use initialization_options instead')
@@ -1007,8 +1023,8 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
-    def set_view_status_listener(self, listener: ViewStatusListener) -> None:
-        self._view_status_listener = listener
+    def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
+        self._view_status_handler = handler
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         """Update the view status bar entry for this server.
@@ -1019,16 +1035,14 @@ class ClientConfig:
         :param view: The view whose status bar should be updated.
         :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
         """
-        if self._view_status_listener:
-            self._view_status_listener.on_view_status_changed(self.name, view, message)
+        self._view_status_handler.on_view_status_changed(self.name, view, message)
 
     def erase_view_status(self, view: sublime.View) -> None:
         """Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """
-        if self._view_status_listener:
-            self._view_status_listener.on_view_status_changed(self.name, view, None)
+        self._view_status_handler.on_view_status_changed(self.name, view, None)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         """Return `True` if this server should be active for the given view.

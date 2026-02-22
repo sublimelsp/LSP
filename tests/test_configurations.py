@@ -33,7 +33,7 @@ class WindowConfigManagerTests(ViewTestCase):
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
         manager = WindowConfigManager(self.window, {})
-        self.assertEqual(list(manager.match_view(self.view, [])), [])
+        self.assertEqual(list(manager.match_view(self.view)), [])
 
     def test_with_single_config(self):
         self.assertIsNotNone(self.view)
@@ -46,7 +46,7 @@ class WindowConfigManagerTests(ViewTestCase):
             hidden=False
         ))
         self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
-        self.assertEqual(list(manager.match_view(self.view, [])), [TEST_CONFIG])
+        self.assertEqual(list(manager.match_view(self.view)), [TEST_CONFIG])
 
     def test_applies_project_settings(self):
         self.window.project_data = MagicMock(return_value={
@@ -66,7 +66,7 @@ class WindowConfigManagerTests(ViewTestCase):
             hidden=False
         ))
         self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
-        configs = list(manager.match_view(self.view, []))
+        configs = list(manager.match_view(self.view))
         self.assertEqual(len(configs), 1)
         config = configs[0]
         self.assertEqual(DISABLED_CONFIG.name, config.name)
@@ -86,4 +86,4 @@ class WindowConfigManagerTests(ViewTestCase):
         manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: (DISABLED_CONFIG, None)})
         # disables config in-memory
         manager.disable_config(DISABLED_CONFIG.name, only_for_session=True)
-        self.assertFalse(any(manager.match_view(self.view, [])))
+        self.assertFalse(any(manager.match_view(self.view)))

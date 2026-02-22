@@ -36,7 +36,7 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
-from .types import ViewStatusListener
+from .types import ViewStatusHandler
 from .url import parse_uri
 from .views import diagnostic_severity
 from .views import extract_variables
@@ -77,7 +77,7 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
         pass
 
 
-class WindowManager(Manager, WindowConfigChangeListener, ViewStatusListener):
+class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
@@ -243,7 +243,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusListener):
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
         config = ClientConfig.from_config(config, {})
-        config.set_view_status_listener(self)
+        config.set_view_status_handler(self)
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
             # debug('Already starting on this window:', config.name)
@@ -519,7 +519,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusListener):
         config_names = [config.name for config in configs]
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
 
-    # --- Implements ViewStatusListener --------------------------------------------------------------------------------
+    # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
 
     @override
     def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:

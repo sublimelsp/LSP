@@ -408,8 +408,8 @@ class SessionBuffer:
         selection = first_selection_region(view)
         if len(changes) == 0 or selection is None:
             return None
-        last_char = changes[-1].str[-1] if changes[-1].str else None
-        if last_char in self._on_type_formatting_trigger_characters:
+        if (last_str := changes[-1].str) and (last_char := last_str[-1]) \
+                and last_char in self._on_type_formatting_trigger_characters:
             return {
                 **text_document_position_params(view, selection.a),
                 'options': formatting_options(view.settings()),

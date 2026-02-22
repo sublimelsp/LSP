@@ -15,6 +15,7 @@ from .logging import debug
 from .logging import set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
+from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -22,11 +23,11 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
-from typing import Optional
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
+from typing_extensions import NotRequired
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -46,11 +47,11 @@ WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
-FileWatcherConfig = TypedDict("FileWatcherConfig", {
-    "patterns": List[str],
-    "events": Optional[List[FileWatcherEventType]],
-    "ignores": Optional[List[str]],
-}, total=False)
+
+class FileWatcherConfig(TypedDict, total=False):
+    patterns: list[str]
+    events: NotRequired[list[FileWatcherEventType]]
+    ignores: NotRequired[list[str]]
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -157,11 +158,22 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("_settings",)
+    __slots__ = ("_settings", "_settings_path")
 
-    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
+    def __init__(
+        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
+    ) -> None:
         self._settings = settings
-        settings.add_on_change("LSP", on_change)
+        self._settings_path = settings_path
+        settings.add_on_change("LSP", partial(on_change, self))
+
+    @property
+    def settings(self) -> sublime.Settings:
+        return self._settings
+
+    @property
+    def settings_path(self) -> str:
+        return self._settings_path
 
     def __del__(self) -> None:
         self._settings.clear_on_change("LSP")

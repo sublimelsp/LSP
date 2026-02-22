@@ -181,7 +181,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         super().__init__(view)
         weakself = weakref.ref(self)
 
-        def on_change() -> None:
+        def on_change(_: SettingsRegistration) -> None:
             nonlocal weakself
             this = weakself()
             if this is not None:
@@ -197,7 +197,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.set_uri(view_to_uri(view))
         self._auto_complete_triggered_manually = False
         self._change_count_on_last_save = -1
-        self._registration = SettingsRegistration(settings, on_change=on_change)
+        self._registration = SettingsRegistration(settings, '', on_change=on_change)
         self._completions_task: QueryCompletionsTask | None = None
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []

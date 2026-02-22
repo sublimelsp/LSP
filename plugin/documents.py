@@ -47,6 +47,7 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.url import view_to_uri
+from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
@@ -134,6 +135,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self) -> None:
         super().__init__()
         self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
+        self._last_action: ChangeEventAction = 'type'
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -143,18 +145,19 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         self.ids_to_listeners.pop(self.buffer.buffer_id, None)
         super().detach()
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed(self, changes: list[sublime.TextChange]) -> None:
         view = self.buffer.primary_view()
         if not view:
             return
         change_count = view.change_count()
         frozen_listeners = WeakSet(self.view_listeners)
 
-        def notify() -> None:
+        def notify(action: ChangeEventAction) -> None:
             for listener in list(frozen_listeners):
-                listener.on_text_changed_async(change_count, changes)
+                listener.on_text_changed_async(change_count, changes, action)
 
-        sublime.set_timeout_async(notify)
+        sublime.set_timeout_async(partial(notify, self._last_action))
+        self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
         for listener in list(self.view_listeners):
@@ -163,6 +166,15 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def on_revert_async(self) -> None:
         for listener in list(self.view_listeners):
             listener.revert_async()
+
+    def set_last_edit_action(self, action: ChangeEventAction) -> None:
+        self._last_action = action
+        # ST should have already scheduled text_change event internally so reseting it from a timeout ensures it's
+        # reset after the event was triggered and also in case the change event didn't trigger.
+        sublime.set_timeout(self._reset_last_edit_action)
+
+    def _reset_last_edit_action(self) -> None:
+        self._last_action = 'type'
 
     def __repr__(self) -> str:
         return f"TextChangeListener({self.buffer.buffer_id})"
@@ -358,10 +370,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return list(self._session_views.values())
 
     @requires_session
-    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_text_changed_async(change_count, changes)
+                sv.on_text_changed_async(change_count, changes, action)
         self._on_view_updated_async()
 
     def get_uri(self) -> DocumentUri:
@@ -595,6 +609,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
+        if command_name in ('paste', 'redo', 'undo'):
+            if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
+                text_change_listener.set_last_edit_action(command_name)
         return None
 
     @requires_session

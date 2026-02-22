@@ -8,6 +8,8 @@ from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
 from ..protocol import DocumentLink
+from ..protocol import DocumentOnTypeFormattingOptions
+from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHint
@@ -18,6 +20,7 @@ from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
@@ -28,7 +31,9 @@ from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.edit import apply_text_edits
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
@@ -42,6 +47,7 @@ from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
 from .core.url import normalize_uri
+from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -50,11 +56,14 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import entire_content_range
+from .core.views import first_selection_region
+from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
+from .core.views import text_document_position_params
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
@@ -64,7 +73,6 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Iterable
 from typing import List
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
@@ -99,11 +107,11 @@ class PendingChanges:
 
     __slots__ = ('version', 'changes')
 
-    def __init__(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def __init__(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes = list(changes)
 
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def update(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes.extend(changes)
 
@@ -349,8 +357,9 @@ class SessionBuffer:
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(self, view: sublime.View, change_count: int,
-                              changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, view: sublime.View, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
@@ -370,8 +379,13 @@ class SessionBuffer:
                 purge = True
             if purge:
                 self._cancel_pending_requests_async()
-                debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
-                          lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
+                if action == 'type' and (params := self._get_on_type_formatting_params_async(view, changes)):
+                    self.purge_changes_async(view)
+                    self.session.send_request_task(Request.onTypeFormatting(params, view)) \
+                        .then(partial(self._on_type_formatting_result_async, view, view.change_count()))
+                else:
+                    debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
+                              lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def _cancel_pending_requests_async(self) -> None:
         for identifier, pending_request in self._document_diagnostic_pending_requests.items():
@@ -381,6 +395,31 @@ class SessionBuffer:
         if self.semantic_tokens.pending_response:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
+
+    def _get_on_type_formatting_params_async(
+        self, view: sublime.View, changes: list[sublime.TextChange]
+    ) -> DocumentOnTypeFormattingParams | None:
+        selection = first_selection_region(view)
+        if len(changes) == 0 or selection is None:
+            return None
+        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
+        last_char = changes[-1].str[-1] if changes[-1].str else None
+        if capability and last_char and (
+            last_char == capability['firstTriggerCharacter'] or last_char in capability.get('moreTriggerCharacter', [])
+        ):
+            return {
+                **text_document_position_params(view, selection.a),
+                'options': formatting_options(view.settings()),
+                'ch': last_char,
+            }
+        return None
+
+    def _on_type_formatting_result_async(
+        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
+    ) -> None:
+        if version != view.change_count() or isinstance(result, Error):
+            return
+        apply_text_edits(view, result)
 
     def on_revert_async(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes

@@ -470,6 +470,9 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 ]
             }
         },
+        "onTypeFormatting": {
+            "dynamicRegistration": True
+        },
         "rename": {
             "dynamicRegistration": True,
             "prepareSupport": True,

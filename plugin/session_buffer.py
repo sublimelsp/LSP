@@ -568,8 +568,9 @@ class SessionBuffer:
     def _update_on_type_formatting_trigger_characters(self) -> None:
         capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
         if capability:
-            self._on_type_formatting_trigger_characters = set(capability['firstTriggerCharacter'],
-                                                              *capability.get('moreTriggerCharacter', []))
+            self._on_type_formatting_trigger_characters = set(
+                (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            )
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):

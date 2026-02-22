@@ -6,6 +6,7 @@ from .api import LspPlugin
 from .api import notification_handler
 from .api import PluginContext
 from .api import register_plugin
+from .api import request_handler
 from .api import unregister_plugin
 from .core.collections import DottedDict
 from .core.css import css

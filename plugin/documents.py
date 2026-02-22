@@ -169,7 +169,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     def set_last_edit_action(self, action: ChangeEventAction) -> None:
         self._last_action = action
-        # ST should have already scheduled text_change event internally so reseting it from a timeout ensures it's
+        # ST should have already scheduled text_change event internally so resetting it from a timeout ensures it's
         # reset after the event was triggered and also in case the change event didn't trigger.
         sublime.set_timeout(self._reset_last_edit_action)
 

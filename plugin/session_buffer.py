@@ -382,7 +382,7 @@ class SessionBuffer:
                 if action == 'type' and (params := self._get_on_type_formatting_params_async(view, changes)):
                     self.purge_changes_async(view)
                     self.session.send_request_task(Request.onTypeFormatting(params, view)) \
-                        .then(partial(self._on_type_formatting_result_async, view, view.change_count()))
+                        .then(partial(self._on_type_formatting_result_async, view, change_count))
                 else:
                     debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                               lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)

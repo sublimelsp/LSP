@@ -1017,7 +1017,7 @@ class ClientConfig:
         :param view: The view to test.
         :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
         """
-        from .sessions import get_plugin
+        from ..api import get_plugin
         if plugin := get_plugin(self.name):
             return plugin.is_applicable(view, self)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):

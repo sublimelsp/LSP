@@ -420,9 +420,8 @@ class SessionBuffer:
     def _on_type_formatting_result_async(
         self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
     ) -> None:
-        if version != view.change_count() or isinstance(result, Error):
-            return
-        apply_text_edits(view, result)
+        if version == view.change_count() and not isinstance(result, Error):
+            apply_text_edits(view, result)
 
     def on_revert_async(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes

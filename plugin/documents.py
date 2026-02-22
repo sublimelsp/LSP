@@ -18,7 +18,6 @@ from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
-from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -69,7 +68,6 @@ from functools import wraps
 from os.path import basename
 from typing import Any
 from typing import Callable
-from typing import cast
 from typing import Generator
 from typing import Iterable
 from typing import Literal
@@ -846,19 +844,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
-    def _highlights_key(self, kind: DocumentHighlightKind, multiline: bool) -> str:
-        return "lsp_highlight_{}{}".format(DOCUMENT_HIGHLIGHT_KIND_NAMES[kind], "m" if multiline else "s")
+    def _highlights_key(self, kind: DocumentHighlightKind, *, multiline: bool) -> str:
+        return "lsp_highlight_{}{}".format(kind.name, "m" if multiline else "s")
 
     def _clear_highlight_regions(self) -> None:
-        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
-            self.view.erase_regions(self._highlights_key(kind, False))
-            self.view.erase_regions(self._highlights_key(kind, True))
+        for kind in DocumentHighlightKind:
+            self.view.erase_regions(self._highlights_key(kind, multiline=False))
+            self.view.erase_regions(self._highlights_key(kind, multiline=True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in [DocumentHighlightKind.Text, DocumentHighlightKind.Read, DocumentHighlightKind.Write]:
+        for kind in DocumentHighlightKind:
             regions: Iterable[sublime.Region] = itertools.chain(
-                self.view.get_regions(self._highlights_key(kind, False)),
-                self.view.get_regions(self._highlights_key(kind, True))
+                self.view.get_regions(self._highlights_key(kind, multiline=False)),
+                self.view.get_regions(self._highlights_key(kind, multiline=True))
             )
             if any(region.contains(point) for region in regions):
                 return True
@@ -870,7 +868,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         point = region.b
         if session := self.session_async("documentHighlightProvider", point):
-            params = cast(DocumentHighlightParams, text_document_position_params(self.view, point))
+            params: DocumentHighlightParams = {**text_document_position_params(self.view, point)}
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
@@ -894,7 +892,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if not regions:
                     continue
                 kind, multiline = tup
-                key = self._highlights_key(kind, multiline)
+                key = self._highlights_key(kind, multiline=multiline)
                 flags = flags_multi if multiline else flags_single
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 

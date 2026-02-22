@@ -191,14 +191,6 @@ CODE_ACTION_KINDS: dict[CodeActionKind, SublimeKind] = {
     CodeActionKind.Source: KIND_SOURCE
 }
 
-
-DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
-
 MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
     MessageType.Error: "ERROR",
     MessageType.Warning: "WARNING",

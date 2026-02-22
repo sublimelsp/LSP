@@ -1035,9 +1035,9 @@ class ClientConfig:
         :param view: The view to test.
         :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
         """
+        from ..api import AbstractPlugin
+        from ..api import get_plugin
         from ..api import PluginContext
-        from .sessions import AbstractPlugin
-        from .sessions import get_plugin
         if plugin := get_plugin(self.name):
             if issubclass(plugin, AbstractPlugin):
                 return plugin.is_applicable(view, self)

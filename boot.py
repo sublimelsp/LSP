@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from .plugin.api import AbstractPlugin
+from .plugin.api import g_plugins
 from .plugin.api import LspPlugin
+from .plugin.api import register_plugin
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -24,8 +27,6 @@ from .plugin.core.registry import LspOpenLocationCommand
 from .plugin.core.registry import LspPrevDiagnosticCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
-from .plugin.core.sessions import AbstractPlugin
-from .plugin.core.sessions import register_plugin
 from .plugin.core.settings import client_configs
 from .plugin.core.settings import load_settings
 from .plugin.core.settings import unload_settings
@@ -193,9 +194,7 @@ def _register_all_plugins() -> None:
 
 
 def _unregister_all_plugins() -> None:
-    from LSP.plugin.core.sessions import _plugins
-
-    _plugins.clear()
+    g_plugins.clear()
     client_configs.external.clear()
     client_configs.all.clear()
 

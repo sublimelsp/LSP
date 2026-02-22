@@ -8,6 +8,8 @@ from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
+from ..api import AbstractPlugin
+from ..api import get_plugin
 from ..api import LspPlugin
 from ..api import PluginContext
 from .configurations import RETRY_COUNT_TIMEDELTA
@@ -26,9 +28,7 @@ from .panels import PanelName
 from .promise import Promise
 from .protocol import Error
 from .protocol import Point
-from .sessions import AbstractPlugin
 from .sessions import AbstractViewListener
-from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session

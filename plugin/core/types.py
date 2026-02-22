@@ -792,7 +792,7 @@ class ClientConfig:
             `"workspace"` shows them for the whole workspace.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
-        :param settings_registration: The SettingsRegistration instance holding resource path and `Settings` instance
+        :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
             for the plugin settings.
         :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.

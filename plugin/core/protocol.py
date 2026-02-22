@@ -203,6 +203,12 @@ class Request(Generic[P, R]):
         return Request('inlayHint/resolve', params, view)
 
     @classmethod
+    def onTypeFormatting(
+        cls, params: DocumentOnTypeFormattingParams, view: sublime.View
+    ) -> Request[DocumentOnTypeFormattingParams, list[TextEdit] | None]:
+        return Request('textDocument/onTypeFormatting', params, view)
+
+    @classmethod
     def rename(
         cls, params: RenameParams, view: sublime.View, *, progress: bool = False
     ) -> Request[RenameParams, WorkspaceEdit | None]:

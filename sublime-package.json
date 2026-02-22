@@ -429,6 +429,11 @@
               "default": 2000,
               "deprecationMessage": "Use the \"on_save_task_timeout_ms\" setting instead."
             },
+            "format_on_type": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Enable on-type-formatting functionality that allows a language server to format parts of the document during typing."
+            },
             "on_save_task_timeout_ms": {
               "type": "integer",
               "default": 2000,

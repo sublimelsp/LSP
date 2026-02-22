@@ -58,6 +58,7 @@ from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterable
+from typing import Literal
 from typing import Tuple
 import html
 import itertools
@@ -69,6 +70,7 @@ import sublime
 import sublime_plugin
 import tempfile
 
+ChangeEventAction = Literal['cut', 'paste', 'redo', 'undo', 'type']
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
@@ -289,7 +291,7 @@ def render_text_change(change: sublime.TextChange) -> TextDocumentContentChangeE
 
 
 def did_change_text_document_params(
-    view: sublime.View, version: int, changes: Iterable[sublime.TextChange] | None = None
+    view: sublime.View, version: int, changes: list[sublime.TextChange] | None = None
 ) -> DidChangeTextDocumentParams:
     content_changes: list[TextDocumentContentChangeEvent] = []
     result: DidChangeTextDocumentParams = {
@@ -332,7 +334,7 @@ def did_open(view: sublime.View, language_id: str) -> Notification[DidOpenTextDo
 
 
 def did_change(view: sublime.View, version: int,
-               changes: Iterable[sublime.TextChange] | None = None) -> Notification[DidChangeTextDocumentParams]:
+               changes: list[sublime.TextChange] | None = None) -> Notification[DidChangeTextDocumentParams]:
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 

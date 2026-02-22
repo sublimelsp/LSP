@@ -13,22 +13,22 @@ reportUnusedCallResult = "none"
 stubPath = "./stubs"
 
 [tool.tox]
-env_list = ["py3"]
+legacy_tox_ini = """
+[tox]
+env_list = py3
 skipsdist = true
 
-[tool.tox.testenv]
-deps = [
-    "mypy==1.18.2",
-    "pyright==1.1.408",
-    "ruff==0.15.0",
-    "orjson==3.11.4",
-]
-commands = [
-    # mypy disabled for main code as it doesn't currently support cyclic definitions - https://github.com/python/mypy/issues/731
-    ["mypy", "stubs"],
-    ["pyright", "plugin", "stubs"],
-    ["ruff", "check"],
-]
+[testenv]
+deps =
+    mypy==1.18.2
+    pyright==1.1.408
+    ruff==0.15.0
+    orjson==3.11.4
+commands =
+    mypy stubs
+    pyright plugin stubs
+    ruff check
+"""
 
 [tool.ruff]
 exclude = [

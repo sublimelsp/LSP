@@ -46,7 +46,7 @@ class WindowConfigManager:
     def get_configs(self) -> list[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
 
-    def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
+    def match_view(self, view: sublime.View) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations where:
 
@@ -59,7 +59,7 @@ class WindowConfigManager:
                 return
             scheme = parse_uri(uri)[0]
             for config in self.all.values():
-                if (config.enabled or include_disabled) and config.match_view(view, scheme):
+                if config.enabled and config.match_view(view, scheme):
                     yield config
         except (IndexError, RuntimeError):
             pass

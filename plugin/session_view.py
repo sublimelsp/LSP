@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from ..protocol import Command
+from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
-from .core.constants import DOCUMENT_HIGHLIGHT_KIND_NAMES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
@@ -148,9 +148,9 @@ class SessionView:
         for key in range(1, 100):
             keys.append(f"lsp_semantic_{session_name}_{key}")
         if document_highlight_style in ("background", "fill"):
-            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
+            for kind in DocumentHighlightKind:
                 for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind}{mode}")
+                    keys.append(f"lsp_highlight_{kind.name}{mode}")
         if hover_highlight_style in ("background", "fill"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
@@ -165,9 +165,9 @@ class SessionView:
             for mode in line_modes:
                 keys.append(f"lsp{session_name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
-            for kind in DOCUMENT_HIGHLIGHT_KIND_NAMES.values():
+            for kind in DocumentHighlightKind:
                 for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind}{mode}")
+                    keys.append(f"lsp_highlight_{kind.name}{mode}")
         if hover_highlight_style in ("underline", "stippled"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:

@@ -191,14 +191,6 @@ CODE_ACTION_KINDS: dict[CodeActionKind, SublimeKind] = {
     CodeActionKind.Source: KIND_SOURCE
 }
 
-
-DOCUMENT_HIGHLIGHT_KIND_NAMES: dict[DocumentHighlightKind, str] = {
-    DocumentHighlightKind.Text: "text",
-    DocumentHighlightKind.Read: "read",
-    DocumentHighlightKind.Write: "write"
-}
-
-
 MESSAGE_TYPE_LEVELS: dict[MessageType, str] = {
     MessageType.Error: "ERROR",
     MessageType.Warning: "WARNING",
@@ -253,6 +245,8 @@ LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.cs": LanguageKind.CSharp,
     "source.dosbatch": LanguageKind.WindowsBat,
     "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
+    "source.git.commit": LanguageKind.GitCommit,
+    "source.git.rebase": LanguageKind.GitRebase,
     "source.js": LanguageKind.JavaScript,
     "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
     "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev

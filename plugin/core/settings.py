@@ -108,7 +108,7 @@ class ClientConfigs:
         self._notify_clients_listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
-        from .sessions import get_plugin
+        from ..api import get_plugin
         if plugin := get_plugin(config_name):
             plugin_settings, plugin_settings_name = plugin.configuration()
             settings_basename = os.path.basename(plugin_settings_name)

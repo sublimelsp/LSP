@@ -8,7 +8,6 @@ from ...protocol import CodeActionKind
 from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
-from ...protocol import ConfigurationItem
 from ...protocol import ConfigurationParams
 from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
@@ -72,6 +71,7 @@ from ...protocol import WorkspaceDocumentDiagnosticReport
 from ...protocol import WorkspaceEdit
 from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
+from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import notification_handler
 from ..api import request_handler
@@ -81,7 +81,6 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
-from .constants import ST_STORAGE_PATH
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
@@ -108,7 +107,6 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
-from .settings import client_configs
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import Transport
@@ -122,7 +120,6 @@ from .types import DocumentSelector_
 from .types import method2attr
 from .types import method_to_capability
 from .types import SemanticToken
-from .types import SettingsRegistration
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
 from .url import normalize_uri
@@ -132,7 +129,6 @@ from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
-from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABCMeta
@@ -164,7 +160,6 @@ import weakref
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
-    from .collections import DottedDict
     from .typing import StrEnum
 
 
@@ -893,7 +888,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class AbstractPlugin(APIHandler, metaclass=ABCMeta):
+class AbstractPlugin(APIHandler, ABC):
 
     @classmethod
     @abstractmethod
@@ -1214,19 +1209,18 @@ class AbstractPlugin(APIHandler, metaclass=ABCMeta):
         pass
 
 
-_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
+g_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
 
 
 def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
-    global _plugins
     name = plugin.name()
-    if name in _plugins:
+    if name in g_plugins:
         return
     try:
         settings, base_file = plugin.configuration()
         if client_configs.add_external_config(name, settings, base_file, notify_listener):
             on_change = partial(client_configs.update_external_config, name, settings, base_file)
-            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+            g_plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
         exception_log(f'Failed to register plugin "{name}"', ex)
 
@@ -1284,18 +1278,16 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    global _plugins
     name = plugin.name()
     try:
-        _plugins.pop(name, None)
+        g_plugins.pop(name, None)
         client_configs.remove_external_config(name)
     except Exception as ex:
         exception_log(f'Failed to unregister plugin "{name}"', ex)
 
 
 def get_plugin(name: str) -> type[AbstractPlugin] | None:
-    global _plugins
-    tup = _plugins.get(name, None)
+    tup = g_plugins.get(name, None)
     return tup[0] if tup else None
 
 

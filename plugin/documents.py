@@ -47,6 +47,7 @@ from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
+from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
@@ -844,19 +845,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
-    def _highlights_key(self, kind: DocumentHighlightKind, *, multiline: bool) -> str:
-        return "lsp_highlight_{}{}".format(kind.name, "m" if multiline else "s")
-
     def _clear_highlight_regions(self) -> None:
         for kind in DocumentHighlightKind:
-            self.view.erase_regions(self._highlights_key(kind, multiline=False))
-            self.view.erase_regions(self._highlights_key(kind, multiline=True))
+            self.view.erase_regions(document_highlight_key(kind, multiline=False))
+            self.view.erase_regions(document_highlight_key(kind, multiline=True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
         for kind in DocumentHighlightKind:
             regions: Iterable[sublime.Region] = itertools.chain(
-                self.view.get_regions(self._highlights_key(kind, multiline=False)),
-                self.view.get_regions(self._highlights_key(kind, multiline=True))
+                self.view.get_regions(document_highlight_key(kind, multiline=False)),
+                self.view.get_regions(document_highlight_key(kind, multiline=True))
             )
             if any(region.contains(point) for region in regions):
                 return True
@@ -892,7 +890,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 if not regions:
                     continue
                 kind, multiline = tup
-                key = self._highlights_key(kind, multiline=multiline)
+                key = document_highlight_key(kind, multiline=multiline)
                 flags = flags_multi if multiline else flags_single
                 self.view.add_regions(key, regions, scope=DOCUMENT_HIGHLIGHT_KIND_SCOPES[kind], flags=flags)
 

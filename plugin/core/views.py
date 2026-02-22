@@ -18,6 +18,7 @@ from ...protocol import DidOpenTextDocumentParams
 from ...protocol import DidSaveTextDocumentParams
 from ...protocol import DocumentColorParams
 from ...protocol import DocumentFormattingParams
+from ...protocol import DocumentHighlightKind
 from ...protocol import DocumentRangeFormattingParams
 from ...protocol import DocumentRangesFormattingParams
 from ...protocol import DocumentUri
@@ -878,3 +879,7 @@ def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
         return True
     kind_len = len(kind)
     return len(other_kind) > kind_len and other_kind.startswith(kind + '.')
+
+
+def document_highlight_key(kind: DocumentHighlightKind, *, multiline: bool) -> str:
+    return "lsp_highlight_{}{}".format(kind, "m" if multiline else "s")

@@ -16,6 +16,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import document_highlight_key
 from .core.views import make_command_link
 from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
@@ -149,8 +150,8 @@ class SessionView:
             keys.append(f"lsp_semantic_{session_name}_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DocumentHighlightKind:
-                for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind.name}{mode}")
+                keys.append(document_highlight_key(kind, multiline=True))
+                keys.append(document_highlight_key(kind, multiline=False))
         if hover_highlight_style in ("background", "fill"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
@@ -166,8 +167,8 @@ class SessionView:
                 keys.append(f"lsp{session_name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
             for kind in DocumentHighlightKind:
-                for mode in line_modes:
-                    keys.append(f"lsp_highlight_{kind.name}{mode}")
+                keys.append(document_highlight_key(kind, multiline=True))
+                keys.append(document_highlight_key(kind, multiline=False))
         if hover_highlight_style in ("underline", "stippled"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:

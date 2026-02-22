@@ -4,7 +4,6 @@ from .logging import debug
 from .logging import exception_log
 from .logging import printf
 from .types import ClientConfig
-from .types import SettingsRegistration
 from .url import parse_uri
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -29,9 +28,7 @@ class WindowConfigChangeListener(metaclass=ABCMeta):
 
 
 class WindowConfigManager:
-    def __init__(
-        self, window: sublime.Window, global_configs: dict[str, tuple[ClientConfig, SettingsRegistration | None]]
-    ) -> None:
+    def __init__(self, window: sublime.Window, global_configs: dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
         self._disabled_for_session: set[str] = set()
@@ -76,7 +73,7 @@ class WindowConfigManager:
         updated_configs: list[ClientConfig] = []
         if updated_config_name is None:
             self.all.clear()
-        for name, (config, _) in self._global_configs.items():
+        for name, config in self._global_configs.items():
             if updated_config_name and updated_config_name != name:
                 continue
             overrides = project_settings.pop(name, None)

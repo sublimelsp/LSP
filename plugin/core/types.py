@@ -759,6 +759,7 @@ class ClientConfig:
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "open_files",
         path_maps: list[PathMap] | None = None,
+        settings_registration: SettingsRegistration | None = None,
         all_settings: dict[str, Any] | None = None
     ) -> None:
         """
@@ -791,6 +792,8 @@ class ClientConfig:
             `"workspace"` shows them for the whole workspace.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
+        :param settings_registration: The SettingsRegistration instance holding resource path and `Settings` instance
+            for the plugin settings.
         :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
         """
@@ -816,6 +819,7 @@ class ClientConfig:
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
+        self._settings_registration = settings_registration
         self._all_settings = all_settings or {}
 
     @property
@@ -830,17 +834,17 @@ class ClientConfig:
         raise AttributeError(name)
 
     @classmethod
-    def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
+    def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
         """Create a ClientConfig from a Sublime Text `Settings` object.
 
-        Plugin-defined defaults are read from `file` (a resource path to the plugin's `.sublime-settings` file) and user
-        overrides are layered on top from `s`.
+        Plugin-defined defaults are read from a resource path to the plugin's `.sublime-settings` file) and user
+        overrides are layered on top from `Settings`.
 
         :param name: Unique server name.
-        :param s: The resolved `sublime.Settings` object for this client.
-        :param file: Resource path to the base `.sublime-settings` file shipped with the LSP plugin (e.g.
-            `"Packages/LSP-pyright/LSP-pyright.sublime-settings"`).
+        :param settings_registration: The `SettingsRegistration` object for this client.
         """
+        s = settings_registration.settings
+        file = settings_registration.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
@@ -872,6 +876,7 @@ class ClientConfig:
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
+            settings_registration=settings_registration,
             all_settings=s.to_dict()
         )
 
@@ -1063,6 +1068,12 @@ class ClientConfig:
                 if mapped:
                     break
         return path
+
+    def toggle_external_config(self, enable: bool) -> None:
+        if self._settings_registration:
+            settings_basename = os.path.basename(self._settings_registration.settings_path)
+            self._settings_registration.settings.set("enabled", enable)
+            sublime.save_settings(settings_basename)
 
     def is_disabled_capability(self, capability_path: str) -> bool:
         """Return `True` if the given capability has been disabled in the config.

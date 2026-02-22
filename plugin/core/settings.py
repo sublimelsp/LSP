@@ -12,7 +12,6 @@ from abc import abstractmethod
 from functools import partial
 from os.path import basename
 import json
-import os
 import sublime
 
 
@@ -30,8 +29,8 @@ class LspSettingsChangeListener(metaclass=ABCMeta):
 class ClientConfigs:
 
     def __init__(self) -> None:
-        self.all: dict[str, tuple[ClientConfig, SettingsRegistration | None]] = {}
-        self.external: dict[str, tuple[ClientConfig, SettingsRegistration]] = {}
+        self.all: dict[str, ClientConfig] = {}
+        self.external: dict[str, ClientConfig] = {}
         self._listener: LspSettingsChangeListener | None = None
         self._clients_hash: int | None = None
 
@@ -45,7 +44,7 @@ class ClientConfigs:
 
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
-        self.all[config.name] = (config, None)
+        self.all[config.name] = config
         self._notify_clients_listener()
 
     def remove_for_testing(self, config: ClientConfig) -> None:
@@ -56,10 +55,10 @@ class ClientConfigs:
         if name in self.external:
             return False
         settings = sublime.load_settings(basename(settings_path))
-        config = ClientConfig.from_sublime_settings(name, settings, settings_path)
-        entry = (config, SettingsRegistration(settings, settings_path, partial(self._update_external_config, name)))
-        self.external[name] = entry
-        self.all[name] = entry
+        registration = SettingsRegistration(settings, settings_path, partial(self._update_external_config, name))
+        config = ClientConfig.from_sublime_settings(name, registration)
+        self.external[name] = config
+        self.all[name] = config
         if notify_listener:
             size = len(self.external)
             # A debounced call is necessary here because of the following problem.
@@ -83,15 +82,13 @@ class ClientConfigs:
 
     def _update_external_config(self, name: str, settings_registration: SettingsRegistration) -> None:
         try:
-            config = ClientConfig.from_sublime_settings(
-                name, settings_registration.settings, settings_registration.settings_path)
+            config = ClientConfig.from_sublime_settings(name, settings_registration)
         except OSError:
             # The plugin is about to be disabled (for example by Package Control for an upgrade), let unregister_plugin
             # handle this
             return
-        entry = (config, settings_registration)
-        self.external[name] = entry
-        self.all[name] = entry
+        self.external[name] = config
+        self.all[name] = config
         self._notify_clients_listener(name)
 
     def update_configs(self) -> None:
@@ -107,19 +104,17 @@ class ClientConfigs:
         clients = DottedDict(read_dict_setting(settings_obj, "default_clients", {}))
         clients.update(clients_dict)
         self.all.clear()
-        self.all.update({name: (ClientConfig.from_dict(name, d), None) for name, d in clients.get().items()})
+        self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)
-        debug("enabled configs:", ", ".join(sorted(c.name for (c, _) in self.all.values() if c.enabled)))
-        debug("disabled configs:", ", ".join(sorted(c.name for (c, _) in self.all.values() if not c.enabled)))
+        debug("enabled configs:", ", ".join(sorted(c.name for c in self.all.values() if c.enabled)))
+        debug("disabled configs:", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
         self._notify_clients_listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from ..api import get_plugin
         if get_plugin(config_name):
-            config, settings_registration = self.external[config_name]
-            settings_basename = os.path.basename(settings_registration.settings_path)
-            settings_registration.settings.set("enabled", is_enabled)
-            sublime.save_settings(settings_basename)
+            config = self.external[config_name]
+            config.toggle_external_config(is_enabled)
             return
         settings = sublime.load_settings("LSP.sublime-settings")
         clients = settings.get("clients")

@@ -135,7 +135,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self) -> None:
         super().__init__()
         self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
-        self._last_action: ChangeEventAction = 'type'
+        self._last_edit_action: ChangeEventAction = 'type'
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -156,7 +156,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
             for listener in list(frozen_listeners):
                 listener.on_text_changed_async(change_count, changes, action)
 
-        sublime.set_timeout_async(partial(notify, self._last_action))
+        sublime.set_timeout_async(partial(notify, self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -168,13 +168,13 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
             listener.revert_async()
 
     def set_last_edit_action(self, action: ChangeEventAction) -> None:
-        self._last_action = action
+        self._last_edit_action = action
         # ST should have already scheduled text_change event internally so resetting it from a timeout ensures it's
         # reset after the event was triggered and also in case the change event didn't trigger.
         sublime.set_timeout(self._reset_last_edit_action)
 
     def _reset_last_edit_action(self) -> None:
-        self._last_action = 'type'
+        self._last_edit_action = 'type'
 
     def __repr__(self) -> str:
         return f"TextChangeListener({self.buffer.buffer_id})"

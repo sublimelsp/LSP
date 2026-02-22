@@ -158,25 +158,17 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("_settings", "_settings_path")
+    __slots__ = ("settings", "settings_path")
 
     def __init__(
         self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
     ) -> None:
-        self._settings = settings
-        self._settings_path = settings_path
+        self.settings = settings
+        self.settings_path = settings_path
         settings.add_on_change("LSP", partial(on_change, self))
 
-    @property
-    def settings(self) -> sublime.Settings:
-        return self._settings
-
-    @property
-    def settings_path(self) -> str:
-        return self._settings_path
-
     def __del__(self) -> None:
-        self._settings.clear_on_change("LSP")
+        self.settings.clear_on_change("LSP")
 
 
 class DebouncerNonThreadSafe:

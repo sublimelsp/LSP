@@ -48,7 +48,7 @@ PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 
-class FileWatcherConfig(TypedDict, total=False):
+class FileWatcherConfig(TypedDict):
     patterns: list[str]
     events: NotRequired[list[FileWatcherEventType]]
     ignores: NotRequired[list[str]]

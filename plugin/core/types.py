@@ -953,6 +953,7 @@ class ClientConfig:
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
             path_maps=path_map_override if path_map_override else src_config.path_maps,
+            settings_registration=src_config._settings_registration,
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
@@ -1069,11 +1070,12 @@ class ClientConfig:
                     break
         return path
 
-    def toggle_external_config(self, enable: bool) -> None:
+    def toggle_enable(self, enable: bool) -> None:
         if self._settings_registration:
             settings_basename = os.path.basename(self._settings_registration.settings_path)
             self._settings_registration.settings.set("enabled", enable)
             sublime.save_settings(settings_basename)
+        self.enabled = enable
 
     def is_disabled_capability(self, capability_path: str) -> bool:
         """Return `True` if the given capability has been disabled in the config.

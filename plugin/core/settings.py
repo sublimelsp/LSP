@@ -114,13 +114,13 @@ class ClientConfigs:
         from ..api import get_plugin
         if get_plugin(config_name):
             config = self.external[config_name]
-            config.toggle_external_config(is_enabled)
+            config.toggle_enable(is_enabled)
             return
         settings = sublime.load_settings("LSP.sublime-settings")
         clients = settings.get("clients")
         if isinstance(clients, dict):
             config = clients.setdefault(config_name, {})
-            config["enabled"] = is_enabled
+            config.toggle_enable(is_enabled)
             settings.set("clients", clients)
             sublime.save_settings("LSP.sublime-settings")
 

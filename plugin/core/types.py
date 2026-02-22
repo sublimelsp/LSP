@@ -793,7 +793,7 @@ class ClientConfig:
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
         :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
-            for the plugin settings.
+            for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
         :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
         """

@@ -73,6 +73,7 @@ from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..api import AbstractPlugin
 from ..api import APIHandler
+from ..api import LspPlugin
 from ..api import notification_handler
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
@@ -159,6 +160,7 @@ import sublime
 import weakref
 
 if TYPE_CHECKING:
+    from ..api import PluginContext
     from .active_request import ActiveRequest
     from .typing import StrEnum
 
@@ -969,7 +971,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
+                 config: ClientConfig, plugin_data: tuple[type[AbstractPlugin | LspPlugin], PluginContext] | None,
+    ) -> None:
         self.transport: Transport | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -996,8 +999,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self._watcher_impl = get_file_watcher_implementation()
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
-        self._plugin_class = plugin_class
-        self._plugin: AbstractPlugin | None = None
+        self._plugin_data = plugin_data
+        self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
@@ -1022,7 +1025,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         return self._plugin is not None
 
     @property
-    def plugin(self) -> AbstractPlugin | None:
+    def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
@@ -1133,7 +1136,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
             return False
-        if self._plugin and self._plugin.should_ignore(view):  # TODO remove after next release
+        # TODO remove after next release
+        if isinstance(self._plugin, AbstractPlugin) and self._plugin.should_ignore(view):
             debug(view, "ignored by plugin", self._plugin.__class__.__name__)
             return False
         if scheme == "file":
@@ -1143,7 +1147,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return False
             elif not self.handles_path(file_name, inside_workspace):
                 return False
-        if self.config.match_view(view, scheme):
+        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
@@ -1265,8 +1269,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
+        if self._plugin_data:
+            if issubclass(self._plugin_data[0], LspPlugin):
+                self._plugin = self._plugin_data[0](weakref.ref(self), self._plugin_data[1])
+            else:
+                self._plugin = self._plugin_data[0](weakref.ref(self))
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             self._plugin.on_server_response_async('initialize', Response(-1, result))
@@ -1329,8 +1336,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
-        if self._plugin_class is not None:
-            if extra_vars := self._plugin_class.additional_variables():
+        if self._plugin_data:
+            if issubclass(self._plugin_data[0], LspPlugin):
+                if extra_vars := self._plugin_data[0].additional_variables(self._plugin_data[1]):
+                    variables.update(extra_vars)
+            elif extra_vars := self._plugin_data[0].additional_variables():
                 variables.update(extra_vars)
         return variables
 
@@ -1340,10 +1350,16 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     ) -> Promise[R | Error | None]:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task: PackagedTask[R | Error | None] = Promise.packaged_task()
-            promise, resolve = task
-            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                return promise
+            if isinstance(self._plugin, LspPlugin):
+                if promise := self._plugin.on_execute_command(command):
+                    return promise.then(lambda _: None)
+            else:
+                task: PackagedTask[R | Error | None] = Promise.packaged_task()
+                promise, resolve = task
+                if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
+                    return promise
+                else:
+                    resolve(None)
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
@@ -1434,7 +1450,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             return Promise.resolve(view)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
-            return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+            if isinstance(self._plugin, LspPlugin):
+                if promise := self._plugin.on_open_uri_async(uri):
+                    return promise.then(lambda sheet: sheet.view())
+            else:
+                return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
 
     def open_uri_async(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from .api import AbstractPlugin
 from .api import get_plugin
+from .api import PluginContext
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -506,16 +508,27 @@ class ServerTestRunner(TransportCallbacks):
             workspace = ProjectFolders(window)
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
             cwd = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
+            if plugin_class:
+                plugin_context = PluginContext(config, initiating_view, window, workspace_folders)
+                if issubclass(plugin_class, AbstractPlugin):
+                    if plugin_class.needs_update_or_installation():
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                else:
+                    plugin_class.install_async(plugin_context)
+                    additional_variables = plugin_class.additional_variables(plugin_context)
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                if issubclass(plugin_class, AbstractPlugin):
+                    cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                else:
+                    cannot_start_reason = plugin_class.can_start(plugin_context)
                 if cannot_start_reason:
                     raise Exception(f'Plugin.can_start() prevented the start due to: {cannot_start_reason}')
-                cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
+                if issubclass(plugin_class, AbstractPlugin):
+                    cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
+                else:
+                    cwd = plugin_class.on_pre_start(plugin_context)
             if not cwd and workspace_folders:
                 cwd = workspace_folders[0].path
             transport_config = config.resolve_transport_config(variables)

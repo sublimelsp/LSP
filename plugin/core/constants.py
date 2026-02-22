@@ -29,6 +29,7 @@ ST_INSTALLED_PACKAGES_PATH = sublime.installed_packages_path()
 ST_PACKAGES_PATH = sublime.packages_path()
 ST_PLATFORM = sublime.platform()
 ST_VERSION = int(sublime.version())
+# TODO: Convert to `Path` once `AbstractPlugin` is removed.
 ST_STORAGE_PATH = join(dirname(ST_CACHE_PATH), "Package Storage")
 """
 The "Package Storage" is a way to store server data without influencing the

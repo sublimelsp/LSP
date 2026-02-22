@@ -12,29 +12,39 @@ from .core.protocol import Response
 from .core.settings import client_configs
 from .core.types import ClientConfig
 from .core.types import method2attr
-from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
-from functools import partial
 from functools import wraps
+from pathlib import Path
 from typing import Any
 from typing import Callable
+from typing import final
 from typing import TYPE_CHECKING
+from typing import TypedDict
 from typing import TypeVar
 from typing_extensions import deprecated
 import inspect
 import sublime
 
 if TYPE_CHECKING:
+    from ..protocol import ConfigurationItem
+    from ..protocol import DocumentUri
+    from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
     from .core.promise import Promise
+    from .core.protocol import Notification
+    from .core.protocol import Request
     from .core.sessions import Session
-    from plugin.core.sessions import SessionBufferProtocol
-    from plugin.core.sessions import SessionViewProtocol
+    from .core.sessions import SessionBufferProtocol
+    from .core.sessions import SessionViewProtocol
+    from .core.types import ClientConfig
+    from .core.views import MarkdownLangMap
+    from .core.workspace import WorkspaceFolder
+    from weakref import ref
     import weakref
 
 __all__ = [
@@ -50,10 +60,10 @@ P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 
 
-g_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
+g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 
-def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
+def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
 
@@ -98,20 +108,23 @@ def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) 
         _register_plugin_impl(plugin, notify_listener)
 
 
-def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -> None:
-    name = plugin.name()
+def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool) -> None:
+    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.__module__.split('.')[0]
     if name in g_plugins:
         return
     try:
-        settings, base_file = plugin.configuration()
-        if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = partial(client_configs.update_external_config, name, settings, base_file)
-            g_plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+        if issubclass(plugin, AbstractPlugin):
+            _, settings_path = plugin.configuration()
+        else:
+            plugin.plugin_storage_path = Path(ST_STORAGE_PATH, name)
+            settings_path = f"Packages/{name}/{name}.sublime-settings"
+        if client_configs.add_external_config(name, settings_path, notify_listener):
+            g_plugins[name] = plugin
     except Exception as ex:
         exception_log(f'Failed to register plugin "{name}"', ex)
 
 
-def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
+def unregister_plugin(plugin: type[AbstractPlugin | LspPlugin]) -> None:
     """
     Unregister an LSP plugin in LSP.
 
@@ -119,7 +132,10 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
-    name = plugin.name()
+    if issubclass(plugin, AbstractPlugin):
+        name = plugin.name()
+    else:
+        name = plugin.__module__.split('.')[0]
     try:
         g_plugins.pop(name, None)
         client_configs.remove_external_config(name)
@@ -127,9 +143,12 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
         exception_log(f'Failed to unregister plugin "{name}"', ex)
 
 
-def get_plugin(name: str) -> type[AbstractPlugin] | None:
-    tup = g_plugins.get(name, None)
-    return tup[0] if tup else None
+def get_plugin(name: str) -> type[AbstractPlugin | LspPlugin] | None:
+    return g_plugins.get(name)
+
+
+class HandleUpdateOrInstallationParams(TypedDict):
+    set_installing_status: Callable[[], None]
 
 
 class APIHandler:
@@ -198,6 +217,248 @@ def request_handler(
         return wrapper
 
     return decorator
+
+
+@final
+class PluginContext:
+    def __init__(
+        self,
+        configuration: ClientConfig,
+        initiating_view: sublime.View,
+        window: sublime.Window,
+        workspace_folders: list[WorkspaceFolder]
+    ) -> None:
+        self.configuration = configuration
+        self.initiating_view = initiating_view
+        self.window = window
+        self.workspace_folders = workspace_folders
+
+
+class LspPlugin:
+
+    plugin_storage_path: Path = Path(ST_STORAGE_PATH)  # Path is updated on registering the plugin class.
+    """
+    The storage path for the plugin.
+
+    Use this as your directory to install server files. Its path is '$DATA/Package Storage/[Package Name]'.
+    """
+
+    @classmethod
+    def is_applicable(cls, context: PluginContext) -> bool:
+        """
+        Determine whether the server should run on the given view.
+
+        The default implementation checks whether the URI scheme and the syntax scope match against the schemes and
+        selector from the settings file. You can override this method for example to dynamically evaluate the applicable
+        selector, or to ignore certain views even when those would match the static config. Please note that no document
+        syncronization messages (textDocument/didOpen, textDocument/didChange, textDocument/didClose, etc.) are sent to
+        the server for ignored views.
+
+        This method is called when the view gets opened. To manually trigger this method again, run the
+        `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
+
+        :param      context:           The plugin context
+        """
+        view = context.initiating_view
+        if (syntax := view.syntax()) and (selector := context.configuration.selector.strip()):
+            scheme, _ = parse_uri(uri_from_view(view))
+            return scheme in context.configuration.schemes and sublime.score_selector(syntax.scope, selector) > 0
+        return False
+
+    @classmethod
+    def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
+        """
+        In addition to the above variables, add more variables here to be expanded.
+        """
+        return None
+
+    @classmethod
+    def install_async(cls, context: PluginContext) -> None:
+        """Update or install the server binary if this plugin manages one. Called before server is started.
+
+        Make sure to call `params.set_installing_status()` before starting long-running operations to give user
+        a better feedback that something is happening.
+        """
+        return
+
+    @classmethod
+    def can_start(cls, context: PluginContext) -> str | None:
+        """
+        Determines ability to start. This is called after needs_update_or_installation and after install_or_update.
+        So you may assume that if you're managing your server binary, then it is already installed when this
+        classmethod is called.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      configuration:      The configuration
+
+        :returns:   A string describing the reason why we should not start a language server session, or None if we
+                    should go ahead and start a session.
+        """
+        return None
+
+    @classmethod
+    def on_pre_start(cls, context: PluginContext) -> str | None:
+        """
+        Callback invoked just before the language server subprocess is started. This is the place to do last-minute
+        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
+        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
+        language server should not care about the working directory.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders, you can modify these
+        :param      configuration:      The configuration, you can modify this one
+
+        :returns:   A desired working directory, or None if you don't care
+        """
+        return None
+
+    @classmethod
+    def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
+        """
+        Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
+        The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
+
+        See: https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map
+
+        :returns:   The markdown language map, or None
+        """
+        return None
+
+    def __init__(self, weaksession: ref[Session], context: PluginContext) -> None:
+        """
+        Constructs a new instance. Your instance is constructed after a response to the initialize request.
+
+        :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
+                                  self.weaksession(), but don't hold on to that reference.
+        """
+        self.weaksession: ref[Session] = weaksession
+        self.context: PluginContext = context
+
+    # ------------- OLD --------------
+
+    """
+    Inherit from this class to handle non-standard requests and notifications.
+    Given a request/notification, replace the non-alphabetic characters with an underscore, and prepend it with "m_".
+    This will be the name of your method.
+    For instance, to implement the non-standard eslint/openDoc request, define the Python method
+
+        def m_eslint_openDoc(self, params, request_id):
+            session = self.weaksession()
+            if session:
+                webbrowser.open_tab(params['url'])
+                session.send_response(Response(request_id, None))
+
+    To handle the non-standard eslint/status notification, define the Python method
+
+        def m_eslint_status(self, params):
+            pass
+
+    To understand how this works, see the __getattr__ method of the Session class.
+    """
+
+    def on_settings_changed(self, settings: DottedDict) -> None:
+        """
+        Override this method to alter the settings that are returned to the server for the
+        workspace/didChangeConfiguration notification and the workspace/configuration requests.
+
+        :param      settings:      The settings that the server should receive.
+        """
+        return
+
+    def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
+        """
+        Override to augment configuration returned for the workspace/configuration request.
+
+        :param      params:         A ConfigurationItem for which configuration is requested.
+        :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
+
+        :returns: The resolved configuration for given params.
+        """
+        return configuration
+
+    def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | None:
+        """
+        Intercept a command that is about to be sent to the language server.
+
+        :param    command:        The payload containing a "command" and optionally "arguments".
+
+        :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
+        """
+        return None
+
+    def on_pre_send_request_async(self, request_id: int, request: Request[Any, Any]) -> None:
+        """
+        Notifies about a request that is about to be sent to the language server.
+        This API is triggered on async thread.
+
+        :param    request_id:  The request ID.
+        :param    request:     The request object. The request params can be modified by the plugin.
+        """
+        return
+
+    def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
+        """
+        Notifies about a notification that is about to be sent to the language server.
+        This API is triggered on async thread.
+
+        :param    notification:  The notification object. The notification params can be modified by the plugin.
+        """
+        return
+
+    def on_server_response_async(self, method: str, response: Response[Any]) -> None:
+        """
+        Notifies about a response message that has been received from the language server.
+        Only successful responses are passed to this method.
+
+        :param    method:    The method of the request.
+        :param    response:  The response object to the request. The response.result field can be modified by the
+                             plugin, before it gets further handled by the LSP package.
+        """
+        return
+
+    def on_server_notification_async(self, notification: Notification[Any]) -> None:
+        """
+        Notifies about a notification message that has been received from the language server.
+
+        :param    notification:  The notification object.
+        """
+        return
+
+    def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
+        """
+        Called when a language server reports to open an URI. If you know how to handle this URI, then return a Promise
+        resolved with `sublime.Sheet` instance.
+        """
+        return None
+
+    def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
+        """
+        Called when the context of the session buffer has changed or a new buffer was opened.
+        """
+        return
+
+    def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
+        """
+        Called after the selection has been modified in a view (debounced).
+        """
+        return
+
+    def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
+        """
+        Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
+        any stored state or delete references to the session or plugin instance that would otherwise prevent the
+        instance from being garbage-collected.
+
+        If the session hasn't crashed, a shutdown message will be send immediately
+        after this method returns. In this case exit_code and exception are None.
+        If the session has crashed, the exit_code and an optional exception are provided.
+
+        This API is triggered on async thread.
+        """
+        return
 
 
 class AbstractPlugin(APIHandler, ABC):
@@ -274,16 +535,10 @@ class AbstractPlugin(APIHandler, ABC):
         :param      view:             The view
         :param      config:           The config
         """
-        if (syntax := view.syntax()) and (selector := cls.selector(view, config).strip()):
-            # TODO replace `cls.selector(view, config)` with `config.selector` after the next release
+        if (syntax := view.syntax()) and (selector := config.selector.strip()):
             scheme, _ = parse_uri(uri_from_view(view))
             return scheme in config.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False
-
-    @classmethod
-    @deprecated("Use `is_applicable(view, config)` instead.")
-    def selector(cls, view: sublime.View, config: ClientConfig) -> str:
-        return config.selector
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:

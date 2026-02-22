@@ -68,7 +68,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from close_test_view(open_view)
         self.view = self.window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-        self.assertTrue(self.wm.get_config_manager().match_view(self.view))
+        self.assertTrue(self.wm.get_config_manager().match_view(self.view, self.wm.workspace_folders))
         # self.init_view_settings()
         yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {

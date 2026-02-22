@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from .api import get_plugin
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
-from .core.sessions import get_plugin
 from .core.transports import create_transport
 from .core.transports import Transport
 from .core.transports import TransportCallbacks

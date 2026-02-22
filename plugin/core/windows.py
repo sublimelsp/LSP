@@ -36,6 +36,7 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
+from .types import ViewStatusHandler
 from .url import parse_uri
 from .views import diagnostic_severity
 from .views import extract_variables
@@ -50,6 +51,7 @@ from time import perf_counter
 from typing import Any
 from typing import Generator
 from typing import TYPE_CHECKING
+from typing_extensions import override
 from weakref import ref
 from weakref import WeakSet
 import functools
@@ -75,7 +77,7 @@ def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> Non
         pass
 
 
-class WindowManager(Manager, WindowConfigChangeListener):
+class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
@@ -96,6 +98,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
         self.total_warning_count = 0
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, _NO_DIAGNOSTICS_PLACEHOLDER, []))
         self.panel_manager.ensure_log_panel()
+        self._view_statuses: dict[int, dict[str, str]] = {}  # Mapping(ViewId -> Mapping(ConfigName -> StatusText))
         self._config_manager.add_change_listener(self)
 
     @property
@@ -240,6 +243,7 @@ class WindowManager(Manager, WindowConfigChangeListener):
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
         config = ClientConfig.from_config(config, {})
+        config.set_view_status_handler(self)
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
             # debug('Already starting on this window:', config.name)
@@ -514,6 +518,27 @@ class WindowManager(Manager, WindowConfigChangeListener):
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
         config_names = [config.name for config in configs]
         sublime.set_timeout_async(lambda: self.restart_sessions_async(config_names))
+
+    # --- Implements ViewStatusHandler ---------------------------------------------------------------------------------
+
+    @override
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        view_id = view.id()
+        if view_id not in self._view_statuses:
+            self._view_statuses[view_id] = {}
+        if status is None:
+            if config_name in self._view_statuses[view_id]:
+                del self._view_statuses[view_id][config_name]
+        else:
+            self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
+        if userprefs().show_view_status:
+            statuses = [status.replace('LSP-', '') for (_, status) in self._view_statuses[view_id].items()]
+            if statuses:
+                statuses.sort()
+                view_status = f"LSP: {' | '.join(statuses)}"
+                view.set_status('lsp-status', view_status)
+                return
+        view.erase_status('lsp-status')
 
 
 class WindowRegistry(LspSettingsChangeListener):

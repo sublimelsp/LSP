@@ -15,6 +15,9 @@ from .logging import debug
 from .logging import set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
+from abc import ABC
+from abc import abstractmethod
+from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -22,11 +25,12 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
-from typing import Optional
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
+from typing_extensions import NotRequired
+from typing_extensions import override
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -46,11 +50,18 @@ WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
-FileWatcherConfig = TypedDict("FileWatcherConfig", {
-    "patterns": List[str],
-    "events": Optional[List[FileWatcherEventType]],
-    "ignores": Optional[List[str]],
-}, total=False)
+
+class FileWatcherConfig(TypedDict, total=False):
+    patterns: list[str]
+    events: NotRequired[list[FileWatcherEventType]]
+    ignores: NotRequired[list[str]]
+
+
+class ViewStatusHandler(ABC):
+
+    @abstractmethod
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        ...
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -157,11 +168,22 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("_settings",)
+    __slots__ = ("_settings", "_settings_path")
 
-    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
+    def __init__(
+        self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
+    ) -> None:
         self._settings = settings
-        settings.add_on_change("LSP", on_change)
+        self._settings_path = settings_path
+        settings.add_on_change("LSP", partial(on_change, self))
+
+    @property
+    def settings(self) -> sublime.Settings:
+        return self._settings
+
+    @property
+    def settings_path(self) -> str:
+        return self._settings_path
 
     def __del__(self) -> None:
         self._settings.clear_on_change("LSP")
@@ -725,6 +747,21 @@ class TransportConfig:
         self.listener_socket = listener_socket
 
 
+class DefaultViewStatusHandler(ViewStatusHandler):
+
+    @override
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        status_key = f"lsp_{config_name}"
+        if status is not None and sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
+            status = f"{config_name} ({status})" if status else config_name
+            view.set_status(status_key, status)
+        else:
+            view.erase_status(status_key)
+
+
+default_status_view_handler = DefaultViewStatusHandler()
+
+
 class ClientConfig:
     """Represents the configuration for a language server.
 
@@ -808,11 +845,11 @@ class ClientConfig:
         self.disabled_capabilities = disabled_capabilities or DottedDict()
         self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
-        self._status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._all_settings = all_settings or {}
+        self._view_status_handler: ViewStatusHandler = default_status_view_handler
 
     @property
     @deprecated('Use initialization_options instead')
@@ -986,6 +1023,9 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
+    def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
+        self._view_status_handler = handler
+
     def set_view_status(self, view: sublime.View, message: str) -> None:
         """Update the view status bar entry for this server.
 
@@ -995,18 +1035,14 @@ class ClientConfig:
         :param view: The view whose status bar should be updated.
         :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
         """
-        if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = f"{self.name} ({message})" if message else self.name
-            view.set_status(self._status_key, status)
-        else:
-            self.erase_view_status(view)
+        self._view_status_handler.on_view_status_changed(self.name, view, message)
 
     def erase_view_status(self, view: sublime.View) -> None:
         """Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """
-        view.erase_status(self._status_key)
+        self._view_status_handler.on_view_status_changed(self.name, view, None)
 
     def match_view(self, view: sublime.View, scheme: str) -> bool:
         """Return `True` if this server should be active for the given view.

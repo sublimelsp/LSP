@@ -16,14 +16,14 @@ class GlobalConfigManagerTests(TestCase):
         self.assertNotIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_global_config(self):
-        window_mgr = WindowConfigManager(sublime.active_window(), {TEST_CONFIG.name: TEST_CONFIG})
+        window_mgr = WindowConfigManager(sublime.active_window(), {TEST_CONFIG.name: (TEST_CONFIG, None)})
         self.assertIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_override_config(self):
         self.assertTrue(TEST_CONFIG.enabled)
         win = sublime.active_window()
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
-        window_mgr = WindowConfigManager(win, {TEST_CONFIG.name: TEST_CONFIG})
+        window_mgr = WindowConfigManager(win, {TEST_CONFIG.name: (TEST_CONFIG, None)})
         self.assertFalse(list(window_mgr.all.values())[0].enabled)
 
 
@@ -38,7 +38,7 @@ class WindowConfigManagerTests(ViewTestCase):
     def test_with_single_config(self):
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
-        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
+        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: (TEST_CONFIG, None)})
         self.view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",
@@ -58,7 +58,7 @@ class WindowConfigManagerTests(ViewTestCase):
                 }
             }
         })
-        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
+        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: (DISABLED_CONFIG, None)})
         self.view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",
@@ -83,7 +83,7 @@ class WindowConfigManagerTests(ViewTestCase):
             }
         })
 
-        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
+        manager = WindowConfigManager(self.window, {DISABLED_CONFIG.name: (DISABLED_CONFIG, None)})
         # disables config in-memory
         manager.disable_config(DISABLED_CONFIG.name, only_for_session=True)
         self.assertFalse(any(manager.match_view(self.view)))

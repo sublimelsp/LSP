@@ -613,7 +613,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": cast(LSPAny, config.init_options.get_resolved(variables))
+        "initializationOptions": cast(LSPAny, config.initialization_options.get_resolved(variables))
     }
 
 

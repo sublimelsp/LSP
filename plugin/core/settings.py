@@ -9,7 +9,6 @@ from .types import Settings
 from .types import SettingsRegistration
 from abc import ABCMeta
 from abc import abstractmethod
-from typing import Any
 import json
 import os
 import sublime
@@ -177,11 +176,3 @@ def userprefs() -> Settings:
 
 def globalprefs() -> sublime.Settings:
     return _global_settings  # type: ignore
-
-
-def read_client_config(name: str, d: dict[str, Any]) -> ClientConfig:
-    return ClientConfig.from_dict(name, d)
-
-
-def update_client_config(external_config: ClientConfig, user_override_config: dict[str, Any]) -> ClientConfig:
-    return ClientConfig.from_config(external_config, user_override_config)

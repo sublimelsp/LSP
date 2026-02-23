@@ -747,6 +747,8 @@ class SessionBuffer:
             # Two-character pairs where the first character matches the trigger character.
             trigger_pairs = (pair for pair in AUTO_PAIR_ITEMS if pair[0] in trigger_characters)
             self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
+        else:
+            self._on_type_formatting_triggers = ()
 
     def _get_on_type_formatting_params_async(
         self, view: sublime.View, last_change: sublime.TextChange

@@ -395,6 +395,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             request_flags |= RequestFlags.INLAY_HINT
         if session == self.session_async('semanticTokensProvider', 0):
             request_flags |= RequestFlags.SEMANTIC_TOKENS
+        if session == self.session_async('documentOnTypeFormattingProvider', 0):
+            request_flags |= RequestFlags.ON_TYPE_FORMATTING
         return request_flags
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------

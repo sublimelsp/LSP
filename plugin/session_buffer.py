@@ -369,29 +369,28 @@ class SessionBuffer:
         if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
-        last_change = list(changes)[-1]
+        last_change = changes[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
-            # A special situation when changes externally. We receive two changes,
+            # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
-            pass
-        else:
-            purge = False
-            if self._pending_changes is None:
-                self._pending_changes = PendingChanges(change_count, changes)
-                purge = True
-            elif self._pending_changes.version < change_count:
-                self._pending_changes.update(change_count, changes)
-                purge = True
-            if purge:
-                self._cancel_pending_requests_async()
-                if action == 'type' and (params := self._get_on_type_formatting_params_async(view, changes)):
-                    self.purge_changes_async(view)
-                    self.session.send_request_task(Request.onTypeFormatting(params, view)) \
-                        .then(partial(self._on_type_formatting_result_async, view, change_count))
-                else:
-                    debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
-                              lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
+            return
+        purge = False
+        if self._pending_changes is None:
+            self._pending_changes = PendingChanges(change_count, changes)
+            purge = True
+        elif self._pending_changes.version < change_count:
+            self._pending_changes.update(change_count, changes)
+            purge = True
+        if purge:
+            self._cancel_pending_requests_async()
+            if action == 'type' and (params := self._get_on_type_formatting_params_async(view, last_change)):
+                self.purge_changes_async(view)
+                self.session.send_request_task(Request.onTypeFormatting(params, view)) \
+                    .then(partial(self._on_type_formatting_result_async, view, change_count))
+            else:
+                debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
+                          lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def _cancel_pending_requests_async(self) -> None:
         for identifier, pending_request in self._document_diagnostic_pending_requests.items():
@@ -403,12 +402,14 @@ class SessionBuffer:
             self.semantic_tokens.pending_response = None
 
     def _get_on_type_formatting_params_async(
-        self, view: sublime.View, changes: list[sublime.TextChange]
+        self, view: sublime.View, last_change: sublime.TextChange
     ) -> DocumentOnTypeFormattingParams | None:
-        selection = first_selection_region(view)
-        if len(changes) == 0 or selection is None:
+        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
-        if (last_str := changes[-1].str) and (last_char := last_str[-1]) \
+        selection = first_selection_region(view)
+        if selection is None:
+            return None
+        if (last_str := last_change.str) and (last_char := last_str[-1]) \
                 and last_char in self._on_type_formatting_trigger_characters:
             return {
                 **text_document_position_params(view, selection.a),

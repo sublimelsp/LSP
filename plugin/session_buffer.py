@@ -401,28 +401,6 @@ class SessionBuffer:
             self.session.cancel_request_async(self.semantic_tokens.pending_response)
             self.semantic_tokens.pending_response = None
 
-    def _get_on_type_formatting_params_async(
-        self, view: sublime.View, last_change: sublime.TextChange
-    ) -> DocumentOnTypeFormattingParams | None:
-        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
-            return None
-        selection = first_selection_region(view)
-        if selection is None:
-            return None
-        if trigger := next((t for t in self._on_type_formatting_triggers if last_change.str.endswith(t)), None):
-            return {
-                **text_document_position_params(view, selection.a),
-                'options': formatting_options(view.settings()),
-                'ch': trigger[0],
-            }
-        return None
-
-    def _on_type_formatting_result_async(
-        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
-    ) -> None:
-        if version == view.change_count() and not isinstance(result, Error):
-            apply_text_edits(view, result)
-
     def on_revert_async(self, view: sublime.View) -> None:
         self._pending_changes = None  # Don't bother with pending changes
         version = view.change_count()
@@ -564,14 +542,6 @@ class SessionBuffer:
     def _update_supported_commands(self) -> None:
         self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
-
-    def _update_on_type_formatting_triggers(self) -> None:
-        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
-        if capability:
-            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
-            # Two-character pairs where the first character matches the trigger character.
-            trigger_pairs = (pair for pair in AUTO_PAIR_ITEMS if pair[0] in trigger_characters)
-            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):
@@ -767,6 +737,38 @@ class SessionBuffer:
                 for identifier in get_diagnostics_identifiers(self.session, view)
             )
         return False
+
+    # --- textDocument/onTypeFormatting --------------------------------------------------------------------------------
+
+    def _update_on_type_formatting_triggers(self) -> None:
+        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
+        if capability:
+            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            # Two-character pairs where the first character matches the trigger character.
+            trigger_pairs = (pair for pair in AUTO_PAIR_ITEMS if pair[0] in trigger_characters)
+            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
+
+    def _get_on_type_formatting_params_async(
+        self, view: sublime.View, last_change: sublime.TextChange
+    ) -> DocumentOnTypeFormattingParams | None:
+        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+            return None
+        selection = first_selection_region(view)
+        if selection is None:
+            return None
+        if trigger := next((t for t in self._on_type_formatting_triggers if last_change.str.endswith(t)), None):
+            return {
+                **text_document_position_params(view, selection.a),
+                'options': formatting_options(view.settings()),
+                'ch': trigger[0],
+            }
+        return None
+
+    def _on_type_formatting_result_async(
+        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
+    ) -> None:
+        if version == view.change_count() and not isinstance(result, Error):
+            apply_text_edits(view, result)
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

@@ -738,12 +738,7 @@ class DefaultViewStatusHandler(ViewStatusHandler):
 
     @override
     def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
-        status_key = f"lsp_{config_name}"
-        if status is not None and sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = f"{config_name} ({status})" if status else config_name
-            view.set_status(status_key, status)
-        else:
-            view.erase_status(status_key)
+        pass
 
 
 default_status_view_handler = DefaultViewStatusHandler()

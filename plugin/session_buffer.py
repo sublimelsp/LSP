@@ -189,7 +189,7 @@ class SessionBuffer:
         self._supported_commands: set[str] = set()
         self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
-        self._update_on_type_formatting_trigger_characters()
+        self._update_on_type_formatting_triggers()
         self._update_color_scheme_rules(view)
 
     @property
@@ -317,7 +317,7 @@ class SessionBuffer:
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
             elif capability_path == "documentOnTypeFormattingProvider":
-                self._update_on_type_formatting_trigger_characters()
+                self._update_on_type_formatting_triggers()
 
     def unregister_capability_async(
         self,
@@ -334,7 +334,7 @@ class SessionBuffer:
             self._dynamically_registered_commands.pop(registration_id)
             self._update_supported_commands()
         elif capability_path == "documentOnTypeFormattingProvider":
-            self._update_on_type_formatting_trigger_characters()
+            self._update_on_type_formatting_triggers()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -565,7 +565,7 @@ class SessionBuffer:
         self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
-    def _update_on_type_formatting_trigger_characters(self) -> None:
+    def _update_on_type_formatting_triggers(self) -> None:
         capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
         if capability:
             trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))

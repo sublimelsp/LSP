@@ -5,7 +5,6 @@
         "schema": {
           "$id": "sublime://settings/LSP",
           "definitions": {
-            // User preferences that are shared with "Preferences.sublime-settings"
             "lsp_format_on_paste": {
               "type": "boolean",
               "default": false,
@@ -40,11 +39,15 @@
               "type": "object",
               "examples": [
                 {
-                  "patterns": ["{**/*.js,**/*.ts,**/*.json}"],
+                  "patterns": [
+                    "{**/*.js,**/*.ts,**/*.json}"
+                  ]
                 }
               ],
               "additionalProperties": false,
-              "required": ["patterns"],
+              "required": [
+                "patterns"
+              ],
               "properties": {
                 "patterns": {
                   "type": "array",
@@ -121,23 +124,23 @@
                   "type": "boolean",
                   "default": true
                 }
-              ],
+              ]
             },
             "ClientDisabledCapabilities": {
               "type": "object",
               "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.",
               "properties": {
                 "callHierarchyProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability",
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "codeActionProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "codeLensProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "colorProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "completionProvider": {
                   "oneOf": [
@@ -154,25 +157,25 @@
                       "type": "boolean",
                       "default": true
                     }
-                  ],
+                  ]
                 },
                 "declarationProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "definitionProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "diagnosticProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "documentFormattingProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "documentHighlightProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "documentLinkProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "documentOnTypeFormattingProvider": {
                   "oneOf": [
@@ -196,46 +199,46 @@
                   ]
                 },
                 "documentRangeFormattingProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "documentSymbolProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "executeCommandProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "foldingRangeProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "hoverProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "implementationProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "inlayHintProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "inlineValueProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "linkedEditingRangeProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "monikerProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "referencesProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "renameProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "selectionRangeProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "semanticTokensProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "signatureHelpProvider": {
                   "oneOf": [
@@ -259,13 +262,13 @@
                   ]
                 },
                 "typeDefinitionProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "typeHierarchyProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 },
                 "workspaceSymbolProvider": {
-                  "$ref": "sublime://settings/LSP#/definitions/DisabledCapability"
+                  "$ref": "#/definitions/DisabledCapability"
                 }
               }
             },
@@ -289,9 +292,8 @@
               }
             },
             "ClientSelector": {
-              // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373
               "markdownDescription": "A [selector](https://www.sublimetext.com/docs/3/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/3/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
-              "type": "string",
+              "type": "string"
             },
             "ClientSchemes": {
               "markdownDescription": "An optional list of URI schemes which this client configuration should attach to. A well-known URI scheme is the `file` scheme. The scheme `buffer` is used as in-memory scratch buffer (that is when you create a new unsaved tab). Furthermore, the scheme `res` is used to denote Sublime Text resource files inside .sublime-package files, viewable with the _View Package File_ command from the _Command Palette_.\n\nOther URI schemes exist, but require different considerations for different language servers.\n\nIf this setting is not specified, then only the `file` scheme is used, meaning that this client configuration will only attach to views that are backed by a file on disk.",
@@ -324,20 +326,19 @@
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
-            // The ClientConfig class
             "ClientConfig": {
               "type": "object",
               "additionalProperties": false,
               "markdownDescription": "The configuration that informs LSP on how to start your language server and to which views it should attach the language server process",
               "properties": {
                 "command": {
-                  "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+                  "$ref": "#/definitions/ClientCommand"
                 },
                 "enabled": {
-                  "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
+                  "$ref": "#/definitions/ClientEnabled"
                 },
                 "file_watcher": {
-                  "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
+                  "$ref": "#/definitions/FileWatcher"
                 },
                 "tcp_port": {
                   "type": "integer",
@@ -358,7 +359,7 @@
                   "$ref": "#/definitions/ClientSchemes"
                 },
                 "priority_selector": {
-                  "$ref": "#/definitions/ClientPrioritySelector",
+                  "$ref": "#/definitions/ClientPrioritySelector"
                 },
                 "initializationOptions": {
                   "$ref": "#/definitions/ClientInitializationOptions"
@@ -377,7 +378,7 @@
                 },
                 "diagnostics_mode": {
                   "$ref": "#/definitions/ClientDiagnosticsMode"
-                },
+                }
               }
             },
             "SemanticTokens": {
@@ -394,6 +395,7 @@
           "/LSP.sublime-settings"
         ],
         "schema": {
+          "$id": "sublime://LSP-settings",
           "properties": {
             "show_view_status": {
               "type": "boolean",
@@ -446,10 +448,10 @@
               "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
             },
             "lsp_code_actions_on_format": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
             },
             "lsp_code_actions_on_save": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
             },
             "show_diagnostics_in_view_status": {
               "type": "boolean",
@@ -503,27 +505,57 @@
             "diagnostics_highlight_style": {
               "oneOf": [
                 {
-                  "enum": ["box", "underline", "stippled", "squiggly", ""],
+                  "enum": [
+                    "box",
+                    "underline",
+                    "stippled",
+                    "squiggly",
+                    ""
+                  ]
                 },
                 {
                   "type": "object",
                   "properties": {
                     "error": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "warning": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "info": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
                     },
                     "hint": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
-                    },
+                    }
                   },
                   "additionalProperties": false
                 }
@@ -626,7 +658,7 @@
             },
             "show_diagnostics_highlights": {
               "type": "boolean",
-              "deprecationMessage": "Use \"diagnostics_highlight_style\" instead",
+              "deprecationMessage": "Use \"diagnostics_highlight_style\" instead"
             },
             "show_multiline_diagnostics_highlights": {
               "type": "boolean",
@@ -656,7 +688,10 @@
             "completion_insert_mode": {
               "type": "string",
               "default": "insert",
-              "enum": ["insert", "replace"],
+              "enum": [
+                "insert",
+                "replace"
+              ],
               "markdownDescription": "The mode used for inserting completions:\n\n - `insert` would insert the completion text in a middle of the word\n\n - `replace` would replace the existing word with a new completion text\n\n An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`\n can be used to insert completion using the opposite mode to the one selected here.\n\n Note: Must be supported by the language server."
             },
             "show_references_in_quick_panel": {
@@ -691,12 +726,14 @@
               "oneOf": [
                 {
                   "type": "array",
-                  "default": ["panel"],
+                  "default": [
+                    "panel"
+                  ],
                   "items": {
                     "type": "string",
                     "enum": [
                       "panel",
-                      "remote",
+                      "remote"
                     ]
                   },
                   "uniqueItems": true,
@@ -725,7 +762,7 @@
               "additionalProperties": {
                 "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
-              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
+              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!"
             },
             "show_inlay_hints": {
               "type": "boolean",
@@ -795,7 +832,7 @@
               "markdownDescription": "Specifies the type and priority of the Node.js installation that should be used for Node.js-based servers.\n\nThe allowed values are:\n\n- `system` - a Node.js runtime found on the PATH\n- `local` - a Node.js runtime managed by LSP that doesn't affect the system\n\nThe order in which the values are specified determines which one is tried first,\nwith the later one being used as a fallback.\nYou can also specify just a single value to disable the fallback.",
               "default": [
                 "system",
-                "local",
+                "local"
               ],
               "items": {
                 "type": "string",
@@ -808,7 +845,7 @@
                   "Node.js runtime managed by LSP"
                 ]
               },
-              "uniqueItems": true,
+              "uniqueItems": true
             },
             "local_use_electron": {
               "type": "boolean",
@@ -816,7 +853,7 @@
               "markdownDescription": "Uses Node.js runtime from the Electron package rather than the official distribution. This has the benefit of lower memory usage due to it having the [pointer compression](https://v8.dev/blog/pointer-compression) enabled.\n\nOnly relevant when using `local` variant of `nodejs_runtime`."
             }
           },
-          "additionalProperties": false,
+          "additionalProperties": false
         }
       },
       {
@@ -826,10 +863,10 @@
         "schema": {
           "properties": {
             "lsp_format_on_paste": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },
             "lsp_format_on_save": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
             },
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
@@ -913,7 +950,7 @@
             },
             "semantic_tokens": {
               "$ref": "sublime://settings/LSP#/definitions/SemanticTokens"
-            },
+            }
           }
         }
       }

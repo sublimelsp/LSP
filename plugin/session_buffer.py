@@ -24,6 +24,7 @@ from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import AUTO_PAIR_ITEMS
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -83,12 +84,11 @@ import itertools
 import sublime
 import time
 
+P = ParamSpec('P')
+
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
-
-
-P = ParamSpec('P')
 
 
 def is_full_document_diagnostic_report(
@@ -187,7 +187,7 @@ class SessionBuffer:
         self.code_lens_annotation_color: str = ''
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
-        self._on_type_formatting_trigger_characters: set[str] = set()
+        self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
         self._update_on_type_formatting_trigger_characters()
         self._update_color_scheme_rules(view)
@@ -409,12 +409,11 @@ class SessionBuffer:
         selection = first_selection_region(view)
         if selection is None:
             return None
-        if (last_str := last_change.str) and (last_char := last_str[-1]) \
-                and last_char in self._on_type_formatting_trigger_characters:
+        if trigger := next((t for t in self._on_type_formatting_triggers if last_change.str.endswith(t)), None):
             return {
                 **text_document_position_params(view, selection.a),
                 'options': formatting_options(view.settings()),
-                'ch': last_char,
+                'ch': trigger[0],
             }
         return None
 
@@ -569,9 +568,10 @@ class SessionBuffer:
     def _update_on_type_formatting_trigger_characters(self) -> None:
         capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
         if capability:
-            self._on_type_formatting_trigger_characters = set(
-                (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
-            )
+            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            # Two-character pairs where the first character matches the trigger character.
+            trigger_pairs = (pair for pair in AUTO_PAIR_ITEMS if pair[0] in trigger_characters)
+            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):

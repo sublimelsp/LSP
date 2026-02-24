@@ -761,6 +761,7 @@ class ClientConfig:
 
     def __init__(
         self,
+        *,
         name: str,
         selector: str,
         priority_selector: str | None = None,
@@ -823,7 +824,7 @@ class ClientConfig:
             self.schemes: list[str] = schemes
         else:
             self.schemes = ["file"]
-        self.command = command
+        self.command = command or []
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self._enabled = enabled

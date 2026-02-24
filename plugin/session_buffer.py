@@ -384,7 +384,8 @@ class SessionBuffer:
             purge = True
         if purge:
             self._cancel_pending_requests_async()
-            if action == 'type' and (params := self._get_on_type_formatting_params_async(view, last_change)):
+            if userprefs().format_on_type and action == 'type' and \
+                    (params := self._get_on_type_formatting_params_async(view, last_change)):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
                     .then(partial(self._on_type_formatting_result_async, view, change_count))

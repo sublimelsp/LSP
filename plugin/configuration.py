@@ -11,7 +11,7 @@ import sublime_plugin
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:
-        self._items = [config.name for (config, _) in client_configs.all.values() if not config.enabled]
+        self._items = [config.name for config in client_configs.all.values() if not config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -48,7 +48,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         wm = windows.lookup(self.window)
         if not wm:
             return
-        self._items = [config.name for (config, _) in client_configs.all.values() if config.enabled]
+        self._items = [config.name for config in client_configs.all.values() if config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:

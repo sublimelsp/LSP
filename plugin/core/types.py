@@ -15,6 +15,8 @@ from .logging import debug
 from .logging import set_debug_logging
 from .url import filename_to_uri
 from .url import parse_uri
+from abc import ABC
+from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -29,6 +31,7 @@ from typing import TypeVar
 from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
+from typing_extensions import override
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -46,16 +49,22 @@ if TYPE_CHECKING:
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
-WORKSPACE_DIAGNOSTICS_TIMEOUT = 3000  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 
-class FileWatcherConfig(TypedDict, total=False):
+class FileWatcherConfig(TypedDict):
     patterns: list[str]
     events: NotRequired[list[FileWatcherEventType]]
     ignores: NotRequired[list[str]]
+
+
+class ViewStatusHandler(ABC):
+
+    @abstractmethod
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        ...
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -162,25 +171,17 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("_settings", "_settings_path")
+    __slots__ = ("settings", "settings_path")
 
     def __init__(
         self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
     ) -> None:
-        self._settings = settings
-        self._settings_path = settings_path
+        self.settings = settings
+        self.settings_path = settings_path
         settings.add_on_change("LSP", partial(on_change, self))
 
-    @property
-    def settings(self) -> sublime.Settings:
-        return self._settings
-
-    @property
-    def settings_path(self) -> str:
-        return self._settings_path
-
     def __del__(self) -> None:
-        self._settings.clear_on_change("LSP")
+        self.settings.clear_on_change("LSP")
 
 
 class DebouncerNonThreadSafe:
@@ -741,6 +742,16 @@ class TransportConfig:
         self.listener_socket = listener_socket
 
 
+class DefaultViewStatusHandler(ViewStatusHandler):
+
+    @override
+    def on_view_status_changed(self, config_name: str, view: sublime.View, status: str | None) -> None:
+        pass
+
+
+default_status_view_handler = DefaultViewStatusHandler()
+
+
 class ClientConfig:
     """Represents the configuration for a language server.
 
@@ -754,6 +765,7 @@ class ClientConfig:
 
     def __init__(
         self,
+        *,
         name: str,
         selector: str,
         priority_selector: str | None = None,
@@ -771,6 +783,7 @@ class ClientConfig:
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "open_files",
         path_maps: list[PathMap] | None = None,
+        settings_registration: SettingsRegistration | None = None,
         all_settings: dict[str, Any] | None = None
     ) -> None:
         """
@@ -803,6 +816,8 @@ class ClientConfig:
             `"workspace"` shows them for the whole workspace.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
+        :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
+            for the plugin settings. Present only for `ClientConfig`s created through `from_sublime_settings()`.
         :param all_settings: The complete raw settings dictionary. Used as a fallback for attribute/key access for
             settings not explicitly modelled above.
         """
@@ -813,10 +828,10 @@ class ClientConfig:
             self.schemes: list[str] = schemes
         else:
             self.schemes = ["file"]
-        self.command = command
+        self.command = command or []
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
-        self.enabled = enabled
+        self._enabled = enabled
         self.initialization_options = initialization_options or DottedDict()
         self.settings = settings or DottedDict()
         self.env = env or {}
@@ -824,16 +839,31 @@ class ClientConfig:
         self.disabled_capabilities = disabled_capabilities or DottedDict()
         self.file_watcher = file_watcher or {}
         self.path_maps = path_maps
-        self._status_key = f"lsp_{self.name}"
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
+        self._settings_registration = settings_registration
         self._all_settings = all_settings or {}
+        self._view_status_handler = default_status_view_handler
 
     @property
     @deprecated('Use initialization_options instead')
     def init_options(self) -> DottedDict:
         return self.initialization_options
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+        if enabled == self._enabled:
+            return
+        if self._settings_registration:
+            settings_basename = os.path.basename(self._settings_registration.settings_path)
+            self._settings_registration.settings.set("enabled", enabled)
+            sublime.save_settings(settings_basename)
+        self._enabled = enabled
 
     def __getattr__(self, name: str, /) -> Any:
         """Get property through attribute access (`.foo`) for properties that don't exist natively."""
@@ -842,17 +872,17 @@ class ClientConfig:
         raise AttributeError(name)
 
     @classmethod
-    def from_sublime_settings(cls, name: str, s: sublime.Settings, file: str) -> ClientConfig:
+    def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
         """Create a ClientConfig from a Sublime Text `Settings` object.
 
-        Plugin-defined defaults are read from `file` (a resource path to the plugin's `.sublime-settings` file) and user
-        overrides are layered on top from `s`.
+        Plugin-defined defaults are read from a resource path to the plugin's `.sublime-settings` file) and user
+        overrides are layered on top from `Settings`.
 
         :param name: Unique server name.
-        :param s: The resolved `sublime.Settings` object for this client.
-        :param file: Resource path to the base `.sublime-settings` file shipped with the LSP plugin (e.g.
-            `"Packages/LSP-pyright/LSP-pyright.sublime-settings"`).
+        :param settings_registration: The `SettingsRegistration` object for this client.
         """
+        s = settings_registration.settings
+        file = settings_registration.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
@@ -884,6 +914,7 @@ class ClientConfig:
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
+            settings_registration=settings_registration,
             all_settings=s.to_dict()
         )
 
@@ -960,6 +991,7 @@ class ClientConfig:
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
             path_maps=path_map_override if path_map_override else src_config.path_maps,
+            settings_registration=src_config._settings_registration,
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
@@ -1002,6 +1034,9 @@ class ClientConfig:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
+    def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
+        self._view_status_handler = handler
+
     def set_view_status(self, view: sublime.View, message: str) -> None:
         """Update the view status bar entry for this server.
 
@@ -1011,18 +1046,14 @@ class ClientConfig:
         :param view: The view whose status bar should be updated.
         :param message: A short status string (e.g. `"loading"`). Pass an empty string to show only the client name.
         """
-        if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
-            status = f"{self.name} ({message})" if message else self.name
-            view.set_status(self._status_key, status)
-        else:
-            self.erase_view_status(view)
+        self._view_status_handler.on_view_status_changed(self.name, view, message)
 
     def erase_view_status(self, view: sublime.View) -> None:
         """Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """
-        view.erase_status(self._status_key)
+        self._view_status_handler.on_view_status_changed(self.name, view, None)
 
     def match_view(
         self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]

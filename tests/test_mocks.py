@@ -9,7 +9,7 @@ from typing import Any
 from typing import Callable
 
 TEST_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None)
-DISABLED_CONFIG = ClientConfig("test", command=[], selector="text.plain", tcp_port=None, enabled=False)
+DISABLED_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None, enabled=False)
 
 basic_responses = {
     'initialize': {

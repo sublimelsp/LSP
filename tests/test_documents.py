@@ -55,7 +55,6 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.config2 = make_stdio_test_config()
         self.config2.initialization_options.assign(initialization_options)
         self.config2.name = "TEST-2"
-        self.config2._status_key = "lsp_TEST-2"
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
@@ -90,8 +89,6 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
         self.view.run_command("insert", {"characters": "a"})
         yield from self.await_message("textDocument/didChange")
-        self.assertEqual(self.view.get_status("lsp_TEST"), "TEST")
-        self.assertEqual(self.view.get_status("lsp_TEST-2"), "TEST-2")
         yield from close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
 

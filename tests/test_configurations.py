@@ -38,7 +38,7 @@ class WindowConfigManagerTests(ViewTestCase):
     def test_with_single_config(self):
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
-        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: (TEST_CONFIG, None)})
+        manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
         self.view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",

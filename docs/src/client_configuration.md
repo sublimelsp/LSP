@@ -39,7 +39,7 @@ Below is an example of the `LSP.sublime-settings` file with configurations for t
 | command | must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured) |
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
-| initializationOptions | options to send to the server at startup (rarely used) |
+| initialization_options | options to send to the server at startup (rarely used) |
 | selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/3/selectors.html |
 | priority_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "priority_selector" to `text.html` for HTML server and `source.php` to PHP server.
 | diagnostics_mode | Set to `"workspace"` (default is `"open_files"`) to ignore diagnostics for files that are not within the project (window) folders. If project has no folders then this option has no effect and diagnostics are shown for all files. If the server supports _pull diagnostics_ (`diagnosticProvider`), this setting also controls whether diagnostics are requested only for open files (`"open_files"`), or for all files in the project folders (`"workspace"`). |
@@ -100,7 +100,7 @@ Global LSP settings (which currently are `lsp_format_on_save`, `lsp_format_on_pa
 
 Also global language server settings can be added or overridden per-project by adding an `LSP` object within the `settings` object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the `clients` key in `LSP.sublime-settings` or those provided by external helper packages.
 
-> **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
+> **Note**: The `settings` and `initialization_options` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
 ```jsonc
 {

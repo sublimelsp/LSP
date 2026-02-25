@@ -360,7 +360,7 @@
                 "priority_selector": {
                   "$ref": "#/definitions/ClientPrioritySelector",
                 },
-                "initializationOptions": {
+                "initialization_options": {
                   "$ref": "#/definitions/ClientInitializationOptions"
                 },
                 "settings": {
@@ -890,7 +890,7 @@
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"
             },
-            "initializationOptions": {
+            "initialization_options": {
               "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
             },
             "settings": {

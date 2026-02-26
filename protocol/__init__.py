@@ -881,7 +881,7 @@ LSP arrays.
 @since 3.17.0
 """
 
-LSPAny: TypeAlias = Union['LSPObject', 'LSPArray', str, int, Uint, float, bool, None]
+LSPAny: TypeAlias = Union['LSPObject', LSPArray, str, int, Uint, float, bool, None]
 """
 The LSP any type.
 Please note that strictly speaking a property with the value `undefined`

@@ -16,6 +16,7 @@ from typing import Sequence
 from typing import TypedDict
 from typing import Union
 from typing_extensions import NotRequired
+from typing_extensions import TypeAlias
 
 URI = str
 DocumentUri = str
@@ -856,7 +857,7 @@ class TokenFormat(StrEnum):
     Relative = 'relative'
 
 
-Definition = Union['Location', List['Location']]
+Definition: TypeAlias = Union['Location', List['Location']]
 """
 The definition of a symbol represented as one or many {@link Location locations}.
 For most programming languages there is only one location at which a symbol is
@@ -866,7 +867,7 @@ Servers should prefer returning `DefinitionLink` over `Definition` if supported
 by the client.
 """
 
-DefinitionLink = 'LocationLink'
+DefinitionLink: TypeAlias = 'LocationLink'
 """
 Information about where a symbol is defined.
 
@@ -874,13 +875,13 @@ Provides additional metadata over normal {@link Location location} definitions, 
 the defining symbol
 """
 
-LSPArray = Sequence['LSPAny']
+LSPArray: TypeAlias = Sequence['LSPAny']
 """
 LSP arrays.
 @since 3.17.0
 """
 
-LSPAny = Union['LSPObject', 'LSPArray', str, int, Uint, float, bool, None]
+LSPAny: TypeAlias = Union['LSPObject', 'LSPArray', str, int, Uint, float, bool, None]
 """
 The LSP any type.
 Please note that strictly speaking a property with the value `undefined`
@@ -890,10 +891,10 @@ optional as well.
 @since 3.17.0
 """
 
-Declaration = Union['Location', List['Location']]
+Declaration: TypeAlias = Union['Location', List['Location']]
 """The declaration of a symbol representation as one or many {@link Location locations}."""
 
-DeclarationLink = 'LocationLink'
+DeclarationLink: TypeAlias = 'LocationLink'
 """
 Information about where a symbol is declared.
 
@@ -904,7 +905,7 @@ Servers should prefer returning `DeclarationLink` over `Declaration` if supporte
 by the client.
 """
 
-InlineValue = Union['InlineValueText', 'InlineValueVariableLookup', 'InlineValueEvaluatableExpression']
+InlineValue: TypeAlias = Union['InlineValueText', 'InlineValueVariableLookup', 'InlineValueEvaluatableExpression']
 """
 Inline value information can be provided by different means:
 - directly as a text value (class InlineValueText).
@@ -915,7 +916,7 @@ The InlineValue types combines all inline value types into one type.
 @since 3.17.0
 """
 
-DocumentDiagnosticReport = Union['RelatedFullDocumentDiagnosticReport', 'RelatedUnchangedDocumentDiagnosticReport']
+DocumentDiagnosticReport: TypeAlias = Union['RelatedFullDocumentDiagnosticReport', 'RelatedUnchangedDocumentDiagnosticReport']
 """
 The result of a document diagnostic pull request. A report can
 either be a full report containing all diagnostics for the
@@ -926,9 +927,9 @@ pull request.
 @since 3.17.0
 """
 
-PrepareRenameResult = Union['Range', 'PrepareRenamePlaceholder', 'PrepareRenameDefaultBehavior']
+PrepareRenameResult: TypeAlias = Union['Range', 'PrepareRenamePlaceholder', 'PrepareRenameDefaultBehavior']
 
-DocumentSelector = List['DocumentFilter']
+DocumentSelector: TypeAlias = List['DocumentFilter']
 """
 A document selector is the combination of one or many document filters.
 
@@ -937,25 +938,25 @@ A document selector is the combination of one or many document filters.
 The use of a string as a document filter is deprecated @since 3.16.0.
 """
 
-ProgressToken = Union[int, str]
+ProgressToken: TypeAlias = Union[int, str]
 
-ChangeAnnotationIdentifier = str
+ChangeAnnotationIdentifier: TypeAlias = str
 """An identifier to refer to a change annotation stored with a workspace edit."""
 
-WorkspaceDocumentDiagnosticReport = Union['WorkspaceFullDocumentDiagnosticReport', 'WorkspaceUnchangedDocumentDiagnosticReport']
+WorkspaceDocumentDiagnosticReport: TypeAlias = Union['WorkspaceFullDocumentDiagnosticReport', 'WorkspaceUnchangedDocumentDiagnosticReport']
 """
 A workspace diagnostic document report.
 
 @since 3.17.0
 """
 
-TextDocumentContentChangeEvent = Union['TextDocumentContentChangePartial', 'TextDocumentContentChangeWholeDocument']
+TextDocumentContentChangeEvent: TypeAlias = Union['TextDocumentContentChangePartial', 'TextDocumentContentChangeWholeDocument']
 """
 An event describing a change to a text document. If only a text is provided
 it is considered to be the full content of the document.
 """
 
-MarkedString = Union[str, 'MarkedStringWithLanguage']
+MarkedString: TypeAlias = Union[str, 'MarkedStringWithLanguage']
 """
 MarkedString can be used to render human readable text. It is either a markdown string
 or a code-block that provides a language and a code snippet. The language identifier
@@ -971,7 +972,7 @@ Note that markdown strings will be sanitized - that means html will be escaped.
 @deprecated use MarkupContent instead.
 """
 
-DocumentFilter = Union['TextDocumentFilter', 'NotebookCellTextDocumentFilter']
+DocumentFilter: TypeAlias = Union['TextDocumentFilter', 'NotebookCellTextDocumentFilter']
 """
 A document filter describes a top level text document or
 a notebook cell document.
@@ -979,20 +980,20 @@ a notebook cell document.
 @since 3.17.0 - support for NotebookCellTextDocumentFilter.
 """
 
-LSPObject = Mapping[str, Any]
+LSPObject: TypeAlias = Mapping[str, Any]
 """
 LSP object definition.
 @since 3.17.0
 """
 
-GlobPattern = Union['Pattern', 'RelativePattern']
+GlobPattern: TypeAlias = Union['Pattern', 'RelativePattern']
 """
 The glob pattern. Either a string pattern or a relative pattern.
 
 @since 3.17.0
 """
 
-TextDocumentFilter = Union['TextDocumentFilterLanguage', 'TextDocumentFilterScheme', 'TextDocumentFilterPattern']
+TextDocumentFilter: TypeAlias = Union['TextDocumentFilterLanguage', 'TextDocumentFilterScheme', 'TextDocumentFilterPattern']
 """
 A document filter denotes a document by different properties like
 the {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of
@@ -1012,7 +1013,7 @@ Glob patterns can have the following syntax:
 @since 3.17.0
 """
 
-NotebookDocumentFilter = Union['NotebookDocumentFilterNotebookType', 'NotebookDocumentFilterScheme', 'NotebookDocumentFilterPattern']
+NotebookDocumentFilter: TypeAlias = Union['NotebookDocumentFilterNotebookType', 'NotebookDocumentFilterScheme', 'NotebookDocumentFilterPattern']
 """
 A notebook document filter denotes a notebook document by
 different properties. The properties will be match
@@ -1021,7 +1022,7 @@ against the notebook's URI (same as with documents)
 @since 3.17.0
 """
 
-Pattern = str
+Pattern: TypeAlias = str
 """
 The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:
 - `*` to match one or more characters in a path segment
@@ -1034,7 +1035,7 @@ The glob pattern to watch relative to the base path. Glob patterns can have the 
 @since 3.17.0
 """
 
-RegularExpressionEngineKind = str
+RegularExpressionEngineKind: TypeAlias = str
 
 
 class ImplementationParams(TypedDict):
@@ -8022,3 +8023,841 @@ class ClientSemanticTokensRequestFullDelta(TypedDict):
     The client will send the `textDocument/semanticTokens/full/delta` request if
     the server provides a corresponding handler.
     """
+
+
+class ImplementationRequest(TypedDict):
+    method: Literal['textDocument/implementation']
+    params: 'ImplementationParams'
+
+
+class TypeDefinitionRequest(TypedDict):
+    method: Literal['textDocument/typeDefinition']
+    params: 'TypeDefinitionParams'
+
+
+class WorkspaceFoldersRequest(TypedDict):
+    method: Literal['workspace/workspaceFolders']
+    params: None
+
+
+class ConfigurationRequest(TypedDict):
+    method: Literal['workspace/configuration']
+    params: 'ConfigurationParams'
+
+
+class DocumentColorRequest(TypedDict):
+    method: Literal['textDocument/documentColor']
+    params: 'DocumentColorParams'
+
+
+class ColorPresentationRequest(TypedDict):
+    method: Literal['textDocument/colorPresentation']
+    params: 'ColorPresentationParams'
+
+
+class FoldingRangeRequest(TypedDict):
+    method: Literal['textDocument/foldingRange']
+    params: 'FoldingRangeParams'
+
+
+class FoldingRangeRefreshRequest(TypedDict):
+    method: Literal['workspace/foldingRange/refresh']
+    params: None
+
+
+class DeclarationRequest(TypedDict):
+    method: Literal['textDocument/declaration']
+    params: 'DeclarationParams'
+
+
+class SelectionRangeRequest(TypedDict):
+    method: Literal['textDocument/selectionRange']
+    params: 'SelectionRangeParams'
+
+
+class WorkDoneProgressCreateRequest(TypedDict):
+    method: Literal['window/workDoneProgress/create']
+    params: 'WorkDoneProgressCreateParams'
+
+
+class CallHierarchyPrepareRequest(TypedDict):
+    method: Literal['textDocument/prepareCallHierarchy']
+    params: 'CallHierarchyPrepareParams'
+
+
+class CallHierarchyIncomingCallsRequest(TypedDict):
+    method: Literal['callHierarchy/incomingCalls']
+    params: 'CallHierarchyIncomingCallsParams'
+
+
+class CallHierarchyOutgoingCallsRequest(TypedDict):
+    method: Literal['callHierarchy/outgoingCalls']
+    params: 'CallHierarchyOutgoingCallsParams'
+
+
+class SemanticTokensRequest(TypedDict):
+    method: Literal['textDocument/semanticTokens/full']
+    params: 'SemanticTokensParams'
+
+
+class SemanticTokensDeltaRequest(TypedDict):
+    method: Literal['textDocument/semanticTokens/full/delta']
+    params: 'SemanticTokensDeltaParams'
+
+
+class SemanticTokensRangeRequest(TypedDict):
+    method: Literal['textDocument/semanticTokens/range']
+    params: 'SemanticTokensRangeParams'
+
+
+class SemanticTokensRefreshRequest(TypedDict):
+    method: Literal['workspace/semanticTokens/refresh']
+    params: None
+
+
+class ShowDocumentRequest(TypedDict):
+    method: Literal['window/showDocument']
+    params: 'ShowDocumentParams'
+
+
+class LinkedEditingRangeRequest(TypedDict):
+    method: Literal['textDocument/linkedEditingRange']
+    params: 'LinkedEditingRangeParams'
+
+
+class WillCreateFilesRequest(TypedDict):
+    method: Literal['workspace/willCreateFiles']
+    params: 'CreateFilesParams'
+
+
+class WillRenameFilesRequest(TypedDict):
+    method: Literal['workspace/willRenameFiles']
+    params: 'RenameFilesParams'
+
+
+class WillDeleteFilesRequest(TypedDict):
+    method: Literal['workspace/willDeleteFiles']
+    params: 'DeleteFilesParams'
+
+
+class MonikerRequest(TypedDict):
+    method: Literal['textDocument/moniker']
+    params: 'MonikerParams'
+
+
+class TypeHierarchyPrepareRequest(TypedDict):
+    method: Literal['textDocument/prepareTypeHierarchy']
+    params: 'TypeHierarchyPrepareParams'
+
+
+class TypeHierarchySupertypesRequest(TypedDict):
+    method: Literal['typeHierarchy/supertypes']
+    params: 'TypeHierarchySupertypesParams'
+
+
+class TypeHierarchySubtypesRequest(TypedDict):
+    method: Literal['typeHierarchy/subtypes']
+    params: 'TypeHierarchySubtypesParams'
+
+
+class InlineValueRequest(TypedDict):
+    method: Literal['textDocument/inlineValue']
+    params: 'InlineValueParams'
+
+
+class InlineValueRefreshRequest(TypedDict):
+    method: Literal['workspace/inlineValue/refresh']
+    params: None
+
+
+class InlayHintRequest(TypedDict):
+    method: Literal['textDocument/inlayHint']
+    params: 'InlayHintParams'
+
+
+class InlayHintResolveRequest(TypedDict):
+    method: Literal['inlayHint/resolve']
+    params: 'InlayHint'
+
+
+class InlayHintRefreshRequest(TypedDict):
+    method: Literal['workspace/inlayHint/refresh']
+    params: None
+
+
+class DocumentDiagnosticRequest(TypedDict):
+    method: Literal['textDocument/diagnostic']
+    params: 'DocumentDiagnosticParams'
+
+
+class WorkspaceDiagnosticRequest(TypedDict):
+    method: Literal['workspace/diagnostic']
+    params: 'WorkspaceDiagnosticParams'
+
+
+class DiagnosticRefreshRequest(TypedDict):
+    method: Literal['workspace/diagnostic/refresh']
+    params: None
+
+
+class InlineCompletionRequest(TypedDict):
+    method: Literal['textDocument/inlineCompletion']
+    params: 'InlineCompletionParams'
+
+
+class TextDocumentContentRequest(TypedDict):
+    method: Literal['workspace/textDocumentContent']
+    params: 'TextDocumentContentParams'
+
+
+class TextDocumentContentRefreshRequest(TypedDict):
+    method: Literal['workspace/textDocumentContent/refresh']
+    params: 'TextDocumentContentRefreshParams'
+
+
+class RegistrationRequest(TypedDict):
+    method: Literal['client/registerCapability']
+    params: 'RegistrationParams'
+
+
+class UnregistrationRequest(TypedDict):
+    method: Literal['client/unregisterCapability']
+    params: 'UnregistrationParams'
+
+
+class InitializeRequest(TypedDict):
+    method: Literal['initialize']
+    params: 'InitializeParams'
+
+
+class ShutdownRequest(TypedDict):
+    method: Literal['shutdown']
+    params: None
+
+
+class ShowMessageRequest(TypedDict):
+    method: Literal['window/showMessageRequest']
+    params: 'ShowMessageRequestParams'
+
+
+class WillSaveTextDocumentWaitUntilRequest(TypedDict):
+    method: Literal['textDocument/willSaveWaitUntil']
+    params: 'WillSaveTextDocumentParams'
+
+
+class CompletionRequest(TypedDict):
+    method: Literal['textDocument/completion']
+    params: 'CompletionParams'
+
+
+class CompletionResolveRequest(TypedDict):
+    method: Literal['completionItem/resolve']
+    params: 'CompletionItem'
+
+
+class HoverRequest(TypedDict):
+    method: Literal['textDocument/hover']
+    params: 'HoverParams'
+
+
+class SignatureHelpRequest(TypedDict):
+    method: Literal['textDocument/signatureHelp']
+    params: 'SignatureHelpParams'
+
+
+class DefinitionRequest(TypedDict):
+    method: Literal['textDocument/definition']
+    params: 'DefinitionParams'
+
+
+class ReferencesRequest(TypedDict):
+    method: Literal['textDocument/references']
+    params: 'ReferenceParams'
+
+
+class DocumentHighlightRequest(TypedDict):
+    method: Literal['textDocument/documentHighlight']
+    params: 'DocumentHighlightParams'
+
+
+class DocumentSymbolRequest(TypedDict):
+    method: Literal['textDocument/documentSymbol']
+    params: 'DocumentSymbolParams'
+
+
+class CodeActionRequest(TypedDict):
+    method: Literal['textDocument/codeAction']
+    params: 'CodeActionParams'
+
+
+class CodeActionResolveRequest(TypedDict):
+    method: Literal['codeAction/resolve']
+    params: 'CodeAction'
+
+
+class WorkspaceSymbolRequest(TypedDict):
+    method: Literal['workspace/symbol']
+    params: 'WorkspaceSymbolParams'
+
+
+class WorkspaceSymbolResolveRequest(TypedDict):
+    method: Literal['workspaceSymbol/resolve']
+    params: 'WorkspaceSymbol'
+
+
+class CodeLensRequest(TypedDict):
+    method: Literal['textDocument/codeLens']
+    params: 'CodeLensParams'
+
+
+class CodeLensResolveRequest(TypedDict):
+    method: Literal['codeLens/resolve']
+    params: 'CodeLens'
+
+
+class CodeLensRefreshRequest(TypedDict):
+    method: Literal['workspace/codeLens/refresh']
+    params: None
+
+
+class DocumentLinkRequest(TypedDict):
+    method: Literal['textDocument/documentLink']
+    params: 'DocumentLinkParams'
+
+
+class DocumentLinkResolveRequest(TypedDict):
+    method: Literal['documentLink/resolve']
+    params: 'DocumentLink'
+
+
+class DocumentFormattingRequest(TypedDict):
+    method: Literal['textDocument/formatting']
+    params: 'DocumentFormattingParams'
+
+
+class DocumentRangeFormattingRequest(TypedDict):
+    method: Literal['textDocument/rangeFormatting']
+    params: 'DocumentRangeFormattingParams'
+
+
+class DocumentRangesFormattingRequest(TypedDict):
+    method: Literal['textDocument/rangesFormatting']
+    params: 'DocumentRangesFormattingParams'
+
+
+class DocumentOnTypeFormattingRequest(TypedDict):
+    method: Literal['textDocument/onTypeFormatting']
+    params: 'DocumentOnTypeFormattingParams'
+
+
+class RenameRequest(TypedDict):
+    method: Literal['textDocument/rename']
+    params: 'RenameParams'
+
+
+class PrepareRenameRequest(TypedDict):
+    method: Literal['textDocument/prepareRename']
+    params: 'PrepareRenameParams'
+
+
+class ExecuteCommandRequest(TypedDict):
+    method: Literal['workspace/executeCommand']
+    params: 'ExecuteCommandParams'
+
+
+class ApplyWorkspaceEditRequest(TypedDict):
+    method: Literal['workspace/applyEdit']
+    params: 'ApplyWorkspaceEditParams'
+
+
+ClientRequest: TypeAlias = Union[ImplementationRequest, TypeDefinitionRequest, DocumentColorRequest, ColorPresentationRequest, FoldingRangeRequest, DeclarationRequest, SelectionRangeRequest, CallHierarchyPrepareRequest, CallHierarchyIncomingCallsRequest, CallHierarchyOutgoingCallsRequest, SemanticTokensRequest, SemanticTokensDeltaRequest, SemanticTokensRangeRequest, LinkedEditingRangeRequest, WillCreateFilesRequest, WillRenameFilesRequest, WillDeleteFilesRequest, MonikerRequest, TypeHierarchyPrepareRequest, TypeHierarchySupertypesRequest, TypeHierarchySubtypesRequest, InlineValueRequest, InlayHintRequest, InlayHintResolveRequest, DocumentDiagnosticRequest, WorkspaceDiagnosticRequest, InlineCompletionRequest, TextDocumentContentRequest, InitializeRequest, ShutdownRequest, WillSaveTextDocumentWaitUntilRequest, CompletionRequest, CompletionResolveRequest, HoverRequest, SignatureHelpRequest, DefinitionRequest, ReferencesRequest, DocumentHighlightRequest, DocumentSymbolRequest, CodeActionRequest, CodeActionResolveRequest, WorkspaceSymbolRequest, WorkspaceSymbolResolveRequest, CodeLensRequest, CodeLensResolveRequest, DocumentLinkRequest, DocumentLinkResolveRequest, DocumentFormattingRequest, DocumentRangeFormattingRequest, DocumentRangesFormattingRequest, DocumentOnTypeFormattingRequest, RenameRequest, PrepareRenameRequest, ExecuteCommandRequest]
+
+
+ServerRequest: TypeAlias = Union[WorkspaceFoldersRequest, ConfigurationRequest, FoldingRangeRefreshRequest, WorkDoneProgressCreateRequest, SemanticTokensRefreshRequest, ShowDocumentRequest, InlineValueRefreshRequest, InlayHintRefreshRequest, DiagnosticRefreshRequest, TextDocumentContentRefreshRequest, RegistrationRequest, UnregistrationRequest, ShowMessageRequest, CodeLensRefreshRequest, ApplyWorkspaceEditRequest]
+
+
+class ImplementationResponse(TypedDict):
+    method: Literal['textDocument/implementation']
+    result: Union['Definition', List['DefinitionLink'], None]
+
+
+class TypeDefinitionResponse(TypedDict):
+    method: Literal['textDocument/typeDefinition']
+    result: Union['Definition', List['DefinitionLink'], None]
+
+
+class WorkspaceFoldersResponse(TypedDict):
+    method: Literal['workspace/workspaceFolders']
+    result: Union[List['WorkspaceFolder'], None]
+
+
+class ConfigurationResponse(TypedDict):
+    method: Literal['workspace/configuration']
+    result: List['LSPAny']
+
+
+class DocumentColorResponse(TypedDict):
+    method: Literal['textDocument/documentColor']
+    result: List['ColorInformation']
+
+
+class ColorPresentationResponse(TypedDict):
+    method: Literal['textDocument/colorPresentation']
+    result: List['ColorPresentation']
+
+
+class FoldingRangeResponse(TypedDict):
+    method: Literal['textDocument/foldingRange']
+    result: Union[List['FoldingRange'], None]
+
+
+class FoldingRangeRefreshResponse(TypedDict):
+    method: Literal['workspace/foldingRange/refresh']
+    result: None
+
+
+class DeclarationResponse(TypedDict):
+    method: Literal['textDocument/declaration']
+    result: Union['Declaration', List['DeclarationLink'], None]
+
+
+class SelectionRangeResponse(TypedDict):
+    method: Literal['textDocument/selectionRange']
+    result: Union[List['SelectionRange'], None]
+
+
+class WorkDoneProgressCreateResponse(TypedDict):
+    method: Literal['window/workDoneProgress/create']
+    result: None
+
+
+class CallHierarchyPrepareResponse(TypedDict):
+    method: Literal['textDocument/prepareCallHierarchy']
+    result: Union[List['CallHierarchyItem'], None]
+
+
+class CallHierarchyIncomingCallsResponse(TypedDict):
+    method: Literal['callHierarchy/incomingCalls']
+    result: Union[List['CallHierarchyIncomingCall'], None]
+
+
+class CallHierarchyOutgoingCallsResponse(TypedDict):
+    method: Literal['callHierarchy/outgoingCalls']
+    result: Union[List['CallHierarchyOutgoingCall'], None]
+
+
+class SemanticTokensResponse(TypedDict):
+    method: Literal['textDocument/semanticTokens/full']
+    result: Union['SemanticTokens', None]
+
+
+class SemanticTokensDeltaResponse(TypedDict):
+    method: Literal['textDocument/semanticTokens/full/delta']
+    result: Union['SemanticTokens', 'SemanticTokensDelta', None]
+
+
+class SemanticTokensRangeResponse(TypedDict):
+    method: Literal['textDocument/semanticTokens/range']
+    result: Union['SemanticTokens', None]
+
+
+class SemanticTokensRefreshResponse(TypedDict):
+    method: Literal['workspace/semanticTokens/refresh']
+    result: None
+
+
+class ShowDocumentResponse(TypedDict):
+    method: Literal['window/showDocument']
+    result: 'ShowDocumentResult'
+
+
+class LinkedEditingRangeResponse(TypedDict):
+    method: Literal['textDocument/linkedEditingRange']
+    result: Union['LinkedEditingRanges', None]
+
+
+class WillCreateFilesResponse(TypedDict):
+    method: Literal['workspace/willCreateFiles']
+    result: Union['WorkspaceEdit', None]
+
+
+class WillRenameFilesResponse(TypedDict):
+    method: Literal['workspace/willRenameFiles']
+    result: Union['WorkspaceEdit', None]
+
+
+class WillDeleteFilesResponse(TypedDict):
+    method: Literal['workspace/willDeleteFiles']
+    result: Union['WorkspaceEdit', None]
+
+
+class MonikerResponse(TypedDict):
+    method: Literal['textDocument/moniker']
+    result: Union[List['Moniker'], None]
+
+
+class TypeHierarchyPrepareResponse(TypedDict):
+    method: Literal['textDocument/prepareTypeHierarchy']
+    result: Union[List['TypeHierarchyItem'], None]
+
+
+class TypeHierarchySupertypesResponse(TypedDict):
+    method: Literal['typeHierarchy/supertypes']
+    result: Union[List['TypeHierarchyItem'], None]
+
+
+class TypeHierarchySubtypesResponse(TypedDict):
+    method: Literal['typeHierarchy/subtypes']
+    result: Union[List['TypeHierarchyItem'], None]
+
+
+class InlineValueResponse(TypedDict):
+    method: Literal['textDocument/inlineValue']
+    result: Union[List['InlineValue'], None]
+
+
+class InlineValueRefreshResponse(TypedDict):
+    method: Literal['workspace/inlineValue/refresh']
+    result: None
+
+
+class InlayHintResponse(TypedDict):
+    method: Literal['textDocument/inlayHint']
+    result: Union[List['InlayHint'], None]
+
+
+class InlayHintResolveResponse(TypedDict):
+    method: Literal['inlayHint/resolve']
+    result: 'InlayHint'
+
+
+class InlayHintRefreshResponse(TypedDict):
+    method: Literal['workspace/inlayHint/refresh']
+    result: None
+
+
+class DocumentDiagnosticResponse(TypedDict):
+    method: Literal['textDocument/diagnostic']
+    result: 'DocumentDiagnosticReport'
+
+
+class WorkspaceDiagnosticResponse(TypedDict):
+    method: Literal['workspace/diagnostic']
+    result: 'WorkspaceDiagnosticReport'
+
+
+class DiagnosticRefreshResponse(TypedDict):
+    method: Literal['workspace/diagnostic/refresh']
+    result: None
+
+
+class InlineCompletionResponse(TypedDict):
+    method: Literal['textDocument/inlineCompletion']
+    result: Union['InlineCompletionList', List['InlineCompletionItem'], None]
+
+
+class TextDocumentContentResponse(TypedDict):
+    method: Literal['workspace/textDocumentContent']
+    result: 'TextDocumentContentResult'
+
+
+class TextDocumentContentRefreshResponse(TypedDict):
+    method: Literal['workspace/textDocumentContent/refresh']
+    result: None
+
+
+class RegistrationResponse(TypedDict):
+    method: Literal['client/registerCapability']
+    result: None
+
+
+class UnregistrationResponse(TypedDict):
+    method: Literal['client/unregisterCapability']
+    result: None
+
+
+class InitializeResponse(TypedDict):
+    method: Literal['initialize']
+    result: 'InitializeResult'
+
+
+class ShutdownResponse(TypedDict):
+    method: Literal['shutdown']
+    result: None
+
+
+class ShowMessageResponse(TypedDict):
+    method: Literal['window/showMessageRequest']
+    result: Union['MessageActionItem', None]
+
+
+class WillSaveTextDocumentWaitUntilResponse(TypedDict):
+    method: Literal['textDocument/willSaveWaitUntil']
+    result: Union[List['TextEdit'], None]
+
+
+class CompletionResponse(TypedDict):
+    method: Literal['textDocument/completion']
+    result: Union[List['CompletionItem'], 'CompletionList', None]
+
+
+class CompletionResolveResponse(TypedDict):
+    method: Literal['completionItem/resolve']
+    result: 'CompletionItem'
+
+
+class HoverResponse(TypedDict):
+    method: Literal['textDocument/hover']
+    result: Union['Hover', None]
+
+
+class SignatureHelpResponse(TypedDict):
+    method: Literal['textDocument/signatureHelp']
+    result: Union['SignatureHelp', None]
+
+
+class DefinitionResponse(TypedDict):
+    method: Literal['textDocument/definition']
+    result: Union['Definition', List['DefinitionLink'], None]
+
+
+class ReferencesResponse(TypedDict):
+    method: Literal['textDocument/references']
+    result: Union[List['Location'], None]
+
+
+class DocumentHighlightResponse(TypedDict):
+    method: Literal['textDocument/documentHighlight']
+    result: Union[List['DocumentHighlight'], None]
+
+
+class DocumentSymbolResponse(TypedDict):
+    method: Literal['textDocument/documentSymbol']
+    result: Union[List['SymbolInformation'], List['DocumentSymbol'], None]
+
+
+class CodeActionResponse(TypedDict):
+    method: Literal['textDocument/codeAction']
+    result: Union[List[Union['Command', 'CodeAction']], None]
+
+
+class CodeActionResolveResponse(TypedDict):
+    method: Literal['codeAction/resolve']
+    result: 'CodeAction'
+
+
+class WorkspaceSymbolResponse(TypedDict):
+    method: Literal['workspace/symbol']
+    result: Union[List['SymbolInformation'], List['WorkspaceSymbol'], None]
+
+
+class WorkspaceSymbolResolveResponse(TypedDict):
+    method: Literal['workspaceSymbol/resolve']
+    result: 'WorkspaceSymbol'
+
+
+class CodeLensResponse(TypedDict):
+    method: Literal['textDocument/codeLens']
+    result: Union[List['CodeLens'], None]
+
+
+class CodeLensResolveResponse(TypedDict):
+    method: Literal['codeLens/resolve']
+    result: 'CodeLens'
+
+
+class CodeLensRefreshResponse(TypedDict):
+    method: Literal['workspace/codeLens/refresh']
+    result: None
+
+
+class DocumentLinkResponse(TypedDict):
+    method: Literal['textDocument/documentLink']
+    result: Union[List['DocumentLink'], None]
+
+
+class DocumentLinkResolveResponse(TypedDict):
+    method: Literal['documentLink/resolve']
+    result: 'DocumentLink'
+
+
+class DocumentFormattingResponse(TypedDict):
+    method: Literal['textDocument/formatting']
+    result: Union[List['TextEdit'], None]
+
+
+class DocumentRangeFormattingResponse(TypedDict):
+    method: Literal['textDocument/rangeFormatting']
+    result: Union[List['TextEdit'], None]
+
+
+class DocumentRangesFormattingResponse(TypedDict):
+    method: Literal['textDocument/rangesFormatting']
+    result: Union[List['TextEdit'], None]
+
+
+class DocumentOnTypeFormattingResponse(TypedDict):
+    method: Literal['textDocument/onTypeFormatting']
+    result: Union[List['TextEdit'], None]
+
+
+class RenameResponse(TypedDict):
+    method: Literal['textDocument/rename']
+    result: Union['WorkspaceEdit', None]
+
+
+class PrepareRenameResponse(TypedDict):
+    method: Literal['textDocument/prepareRename']
+    result: Union['PrepareRenameResult', None]
+
+
+class ExecuteCommandResponse(TypedDict):
+    method: Literal['workspace/executeCommand']
+    result: Union['LSPAny', None]
+
+
+class ApplyWorkspaceEditResponse(TypedDict):
+    method: Literal['workspace/applyEdit']
+    result: 'ApplyWorkspaceEditResult'
+
+
+ServerResponse: TypeAlias = Union[ImplementationResponse, TypeDefinitionResponse, DocumentColorResponse, ColorPresentationResponse, FoldingRangeResponse, DeclarationResponse, SelectionRangeResponse, CallHierarchyPrepareResponse, CallHierarchyIncomingCallsResponse, CallHierarchyOutgoingCallsResponse, SemanticTokensResponse, SemanticTokensDeltaResponse, SemanticTokensRangeResponse, LinkedEditingRangeResponse, WillCreateFilesResponse, WillRenameFilesResponse, WillDeleteFilesResponse, MonikerResponse, TypeHierarchyPrepareResponse, TypeHierarchySupertypesResponse, TypeHierarchySubtypesResponse, InlineValueResponse, InlayHintResponse, InlayHintResolveResponse, DocumentDiagnosticResponse, WorkspaceDiagnosticResponse, InlineCompletionResponse, TextDocumentContentResponse, InitializeResponse, ShutdownResponse, WillSaveTextDocumentWaitUntilResponse, CompletionResponse, CompletionResolveResponse, HoverResponse, SignatureHelpResponse, DefinitionResponse, ReferencesResponse, DocumentHighlightResponse, DocumentSymbolResponse, CodeActionResponse, CodeActionResolveResponse, WorkspaceSymbolResponse, WorkspaceSymbolResolveResponse, CodeLensResponse, CodeLensResolveResponse, DocumentLinkResponse, DocumentLinkResolveResponse, DocumentFormattingResponse, DocumentRangeFormattingResponse, DocumentRangesFormattingResponse, DocumentOnTypeFormattingResponse, RenameResponse, PrepareRenameResponse, ExecuteCommandResponse]
+
+
+ClientResponse: TypeAlias = Union[WorkspaceFoldersResponse, ConfigurationResponse, FoldingRangeRefreshResponse, WorkDoneProgressCreateResponse, SemanticTokensRefreshResponse, ShowDocumentResponse, InlineValueRefreshResponse, InlayHintRefreshResponse, DiagnosticRefreshResponse, TextDocumentContentRefreshResponse, RegistrationResponse, UnregistrationResponse, ShowMessageResponse, CodeLensRefreshResponse, ApplyWorkspaceEditResponse]
+
+
+class DidChangeWorkspaceFoldersNotification(TypedDict):
+    method: Literal['workspace/didChangeWorkspaceFolders']
+    params: 'DidChangeWorkspaceFoldersParams'
+
+
+class WorkDoneProgressCancelNotification(TypedDict):
+    method: Literal['window/workDoneProgress/cancel']
+    params: 'WorkDoneProgressCancelParams'
+
+
+class DidCreateFilesNotification(TypedDict):
+    method: Literal['workspace/didCreateFiles']
+    params: 'CreateFilesParams'
+
+
+class DidRenameFilesNotification(TypedDict):
+    method: Literal['workspace/didRenameFiles']
+    params: 'RenameFilesParams'
+
+
+class DidDeleteFilesNotification(TypedDict):
+    method: Literal['workspace/didDeleteFiles']
+    params: 'DeleteFilesParams'
+
+
+class DidOpenNotebookDocumentNotification(TypedDict):
+    method: Literal['notebookDocument/didOpen']
+    params: 'DidOpenNotebookDocumentParams'
+
+
+class DidChangeNotebookDocumentNotification(TypedDict):
+    method: Literal['notebookDocument/didChange']
+    params: 'DidChangeNotebookDocumentParams'
+
+
+class DidSaveNotebookDocumentNotification(TypedDict):
+    method: Literal['notebookDocument/didSave']
+    params: 'DidSaveNotebookDocumentParams'
+
+
+class DidCloseNotebookDocumentNotification(TypedDict):
+    method: Literal['notebookDocument/didClose']
+    params: 'DidCloseNotebookDocumentParams'
+
+
+class InitializedNotification(TypedDict):
+    method: Literal['initialized']
+    params: 'InitializedParams'
+
+
+class ExitNotification(TypedDict):
+    method: Literal['exit']
+    params: None
+
+
+class DidChangeConfigurationNotification(TypedDict):
+    method: Literal['workspace/didChangeConfiguration']
+    params: 'DidChangeConfigurationParams'
+
+
+class ShowMessageNotification(TypedDict):
+    method: Literal['window/showMessage']
+    params: 'ShowMessageParams'
+
+
+class LogMessageNotification(TypedDict):
+    method: Literal['window/logMessage']
+    params: 'LogMessageParams'
+
+
+class TelemetryEventNotification(TypedDict):
+    method: Literal['telemetry/event']
+    params: 'LSPAny'
+
+
+class DidOpenTextDocumentNotification(TypedDict):
+    method: Literal['textDocument/didOpen']
+    params: 'DidOpenTextDocumentParams'
+
+
+class DidChangeTextDocumentNotification(TypedDict):
+    method: Literal['textDocument/didChange']
+    params: 'DidChangeTextDocumentParams'
+
+
+class DidCloseTextDocumentNotification(TypedDict):
+    method: Literal['textDocument/didClose']
+    params: 'DidCloseTextDocumentParams'
+
+
+class DidSaveTextDocumentNotification(TypedDict):
+    method: Literal['textDocument/didSave']
+    params: 'DidSaveTextDocumentParams'
+
+
+class WillSaveTextDocumentNotification(TypedDict):
+    method: Literal['textDocument/willSave']
+    params: 'WillSaveTextDocumentParams'
+
+
+class DidChangeWatchedFilesNotification(TypedDict):
+    method: Literal['workspace/didChangeWatchedFiles']
+    params: 'DidChangeWatchedFilesParams'
+
+
+class PublishDiagnosticsNotification(TypedDict):
+    method: Literal['textDocument/publishDiagnostics']
+    params: 'PublishDiagnosticsParams'
+
+
+class SetTraceNotification(TypedDict):
+    method: Literal['$/setTrace']
+    params: 'SetTraceParams'
+
+
+class LogTraceNotification(TypedDict):
+    method: Literal['$/logTrace']
+    params: 'LogTraceParams'
+
+
+class CancelNotification(TypedDict):
+    method: Literal['$/cancelRequest']
+    params: 'CancelParams'
+
+
+class ProgressNotification(TypedDict):
+    method: Literal['$/progress']
+    params: 'ProgressParams'
+
+
+ClientNotification: TypeAlias = Union[DidChangeWorkspaceFoldersNotification, WorkDoneProgressCancelNotification, DidCreateFilesNotification, DidRenameFilesNotification, DidDeleteFilesNotification, DidOpenNotebookDocumentNotification, DidChangeNotebookDocumentNotification, DidSaveNotebookDocumentNotification, DidCloseNotebookDocumentNotification, InitializedNotification, ExitNotification, DidChangeConfigurationNotification, DidOpenTextDocumentNotification, DidChangeTextDocumentNotification, DidCloseTextDocumentNotification, DidSaveTextDocumentNotification, WillSaveTextDocumentNotification, DidChangeWatchedFilesNotification, SetTraceNotification, CancelNotification, ProgressNotification]
+
+
+ServerNotification: TypeAlias = Union[ShowMessageNotification, LogMessageNotification, TelemetryEventNotification, PublishDiagnosticsNotification, LogTraceNotification, CancelNotification, ProgressNotification]

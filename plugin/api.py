@@ -26,7 +26,6 @@ from typing import final
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
-from typing_extensions import deprecated
 import inspect
 import sublime
 
@@ -636,11 +635,6 @@ class AbstractPlugin(APIHandler, ABC):
         :param      configuration:      The configuration
         """
         pass
-
-    @classmethod
-    @deprecated("Use `is_applicable(view, config)` instead.")
-    def should_ignore(cls, view: sublime.View) -> bool:
-        return False
 
     @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:

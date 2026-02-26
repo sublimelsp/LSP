@@ -1136,10 +1136,6 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if not self.state == ClientStates.READY:
             return False
-        # TODO remove after next release
-        if isinstance(self._plugin, AbstractPlugin) and self._plugin.should_ignore(view):
-            debug(view, "ignored by plugin", self._plugin.__class__.__name__)
-            return False
         if scheme == "file":
             file_name = view.file_name()
             if not file_name:

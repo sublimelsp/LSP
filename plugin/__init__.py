@@ -17,9 +17,15 @@ from .core.file_watcher import FileWatcherEventType
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
 from .core.promise import Promise
+from .core.protocol import ClientNotification
+from .core.protocol import ClientRequest
+from .core.protocol import ClientResponse
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.protocol import ServerNotification
+from .core.protocol import ServerRequest
+from .core.protocol import ServerResponse
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.sessions import Session
@@ -42,6 +48,9 @@ __all__ = [
     'AbstractPlugin',
     'apply_text_edits',
     'ClientConfig',
+    'ClientNotification',
+    'ClientRequest',
+    'ClientResponse',
     'css',
     'DebouncerNonThreadSafe',
     'DottedDict',
@@ -66,6 +75,9 @@ __all__ = [
     'Request',
     'request_handler',
     'Response',
+    'ServerNotification',
+    'ServerRequest',
+    'ServerResponse',
     'Session',
     'SessionBufferProtocol',
     'SessionViewProtocol',

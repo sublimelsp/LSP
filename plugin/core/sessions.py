@@ -2292,6 +2292,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 else:
                     server_response = cast(ServerResponse, cast(object, {'method': method, 'result': response}))
                     self._plugin.on_server_response_async(server_response)
+                    response.result = server_response['result']
+            return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)

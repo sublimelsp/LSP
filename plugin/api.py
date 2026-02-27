@@ -6,9 +6,13 @@ from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
+from .core.protocol import ClientNotification
+from .core.protocol import ClientRequest
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
+from .core.protocol import ServerNotification
+from .core.protocol import ServerResponse
 from .core.settings import client_configs
 from .core.types import ClientConfig
 from .core.types import method2attr
@@ -269,7 +273,6 @@ class LspPlugin:
         """
         In addition to the above variables, add more variables here to be expanded.
         """
-        return None
 
     @classmethod
     def install_async(cls, context: PluginContext) -> None:
@@ -278,7 +281,6 @@ class LspPlugin:
         Make sure to call `params.set_installing_status()` before starting long-running operations to give user
         a better feedback that something is happening.
         """
-        return
 
     @classmethod
     def can_start(cls, context: PluginContext) -> str | None:
@@ -295,7 +297,6 @@ class LspPlugin:
         :returns:   A string describing the reason why we should not start a language server session, or None if we
                     should go ahead and start a session.
         """
-        return None
 
     @classmethod
     def on_pre_start(cls, context: PluginContext) -> str | None:
@@ -312,7 +313,6 @@ class LspPlugin:
 
         :returns:   A desired working directory, or None if you don't care
         """
-        return None
 
     @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
@@ -324,7 +324,6 @@ class LspPlugin:
 
         :returns:   The markdown language map, or None
         """
-        return None
 
     def __init__(self, weaksession: ref[Session], context: PluginContext) -> None:
         """
@@ -365,7 +364,6 @@ class LspPlugin:
 
         :param      settings:      The settings that the server should receive.
         """
-        return
 
     def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
@@ -386,64 +384,55 @@ class LspPlugin:
 
         :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
         """
-        return None
 
-    def on_pre_send_request_async(self, request_id: int, request: Request[Any, Any]) -> None:
+    def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
         This API is triggered on async thread.
 
-        :param    request_id:  The request ID.
-        :param    request:     The request object. The request params can be modified by the plugin.
+        :param    request:     The request object. The request['params'] can be modified by the plugin.
+        :param    view:        The corresponding View if applicable.
         """
-        return
 
-    def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
+    def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
         """
         Notifies about a notification that is about to be sent to the language server.
         This API is triggered on async thread.
 
-        :param    notification:  The notification object. The notification params can be modified by the plugin.
+        :param    notification:  The notification object. The notification['params'] can be modified by the plugin.
         """
-        return
 
-    def on_server_response_async(self, method: str, response: Response[Any]) -> None:
+    def on_server_response_async(self, response: ServerResponse) -> None:
         """
         Notifies about a response message that has been received from the language server.
         Only successful responses are passed to this method.
 
-        :param    method:    The method of the request.
-        :param    response:  The response object to the request. The response.result field can be modified by the
+        :param    response:  The response object to the request. The response['result'] field can be modified by the
                              plugin, before it gets further handled by the LSP package.
         """
-        return
 
-    def on_server_notification_async(self, notification: Notification[Any]) -> None:
+    def on_server_notification_async(self, notification: ServerNotification) -> None:
         """
         Notifies about a notification message that has been received from the language server.
 
         :param    notification:  The notification object.
         """
-        return
 
     def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return a Promise
         resolved with `sublime.Sheet` instance.
         """
-        return None
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """
         Called when the context of the session buffer has changed or a new buffer was opened.
         """
-        return
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
         """
         Called after the selection has been modified in a view (debounced).
         """
-        return
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """
@@ -457,7 +446,6 @@ class LspPlugin:
 
         This API is triggered on async thread.
         """
-        return
 
 
 class AbstractPlugin(APIHandler, ABC):

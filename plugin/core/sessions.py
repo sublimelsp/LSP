@@ -101,6 +101,8 @@ from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
+from .protocol import ClientNotification
+from .protocol import ClientRequest
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
@@ -108,6 +110,8 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
+from .protocol import ServerNotification
+from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import Transport
@@ -1266,13 +1270,16 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
         if self._plugin_data:
-            if issubclass(self._plugin_data[0], LspPlugin):
-                self._plugin = self._plugin_data[0](weakref.ref(self), self._plugin_data[1])
-            else:
-                self._plugin = self._plugin_data[0](weakref.ref(self))
+            plugin_class, plugin_context = self._plugin_data
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            self._plugin.on_server_response_async('initialize', Response(-1, result))
+            if issubclass(plugin_class, LspPlugin):
+                self._plugin = plugin_class(weakref.ref(self), plugin_context)
+                server_response: ServerResponse = {'method': 'initialize', 'result': result}
+                self._plugin.on_server_response_async(server_response)
+            else:
+                self._plugin = plugin_class(weakref.ref(self))
+                self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
@@ -2170,8 +2177,12 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, request)
+        elif self._plugin:
+            client_request = cast(ClientRequest, cast(object, {'method': request.method, 'params': request.params}))
+            self._plugin.on_pre_send_request_async(client_request, request.view)
+            request.params = cast(P, client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
         return request_id
@@ -2206,8 +2217,13 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification[P]) -> None:
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
+        elif self._plugin:
+            client_notification = cast(ClientNotification,
+                                       cast(object, {'method': notification.method, 'params': notification.params}))
+            self._plugin.on_pre_send_notification_async(client_notification)
+            notification.params = cast(P, client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
@@ -2250,8 +2266,11 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
-                if self._plugin:
+                if self._plugin and isinstance(self._plugin, AbstractPlugin):
                     self._plugin.on_server_notification_async(Notification(method, result))
+                elif self._plugin:
+                    server_notification = cast(ServerNotification, cast(object, {'method': method, 'result': result}))
+                    self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2261,9 +2280,12 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
-            if self._plugin and not is_error:
-                self._plugin.on_server_response_async(method, response)  # type: ignore
-            return handler, response.result, None, None, None
+            if not is_error and self._plugin:
+                if isinstance(self._plugin, AbstractPlugin):
+                    self._plugin.on_server_response_async(cast(str, method), response)
+                else:
+                    server_response = cast(ServerResponse, cast(object, {'method': method, 'result': response}))
+                    self._plugin.on_server_response_async(server_response)
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)

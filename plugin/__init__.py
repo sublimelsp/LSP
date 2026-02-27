@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
-from .api import HandleUpdateOrInstallationParams
 from .api import LspPlugin
 from .api import notification_handler
 from .api import PluginContext
@@ -59,7 +58,6 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
-    'HandleUpdateOrInstallationParams',
     'LspPlugin',
     'LspTextCommand',
     'LspWindowCommand',

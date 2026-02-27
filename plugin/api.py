@@ -28,7 +28,6 @@ from typing import Any
 from typing import Callable
 from typing import final
 from typing import TYPE_CHECKING
-from typing import TypedDict
 from typing import TypeVar
 import inspect
 import sublime
@@ -148,10 +147,6 @@ def unregister_plugin(plugin: type[AbstractPlugin | LspPlugin]) -> None:
 
 def get_plugin(name: str) -> type[AbstractPlugin | LspPlugin] | None:
     return g_plugins.get(name)
-
-
-class HandleUpdateOrInstallationParams(TypedDict):
-    set_installing_status: Callable[[], None]
 
 
 class APIHandler:

@@ -12,14 +12,12 @@ from .core.protocol import Response
 from .core.settings import client_configs
 from .core.types import ClientConfig
 from .core.types import method2attr
-from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
-from functools import partial
 from functools import wraps
 from typing import Any
 from typing import Callable
@@ -50,7 +48,7 @@ P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 
 
-g_plugins: dict[str, tuple[type[AbstractPlugin], SettingsRegistration]] = {}
+g_plugins: dict[str, type[AbstractPlugin]] = {}
 
 
 def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
@@ -103,10 +101,9 @@ def _register_plugin_impl(plugin: type[AbstractPlugin], notify_listener: bool) -
     if name in g_plugins:
         return
     try:
-        settings, base_file = plugin.configuration()
-        if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            on_change = partial(client_configs.update_external_config, name, settings, base_file)
-            g_plugins[name] = (plugin, SettingsRegistration(settings, on_change))
+        _, settings_path = plugin.configuration()
+        if client_configs.add_external_config(name, settings_path, notify_listener):
+            g_plugins[name] = plugin
     except Exception as ex:
         exception_log(f'Failed to register plugin "{name}"', ex)
 
@@ -128,8 +125,7 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
 
 
 def get_plugin(name: str) -> type[AbstractPlugin] | None:
-    tup = g_plugins.get(name, None)
-    return tup[0] if tup else None
+    return g_plugins.get(name)
 
 
 class APIHandler:

@@ -610,7 +610,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
-        if command_name in ('paste', 'redo', 'undo'):
+        if command_name in ('cut', 'paste', 'redo', 'undo'):
             if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
                 text_change_listener.set_last_edit_action(command_name)
         return None

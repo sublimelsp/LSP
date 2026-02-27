@@ -70,7 +70,7 @@ import sublime
 import sublime_plugin
 import tempfile
 
-ChangeEventAction = Literal['paste', 'redo', 'undo', 'type']
+ChangeEventAction = Literal['cut', 'paste', 'redo', 'undo', 'type']
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501

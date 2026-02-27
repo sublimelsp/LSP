@@ -5,10 +5,12 @@ from functools import total_ordering
 from typing import Any
 from typing import Callable
 from typing import Generic
+from typing import Literal
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import NotRequired
+from typing_extensions import TypeAlias
 import sublime
 
 INT_MAX = 2**31 - 1
@@ -1386,22 +1388,22 @@ class PublishDiagnosticsNotification(TypedDict):
 
 
 class SetTraceNotification(TypedDict):
-    method: Literal['$/setTrace']  # noqa: F722
+    method: Literal['$/setTrace']
     params: 'SetTraceParams'
 
 
 class LogTraceNotification(TypedDict):
-    method: Literal['$/logTrace']  # noqa: F722
+    method: Literal['$/logTrace']
     params: 'LogTraceParams'
 
 
 class CancelNotification(TypedDict):
-    method: Literal['$/cancelRequest']  # noqa: F722
+    method: Literal['$/cancelRequest']
     params: 'CancelParams'
 
 
 class ProgressNotification(TypedDict):
-    method: Literal['$/progress']  # noqa: F722
+    method: Literal['$/progress']
     params: 'ProgressParams'
 
 

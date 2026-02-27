@@ -43,23 +43,6 @@ For package managers like `nvm` (Node version manager), the recommended way is t
 !!! note
     On macOS, it's enough to restart ST for the changes to be picked up. On other platforms, you might have to re-login your user account.
 
-Another solution could be (at least on Linux) to update the server `PATH` using the `env`parameter in your **LSP** configuration file. The following template can be used where:
-
-  - `<your_language_server_name>` is the server name
-  - `<added_path>` is the directory needed for the server to behave correctly
-
-```jsonc
-"<your_language_server_name>":
-{
-    // ...
-
-    "env":
-    {
-        "PATH": "<added_path>:/usr/local/bin"
-    }
-}
-```
-
 ## Common problems
 
 ### Error dialog saying `Failed to start...`

@@ -1454,8 +1454,14 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
+                def on_sheet_opened(sheet: sublime.Sheet) -> sublime.View | None:
+                    if view := sheet.view():
+                        view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+                        return view
+                    return None
+
                 if promise := self._plugin.on_open_uri_async(uri):
-                    return promise.then(lambda sheet: sheet.view())
+                    return promise.then(on_sheet_opened)
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None

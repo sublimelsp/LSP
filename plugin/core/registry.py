@@ -240,6 +240,8 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
             if not config:
                 debug(f'Configuration with name {session_name} does not exist')
                 return
+            if not config.enabled:
+                return
             listener = windows.listener_for_view(self.view)
             if not listener:
                 debug(f'No listener for view {self.view}')

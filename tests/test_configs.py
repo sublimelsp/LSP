@@ -26,7 +26,7 @@ def update_client_config(external_config: ClientConfig, user_override_config: di
 
 class ConfigParsingTests(DeferrableTestCase):
 
-    def test_can_parse_settings_with_selector(self):
+    def test_can_parse_settings_with_selector(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python"
@@ -35,7 +35,7 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(config.selector, "source.python")
         self.assertEqual(config.priority_selector, "source.python")
 
-    def test_can_update_config(self):
+    def test_can_update_config(self) -> None:
         settings = {
             "command": ["pyls"],
         }
@@ -43,7 +43,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = update_client_config(config, {"enabled": True})
         self.assertEqual(config.enabled, True)
 
-    def test_can_read_experimental_capabilities(self):
+    def test_can_read_experimental_capabilities(self) -> None:
         experimental_capabilities = {
             "foo": 1,
             "bar": True,
@@ -56,7 +56,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("pyls", settings)
         self.assertEqual(config.experimental_capabilities, experimental_capabilities)
 
-    def test_transport_config_extends_env_path(self):
+    def test_transport_config_extends_env_path(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -70,7 +70,7 @@ class ConfigParsingTests(DeferrableTestCase):
         resolved_path = transport_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
 
-    def test_list_in_environment(self):
+    def test_list_in_environment(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -87,7 +87,7 @@ class ConfigParsingTests(DeferrableTestCase):
             self.assertEqual(resolved.env["FOO"], "C:/hello:X:/there:Y:/asdf")
         self.assertEqual(resolved.env["BAR"], "baz")
 
-    def test_disabled_capabilities(self):
+    def test_disabled_capabilities(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -112,7 +112,7 @@ class ConfigParsingTests(DeferrableTestCase):
         # This one should be enabled
         self.assertFalse(config.is_disabled_capability("definitionProvider"))
 
-    def test_filter_out_disabled_capabilities_ignore_partially(self):
+    def test_filter_out_disabled_capabilities_ignore_partially(self) -> None:
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -125,7 +125,7 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
 
-    def test_exposes_unknown_root_keys(self):
+    def test_exposes_unknown_root_keys(self) -> None:
         settings = {
             "unknown": {
                 "foo": 1
@@ -134,7 +134,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("test", settings)
         self.assertEqual(config.unknown, settings['unknown'])
 
-    def test_shallow_merges_overrides_for_unknown_root_keys(self):
+    def test_shallow_merges_overrides_for_unknown_root_keys(self) -> None:
         settings = {
             "unknown": {
                 "foo": 1
@@ -148,7 +148,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = update_client_config(read_client_config("test", settings), overriddes)
         self.assertEqual(config.unknown, overriddes['unknown'])
 
-    def test_attribute_access_prefers_native_keys(self):
+    def test_attribute_access_prefers_native_keys(self) -> None:
         settings = {
             "settings": {
                 "setting1": 1
@@ -157,7 +157,7 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("test", settings)
         self.assertIsInstance(config.settings, DottedDict)
 
-    def test_does_not_have_subscription_access(self):
+    def test_does_not_have_subscription_access(self) -> None:
         settings = {
             "settings": {
                 "setting1": 1
@@ -172,7 +172,7 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertRaises(TypeError, lambda: config['unknown'])  # pyright: ignore[reportIndexIssue]
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
-    def test_path_maps(self):
+    def test_path_maps(self) -> None:
         config = read_client_config("asdf", {
             "command": ["asdf"],
             "selector": "source.foo",

@@ -288,7 +288,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
 
 class PatternToGlobTests(unittest.TestCase):
 
-    def test_basic_directory_patterns(self):
+    def test_basic_directory_patterns(self) -> None:
         patterns = [
             '.git',
             'CVS',
@@ -303,7 +303,7 @@ class PatternToGlobTests(unittest.TestCase):
             ],
             is_directory_pattern=True)
 
-    def test_complex_directory_patterns(self):
+    def test_complex_directory_patterns(self) -> None:
         patterns = [
             '*/foo',
             'foo/bar',
@@ -320,7 +320,7 @@ class PatternToGlobTests(unittest.TestCase):
             ],
             is_directory_pattern=True)
 
-    def test_basic_file_patterns(self):
+    def test_basic_file_patterns(self) -> None:
         self._verify_patterns(
             [
                 '*.pyc',
@@ -333,7 +333,7 @@ class PatternToGlobTests(unittest.TestCase):
             ],
             is_directory_pattern=False)
 
-    def test_complex_file_patterns(self):
+    def test_complex_file_patterns(self) -> None:
         self._verify_patterns(
             [
                 "/*.pyo",
@@ -343,7 +343,7 @@ class PatternToGlobTests(unittest.TestCase):
             ],
             is_directory_pattern=False)
 
-    def test_project_relative_patterns(self):
+    def test_project_relative_patterns(self) -> None:
         self._verify_patterns(['//foo'], ['/Users/me/foo/**'], is_directory_pattern=True, root_path='/Users/me')
         self._verify_patterns(['//*.pyo'], ['/Users/me/*.pyo'], is_directory_pattern=False, root_path='/Users/me')
         # Without root_path those will be treated as absolute paths even when starting with multiple slashes.

@@ -6,7 +6,7 @@ import unittest
 
 class LspRenamePanelTests(unittest.TestCase):
 
-    def test_utf16_ascii(self):
+    def test_utf16_ascii(self) -> None:
         s = 'abc'
         self.assertEqual(utf16_to_code_points(s, 0), 0)
         self.assertEqual(utf16_to_code_points(s, 1), 1)
@@ -14,7 +14,7 @@ class LspRenamePanelTests(unittest.TestCase):
         self.assertEqual(utf16_to_code_points(s, 3), 3)  # EOL after last character should count as its own code point
         self.assertEqual(utf16_to_code_points(s, 1337), 3)  # clamp to EOL
 
-    def test_utf16_deseret_letter(self):
+    def test_utf16_deseret_letter(self) -> None:
         # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocuments
         s = 'a𐐀b'
         self.assertEqual(len(s), 3)
@@ -25,7 +25,7 @@ class LspRenamePanelTests(unittest.TestCase):
         self.assertEqual(utf16_to_code_points(s, 4), 3)
         self.assertEqual(utf16_to_code_points(s, 1337), 3)
 
-    def test_utf16_emoji(self):
+    def test_utf16_emoji(self) -> None:
         s = 'a😀x'
         self.assertEqual(len(s), 3)
         self.assertEqual(utf16_to_code_points(s, 0), 0)
@@ -35,7 +35,7 @@ class LspRenamePanelTests(unittest.TestCase):
         self.assertEqual(utf16_to_code_points(s, 4), 3)
         self.assertEqual(utf16_to_code_points(s, 1337), 3)
 
-    def test_utf16_emoji_zwj_sequence(self):
+    def test_utf16_emoji_zwj_sequence(self) -> None:
         # https://unicode.org/emoji/charts/emoji-zwj-sequences.html
         s = 'a😵‍💫x'
         self.assertEqual(len(s), 5)

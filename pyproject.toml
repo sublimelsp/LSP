@@ -70,7 +70,6 @@ ignore = [
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "B909",  # https://docs.astral.sh/ruff/rules/loop-iterator-mutation/
     "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "C400",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/

@@ -415,5 +415,4 @@ class LspSelectCompletionCommand(LspTextCommand):
             # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
             # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
             translation = region.b - primary_cursor_position
-            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
-            yield translated_edit_region
+            yield sublime.Region(edit_region.a + translation, edit_region.b + translation)

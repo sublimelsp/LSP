@@ -103,6 +103,10 @@
               "type": "object",
               "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
             },
+            "ClientInitializationOptionsDeprecated": {
+              "type": "object",
+              "deprecationMessage": "Use \"initialization_options\" instead."
+            },
             "ClientSettings": {
               "type": "object",
               "markdownDescription": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
@@ -360,8 +364,11 @@
                 "priority_selector": {
                   "$ref": "#/definitions/ClientPrioritySelector",
                 },
-                "initializationOptions": {
+                "initialization_options": {
                   "$ref": "#/definitions/ClientInitializationOptions"
+                },
+                "initializationOptions": {
+                  "$ref": "#/definitions/ClientInitializationOptionsDeprecated"
                 },
                 "settings": {
                   "$ref": "#/definitions/ClientSettings"
@@ -890,8 +897,11 @@
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"
             },
-            "initializationOptions": {
+            "initialization_options": {
               "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
+            },
+            "initializationOptions": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptionsDeprecated"
             },
             "settings": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSettings"

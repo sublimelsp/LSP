@@ -70,13 +70,13 @@ Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimels
                 "enabled": true,
                 "command": ["/PATH/TO/clojure-lsp"], // Update the PATH
                 "selector": "source.clojure",
-                "initializationOptions": {}
+                "initialization_options": {}
             }
         }
     }
     ```
 
-!!! info "See available [initializationOptions](https://clojure-lsp.io/settings/#initializationoptions)."
+!!! info "See available [initialization options](https://clojure-lsp.io/settings/#initializationoptions)."
 
 ## CSS
 
@@ -155,7 +155,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
                 "enabled": true,
                 "command": ["fsautocomplete"],
                 "selector": "source.fsharp",
-                "initializationOptions": {
+                "initialization_options": {
                     "AutomaticWorkspaceInit": true
                 }
             }
@@ -686,7 +686,7 @@ There are multiple options:
                 "enabled": true,
                 "command": ["solargraph", "stdio"],
                 "selector": "source.ruby",
-                "initializationOptions": {
+                "initialization_options": {
                     "diagnostics": true
                 }
             }
@@ -762,7 +762,7 @@ There are multiple options:
                 "enabled": true,
                 "command": ["ruby-lsp"],
                 "selector": "source.ruby | text.html.rails",
-                "initializationOptions": {
+                "initialization_options": {
                     "enabledFeatures": {
                         "diagnostics": true
                     },
@@ -831,7 +831,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
                 "enabled": true,
                 "command": ["diagnostic-languageserver", "--stdio"],
                 "selector": "source.shell.bash",
-                "initializationOptions": {
+                "initialization_options": {
                     "linters": {
                         "shellcheck": {
                             "command": "shellcheck",

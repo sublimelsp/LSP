@@ -65,7 +65,6 @@ fixable = ["ALL"]
 select = ["ALL"]
 # Refer to https://docs.astral.sh/ruff/rules/
 ignore = [
-    "ANN001",  # https://docs.astral.sh/ruff/rules/missing-type-function-argument/
     "ANN003",  # https://docs.astral.sh/ruff/rules/missing-type-kwargs/
     "ANN201",  # https://docs.astral.sh/ruff/rules/missing-return-type-undocumented-public-function/
     "ANN202",  # https://docs.astral.sh/ruff/rules/missing-return-type-private-function/

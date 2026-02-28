@@ -27,7 +27,7 @@ class HashableRange:
         start, end = r['start'], r['end']
         self.data = (start['line'], start['character'], end['line'], end['character'])
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.data)
 
     def __eq__(self, rhs: object) -> bool:

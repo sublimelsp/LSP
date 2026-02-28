@@ -417,7 +417,7 @@ class SemanticToken:
 
     __slots__ = ("modifiers", "region", "type")
 
-    def __init__(self, region: sublime.Region, typ: str, modifiers: list[str]):
+    def __init__(self, region: sublime.Region, typ: str, modifiers: list[str]) -> None:
         self.modifiers = modifiers
         self.region = region
         self.type = typ

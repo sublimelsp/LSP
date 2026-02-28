@@ -75,7 +75,7 @@ class TestFileWatcher(FileWatcher):
 
     def trigger_event(self, events: list[FileWatcherEvent]) -> None:
 
-        def trigger_async():
+        def trigger_async() -> None:
             if self.handler:
                 self.handler.on_file_event_async(events)
 

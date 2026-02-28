@@ -17,6 +17,7 @@ from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -413,14 +414,11 @@ class Settings:
             return [None] * 4  # default styling
 
 
+@dataclass
 class SemanticToken:
-
-    __slots__ = ("modifiers", "region", "type")
-
-    def __init__(self, region: sublime.Region, typ: str, modifiers: list[str]) -> None:
-        self.modifiers = modifiers
-        self.region = region
-        self.type = typ
+    region: sublime.Region
+    type: str
+    modifiers: list[str]
 
 
 class ClientStates:

@@ -71,7 +71,6 @@ ignore = [
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
     "B008",  # https://docs.astral.sh/ruff/rules/function-call-in-default-argument/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "B017",  # https://docs.astral.sh/ruff/rules/assert-raises-exception/
     "B027",  # https://docs.astral.sh/ruff/rules/empty-method-without-abstract-decorator/
     "B901",  # https://docs.astral.sh/ruff/rules/return-in-generator/
     "B903",  # https://docs.astral.sh/ruff/rules/class-as-data-structure/

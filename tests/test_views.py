@@ -187,12 +187,12 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_no_allowed_formats(self) -> None:
         content = "<div>text\n</div>"
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             minihtml(self.view, content, allowed_formats=0)
 
     def test_minihtml_conflicting_formats(self) -> None:
         content = "<div>text\n</div>"
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKED_STRING)
 
     def test_minihtml_format_string(self) -> None:

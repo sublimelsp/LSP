@@ -120,8 +120,8 @@ def content_length(line: bytes) -> int | None:
         value = value.strip()
         try:
             return int(value)
-        except ValueError:
-            raise ValueError(f"Invalid Content-Length header: {value}")
+        except ValueError as ex:
+            raise ValueError(f"Invalid Content-Length header: {value}") from ex
     return None
 
 

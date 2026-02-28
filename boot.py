@@ -265,7 +265,7 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in opening_files:
+        for fn in opening_files.keys():
             if fn == file_name or os.path.samefile(fn, file_name):
                 tup = opening_files.pop(fn, None)
                 if tup:

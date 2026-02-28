@@ -2003,7 +2003,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             return ({"success": b})
 
         if params.get("external"):
-            return Promise.resolve(success(open_externally(uri, bool(params.get("takeFocus")))))
+            return Promise.resolve(success(open_externally(uri)))
         # TODO: ST API does not allow us to say "do not focus this new view"
         return self.open_uri_async(uri, params.get("selection")).then(success)
 

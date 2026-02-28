@@ -24,7 +24,7 @@ class LspTask(ABC):
     def is_applicable(cls, view: sublime.View) -> bool:
         pass
 
-    def __init__(self, task_runner: LspTextCommand, on_done: Callable[[], None]):
+    def __init__(self, task_runner: LspTextCommand, on_done: Callable[[], None]) -> None:
         self._task_runner = task_runner
         self._on_done = on_done
         self._completed = False

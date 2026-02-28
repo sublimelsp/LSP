@@ -160,8 +160,8 @@ def get_symbol_kind_from_scope(scope_name: str) -> SublimeKind:
     return best_kind
 
 
-def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
-    return sublime.Region(position_to_offset(range['start'], view), position_to_offset(range['end'], view))
+def range_to_region(lsp_range: Range, view: sublime.View) -> sublime.Region:
+    return sublime.Region(position_to_offset(lsp_range['start'], view), position_to_offset(lsp_range['end'], view))
 
 
 def region_to_range(view: sublime.View, region: sublime.Region) -> Range:

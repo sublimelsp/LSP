@@ -9,7 +9,7 @@ import sublime
 
 class LspServerPanelTests(DeferrableTestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.window = sublime.active_window()
         self.assertIsNotNone(self.window)
@@ -24,14 +24,14 @@ class LspServerPanelTests(DeferrableTestCase):
             return
         self.panel.run_command("lsp_clear_panel")
 
-    def assert_total_lines_equal(self, expected_total_lines):
+    def assert_total_lines_equal(self, expected_total_lines: int) -> None:
         actual_total_lines = len(self.panel.split_by_newlines(sublime.Region(0, self.panel.size())))
         self.assertEqual(actual_total_lines, expected_total_lines)
 
     def update_panel(self, msg: str) -> None:
         self.wm.log_server_message("test", msg)
 
-    def test_server_panel_circular_behavior(self):
+    def test_server_panel_circular_behavior(self) -> None:
         n = MAX_LOG_LINES_LIMIT_ON
         for i in range(0, n + 1):
             self.update_panel(str(i))

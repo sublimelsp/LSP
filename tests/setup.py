@@ -60,11 +60,11 @@ def make_tcp_test_config() -> ClientConfig:
     )
 
 
-def add_config(config):
+def add_config(config: ClientConfig) -> None:
     client_configs.add_for_testing(config)
 
 
-def remove_config(config):
+def remove_config(config: ClientConfig) -> None:
     client_configs.remove_for_testing(config)
 
 
@@ -153,7 +153,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return False
 
     @classmethod
-    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator:
+    def await_message(cls, method: str, promise: YieldPromise | None = None) -> Generator[Any, None, Any]:
         """
         Awaits until server receives a request with a specified method.
 
@@ -179,7 +179,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
         cls.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from cls.await_promise(promise)
-        return promise.result()
+        return promise.result()  # noqa: B901
 
     def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
         promise = YieldPromise()
@@ -195,14 +195,14 @@ class TextDocumentTestCase(DeferrableTestCase):
         return promise
 
     @classmethod
-    def await_promise(cls, promise: YieldPromise | Promise) -> Generator:
+    def await_promise(cls, promise: YieldPromise | Promise) -> Generator[Any, None, Any]:
         if isinstance(promise, YieldPromise):
             yielder = promise
         else:
             yielder = YieldPromise()
             promise.then(lambda result: yielder.fulfill(result))
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
-        return yielder.result()
+        return yielder.result()  # noqa: B901
 
     def await_run_code_action(self, code_action: dict[str, Any]) -> Generator:
         promise = YieldPromise()

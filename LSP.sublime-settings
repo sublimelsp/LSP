@@ -334,7 +334,7 @@
   //     "settings": { },
   //
   //     // Sent once to server in initialize request
-  //     "initializationOptions": { },
+  //     "initialization_options": { },
   //
   //     // Disable providers if so desired
   //     "disabled_capabilities": { },
@@ -391,7 +391,7 @@
         "stdio"
       ],
       "selector": "source.ruby | text.html.ruby",
-      "initializationOptions": {
+      "initialization_options": {
         "diagnostics": false
       },
     },

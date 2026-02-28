@@ -206,7 +206,7 @@ def plugin_loaded() -> None:
     # TODO: remove this in the next minor release
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")
     if base_scope_map.to_dict():
-        def show_warning():
+        def show_warning() -> None:
             print("LSP - The language-ids.sublime-settings file is deprecated, but it looks like you have it.\nSee the migration guide -> https://github.com/sublimelsp/LSP/issues/2592")  # noqa: E501
             sublime.status_message("LSP - The language-ids.sublime-settings file is deprecated. Open the Console for details.")  # noqa: E501
 
@@ -265,7 +265,7 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in opening_files:
+        for fn in opening_files.keys():
             if fn == file_name or os.path.samefile(fn, file_name):
                 tup = opening_files.pop(fn, None)
                 if tup:

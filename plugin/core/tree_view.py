@@ -65,10 +65,10 @@ class TreeItem:
         indent_html = f'<span style="padding-left: {indent_level}rem;">&nbsp;</span>'
         if self.collapsible_state == TreeItemCollapsibleState.COLLAPSED:
             disclosure_button_html = '<a class="disclosure-button" href="{}">▶</a>'.format(
-                sublime.command_url('lsp_expand_tree_item', {'name': sheet_name, 'id': self.id}))
+                sublime.command_url('lsp_expand_tree_item', {'name': sheet_name, 'node_id': self.id}))
         elif self.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             disclosure_button_html = '<a class="disclosure-button" href="{}">▼</a>'.format(
-                sublime.command_url('lsp_collapse_tree_item', {'name': sheet_name, 'id': self.id}))
+                sublime.command_url('lsp_collapse_tree_item', {'name': sheet_name, 'node_id': self.id}))
         else:
             disclosure_button_html = '<span class="disclosure-button">&nbsp;</span>'
         kind_class_name = KIND_CLASS_NAMES.get(self.kind[0], 'kind kind_ambiguous')
@@ -118,8 +118,8 @@ class TreeDataProvider(metaclass=ABCMeta):
 class TreeViewSheet(sublime.HtmlSheet):
     """ A special HtmlSheet which can render interactive tree data structures. """
 
-    def __init__(self, id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
-        super().__init__(id)
+    def __init__(self, sheet_id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
+        super().__init__(sheet_id)
         self.nodes: dict[str, Node] = {}
         self.root_nodes: list[str] = []
         self.name = name
@@ -149,9 +149,9 @@ class TreeViewSheet(sublime.HtmlSheet):
             promises.append(self.data_provider.get_children(element).then(partial(self._add_children, tree_item.id)))
         Promise.all(promises).then(lambda _: self._update_contents())
 
-    def _add_children(self, id: str, elements: list[T]) -> None:
-        assert id in self.nodes
-        node = self.nodes[id]
+    def _add_children(self, node_id: str, elements: list[T]) -> None:
+        assert node_id in self.nodes
+        node = self.nodes[node_id]
         for element in elements:
             tree_item = self.data_provider.get_tree_item(element)
             self.nodes[tree_item.id] = Node(element, tree_item, node.indent_level + 1)
@@ -160,21 +160,21 @@ class TreeViewSheet(sublime.HtmlSheet):
             node.tree_item.collapsible_state = TreeItemCollapsibleState.NONE
         node.is_resolved = True
 
-    def expand_item(self, id: str) -> None:
-        assert id in self.nodes
-        node = self.nodes[id]
+    def expand_item(self, node_id: str) -> None:
+        assert node_id in self.nodes
+        node = self.nodes[node_id]
         node.tree_item.collapsible_state = TreeItemCollapsibleState.EXPANDED
         if node.is_resolved:
             self._update_contents()
             return
         else:
             self.data_provider.get_children(node.element) \
-                .then(partial(self._add_children, id)) \
+                .then(partial(self._add_children, node_id)) \
                 .then(lambda _: self._update_contents())
 
-    def collapse_item(self, id: str) -> None:
-        assert id in self.nodes
-        self.nodes[id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
+    def collapse_item(self, node_id: str) -> None:
+        assert node_id in self.nodes
+        self.nodes[node_id].tree_item.collapsible_state = TreeItemCollapsibleState.COLLAPSED
         self._update_contents()
 
     def _update_contents(self) -> None:
@@ -262,8 +262,8 @@ class TreeViewSheet(sublime.HtmlSheet):
         """.format(css().sheets, self.header, "".join([self._subtree_html(root_id) for root_id in self.root_nodes]))
         self.set_contents(contents)
 
-    def _subtree_html(self, id: str) -> str:
-        node = self.nodes[id]
+    def _subtree_html(self, node_id: str) -> str:
+        node = self.nodes[node_id]
         html = node.tree_item.html(self.name, node.indent_level)
         if node.tree_item.collapsible_state == TreeItemCollapsibleState.EXPANDED:
             html += "".join([self._subtree_html(child_id) for child_id in node.child_ids])
@@ -313,7 +313,7 @@ def new_tree_view_sheet(
     return tree_view_sheet
 
 
-def toggle_tree_item(window: sublime.Window, name: str, id: str, expand: bool) -> None:
+def toggle_tree_item(window: sublime.Window, name: str, node_id: str, expand: bool) -> None:
     wm = windows.lookup(window)
     if not wm:
         return
@@ -321,18 +321,18 @@ def toggle_tree_item(window: sublime.Window, name: str, id: str, expand: bool) -
     if not sheet:
         return
     if expand:
-        sheet.expand_item(id)
+        sheet.expand_item(node_id)
     else:
-        sheet.collapse_item(id)
+        sheet.collapse_item(node_id)
 
 
 class LspExpandTreeItemCommand(LspWindowCommand):
 
-    def run(self, name: str, id: str) -> None:
-        toggle_tree_item(self.window, name, id, True)
+    def run(self, name: str, node_id: str) -> None:
+        toggle_tree_item(self.window, name, node_id, True)
 
 
 class LspCollapseTreeItemCommand(LspWindowCommand):
 
-    def run(self, name: str, id: str) -> None:
-        toggle_tree_item(self.window, name, id, False)
+    def run(self, name: str, node_id: str) -> None:
+        toggle_tree_item(self.window, name, node_id, False)

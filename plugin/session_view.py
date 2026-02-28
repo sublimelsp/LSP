@@ -33,9 +33,9 @@ import sublime
 class TagData:
     __slots__ = ('key', 'regions', 'scope')
 
-    def __init__(self, key: str, regions: list[sublime.Region] = [], scope: str = '') -> None:
+    def __init__(self, key: str, regions: list[sublime.Region] | None = None, scope: str = '') -> None:
         self.key = key
-        self.regions = regions
+        self.regions = regions or []
         self.scope = scope
 
 

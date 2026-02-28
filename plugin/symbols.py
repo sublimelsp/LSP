@@ -270,12 +270,8 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
             for lsp_kind, st_kind in SYMBOL_KINDS.items()
             if any(item.value['kind'] == lsp_kind for item in self.items)
         ])
-        for index, item in enumerate(items):
-            if item.value == self.last_selected:
-                break
-        else:
-            index = 0
-        return items, index
+        selected_index = next((i for i, item in enumerate(items) if item.value == self.last_selected), 0)
+        return items, selected_index
 
     def confirm(self, text: int) -> None:
         self.last_selected = text

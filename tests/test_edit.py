@@ -160,7 +160,7 @@ LSP_EDIT_DOCUMENT_CHANGES_3: WorkspaceEdit = {
 
 class TextEditTests(unittest.TestCase):
 
-    def test_parse_from_lsp(self):
+    def test_parse_from_lsp(self) -> None:
         (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
         self.assertEqual(newText, 'newText\n')  # Without the \r
         self.assertEqual(start[0], 10)
@@ -171,29 +171,29 @@ class TextEditTests(unittest.TestCase):
 
 class WorkspaceEditTests(unittest.TestCase):
 
-    def test_parse_no_changes_from_lsp(self):
+    def test_parse_no_changes_from_lsp(self) -> None:
         changes = parse_workspace_edit({})
         self.assertEqual(len(changes), 0)
 
-    def test_parse_changes_from_lsp(self):
+    def test_parse_changes_from_lsp(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_CHANGES)
         self.assertIn(URI, changes)
         self.assertEqual(len(changes), 1)
         self.assertEqual(len(changes[URI][0]), 1)
 
-    def test_parse_document_changes_from_lsp(self):
+    def test_parse_document_changes_from_lsp(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
         self.assertIn(URI, changes)
         self.assertEqual(len(changes), 1)
         self.assertEqual(len(changes[URI][0]), 1)
 
-    def test_no_clobbering_of_previous_edits(self):
+    def test_no_clobbering_of_previous_edits(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
         self.assertIn(URI, changes)
         self.assertEqual(len(changes), 1)
         self.assertEqual(len(changes[URI][0]), 5)
 
-    def test_prefers_document_edits_over_changes(self):
+    def test_prefers_document_edits_over_changes(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
         self.assertIn(URI, changes)
         self.assertEqual(len(changes), 1)
@@ -202,10 +202,10 @@ class WorkspaceEditTests(unittest.TestCase):
 
 class SortByApplicationOrderTests(unittest.TestCase):
 
-    def test_empty_sort(self):
+    def test_empty_sort(self) -> None:
         self.assertEqual(sort_by_application_order([]), [])
 
-    def test_sorts_in_application_order(self):
+    def test_sorts_in_application_order(self) -> None:
         edits = [
             ((0, 0), (0, 0), 'b'),
             ((0, 0), (0, 0), 'a'),
@@ -217,7 +217,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
         self.assertEqual(sorted_edits[1][2], 'a')
         self.assertEqual(sorted_edits[2][2], 'c')
 
-    def test_sorts_in_application_order2(self):
+    def test_sorts_in_application_order2(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
         (edits, label, version) = changes[URI]
         self.assertEqual(version, 6)

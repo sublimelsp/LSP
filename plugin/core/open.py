@@ -160,12 +160,11 @@ def open_in_browser(uri: str) -> None:
         sublime.status_message("failed to open: " + uri)
 
 
-def open_externally(uri: str, take_focus: bool) -> bool:
+def open_externally(uri: str) -> bool:
     """
     A blocking function that invokes the OS's "open with default extension"
     """
     try:
-        # TODO: handle take_focus
         if ST_PLATFORM == "windows":
             os.startfile(uri)  # type: ignore
         elif ST_PLATFORM == "osx":

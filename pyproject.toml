@@ -20,7 +20,7 @@ skipsdist = true
 deps = [
     "mypy==1.18.2",
     "pyright==1.1.408",
-    "ruff==0.15.0",
+    "ruff==0.15.4",
     "orjson==3.11.4",
 ]
 commands = [
@@ -65,29 +65,11 @@ fixable = ["ALL"]
 select = ["ALL"]
 # Refer to https://docs.astral.sh/ruff/rules/
 ignore = [
-    "A001",  # https://docs.astral.sh/ruff/rules/builtin-variable-shadowing/
-    "A002",  # https://docs.astral.sh/ruff/rules/builtin-argument-shadowing/
-    "ANN001",  # https://docs.astral.sh/ruff/rules/missing-type-function-argument/
-    "ANN003",  # https://docs.astral.sh/ruff/rules/missing-type-kwargs/
-    "ANN201",  # https://docs.astral.sh/ruff/rules/missing-return-type-undocumented-public-function/
-    "ANN202",  # https://docs.astral.sh/ruff/rules/missing-return-type-private-function/
-    "ANN204",  # https://docs.astral.sh/ruff/rules/missing-return-type-special-method/
     "ANN401",  # https://docs.astral.sh/ruff/rules/any-type/
-    "ARG001",  # https://docs.astral.sh/ruff/rules/unused-function-argument/
     "ARG002",  # https://docs.astral.sh/ruff/rules/unused-method-argument/
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
-    "B006",  # https://docs.astral.sh/ruff/rules/mutable-argument-default/
-    "B007",  # https://docs.astral.sh/ruff/rules/unused-loop-control-variable/
-    "B008",  # https://docs.astral.sh/ruff/rules/function-call-in-default-argument/
-    "B009",  # https://docs.astral.sh/ruff/rules/get-attr-with-constant/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "B017",  # https://docs.astral.sh/ruff/rules/assert-raises-exception/
-    "B027",  # https://docs.astral.sh/ruff/rules/empty-method-without-abstract-decorator/
-    "B901",  # https://docs.astral.sh/ruff/rules/return-in-generator/
-    "B903",  # https://docs.astral.sh/ruff/rules/class-as-data-structure/
-    "B904",  # https://docs.astral.sh/ruff/rules/raise-without-from-inside-except/
-    "B909",  # https://docs.astral.sh/ruff/rules/loop-iterator-mutation/
     "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "C400",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/

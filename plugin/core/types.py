@@ -17,6 +17,7 @@ from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -415,14 +416,11 @@ class Settings:
             return [None] * 4  # default styling
 
 
+@dataclass
 class SemanticToken:
-
-    __slots__ = ("modifiers", "region", "type")
-
-    def __init__(self, region: sublime.Region, type: str, modifiers: list[str]):
-        self.modifiers = modifiers
-        self.region = region
-        self.type = type
+    region: sublime.Region
+    type: str
+    modifiers: list[str]
 
 
 class ClientStates:
@@ -884,8 +882,17 @@ class ClientConfig:
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
-        initialization_options = DottedDict(base.get("initializationOptions", {}))
-        initialization_options.update(read_dict_setting(s, "initializationOptions", {}))
+        # "initialization_options" with backwards compatibility for "initializationOptions"
+        base_old_init_opts = base.get("initializationOptions", {})
+        base_new_init_opts = base.get("initialization_options", {})
+        resolved_old_init_opts = read_dict_setting(s, "initializationOptions", {})
+        resolved_new_init_opts = read_dict_setting(s, "initialization_options", {})
+        initialization_options = DottedDict(base_new_init_opts or base_old_init_opts)
+        if resolved_old_init_opts != base_old_init_opts:
+            debug(f'"initializationOptions" in config {name} is deprecated! Use "initialization_options" instead.')
+            initialization_options.update(resolved_old_init_opts)
+        if resolved_new_init_opts != base_new_init_opts:
+            initialization_options.update(resolved_new_init_opts)
         disabled_capabilities = s.get("disabled_capabilities")
         file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
@@ -940,7 +947,7 @@ class ClientConfig:
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
             enabled=d.get("enabled", False),
-            initialization_options=DottedDict(d.get("initializationOptions")),
+            initialization_options=DottedDict(d.get("initialization_options", d.get("initializationOptions"))),
             settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
             experimental_capabilities=d.get("experimental_capabilities"),
@@ -957,7 +964,7 @@ class ClientConfig:
         """Create a ClientConfig by applying overrides to an existing config.
 
         Values present in `override` take precedence over those in `src_config`. Structured
-        values (`initializationOptions`, `settings`) are deep-merged rather than replaced wholesale. The raw
+        values (`initialization_options`, `settings`) are deep-merged rather than replaced wholesale. The raw
         `_all_settings` dict is shallow-merged.
 
         :param src_config: The base configuration to start from.
@@ -979,7 +986,8 @@ class ClientConfig:
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             enabled=override.get("enabled", src_config.enabled),
             initialization_options=DottedDict.from_base_and_override(
-                src_config.initialization_options, override.get("initializationOptions")),
+                src_config.initialization_options,
+                override.get("initialization_options", override.get("initializationOptions"))),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
             env=override.get("env", src_config.env),
             experimental_capabilities=override.get(

@@ -17,7 +17,7 @@
 
   // Enable on-type-formatting functionality that allows a language server
   // to format parts of the document during typing.
-  "format_on_type": true,
+  "format_on_type": false,
 
   // --- Code Actions -------------------------------------------------------------------
 

@@ -294,7 +294,7 @@ class Settings:
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
-        r("format_on_type", True)
+        r("format_on_type", False)
         r("hover_highlight_style", "")
         r("initially_folded", [])
         r("inlay_hints_max_length", 30)

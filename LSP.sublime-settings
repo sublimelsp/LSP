@@ -15,7 +15,7 @@
   // "settings" section of project files.
   "lsp_format_on_save": false,
 
-  // Enable on-type-formatting functionality that allows language server
+  // Enable on-type-formatting functionality that allows a language server
   // to format parts of the document during typing.
   "format_on_type": true,
 

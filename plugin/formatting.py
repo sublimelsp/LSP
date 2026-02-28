@@ -231,7 +231,7 @@ class LspFormatCommand(LspTextCommand):
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         return self.is_enabled(event, point)
 
-    def description(self, **kwargs) -> str:
+    def description(self, **kwargs: Any) -> str:
         return "Format Selection" if self._range_formatting_available() else "Format File"
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:

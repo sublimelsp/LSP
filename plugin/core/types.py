@@ -417,10 +417,10 @@ class SemanticToken:
 
     __slots__ = ("modifiers", "region", "type")
 
-    def __init__(self, region: sublime.Region, type: str, modifiers: list[str]):
+    def __init__(self, region: sublime.Region, typ: str, modifiers: list[str]):
         self.modifiers = modifiers
         self.region = region
-        self.type = type
+        self.type = typ
 
 
 class ClientStates:

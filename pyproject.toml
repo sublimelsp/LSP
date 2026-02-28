@@ -69,7 +69,6 @@ ignore = [
     "ARG002",  # https://docs.astral.sh/ruff/rules/unused-method-argument/
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
-    "B007",  # https://docs.astral.sh/ruff/rules/unused-loop-control-variable/
     "B008",  # https://docs.astral.sh/ruff/rules/function-call-in-default-argument/
     "B009",  # https://docs.astral.sh/ruff/rules/get-attr-with-constant/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/

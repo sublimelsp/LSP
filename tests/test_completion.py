@@ -54,7 +54,9 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Callable[[], bool]:
+    def create_commit_completion_closure(
+        self, commit_completion_command: str = "commit_completion"
+    ) -> Callable[[], bool]:
         committed = False
         current_change_count = self.view.change_count()
 

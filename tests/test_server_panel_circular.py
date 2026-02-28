@@ -24,7 +24,7 @@ class LspServerPanelTests(DeferrableTestCase):
             return
         self.panel.run_command("lsp_clear_panel")
 
-    def assert_total_lines_equal(self, expected_total_lines):
+    def assert_total_lines_equal(self, expected_total_lines: int):
         actual_total_lines = len(self.panel.split_by_newlines(sublime.Region(0, self.panel.size())))
         self.assertEqual(actual_total_lines, expected_total_lines)
 

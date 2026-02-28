@@ -238,7 +238,7 @@ class LspPlugin:
     """
     The storage path for the plugin.
 
-    Use this as your directory to install server files. Its path is '$DATA/Package Storage/[Package Name]'.
+    Use this as your directory to install server files. Its path is '$DATA/Package Storage/<Package Name>'.
     """
 
     @classmethod

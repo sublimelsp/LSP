@@ -47,9 +47,7 @@ class WindowConfigManager:
     def get_configs(self) -> list[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
 
-    def match_view(
-        self, view: sublime.View, workspace_folders: list[WorkspaceFolder]
-    ) -> Generator[ClientConfig, None, None]:
+    def match_view(self, view: sublime.View, workspace_folders: list[WorkspaceFolder]) -> Generator[ClientConfig]:
         """
         Yields configurations where:
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ..protocol import TextEdit
 from ..protocol import WorkspaceEdit
-from .core.edit import parse_range
+from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
 from .core.logging import debug
@@ -176,8 +176,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
 def _parse_text_edit(text_edit: TextEdit) -> TextEditTuple:
     return (
-        parse_range(text_edit['range']['start']),
-        parse_range(text_edit['range']['end']),
+        parse_lsp_position(text_edit['range']['start']),
+        parse_lsp_position(text_edit['range']['end']),
         # Strip away carriage returns -- SublimeText takes care of that.
         text_edit.get('newText', '').replace("\r", "")
     )
@@ -248,14 +248,14 @@ def _render_workspace_edit_panel(
         to_render.append(filename_line)
         reference_document.append(filename_line)
         for edit in changes:
-            start_row, start_col_utf16 = parse_range(edit['range']['start'])
+            start_row, start_col_utf16 = parse_lsp_position(edit['range']['start'])
             line_content = get_line(wm.window, file, start_row, strip=False) if scheme == 'file' else \
                 '<no preview available>'
             start_col = utf16_to_code_points(line_content, start_col_utf16)
             original_line = ROWCOL_PREFIX.format(start_row + 1, start_col + 1, line_content.strip() + "\n")
             reference_document.append(original_line)
             if scheme == "file" and line_content:
-                end_row, end_col_utf16 = parse_range(edit['range']['end'])
+                end_row, end_col_utf16 = parse_lsp_position(edit['range']['end'])
                 new_text_rows = edit['newText'].split('\n')
                 new_line_content = line_content[:start_col] + new_text_rows[0]
                 if start_row == end_row and len(new_text_rows) == 1:

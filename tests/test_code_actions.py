@@ -86,10 +86,10 @@ def create_disabled_code_action(view: sublime.View, version: int, edits: list[tu
 
 def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:
     def diagnostic_to_lsp(diagnostic: tuple[str, Range]) -> dict:
-        message, range = diagnostic
+        message, lsp_range = diagnostic
         return {
             "message": message,
-            "range": range
+            "range": lsp_range
         }
     return {
         "uri": TEST_FILE_URI,

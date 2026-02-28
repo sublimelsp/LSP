@@ -26,6 +26,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any
 from typing import Callable
+from typing import Final
 from typing import final
 from typing import TYPE_CHECKING
 from typing import TypeVar
@@ -118,7 +119,7 @@ def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_liste
         if issubclass(plugin, AbstractPlugin):
             _, settings_path = plugin.configuration()
         else:
-            plugin.plugin_storage_path = Path(ST_STORAGE_PATH, name)
+            plugin.plugin_storage_path = Path(ST_STORAGE_PATH, name)  # pyright: ignore[reportAttributeAccessIssue]
             settings_path = f"Packages/{name}/{name}.sublime-settings"
         if client_configs.add_external_config(name, settings_path, notify_listener):
             g_plugins[name] = plugin
@@ -234,7 +235,7 @@ class PluginContext:
 
 class LspPlugin:
 
-    plugin_storage_path: Path = Path(ST_STORAGE_PATH)  # Path is updated on registering the plugin class.
+    plugin_storage_path: Final[Path] = Path(ST_STORAGE_PATH)  # Path is updated on registering the plugin class.
     """
     The storage path for the plugin.
 

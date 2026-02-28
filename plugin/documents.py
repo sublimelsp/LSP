@@ -18,6 +18,7 @@ from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
+from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -610,9 +611,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
-        if command_name in ('cut', 'paste', 'redo', 'undo'):
+        if edit_action := COMMAND_TO_CHANGE_EVENT_ACTION.get(command_name):
             if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
-                text_change_listener.set_last_edit_action(command_name)
+                text_change_listener.set_last_edit_action(edit_action)
         return None
 
     @requires_session

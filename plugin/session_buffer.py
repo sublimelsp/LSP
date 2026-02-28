@@ -895,7 +895,7 @@ class SessionBuffer:
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
-            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            lambda p: getattr(p, 'lsp_uuid', None) != phantom_uuid,
             self._inlay_hints_phantom_set.phantoms)
         )
         self._inlay_hints_phantom_set.update(new_phantoms)

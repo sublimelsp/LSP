@@ -458,14 +458,14 @@ class AbstractPlugin(APIHandler, ABC):
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:
         """
-        Return the Settings object that defines the "command", "selector", and optionally the "initializationOptions",
+        Return the Settings object that defines the "command", "selector", and optionally the "initialization_options",
         "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
         filename as the second element in the tuple.
 
         The second element in the tuple is used to handle "settings" overrides from users properly. For example, if your
         plugin is called LSP-foobar, you would return "Packages/LSP-foobar/LSP-foobar.sublime-settings".
 
-        The "command", "initializationOptions" and "env" are subject to template string substitution. The following
+        The "command", "initialization_options" and "env" are subject to template string substitution. The following
         template strings are recognized:
 
         $file
@@ -489,8 +489,8 @@ class AbstractPlugin(APIHandler, ABC):
         $port         A random free TCP-port on localhost in case "tcp_port" is set to 0. This string template can only
                       be used in the "command"
 
-        The "command" and "env" are expanded upon starting the subprocess of the Session. The "initializationOptions"
-        are expanded upon doing the initialize request. "initializationOptions" does not expand $port.
+        The "command" and "env" are expanded upon starting the subprocess of the Session. The "initialization_options"
+        are expanded upon doing the initialize request. "initialization_options" does not expand $port.
 
         When you're managing your own server binary, you would typically place it in sublime.cache_path(). So your
         "command" should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]

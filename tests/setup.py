@@ -60,11 +60,11 @@ def make_tcp_test_config() -> ClientConfig:
     )
 
 
-def add_config(config):
+def add_config(config: ClientConfig) -> None:
     client_configs.add_for_testing(config)
 
 
-def remove_config(config):
+def remove_config(config: ClientConfig) -> None:
     client_configs.remove_for_testing(config)
 
 

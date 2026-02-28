@@ -11,15 +11,15 @@ import sublime
 
 class GlobalConfigManagerTests(TestCase):
 
-    def test_empty_configs(self):
+    def test_empty_configs(self) -> None:
         window_mgr = WindowConfigManager(sublime.active_window(), {})
         self.assertNotIn(TEST_CONFIG.name, window_mgr.all)
 
-    def test_global_config(self):
+    def test_global_config(self) -> None:
         window_mgr = WindowConfigManager(sublime.active_window(), {TEST_CONFIG.name: TEST_CONFIG})
         self.assertIn(TEST_CONFIG.name, window_mgr.all)
 
-    def test_override_config(self):
+    def test_override_config(self) -> None:
         self.assertTrue(TEST_CONFIG.enabled)
         win = sublime.active_window()
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
@@ -29,13 +29,13 @@ class GlobalConfigManagerTests(TestCase):
 
 class WindowConfigManagerTests(ViewTestCase):
 
-    def test_no_configs(self):
+    def test_no_configs(self) -> None:
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
         manager = WindowConfigManager(self.window, {})
         self.assertEqual(list(manager.match_view(self.view, [])), [])
 
-    def test_with_single_config(self):
+    def test_with_single_config(self) -> None:
         self.assertIsNotNone(self.view)
         self.assertIsNotNone(self.window)
         manager = WindowConfigManager(self.window, {TEST_CONFIG.name: TEST_CONFIG})
@@ -48,7 +48,7 @@ class WindowConfigManagerTests(ViewTestCase):
         self.view.settings().set("lsp_uri", "file:///foo/bar.txt")
         self.assertEqual(list(manager.match_view(self.view, [])), [TEST_CONFIG])
 
-    def test_applies_project_settings(self):
+    def test_applies_project_settings(self) -> None:
         self.window.project_data = MagicMock(return_value={
             "settings": {
                 "LSP": {
@@ -72,7 +72,7 @@ class WindowConfigManagerTests(ViewTestCase):
         self.assertEqual(DISABLED_CONFIG.name, config.name)
         self.assertTrue(config.enabled)
 
-    def test_disables_temporarily(self):
+    def test_disables_temporarily(self) -> None:
         self.window.project_data = MagicMock(return_value={
             "settings": {
                 "LSP": {

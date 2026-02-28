@@ -54,7 +54,9 @@ class CompletionsTestsBase(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def create_commit_completion_closure(self, commit_completion_command="commit_completion") -> Callable[[], bool]:
+    def create_commit_completion_closure(
+        self, commit_completion_command: str = "commit_completion"
+    ) -> Callable[[], bool]:
         committed = False
         current_change_count = self.view.change_count()
 
@@ -806,7 +808,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
 
 
 class ItemDefaultTests(TestCase):
-    def test_respects_defaults_for_completion(self):
+    def test_respects_defaults_for_completion(self) -> None:
         item: CompletionItem = {
             'label': 'Hello'
         }
@@ -832,7 +834,7 @@ class ItemDefaultTests(TestCase):
         }
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
 
-    def test_defaults_should_not_override_completion_fields_if_present(self):
+    def test_defaults_should_not_override_completion_fields_if_present(self) -> None:
         item: CompletionItem = {
             'label': 'Hello',
             'textEdit': {
@@ -873,7 +875,7 @@ class ItemDefaultTests(TestCase):
         }
         self.assertEqual(completion_with_defaults(item, item_defaults), expected)
 
-    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self):
+    def test_conversion_of_edit_range_to_text_edit_when_it_includes_insert_replace_fields(self) -> None:
         item: CompletionItem = {
             'label': 'Hello',
             'textEditText': 'Text to insert'

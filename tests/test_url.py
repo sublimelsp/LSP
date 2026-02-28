@@ -13,17 +13,17 @@ import unittest.mock
 @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
 class WindowsTests(unittest.TestCase):
 
-    def test_converts_path_to_uri(self):
+    def test_converts_path_to_uri(self) -> None:
         self.assertEqual("file:///C:/dir%20ectory/file.txt", filename_to_uri("c:\\dir ectory\\file.txt"))
 
-    def test_converts_uri_to_path(self):
+    def test_converts_uri_to_path(self) -> None:
         self.assertEqual("C:\\dir ectory\\file.txt", parse_uri("file:///c:/dir ectory/file.txt")[1])
 
-    def test_converts_encoded_bad_drive_uri_to_path(self):
+    def test_converts_encoded_bad_drive_uri_to_path(self) -> None:
         # url2pathname does not understand %3A
         self.assertEqual("C:\\dir ectory\\file.txt", parse_uri("file:///c%3A/dir%20ectory/file.txt")[1])
 
-    def test_view_to_uri_with_valid_filename(self):
+    def test_view_to_uri_with_valid_filename(self) -> None:
         view = sublime.active_window().active_view()
         assert view
         view.file_name = unittest.mock.MagicMock(
@@ -32,12 +32,12 @@ class WindowsTests(unittest.TestCase):
         uri = view_to_uri(view)
         self.assertEqual(uri, "file:///C:/Users/A%20b/popups.css")
 
-    def test_unc_path(self):
+    def test_unc_path(self) -> None:
         scheme, path = parse_uri('file://192.168.80.2/D%24/www/File.php')
         self.assertEqual(scheme, "file")
         self.assertEqual(path, R'\\192.168.80.2\D$\www\File.php')
 
-    def test_wsl_path(self):
+    def test_wsl_path(self) -> None:
         scheme, path = parse_uri('file://wsl%24/Ubuntu-20.04/File.php')
         self.assertEqual(scheme, "file")
         self.assertEqual(path, R'\\wsl$\Ubuntu-20.04\File.php')
@@ -46,13 +46,13 @@ class WindowsTests(unittest.TestCase):
 @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
 class NixTests(unittest.TestCase):
 
-    def test_converts_path_to_uri(self):
+    def test_converts_path_to_uri(self) -> None:
         self.assertEqual("file:///dir%20ectory/file.txt", filename_to_uri("/dir ectory/file.txt"))
 
-    def test_converts_uri_to_path(self):
+    def test_converts_uri_to_path(self) -> None:
         self.assertEqual("/dir ectory/file.txt", parse_uri("file:///dir ectory/file.txt")[1])
 
-    def test_view_to_uri_with_valid_filename(self):
+    def test_view_to_uri_with_valid_filename(self) -> None:
         view = sublime.active_window().active_view()
         assert view
         view.file_name = unittest.mock.MagicMock(return_value="/foo/bar/baz.txt")
@@ -62,11 +62,11 @@ class NixTests(unittest.TestCase):
 
 class MultiplatformTests(unittest.TestCase):
 
-    def test_resource_path(self):
+    def test_resource_path(self) -> None:
         uri = filename_to_uri(os.path.join(sublime.installed_packages_path(), "Package Control", "dir", "file.py"))
         self.assertEqual(uri, "res:/Packages/Package%20Control/dir/file.py")
 
-    def test_buffer_uri(self):
+    def test_buffer_uri(self) -> None:
         view = sublime.active_window().active_view()
         assert view
         view.file_name = unittest.mock.MagicMock(return_value=None)
@@ -74,7 +74,7 @@ class MultiplatformTests(unittest.TestCase):
         uri = view_to_uri(view)
         self.assertEqual(uri, "buffer:42")
 
-    def test_parse_uri(self):
+    def test_parse_uri(self) -> None:
         scheme, _ = parse_uri("buffer:42")
         self.assertEqual(scheme, "buffer")
         scheme, _ = parse_uri("www.example.com/foo:bar")

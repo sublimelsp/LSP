@@ -309,34 +309,34 @@ class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
 
 
 class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
-    def test_code_actions_format_on_save_task_enabled__unset(self):
+    def test_code_actions_format_on_save_task_enabled__unset(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {})
         self.view.settings().set("lsp_format_on_save", False)
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_enabled__format_on_save_false(self):
+    def test_code_actions_format_on_save_task_enabled__format_on_save_false(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
         self.view.settings().set("lsp_format_on_save", False)
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_enabled__unsupported(self):
+    def test_code_actions_format_on_save_task_enabled__unsupported(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {"quickfix.unsupported": True})
         self.view.settings().set("lsp_format_on_save", True)
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_enabled__standard_settings(self):
+    def test_code_actions_format_on_save_task_enabled__standard_settings(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
         self.view.settings().set("lsp_format_on_save", True)
         self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_enabled__user_settings(self):
+    def test_code_actions_format_on_save_task_enabled__user_settings(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
         del self.view.settings()["lsp_format_on_save"]
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
         userprefs().lsp_format_on_save = True
         self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_get_code_actions__no_duplicate_actions(self):
+    def test_code_actions_format_on_save_task_get_code_actions__no_duplicate_actions(self) -> None:
         self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True, "source.sort.json": True})
         # No source.fixAll action as it is already run via the CodeActionsOnSaveTask task

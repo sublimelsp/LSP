@@ -414,8 +414,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session_views = self.session_views_async()
         if not session_views:
             return
-        if userprefs().show_code_actions and self._code_actions_for_selection_needs_refresh:
-            self._do_code_actions_for_selection_async()
         for sb in self.session_buffers_async():
             if sb.code_lenses_needs_refresh:
                 sb.do_code_lenses_async(self.view)
@@ -429,6 +427,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
                 sb.do_inlay_hints_async(self.view)
+        if userprefs().show_code_actions and self._code_actions_for_selection_needs_refresh:
+            self._do_code_actions_for_selection_async()
 
     @requires_session
     def on_selection_modified_async(self) -> None:

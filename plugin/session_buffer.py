@@ -611,9 +611,12 @@ class SessionBuffer:
         if not mgr or mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
         if version < view.change_count():
+            # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
+            # from _on_after_change_async after the didChange notification.
             return
         for identifier in get_diagnostics_identifiers(self.session, view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
+        self.document_diagnostic_needs_refresh = False
 
     def _do_document_diagnostic_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -669,8 +672,8 @@ class SessionBuffer:
                     DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
                 )
 
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.document_diagnostic_needs_refresh = needs_refresh
+    def set_document_diagnostic_pending_refresh(self) -> None:
+        self.document_diagnostic_needs_refresh = True
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -813,6 +816,7 @@ class SessionBuffer:
             }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
+        self.semantic_tokens.needs_refresh = False
 
     def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
@@ -905,8 +909,8 @@ class SessionBuffer:
         for region_key in self.semantic_tokens.active_region_keys:
             view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.semantic_tokens.needs_refresh = needs_refresh
+    def set_semantic_tokens_pending_refresh(self) -> None:
+        self.semantic_tokens.needs_refresh = True
 
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
@@ -931,6 +935,7 @@ class SessionBuffer:
             "range": entire_content_range(view)
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
+        self.inlay_hints_needs_refresh = False
 
     def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
@@ -945,8 +950,8 @@ class SessionBuffer:
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.inlay_hints_needs_refresh = needs_refresh
+    def set_inlay_hints_pending_refresh(self) -> None:
+        self.inlay_hints_needs_refresh = True
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
@@ -973,6 +978,7 @@ class SessionBuffer:
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
+        self.code_lenses_needs_refresh = False
 
     def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
         self._code_lenses.handle_response_async(response or [])
@@ -1009,8 +1015,8 @@ class SessionBuffer:
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
 
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.code_lenses_needs_refresh = needs_refresh
+    def set_code_lenses_pending_refresh(self) -> None:
+        self.code_lenses_needs_refresh = True
 
     # ------------------------------------------------------------------------------------------------------------------
 

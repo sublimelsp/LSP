@@ -8,7 +8,7 @@ body {
     border: 1px solid color(var(--foreground) alpha(0.1));
 }
 .lsp_popup hr {
-    margin-top: 0rem;
+    margin-top: 0;
     margin-bottom: 0.5rem;
     border-color: color(var(--foreground) alpha(0.10));
 }

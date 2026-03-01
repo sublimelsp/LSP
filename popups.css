@@ -1,6 +1,7 @@
 html,
 body {
-    --mdpopups-bg: var(--background);
+    --mdpopups-bg: color(var(--background) lightness(- 3%));
+    font-family: system;
 }
 .lsp_popup {
     border-radius: 4px;

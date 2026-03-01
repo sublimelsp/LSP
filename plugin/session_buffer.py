@@ -61,7 +61,6 @@ from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
-from enum import Enum
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -83,12 +82,6 @@ HUGE_FILE_SIZE = 50000
 
 
 P = ParamSpec('P')
-
-
-class RequestStrategy(Enum):
-    DEFAULT = 1
-    FORCE_DIAGNOSTICS = 2
-    SUPPRESS = 3
 
 
 def is_full_document_diagnostic_report(
@@ -231,7 +224,7 @@ class SessionBuffer:
 
     def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():
-            self.purge_changes_async(view, RequestStrategy.SUPPRESS)
+            self.purge_changes_async(view, suppress_requests=True)
             self.session.send_notification(did_close(uri=self._last_known_uri))
             self.opened = False
 
@@ -391,13 +384,11 @@ class SessionBuffer:
         self._pending_changes = None  # Don't bother with pending changes
         version = view.change_count()
         self.session.send_notification(did_change(view, version, None))
-        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, RequestStrategy.FORCE_DIAGNOSTICS))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version))
 
     on_reload_async = on_revert_async
 
-    def purge_changes_async(
-        self, view: sublime.View, request_strategy: RequestStrategy = RequestStrategy.DEFAULT
-    ) -> None:
+    def purge_changes_async(self, view: sublime.View, suppress_requests: bool = False) -> None:
         if self._pending_changes is None:
             return
         sync_kind = self.text_sync_kind()
@@ -418,22 +409,19 @@ class SessionBuffer:
         finally:
             self._pending_changes = None
         self.session.notify_plugin_on_session_buffer_change(self)
-        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, request_strategy))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, suppress_requests))
 
-    def _on_after_change_async(
-        self, view: sublime.View, version: int, request_strategy: RequestStrategy = RequestStrategy.DEFAULT
-    ) -> None:
+    def _on_after_change_async(self, view: sublime.View, version: int, suppress_requests: bool = False) -> None:
         if self._is_saving:
             self._has_changed_during_save = True
             return
-        if request_strategy == RequestStrategy.SUPPRESS:
+        if suppress_requests:
             return
         try:
             request_flags = self._get_request_flags(view)
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
-            forced_update = request_strategy == RequestStrategy.FORCE_DIAGNOSTICS
-            self.do_document_diagnostic_async(view, version, forced_update=forced_update)
+            self.do_document_diagnostic_async(view, version)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):

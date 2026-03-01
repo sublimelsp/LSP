@@ -201,6 +201,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
+        self._code_actions_for_selection_needs_refresh = True
         self.hover_provider_count = 0
         self._setup()
 
@@ -328,8 +329,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         self._clear_code_actions_annotation()
-        if is_view_visible and userprefs().show_code_actions:
-            self._do_code_actions_async()
+        if userprefs().show_code_actions:
+            if is_view_visible:
+                self._do_code_actions_for_selection_async()
+            else:
+                self._code_actions_for_selection_needs_refresh = True
         self._update_diagnostic_in_status_bar_async()
         window = self.view.window()
         is_active_view = window and window.active_view() == self.view
@@ -410,8 +414,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session_views = self.session_views_async()
         if not session_views:
             return
-        if userprefs().show_code_actions:
-            self._do_code_actions_async()
+        if userprefs().show_code_actions and self._code_actions_for_selection_needs_refresh:
+            self._do_code_actions_for_selection_async()
         for sb in self.session_buffers_async():
             if sb.code_lenses_needs_refresh:
                 sb.do_code_lenses_async(self.view)
@@ -442,7 +446,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._do_highlights_async()
         if userprefs().show_code_actions:
-            self._do_code_actions_async()
+            self._do_code_actions_for_selection_async()
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
             if code_lenses_enabled:
@@ -758,9 +762,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions_async(self) -> None:
+    def _do_code_actions_for_selection_async(self) -> None:
         if not self._stored_selection:
             return
+        self._code_actions_for_selection_needs_refresh = False
         region = self._stored_selection[0]
         self._diagnostics_for_selection = self.get_diagnostics_async(region)
         actions_manager \

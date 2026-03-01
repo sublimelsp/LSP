@@ -126,7 +126,7 @@ class PendingDocumentDiagnosticRequest:
 class SemanticTokensData:
 
     __slots__ = (
-        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
+        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'pending_response')
 
     def __init__(self) -> None:
         self.data: list[int] = []
@@ -134,7 +134,6 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.needs_refresh = False
         self.pending_response: int | None = None
 
 
@@ -158,13 +157,13 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
+        self.pending_refreshes: RequestFlags = RequestFlags.NONE
         self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostics_versions: dict[DiagnosticsIdentifier, int] = {}
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.supported_diagnostic_tags: set[DiagnosticTag] = set()
-        self.document_diagnostic_needs_refresh = False
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
@@ -177,8 +176,6 @@ class SessionBuffer:
         self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
-        self.inlay_hints_needs_refresh = False
-        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
         self._code_lenses = CodeLensCache()
@@ -478,7 +475,7 @@ class SessionBuffer:
     def on_userprefs_changed_async(self) -> None:
         self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
-            self.semantic_tokens.needs_refresh = True
+            self.pending_refreshes |= RequestFlags.SEMANTIC_TOKENS
         else:
             self.clear_semantic_tokens_async()
         for sv in self.session_views:
@@ -499,6 +496,9 @@ class SessionBuffer:
             if sv.view.is_valid():
                 return sv.view
         return None
+
+    def set_pending_refresh(self, flags: RequestFlags) -> None:
+        self.pending_refreshes |= flags
 
     def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
         """
@@ -616,7 +616,7 @@ class SessionBuffer:
             return
         for identifier in get_diagnostics_identifiers(self.session, view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
-        self.document_diagnostic_needs_refresh = False
+        self.pending_refreshes &= ~RequestFlags.DIAGNOSTIC
 
     def _do_document_diagnostic_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -671,9 +671,6 @@ class SessionBuffer:
                     lambda: self._if_view_unchanged(self._do_document_diagnostic_async, version)(identifier, version),
                     DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
                 )
-
-    def set_document_diagnostic_pending_refresh(self) -> None:
-        self.document_diagnostic_needs_refresh = True
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -816,7 +813,7 @@ class SessionBuffer:
             }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-        self.semantic_tokens.needs_refresh = False
+        self.pending_refreshes &= ~RequestFlags.SEMANTIC_TOKENS
 
     def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
@@ -909,9 +906,6 @@ class SessionBuffer:
         for region_key in self.semantic_tokens.active_region_keys:
             view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
 
-    def set_semantic_tokens_pending_refresh(self) -> None:
-        self.semantic_tokens.needs_refresh = True
-
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
@@ -935,7 +929,7 @@ class SessionBuffer:
             "range": entire_content_range(view)
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
-        self.inlay_hints_needs_refresh = False
+        self.pending_refreshes &= ~RequestFlags.INLAY_HINT
 
     def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
@@ -949,9 +943,6 @@ class SessionBuffer:
 
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
-
-    def set_inlay_hints_pending_refresh(self) -> None:
-        self.inlay_hints_needs_refresh = True
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
@@ -978,7 +969,7 @@ class SessionBuffer:
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
-        self.code_lenses_needs_refresh = False
+        self.pending_refreshes &= ~RequestFlags.CODE_LENS
 
     def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
         self._code_lenses.handle_response_async(response or [])
@@ -1014,9 +1005,6 @@ class SessionBuffer:
         supported_code_lenses = self._filter_supported_code_lenses()
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
-
-    def set_code_lenses_pending_refresh(self) -> None:
-        self.code_lenses_needs_refresh = True
 
     # ------------------------------------------------------------------------------------------------------------------
 

@@ -64,6 +64,10 @@ class RequestFlags(IntFlag):
     """ textDocument/semanticTokens """
     ON_TYPE_FORMATTING = 8
     """ textDocument/onTypeFormatting """
+    CODE_LENS = 16
+    """ textDocument/codeLens """
+    DIAGNOSTIC = 32
+    """ textDocument/diagnostic """
 
 
 class RegionKey(StrEnum):

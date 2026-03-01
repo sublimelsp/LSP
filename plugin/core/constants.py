@@ -55,6 +55,10 @@ class RequestFlags(IntFlag):
     """ textDocument/inlayHint """
     SEMANTIC_TOKENS = 4
     """ textDocument/semanticTokens """
+    CODE_LENS = 8
+    """ textDocument/codeLens """
+    DIAGNOSTIC = 16
+    """ textDocument/diagnostic """
 
 
 class RegionKey(StrEnum):

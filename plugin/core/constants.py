@@ -45,8 +45,8 @@ where $DATA means:
 - on Linux: ~/.cache/sublime-text
 """
 MARKO_MD_PARSER_VERSION: str | None = marko_version
-# Character sets that are commonly auto-paired by ST.
-AUTO_PAIR_ITEMS = ('{}', '()', '[]', "''", '""')
+# Brackets that are commonly auto-paired by ST.
+AUTO_CLOSE_BRACKETS = ('{}', '()', '[]')
 
 
 class RequestFlags(IntFlag):

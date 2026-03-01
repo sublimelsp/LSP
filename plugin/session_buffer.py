@@ -24,7 +24,7 @@ from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
-from .core.constants import AUTO_PAIR_ITEMS
+from .core.constants import AUTO_CLOSE_BRACKETS
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -744,7 +744,7 @@ class SessionBuffer:
         if capability:
             trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
             # Two-character pairs where the first character matches the trigger character.
-            trigger_pairs = (pair for pair in AUTO_PAIR_ITEMS if pair[0] in trigger_characters)
+            trigger_pairs = (pair for pair in AUTO_CLOSE_BRACKETS if pair[0] in trigger_characters)
             self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
         else:
             self._on_type_formatting_triggers = ()

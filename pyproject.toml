@@ -56,6 +56,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "plugin/core/typing.py" = ["F401"]
+"plugin/core/protocol.py" = ["UP006", "UP007"]
 
 [tool.ruff.lint]
 # Enable preview rules.
@@ -66,21 +67,10 @@ select = ["ALL"]
 # Refer to https://docs.astral.sh/ruff/rules/
 ignore = [
     "ANN401",  # https://docs.astral.sh/ruff/rules/any-type/
-    "ARG001",  # https://docs.astral.sh/ruff/rules/unused-function-argument/
     "ARG002",  # https://docs.astral.sh/ruff/rules/unused-method-argument/
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
-    "B006",  # https://docs.astral.sh/ruff/rules/mutable-argument-default/
-    "B007",  # https://docs.astral.sh/ruff/rules/unused-loop-control-variable/
-    "B008",  # https://docs.astral.sh/ruff/rules/function-call-in-default-argument/
-    "B009",  # https://docs.astral.sh/ruff/rules/get-attr-with-constant/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "B017",  # https://docs.astral.sh/ruff/rules/assert-raises-exception/
-    "B027",  # https://docs.astral.sh/ruff/rules/empty-method-without-abstract-decorator/
-    "B901",  # https://docs.astral.sh/ruff/rules/return-in-generator/
-    "B903",  # https://docs.astral.sh/ruff/rules/class-as-data-structure/
-    "B904",  # https://docs.astral.sh/ruff/rules/raise-without-from-inside-except/
-    "B909",  # https://docs.astral.sh/ruff/rules/loop-iterator-mutation/
     "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "C400",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/

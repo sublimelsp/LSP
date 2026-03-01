@@ -60,6 +60,7 @@ from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
+from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -108,13 +109,10 @@ class PendingChanges:
         self.changes.extend(changes)
 
 
+@dataclass
 class PendingDocumentDiagnosticRequest:
-
-    __slots__ = ('version', 'request_id')
-
-    def __init__(self, version: int, request_id: int) -> None:
-        self.version = version
-        self.request_id = request_id
+    version: int
+    request_id: int
 
 
 class SemanticTokensData:
@@ -900,7 +898,7 @@ class SessionBuffer:
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
-            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            lambda p: getattr(p, 'lsp_uuid', None) != phantom_uuid,
             self._inlay_hints_phantom_set.phantoms)
         )
         self._inlay_hints_phantom_set.update(new_phantoms)

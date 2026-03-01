@@ -15,6 +15,7 @@ from .core.protocol import ResolvedCodeLens
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.views import ChangeEventAction
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_highlight_key
 from .core.views import make_command_link
@@ -22,7 +23,6 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
-from typing import Iterable
 from weakref import ref
 from weakref import WeakValueDictionary
 import html
@@ -362,8 +362,10 @@ class SessionView:
         if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
-    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed_async(self.view, change_count, changes)
+    def on_text_changed_async(
+        self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
+        self.session_buffer.on_text_changed_async(self.view, change_count, changes, action)
 
     def on_revert_async(self) -> None:
         self.session_buffer.on_revert_async(self.view)

@@ -8,6 +8,8 @@ from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
 from ..protocol import DocumentLink
+from ..protocol import DocumentOnTypeFormattingOptions
+from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHint
@@ -18,9 +20,11 @@ from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import AUTO_CLOSE_BRACKETS
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -28,7 +32,9 @@ from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.edit import apply_text_edits
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
@@ -42,6 +48,7 @@ from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
 from .core.url import normalize_uri
+from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -50,11 +57,14 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import entire_content_range
+from .core.views import first_selection_region
+from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
+from .core.views import text_document_position_params
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
@@ -65,7 +75,6 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Iterable
 from typing import List
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
@@ -76,12 +85,11 @@ import itertools
 import sublime
 import time
 
+P = ParamSpec('P')
+
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
-
-
-P = ParamSpec('P')
 
 
 def is_full_document_diagnostic_report(
@@ -100,11 +108,11 @@ class PendingChanges:
 
     __slots__ = ('version', 'changes')
 
-    def __init__(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def __init__(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes = list(changes)
 
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def update(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes.extend(changes)
 
@@ -174,7 +182,9 @@ class SessionBuffer:
         self.code_lens_annotation_color: str = ''
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
+        self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
+        self._update_on_type_formatting_triggers()
         self._update_color_scheme_rules(view)
 
     @property
@@ -301,6 +311,8 @@ class SessionBuffer:
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
+            elif capability_path == "documentOnTypeFormattingProvider":
+                self._update_on_type_formatting_triggers()
 
     def unregister_capability_async(
         self,
@@ -316,6 +328,8 @@ class SessionBuffer:
         if capability_path == "executeCommandProvider":
             self._dynamically_registered_commands.pop(registration_id)
             self._update_supported_commands()
+        elif capability_path == "documentOnTypeFormattingProvider":
+            self._update_on_type_formatting_triggers()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -344,27 +358,33 @@ class SessionBuffer:
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(self, view: sublime.View, change_count: int,
-                              changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, view: sublime.View, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
-        last_change = list(changes)[-1]
+        last_change = changes[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
-            # A special situation when changes externally. We receive two changes,
+            # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
-            pass
-        else:
-            purge = False
-            if self._pending_changes is None:
-                self._pending_changes = PendingChanges(change_count, changes)
-                purge = True
-            elif self._pending_changes.version < change_count:
-                self._pending_changes.update(change_count, changes)
-                purge = True
-            if purge:
-                self._cancel_pending_requests_async()
+            return
+        purge = False
+        if self._pending_changes is None:
+            self._pending_changes = PendingChanges(change_count, changes)
+            purge = True
+        elif self._pending_changes.version < change_count:
+            self._pending_changes.update(change_count, changes)
+            purge = True
+        if purge:
+            self._cancel_pending_requests_async()
+            if userprefs().format_on_type and action == 'type' and \
+                    (params := self._get_on_type_formatting_params_async(view, last_change)):
+                self.purge_changes_async(view)
+                self.session.send_request_task(Request.onTypeFormatting(params, view)) \
+                    .then(partial(self._on_type_formatting_result_async, view, change_count))
+            else:
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
@@ -716,6 +736,43 @@ class SessionBuffer:
                 for identifier in get_diagnostics_identifiers(self.session, view)
             )
         return False
+
+    # --- textDocument/onTypeFormatting --------------------------------------------------------------------------------
+
+    def _update_on_type_formatting_triggers(self) -> None:
+        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
+        if capability:
+            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            # Two-character pairs where the first character matches the trigger character.
+            trigger_pairs = (pair for pair in AUTO_CLOSE_BRACKETS if pair[0] in trigger_characters)
+            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
+        else:
+            self._on_type_formatting_triggers = ()
+
+    def _get_on_type_formatting_params_async(
+        self, view: sublime.View, last_change: sublime.TextChange
+    ) -> DocumentOnTypeFormattingParams | None:
+        if not self._on_type_formatting_triggers:
+            return None
+        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+            return None
+        selection = first_selection_region(view)
+        if selection is None:
+            return None
+        for trigger in self._on_type_formatting_triggers:
+            if last_change.str.endswith(trigger):
+                return {
+                    **text_document_position_params(view, selection.a),
+                    'options': formatting_options(view.settings()),
+                    'ch': trigger[0],
+                }
+        return None
+
+    def _on_type_formatting_result_async(
+        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
+    ) -> None:
+        if version == view.change_count() and not isinstance(result, Error):
+            apply_text_edits(view, result)
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 

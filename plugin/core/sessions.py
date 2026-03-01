@@ -762,7 +762,7 @@ class SessionBufferProtocol(Protocol):
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
         ...
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = ...) -> None:
+    def set_semantic_tokens_pending_refresh(self) -> None:
         ...
 
     def get_semantic_tokens(self) -> list[SemanticToken]:
@@ -774,7 +774,7 @@ class SessionBufferProtocol(Protocol):
     def do_inlay_hints_async(self, view: sublime.View) -> None:
         ...
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = ...) -> None:
+    def set_inlay_hints_pending_refresh(self) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
@@ -786,13 +786,13 @@ class SessionBufferProtocol(Protocol):
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = ...) -> None:
+    def set_document_diagnostic_pending_refresh(self) -> None:
         ...
 
     def do_code_lenses_async(self, view: sublime.View) -> None:
         ...
 
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
+    def set_code_lenses_pending_refresh(self) -> None:
         ...
 
 

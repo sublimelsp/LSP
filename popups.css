@@ -12,6 +12,7 @@ body {
     margin-bottom: 0.5rem;
     border-color: color(var(--foreground) alpha(0.10));
 }
+.lsp_popup blockquote,
 .lsp_popup p,
 .lsp_popup h1,
 .lsp_popup h2,

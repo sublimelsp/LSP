@@ -18,7 +18,8 @@ body {
 .lsp_popup h3,
 .lsp_popup h4,
 .lsp_popup h5,
-.lsp_popup h6 {
+.lsp_popup h6,
+.lsp_popup .admonition {
     font-size: 1rem;
     margin: 0.5rem;
 }

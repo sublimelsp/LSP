@@ -87,7 +87,7 @@ P = ParamSpec('P')
 
 class RequestStrategy(Enum):
     DEFAULT = 1
-    FORCE = 2
+    FORCE_DIAGNOSTICS = 2
     SUPPRESS = 3
 
 
@@ -391,7 +391,7 @@ class SessionBuffer:
         self._pending_changes = None  # Don't bother with pending changes
         version = view.change_count()
         self.session.send_notification(did_change(view, version, None))
-        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, RequestStrategy.FORCE))
+        sublime.set_timeout_async(lambda: self._on_after_change_async(view, version, RequestStrategy.FORCE_DIAGNOSTICS))
 
     on_reload_async = on_revert_async
 
@@ -432,7 +432,8 @@ class SessionBuffer:
             request_flags = self._get_request_flags(view)
             if request_flags & RequestFlags.DOCUMENT_COLOR:
                 self._do_color_boxes_async(view, version)
-            self.do_document_diagnostic_async(view, version, forced_update=request_strategy == RequestStrategy.FORCE)
+            forced_update = request_strategy == RequestStrategy.FORCE_DIAGNOSTICS
+            self.do_document_diagnostic_async(view, version, forced_update=forced_update)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
             if userprefs().link_highlight_style in ("underline", "none"):

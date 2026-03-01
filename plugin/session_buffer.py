@@ -759,12 +759,13 @@ class SessionBuffer:
         selection = first_selection_region(view)
         if selection is None:
             return None
-        if trigger := next((t for t in self._on_type_formatting_triggers if last_change.str.endswith(t)), None):
-            return {
-                **text_document_position_params(view, selection.a),
-                'options': formatting_options(view.settings()),
-                'ch': trigger[0],
-            }
+        for trigger in self._on_type_formatting_triggers:
+            if last_change.str.endswith(trigger):
+                return {
+                    **text_document_position_params(view, selection.a),
+                    'options': formatting_options(view.settings()),
+                    'ch': trigger[0],
+                }
         return None
 
     def _on_type_formatting_result_async(

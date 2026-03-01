@@ -59,13 +59,13 @@ body {
 }
 .info {
     border-width: 0;
-    background-color: color(var(--bluish) alpha(0));
+    background-color: color(var(--bluish) alpha(0.2));
     color: var(--foreground);
     padding: 0.5rem;
 }
 .hints {
     border-width: 0;
-    background-color: color(var(--bluish) alpha(0));
+    background-color: color(var(--bluish) alpha(0.2));
     color: var(--foreground);
     padding: 0.5rem;
 }

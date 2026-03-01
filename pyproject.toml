@@ -56,6 +56,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "plugin/core/typing.py" = ["F401"]
+"plugin/core/protocol.py" = ["UP006", "UP007"]
 
 [tool.ruff.lint]
 # Enable preview rules.

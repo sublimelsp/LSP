@@ -414,20 +414,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_code_actions_async()
         for sb in self.session_buffers_async():
             if sb.code_lenses_needs_refresh:
-                sb.set_code_lenses_pending_refresh(needs_refresh=False)
                 sb.do_code_lenses_async(self.view)
             if sb.document_diagnostic_needs_refresh:
-                sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
                 sb.do_document_diagnostic_async(self.view, self.view.change_count(), forced_update=True)
             if sb.semantic_tokens.needs_refresh \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                sb.set_semantic_tokens_pending_refresh(needs_refresh=False)
                 sb.do_semantic_tokens_async(self.view)
             if sb.inlay_hints_needs_refresh \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
-                sb.set_inlay_hints_pending_refresh(needs_refresh=False)
                 sb.do_inlay_hints_async(self.view)
 
     @requires_session

@@ -875,18 +875,20 @@
           "/Preferences.sublime-settings"
         ],
         "schema": {
-          "lsp_format_on_paste": {
-            "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
+          "properties": {
+            "lsp_format_on_paste": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
+            },
+            "lsp_format_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_format": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
+            },
+            "lsp_code_actions_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
+            }
           },
-          "lsp_format_on_save": {
-            "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
-          },
-          "lsp_code_actions_on_format": {
-            "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
-          },
-          "lsp_code_actions_on_save": {
-            "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
-          }
         }
       },
       {

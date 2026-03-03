@@ -64,6 +64,9 @@ body {
 .c--spacer {
     margin-top: .5rem;
 }
+.border-top {
+    border-top: 1px solid color(var(--foreground) alpha(0.10));
+}
 .color-muted {
     color: color(var(--foreground) alpha(0.6));
 }

@@ -30,6 +30,7 @@ from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
+from .core.views import wrap_html
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -314,9 +315,10 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += f"<div class='highlight'>{detail}</div>"
+            minihtml_content += wrap_html(detail, cls='c')
         if documentation:
-            minihtml_content += documentation
+            cls = 'c' if not detail else 'c border-top'
+            minihtml_content += wrap_html(documentation, cls=cls)
 
         def run_on_main_thread() -> None:
             if not self.view.is_valid():

@@ -431,10 +431,6 @@ def text_document_code_action_params(
     }
 
 
-# Workaround for limited margin-collapsing capabilities of the minihtml.
-LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
-
-
 def show_lsp_popup(
     view: sublime.View,
     contents: str,
@@ -450,7 +446,6 @@ def show_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
@@ -477,7 +472,6 @@ def update_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
@@ -615,6 +609,11 @@ def _replace_match(match: Any) -> str:
 
 def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
+
+
+def wrap_html(content: str, *, tag: str = 'div', cls: str | None = None) -> str:
+    cls = f' class="{cls}"' if cls else ''
+    return f'<{tag}{cls}>{content}<div class="c--spacer"></div></{tag}>'
 
 
 def make_link(href: str, text: Any, class_name: str | None = None, tooltip: str | None = None) -> str:

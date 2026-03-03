@@ -765,9 +765,6 @@ class SessionBufferProtocol(Protocol):
     def do_semantic_tokens_async(self, view: sublime.View) -> None:
         ...
 
-    def set_semantic_tokens_pending_refresh(self) -> None:
-        ...
-
     def get_semantic_tokens(self) -> list[SemanticToken]:
         ...
 
@@ -775,9 +772,6 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def do_inlay_hints_async(self, view: sublime.View) -> None:
-        ...
-
-    def set_inlay_hints_pending_refresh(self) -> None:
         ...
 
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
@@ -789,13 +783,10 @@ class SessionBufferProtocol(Protocol):
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
-    def set_document_diagnostic_pending_refresh(self) -> None:
-        ...
-
     def do_code_lenses_async(self, view: sublime.View) -> None:
         ...
 
-    def set_code_lenses_pending_refresh(self) -> None:
+    def set_pending_refresh(self, flags: RequestFlags) -> None:
         ...
 
 
@@ -1821,7 +1812,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             for session_buffer, session_view in visible_session_buffers:
                 session_buffer.do_code_lenses_async(session_view.view)
             for session_buffer in not_visible_session_buffers:
-                session_buffer.set_code_lenses_pending_refresh()
+                session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
@@ -1835,9 +1826,9 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 if session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
                     session_buffer.do_semantic_tokens_async(session_view.view)
                 else:
-                    session_buffer.set_semantic_tokens_pending_refresh()
+                    session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
             for session_buffer in not_visible_session_buffers:
-                session_buffer.set_semantic_tokens_pending_refresh()
+                session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
@@ -1851,9 +1842,9 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 if session_view.get_request_flags() & RequestFlags.INLAY_HINT:
                     session_buffer.do_inlay_hints_async(session_view.view)
                 else:
-                    session_buffer.set_inlay_hints_pending_refresh()
+                    session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
             for session_buffer in not_visible_session_buffers:
-                session_buffer.set_inlay_hints_pending_refresh()
+                session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
 
         sublime.set_timeout_async(continue_after_response)
         return Promise.resolve(None)
@@ -1869,7 +1860,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             view = session_view.view
             session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
-            session_buffer.set_document_diagnostic_pending_refresh()
+            session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:

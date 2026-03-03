@@ -40,11 +40,15 @@
               "type": "object",
               "examples": [
                 {
-                  "patterns": ["{**/*.js,**/*.ts,**/*.json}"],
+                  "patterns": [
+                    "{**/*.js,**/*.ts,**/*.json}"
+                  ],
                 }
               ],
               "additionalProperties": false,
-              "required": ["patterns"],
+              "required": [
+                "patterns"
+              ],
               "properties": {
                 "patterns": {
                   "type": "array",
@@ -515,25 +519,55 @@
             "diagnostics_highlight_style": {
               "oneOf": [
                 {
-                  "enum": ["box", "underline", "stippled", "squiggly", ""],
+                  "enum": [
+                    "box",
+                    "underline",
+                    "stippled",
+                    "squiggly",
+                    ""
+                  ],
                 },
                 {
                   "type": "object",
                   "properties": {
                     "error": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "warning": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "squiggly"
                     },
                     "info": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
                     },
                     "hint": {
-                      "enum": ["box", "underline", "stippled", "squiggly", ""],
+                      "enum": [
+                        "box",
+                        "underline",
+                        "stippled",
+                        "squiggly",
+                        ""
+                      ],
                       "default": "stippled"
                     },
                   },
@@ -668,7 +702,10 @@
             "completion_insert_mode": {
               "type": "string",
               "default": "insert",
-              "enum": ["insert", "replace"],
+              "enum": [
+                "insert",
+                "replace"
+              ],
               "markdownDescription": "The mode used for inserting completions:\n\n - `insert` would insert the completion text in a middle of the word\n\n - `replace` would replace the existing word with a new completion text\n\n An LSP keybinding `lsp_commit_completion_with_opposite_insert_mode`\n can be used to insert completion using the opposite mode to the one selected here.\n\n Note: Must be supported by the language server."
             },
             "show_references_in_quick_panel": {
@@ -703,7 +740,9 @@
               "oneOf": [
                 {
                   "type": "array",
-                  "default": ["panel"],
+                  "default": [
+                    "panel"
+                  ],
                   "items": {
                     "type": "string",
                     "enum": [
@@ -838,15 +877,18 @@
         "schema": {
           "properties": {
             "lsp_format_on_paste": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
             },
             "lsp_format_on_save": {
-              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_format": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
             },
             "lsp_code_actions_on_save": {
               "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
             }
-          }
+          },
         }
       },
       {
@@ -857,6 +899,18 @@
           "properties": {
             "settings": {
               "properties": {
+                "lsp_format_on_paste": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_paste"
+                },
+                "lsp_format_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+                },
+                "lsp_code_actions_on_format": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_format"
+                },
+                "lsp_code_actions_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
+                },
                 "LSP": {
                   "type": "object",
                   "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",

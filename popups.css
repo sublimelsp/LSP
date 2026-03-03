@@ -13,7 +13,7 @@ body {
 .mdpopups h4,
 .mdpopups h5,
 .mdpopups h6 {
-    font-size: 1rem;
+    font-size: 1.05rem;
 }
 .mdpopups kbd {
     font-size: 0.8rem;
@@ -57,6 +57,7 @@ body {
     background-color: transparent;
 }
 .c {
+    font-size: 1.05rem;
     padding: 0.5rem;
     padding-bottom: 0;
 }

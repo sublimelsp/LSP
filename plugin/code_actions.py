@@ -31,7 +31,6 @@ from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
-import re
 import sublime
 
 if TYPE_CHECKING:
@@ -300,24 +299,16 @@ class CodeActionsOnFormatTask(CodeActionsTaskBase):
 class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
     """Run code actions on format when format_on_save is enabled."""
 
-    @staticmethod
-    def action_is_redundant(action: str, actions: dict[str, bool]) -> bool:
-        # Checks if the specified 'action' (source.fixAll.eslint) or the parent (source.fixAll,  when applicable)
-        # is already present in 'actions'
-        if (match_parent_action := re.match(r"([^.]+\.[^.]+(?=\.))", action)):
-            return action in actions or match_parent_action[0] in actions
-        return action in actions
-
     @classmethod
     @override
     def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
         code_actions_on_format = super().get_code_actions(view)
         code_actions_on_save = CodeActionsOnSaveTask.get_code_actions(view)
-        # Prevent triggering of redundant code actions
+        # Prevent triggering of redundant and duplicate code actions
         return {
-            action: enabled
-            for action, enabled in code_actions_on_format.items()
-            if not CodeActionsOnFormatOnSaveTask.action_is_redundant(action, code_actions_on_save)
+            format_action: enabled
+            for format_action, enabled in code_actions_on_format.items()
+            if not any(kind_contains_other_kind(save_action, format_action) for save_action in code_actions_on_save)
         }
 
     @classmethod

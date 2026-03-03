@@ -340,25 +340,11 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
     def test_code_actions_format_on_save_task_get_code_actions__no_redundant_actions(self) -> None:
         self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True, "source.sort.json": True})
-        # No source.fixAll action as it is already run via the CodeActionsOnSaveTask task
+        # No 'source.fixAll' action as it is already run via the CodeActionsOnSaveTask task
         assert CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view) == {"source.sort.json": True}
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll.eslint": True, "source.sort.json": True})
-        # No 'source.fixAll.eslint' action as 'source.fixAll' it is already run via the CodeActionsOnSaveTask task
+        # No 'source.fixAll.eslint' action as 'source.fixAll' is already run via the CodeActionsOnSaveTask task
         self.assertEqual(CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view), {"source.sort.json": True})
-
-    def test_code_actions_format_on_save_task_action_is_redundant(self) -> None:
-        self.assertTrue(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll", {"source.fixAll": True}))
-        self.assertTrue(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll", {"source.fixAll": False}))
-        self.assertTrue(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll.eslint", {"source.fixAll": True}))
-        self.assertTrue(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll.eslint", {"source.fixAll": False}))
-        self.assertFalse(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll", {"source.fixAll.eslint": True}))
-        self.assertFalse(CodeActionsOnFormatOnSaveTask.action_is_redundant(
-            "source.fixAll", {"source.fixAll.eslint": False}))
 
 
 class CodeActionMatchingTestCase(unittest.TestCase):

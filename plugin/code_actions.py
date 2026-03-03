@@ -244,9 +244,7 @@ class CodeActionsTaskBase(LspTask):
         code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
         code_actions.update(view_code_actions)
         return {
-            action: enabled
-            for action, enabled in code_actions.items()
-            if enabled and action.startswith(CodeActionKind.Source)
+            action: enabled for action, enabled in code_actions.items() if action.startswith(CodeActionKind.Source)
         }
 
     @override

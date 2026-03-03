@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask
-from LSP.plugin.code_actions import CodeActionsOnFormatTask
-from LSP.plugin.code_actions import CodeActionsOnSaveTask
 from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point
@@ -308,30 +306,6 @@ class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
         self.assertEqual(entire_content(self.view), 'const x = 1;')
         # Document should be saved
         self.assertEqual(self.view.is_dirty(), False)
-
-
-class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
-    def test_get_code_actions__enabled(self) -> None:
-        self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True})
-        self.assertEqual(CodeActionsOnSaveTask.get_code_actions(self.view), {"source.fixAll": True})
-        self.assertTrue(CodeActionsOnSaveTask.is_applicable(self.view))
-
-    def test_get_code_actions__disabled(self) -> None:
-        self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": False})
-        self.assertEqual(CodeActionsOnSaveTask.get_code_actions(self.view), {})
-        self.assertFalse(CodeActionsOnSaveTask.is_applicable(self.view))
-
-
-class CodeActionsOnFormatTaskTestCase(TextDocumentTestCase):
-    def test_get_code_actions__enabled(self) -> None:
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
-        self.assertEqual(CodeActionsOnFormatTask.get_code_actions(self.view), {"source.fixAll": True})
-        self.assertTrue(CodeActionsOnFormatTask.is_applicable(self.view))
-
-    def test_get_code_actions__disabled(self) -> None:
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False})
-        self.assertEqual(CodeActionsOnFormatTask.get_code_actions(self.view), {})
-        self.assertFalse(CodeActionsOnFormatTask.is_applicable(self.view))
 
 
 class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):

@@ -475,7 +475,7 @@ class SessionBuffer:
     def on_userprefs_changed_async(self) -> None:
         self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
-            self.pending_refreshes |= RequestFlags.SEMANTIC_TOKENS
+            self.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
         else:
             self.clear_semantic_tokens_async()
         for sv in self.session_views:
@@ -498,7 +498,15 @@ class SessionBuffer:
         return None
 
     def set_pending_refresh(self, flags: RequestFlags) -> None:
+        """
+        Mark the request type(s) given by `flags` as pending for refresh. New requests according to the marked types
+        will be sent the next time when a view of this SessionBuffer gets activated.
+        """
         self.pending_refreshes |= flags
+
+    def _reset_pending_refresh(self, flags: RequestFlags) -> None:
+        """Reset the refresh marker for the request type(s) given by `flags`."""
+        self.pending_refreshes &= ~flags
 
     def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
         """
@@ -616,7 +624,7 @@ class SessionBuffer:
             return
         for identifier in get_diagnostics_identifiers(self.session, view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
-        self.pending_refreshes &= ~RequestFlags.DIAGNOSTIC
+        self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     def _do_document_diagnostic_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -813,7 +821,7 @@ class SessionBuffer:
             }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
-        self.pending_refreshes &= ~RequestFlags.SEMANTIC_TOKENS
+        self._reset_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
     def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
@@ -929,7 +937,7 @@ class SessionBuffer:
             "range": entire_content_range(view)
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
-        self.pending_refreshes &= ~RequestFlags.INLAY_HINT
+        self._reset_pending_refresh(RequestFlags.INLAY_HINT)
 
     def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
@@ -969,7 +977,7 @@ class SessionBuffer:
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
-        self.pending_refreshes &= ~RequestFlags.CODE_LENS
+        self._reset_pending_refresh(RequestFlags.CODE_LENS)
 
     def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
         self._code_lenses.handle_response_async(response or [])

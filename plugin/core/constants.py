@@ -51,9 +51,10 @@ AUTO_CLOSE_BRACKETS = ('{}', '()', '[]')
 
 class RequestFlags(IntFlag):
     """
-    A bitflag that indicates how some of the requests are prioritized between the sessions.
-    This is used for multi-session configurations, where the best session is selected for each of the relevant features
-    below and the corresponding request is made only by that one session.
+    A bitflag that holds information about selecting a subset of request types.
+
+    This is used for example to prioritize certain requests between different sessions in a multi-session configuration,
+    and to mark some requests as pending for refresh in a given document.
     """
     NONE = 0
     DOCUMENT_COLOR = 1

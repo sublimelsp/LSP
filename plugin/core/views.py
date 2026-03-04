@@ -552,7 +552,7 @@ def minihtml(
             is_plain_text = False
             result = f"```{language}\n{value}\n```\n"
     if is_plain_text:
-        return f"<p>{text2html(result)}</p>" if result else ''
+        return f"<span>{text2html(result)}</span>" if result else ''
     frontmatter: dict[str, Any] = {
         "allow_code_wrap": True,
     }
@@ -609,11 +609,6 @@ def _replace_match(match: Any) -> str:
 
 def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
-
-
-def wrap_html(content: str, *, tag: str = 'div', cls: str | None = None) -> str:
-    cls = f' class="{cls}"' if cls else ''
-    return f'<{tag}{cls}>{content}<div class="c--spacer"></div></{tag}>'
 
 
 def make_link(href: str, text: Any, class_name: str | None = None, tooltip: str | None = None) -> str:
@@ -822,10 +817,22 @@ def _format_diagnostic_related_info(
     )
 
 
-def _html_element(name: str, text: str, class_name: str | None = None, escape: bool = True) -> str:
+def html_wrapper(content: str, *, class_name: str | None = None) -> str:
+    """
+    Wrap content in a container with default pading applied.
+
+    Automatically inserted spacer element acts as a bottom padding to workaround minihtml's margin collapsing bug.
+    Otherwise if the last element had bottom margin (for example a paragraph), it would render a double margin.
+    The `content` is NOT escaped.
+    """
+    extra_class = f' {class_name}' if class_name else ''
+    return f'<div class="wrapper{extra_class}">{content}<div class="wrapper--spacer"></div></div>'
+
+
+def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:
     return '<{0}{2}>{1}</{0}>'.format(
-        name,
-        text2html(text) if escape else text,
+        tag,
+        text2html(content) if escape else content,
         f' class="{text2html(class_name)}"' if class_name else ''
     )
 

@@ -29,6 +29,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -39,7 +40,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .core.views import wrap_html
 from functools import partial
 from typing import Sequence
 from typing import Union
@@ -268,7 +268,7 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(wrap_html(minihtml(self.view, content, allowed_formats, language_map), cls='c'))
+            contents.append(html_wrapper(minihtml(self.view, content, allowed_formats, language_map)))
         return '<hr>'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:

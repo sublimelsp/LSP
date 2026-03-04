@@ -268,7 +268,9 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(html_wrapper(minihtml(self.view, content, allowed_formats, language_map)))
+            parsed = minihtml(self.view, content, allowed_formats, language_map)
+            if parsed:
+                contents.append(html_wrapper(parsed))
         return '<hr>'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:

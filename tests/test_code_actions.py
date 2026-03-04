@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask
+from LSP.plugin.code_actions import CodeActionsOnSaveTask
 from LSP.plugin.code_actions import get_matching_on_save_kinds
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point
@@ -114,6 +115,22 @@ class CodeActionsTestCaseBase(TextDocumentTestCase):
     def doCleanups(self) -> Generator:
         yield from self.await_clear_view_and_save()
         yield from super().doCleanups()
+
+
+class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True})
+        cls.view.settings().set('lsp_code_actions_on_format', {"source.fixAll.eslint": True})
+        cls.view.settings().set('lsp_format_on_save', False)
+
+    def test_applicable_when_format_on_save_disabled(self) -> None:
+        self.assertTrue(CodeActionsOnSaveTask.is_applicable(self.view))
+
+    def test_applicable_when_format_on_save_enabled(self) -> None:
+        self.view.settings().set('lsp_format_on_save', True)
+        self.assertFalse(CodeActionsOnSaveTask.is_applicable(self.view))
 
 
 class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
@@ -337,14 +354,15 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
         userprefs().lsp_format_on_save = True
         self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_get_code_actions__no_redundant_actions(self) -> None:
+    def test_code_actions_format_on_save_task_get_code_actions__settings_are_merged(self) -> None:
         self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True, "source.sort.json": True})
-        # No 'source.fixAll' action as it is already run via the CodeActionsOnSaveTask task
-        assert CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view) == {"source.sort.json": True}
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll.eslint": True, "source.sort.json": True})
-        # No 'source.fixAll.eslint' action as 'source.fixAll' is already run via the CodeActionsOnSaveTask task
-        self.assertEqual(CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view), {"source.sort.json": True})
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False, "source.sort.json": True})
+        # Actions defined in both settings are merged, settings defined in code_actions_on_format overrule
+        # settings in code_actions_on_save
+        self.assertEqual(
+            CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view),
+            {"source.fixAll": False, "source.organizeImports": True, "source.sort.json": True},
+        )
 
 
 class CodeActionMatchingTestCase(unittest.TestCase):

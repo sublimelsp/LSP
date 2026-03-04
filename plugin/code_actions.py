@@ -238,6 +238,11 @@ class CodeActionsTaskBase(LspTask):
         return bool(view.window()) and bool(cls.get_code_actions(view))
 
     @classmethod
+    def format_on_save_enabled(cls, view: sublime.View) -> bool:
+        view_format_on_save = view.settings().get('lsp_format_on_save', None)
+        return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
+
+    @classmethod
     def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
         view_code_actions = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
         code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
@@ -288,6 +293,11 @@ class CodeActionsOnSaveTask(CodeActionsTaskBase):
 
     SETTING_NAME: str = "lsp_code_actions_on_save"
 
+    @classmethod
+    @override
+    def is_applicable(cls, view: sublime.View) -> bool:
+        return super().is_applicable(view) and not cls.format_on_save_enabled(view)
+
 
 class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
@@ -297,27 +307,23 @@ class CodeActionsOnFormatTask(CodeActionsTaskBase):
 
 @final
 class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
-    """Run code actions on format when format_on_save is enabled."""
+    """
+    Run code actions on format when format_on_save is enabled.
+
+    Code actions defined in both 'lsp_code_actions_on_save' and 'lsp_code_actions_on_format' will be run.
+    """
 
     @classmethod
     @override
     def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
-        code_actions_on_format = super().get_code_actions(view)
         code_actions_on_save = CodeActionsOnSaveTask.get_code_actions(view)
-        # Prevent triggering of redundant and duplicate code actions
-        return {
-            format_action: enabled
-            for format_action, enabled in code_actions_on_format.items()
-            if not any(kind_contains_other_kind(save_action, format_action) for save_action in code_actions_on_save)
-        }
+        code_actions_on_format = super().get_code_actions(view)
+        return {**code_actions_on_save, **code_actions_on_format}
 
     @classmethod
     @override
     def is_applicable(cls, view: sublime.View) -> bool:
-        if not super().is_applicable(view):
-            return False
-        view_format_on_save = view.settings().get('lsp_format_on_save', None)
-        return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
+        return super().is_applicable(view) and cls.format_on_save_enabled(view)
 
 
 class LspCodeActionsCommand(LspTextCommand):

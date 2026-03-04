@@ -317,7 +317,9 @@ class LspResolveDocsCommand(LspTextCommand):
         if detail:
             minihtml_content += html_wrapper(detail)
         if documentation:
-            minihtml_content += html_wrapper(documentation, class_name='border-top' if detail else '')
+            if detail:
+                minihtml_content += '<hr class="m-0">'
+            minihtml_content += html_wrapper(documentation)
 
         def run_on_main_thread() -> None:
             if not self.view.is_valid():

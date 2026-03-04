@@ -60,23 +60,23 @@ body {
     color: var(--mdpopups-admon-important-accent);
     background-color: transparent;
 }
-.wrapper {
+.lsp_popup .wrapper {
     font-size: var(--font-size);
     padding: 0.5rem;
     padding-bottom: 0;
 }
-.wrapper--spacer {
+.lsp_popup .wrapper--spacer {
     margin-top: .5rem;
 }
-.border-top {
-    border-top: 1px solid color(var(--foreground) alpha(0.10));
+.lsp_popup .m-0 {
+    margin: 0;
 }
-.font-size-sm {
+.lsp_popup .font-size-sm {
     font-size: var(--font-size-sm)
 }
-.font-size-xs,
-.font-size-xs div.highlight,
-.font-size-xs pre.highlight {
+.lsp_popup .font-size-xs,
+.lsp_popup .font-size-xs div.highlight,
+.lsp_popup .font-size-xs pre.highlight {
     font-size: var(--font-size-xs)
 }
 .color-muted {

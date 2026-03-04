@@ -82,10 +82,11 @@ class SigHelp:
         blocks.append(self._render_label(signature))
         if parameter_doc := self._parameter_documentation(view, signature):
             blocks.append(parameter_doc)
-        result = html_wrapper(''.join(blocks), class_name='font-size-sm')
+        formatted = [html_wrapper(''.join(blocks), class_name='font-size-sm')]
         if signature_doc := self._signature_documentation(view, signature):
-            result += html_wrapper(''.join(signature_doc), class_name='font-size-xs border-top')
-        return result
+            formatted.append('<hr class="m-0">')
+            formatted.append(html_wrapper(''.join(signature_doc), class_name='font-size-xs'))
+        return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
         """

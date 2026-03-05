@@ -9,6 +9,7 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
+from ..api import DontStartPluginError
 from ..api import get_plugin
 from ..api import LspPlugin
 from ..api import PluginContext
@@ -276,20 +277,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-                if issubclass(plugin_class, LspPlugin):
-                    cannot_start_reason = plugin_class.can_start(plugin_context)
-                else:
+                if issubclass(plugin_class, AbstractPlugin):
                     cannot_start_reason = plugin_class.can_start(
                         self._window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    config.erase_view_status(initiating_view)
-                    message = f"cannot start {config.name}: {cannot_start_reason}"
-                    self._config_manager.disable_config(config.name, only_for_session=True)
-                    # Continue with handling pending listeners
-                    self._new_session = None
-                    sublime.set_timeout_async(self._dequeue_listener_async)
-                    self._window.status_message(message)
-                    return
+                    if cannot_start_reason:
+                        raise DontStartPluginError(cannot_start_reason)
                 if issubclass(plugin_class, LspPlugin):
                     config.command = plugin_class.command(plugin_context)
                     initialization_options = plugin_class.initialization_options(plugin_context)
@@ -318,6 +310,14 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
             )
             self._new_session = session
+        except DontStartPluginError as ex:
+            config.erase_view_status(initiating_view)
+            message = f"cannot start {config.name}: {str(ex)}"
+            self._config_manager.disable_config(config.name, only_for_session=True)
+            # Continue with handling pending listeners
+            self._new_session = None
+            sublime.set_timeout_async(self._dequeue_listener_async)
+            self._window.status_message(message)
         except Exception as e:
             message = "".join((
                 "Failed to start {0} - disabling for this window for the duration of the current session.\n",

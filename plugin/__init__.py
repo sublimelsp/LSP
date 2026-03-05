@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
+from .api import DontStartPluginError
 from .api import LspPlugin
 from .api import notification_handler
 from .api import PluginContext
@@ -52,6 +53,7 @@ __all__ = [
     'ClientResponse',
     'css',
     'DebouncerNonThreadSafe',
+    'DontStartPluginError',
     'DottedDict',
     'filename_to_uri',
     'FileWatcher',

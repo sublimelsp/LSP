@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     'APIHandler',
+    'DontStartPluginError',
     'notification_handler',
     'request_handler',
 ]
@@ -66,9 +67,17 @@ R = TypeVar('R', bound=LSPAny)
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 
+class DontStartPluginError(Exception):
+
+    def __init__(self, message: str, *args: Any) -> None:
+        super().__init__(message, *args)
+
+
 def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
+
+    TODO: Document DontStartPluginError
 
     You should put a call to this function in your `plugin_loaded` callback. This way, when your package is disabled
     by a user and then re-enabled again by a user, the changes in state are picked up by LSP, and your language server
@@ -287,22 +296,6 @@ class LspPlugin:
 
         Make sure to call `params.set_installing_status()` before starting long-running operations to give user
         a better feedback that something is happening.
-        """
-
-    @classmethod
-    def can_start(cls, context: PluginContext) -> str | None:
-        """
-        Determines ability to start. This is called after needs_update_or_installation and after install_or_update.
-        So you may assume that if you're managing your server binary, then it is already installed when this
-        classmethod is called.
-
-        :param      window:             The window
-        :param      initiating_view:    The initiating view
-        :param      workspace_folders:  The workspace folders
-        :param      configuration:      The configuration
-
-        :returns:   A string describing the reason why we should not start a language server session, or None if we
-                    should go ahead and start a session.
         """
 
     @classmethod

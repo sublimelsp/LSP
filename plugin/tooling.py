@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
+from .api import DontStartPluginError
 from .api import get_plugin
 from .api import PluginContext
 from .core.collections import DottedDict
@@ -521,11 +522,9 @@ class ServerTestRunner(TransportCallbacks):
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
                 if issubclass(plugin_class, AbstractPlugin):
-                    cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
-                else:
-                    cannot_start_reason = plugin_class.can_start(plugin_context)
-                if cannot_start_reason:
-                    raise Exception(f'Plugin.can_start() prevented the start due to: {cannot_start_reason}')
+                    reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                    if reason:
+                        raise DontStartPluginError(f'Plugin.can_start() prevented the start due to: {reason}')
                 if issubclass(plugin_class, AbstractPlugin):
                     cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
                 else:

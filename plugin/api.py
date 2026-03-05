@@ -306,20 +306,16 @@ class LspPlugin:
         """
 
     @classmethod
-    def on_pre_start(cls, context: PluginContext) -> str | None:
-        """
-        Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
-        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
-        language server should not care about the working directory.
+    def command(cls, context: PluginContext) -> list[str]:
+        return context.configuration.command
 
-        :param      window:             The window
-        :param      initiating_view:    The initiating view
-        :param      workspace_folders:  The workspace folders, you can modify these
-        :param      configuration:      The configuration, you can modify this one
+    @classmethod
+    def initialization_options(cls, context: PluginContext) -> dict[str, Any] | DottedDict:
+        return context.configuration.initialization_options
 
-        :returns:   A desired working directory, or None if you don't care
-        """
+    @classmethod
+    def working_directory(cls, context: PluginContext) -> str | None:
+        return None
 
     @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:

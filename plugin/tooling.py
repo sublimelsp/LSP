@@ -3,6 +3,7 @@ from __future__ import annotations
 from .api import AbstractPlugin
 from .api import get_plugin
 from .api import PluginContext
+from .core.collections import DottedDict
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -528,7 +529,12 @@ class ServerTestRunner(TransportCallbacks):
                 if issubclass(plugin_class, AbstractPlugin):
                     cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
                 else:
-                    cwd = plugin_class.on_pre_start(plugin_context)
+                    config.command = plugin_class.command(plugin_context)
+                    initialization_options = plugin_class.initialization_options(plugin_context)
+                    config.initialization_options = initialization_options \
+                        if isinstance(initialization_options, DottedDict) \
+                        else DottedDict(initialization_options)
+                    cwd = plugin_class.working_directory(plugin_context)
             if not cwd and workspace_folders:
                 cwd = workspace_folders[0].path
             transport_config = config.resolve_transport_config(variables)

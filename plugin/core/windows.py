@@ -12,6 +12,7 @@ from ..api import AbstractPlugin
 from ..api import get_plugin
 from ..api import LspPlugin
 from ..api import PluginContext
+from .collections import DottedDict
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -290,7 +291,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     self._window.status_message(message)
                     return
                 if issubclass(plugin_class, LspPlugin):
-                    cwd = plugin_class.on_pre_start(plugin_context)
+                    config.command = plugin_class.command(plugin_context)
+                    initialization_options = plugin_class.initialization_options(plugin_context)
+                    config.initialization_options = initialization_options \
+                        if isinstance(initialization_options, DottedDict) \
+                        else DottedDict(initialization_options)
+                    cwd = plugin_class.working_directory(plugin_context)
                 else:
                     cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")

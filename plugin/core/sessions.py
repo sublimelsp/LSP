@@ -153,7 +153,6 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
-from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from weakref import WeakSet
@@ -1064,18 +1063,6 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def _redraw_config_status_async(self) -> None:
         for sv in self.session_views_async():
             self.config.set_view_status(sv.view, self.config_status_message)
-
-    @deprecated("Use set_config_status_async(message) instead")
-    def set_window_status_async(self, key: str, message: str) -> None:
-        self._status_messages[key] = message
-        for sv in self.session_views_async():
-            sv.view.set_status(key, message)
-
-    @deprecated("Use set_config_status_async('') instead")
-    def erase_window_status_async(self, key: str) -> None:
-        self._status_messages.pop(key, None)
-        for sv in self.session_views_async():
-            sv.view.erase_status(key)
 
     # --- session buffer management ------------------------------------------------------------------------------------
 

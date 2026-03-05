@@ -19,7 +19,7 @@ The LSP package enhances the auto-complete functionality of Sublime Text with re
 If available, you can click the **More** link or use the default key binding <kbd>F12</kbd> to show an additional documentation popup with detailed information about the highlighted completion item.
 
 Some language servers provide two different modes for inserting a completion item when the caret is in the middle of a word, in which case **Replace** or **Insert** is shown at the bottom of the auto-completion popup.
-The default insertion mode can be configured with the `"completion_insert_mode"` setting, and the opposite mode can be used by selecting a completion item with the key binding <kbd>Alt</kbd>+<kbd>Enter</kbd>.
+The default insertion mode can be configured with the `"completion_insert_mode"` setting, and the opposite mode can be used by selecting a completion item with the key binding <kbd>Alt</kbd><kbd>Enter</kbd>.
 
 [Example GIF for "Replace" mode](https://user-images.githubusercontent.com/22029477/189607770-1a8018f6-1fd1-40de-b6d9-be1f657dfc0d.gif)
 
@@ -104,14 +104,14 @@ For example, it can highlight argument names in the function body with the same 
 
 In order to support semantic highlighting, the color scheme requires a special rule with a background color set for semantic tokens, which is (marginally) different from the original background.
 LSP automatically adds such a rule to the built-in color schemes from Sublime Text.
-If you use a custom color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
+If you use a custom color scheme, select *UI: Customize Color Scheme* from the Command Palette and add the following rule:
 
 ```jsonc
 {
     "rules": [
         {
             "scope": "meta.semantic-token",
-            "background": "#00000101"
+            "background": "#00000101" // must be (marginally) different from the original color scheme background
         },
     ]
 }
@@ -158,7 +158,7 @@ If you define color scheme rules for the `meta.semantic-token.*` scopes listed a
 The fallback scopes can depend on additional [token modifiers](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers).
 
 Language servers can also add their custom token types and modifiers, which are not defined in the protocol.
-The default scopes for such custom tokens are defined in a `semantic_tokens` mapping in the server configuration, for example in the settings file of an LSP-\* helper package.
+The default scopes for such custom tokens are defined in a `"semantic_tokens"` mapping in the server configuration, for example in the settings file of an LSP-\* helper package.
 The keys of this mapping should be the token types and the values are the corresponding scopes.
 Semantic tokens with exactly one token modifier can be targeted by appending the modifier after a dot.
 
@@ -188,7 +188,7 @@ If neither a scope for a custom token type is defined, nor a color scheme rule f
 LSP provides a "Goto Definition" command, which can be more accurate than the syntax-based "Goto Definition" functionality from Sublime Text, due to the language server's additional knowledge about the project structure and type information.
 It is accessible from the right-click context menu, under *Goto* from the main menu, or can be bound to a user-defined key binding.
 
-The command from LSP can also fall back to Sublime's built-in "Goto Definition" if the `fallback` argument is set to `true`.
+The command from LSP can also fall back to Sublime's built-in "Goto Definition" if the `"fallback"` argument is set to `true`.
 This way, the built-in "Goto Definition" command will be triggered when there are no results found.
 
 If applicable to the language and supported by the server, further refinements may be available in addition to the basic "Goto Definition" functionality:
@@ -201,7 +201,7 @@ If applicable to the language and supported by the server, further refinements m
 ## Find References
 
 LSP has a "Find References" command that is similar to the built-in "Goto Reference…", but can provide more accurate results.
-The command from LSP replaces the default key binding <kbd>Shift</kbd>+<kbd>F12</kbd>, and it can also be accessed from the right-click context menu, from the main menu, and from the command palette.
+The command from LSP replaces the default key binding <kbd>Shift</kbd><kbd>F12</kbd>, and it can also be accessed from the right-click context menu, from the main menu, and from the command palette.
 If the `fallback` command argument is set to `true` in a user-defined key binding or command palette entry, LSP's "Find References" can fall back to the built-in "Goto Reference…" when there are no results found by the language server.
 
 
@@ -210,7 +210,7 @@ If the `fallback` command argument is set to `true` in a user-defined key bindin
 ![Diagnostics](./images/diagnostics.png)
 
 LSP highlights syntax and type errors, linter warnings and other information like hints about unused variables in the source code.
-Additionally, an icon is shown in the gutter for lines that contain diagnostics with severity "error", "warning", or "information".
+Additionally, an icon is shown in the gutter for lines that contain diagnostics with severity *information* or higher.
 
 The colors for diagnostics can be adjusted with color scheme rules for the following scopes:
 
@@ -221,6 +221,10 @@ The colors for diagnostics can be adjusted with color scheme rules for the follo
 | Information | `markup.info` | stippled underline |
 | Hint | `markup.info.hint` | stippled underline |
 
+Diagnostics can also be presented as annotations positioned to the right of the viewport, if the `"show_diagnostics_annotations_severity_level"` setting is enabled:
+
+![Diagnostics as annotations](./images/diagnostics_annotations.png)
+
 Diagnostics also optionally include the following scopes:
 
 | [Diagnostic Tag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnosticTag) | scope | description |
@@ -230,7 +234,7 @@ Diagnostics also optionally include the following scopes:
 
 Those scopes can be used to, for example, gray out the text color of unused code, if the server supports that.
 
-For example, to add a custom rule for the `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
+For example, to add a custom rule for the Mariana color scheme, select *UI: Customize Color Scheme* from the Command Palette and add the following rule:
 
 ```jsonc
 {
@@ -238,8 +242,8 @@ For example, to add a custom rule for the `Mariana` color scheme, select `UI: Cu
         {
             "scope": "markup.unnecessary",
             "foreground": "rgba(255, 255, 255, 0.4)",
-            "background": "#00000101", // required to be (marginally) different from the original color scheme background
-        }
+            "background": "#00000101" // must be (marginally) different from the original color scheme background
+        },
     ]
 }
 ```
@@ -295,7 +299,7 @@ To adjust the style, you can create an [override](https://www.sublimetext.com/do
 
 LSP provides a replacement for the built-in "Goto Symbol" command, which displays all symbols from the active file in the command palette and allows to quickly jump to their locations.
 The command from LSP can provide more detailed descriptions and also allows to filter symbols according to their kind by pressing <kbd>backspace</kbd> in the input field.
-Please note that LSP does *not* replace the default key binding <kbd>Ctrl</kbd>+<kbd>R</kbd> for the built-in command.
+Please note that LSP does *not* replace the default key binding <kbd>Ctrl</kbd><kbd>R</kbd> for the built-in command.
 
 
 ## Goto Symbol in Project

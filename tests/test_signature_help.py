@@ -212,7 +212,7 @@ class SignatureHelpTest(unittest.TestCase):
     #         r'''
     #         <p>
     #         <div style="font-size: 0\.9rem">
-    #         <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\):
+    #         <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\):  # noqa: E501
     #         </div>
     #         </p>
     #         <div class="highlight"><span style="color: #\w{6}">f\(</span>

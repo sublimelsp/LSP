@@ -112,14 +112,13 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
 
 
 def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool) -> None:
-    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.__module__.split('.')[0]
+    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.session_name
     if name in g_plugins:
         return
     try:
         if issubclass(plugin, AbstractPlugin):
             _, settings_path = plugin.configuration()
         else:
-            plugin.plugin_storage_path = Path(ST_STORAGE_PATH, name)  # pyright: ignore[reportAttributeAccessIssue]
             settings_path = f"Packages/{name}/{name}.sublime-settings"
         if client_configs.add_external_config(name, settings_path, notify_listener):
             g_plugins[name] = plugin
@@ -235,12 +234,24 @@ class PluginContext:
 
 class LspPlugin:
 
-    plugin_storage_path: Final[Path] = Path(ST_STORAGE_PATH)  # Path is updated on registering the plugin class.
+    session_name: Final[str] = ''
+    """
+    The name of the plugin.
+
+    This becomes the session name and the key of the settings object (in project settings, for example).
+    It is automatically inferred from package name and is not to be changed manually.
+    """
+
+    plugin_storage_path: Final[Path] = Path()  # Path is updated on subclassing this class.
     """
     The storage path for the plugin.
 
     Use this as your directory to install server files. Its path is '$DATA/Package Storage/<Package Name>'.
     """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls.session_name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
+        cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.session_name)  # pyright: ignore[reportAttributeAccessIssue]
 
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:

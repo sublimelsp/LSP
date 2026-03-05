@@ -18,6 +18,7 @@ from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
+from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -46,6 +47,7 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.url import view_to_uri
+from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
@@ -133,6 +135,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self) -> None:
         super().__init__()
         self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
+        self._last_edit_action: ChangeEventAction = 'type'
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -142,18 +145,19 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         self.ids_to_listeners.pop(self.buffer.buffer_id, None)
         super().detach()
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed(self, changes: list[sublime.TextChange]) -> None:
         view = self.buffer.primary_view()
         if not view:
             return
         change_count = view.change_count()
         frozen_listeners = WeakSet(self.view_listeners)
 
-        def notify() -> None:
+        def notify(action: ChangeEventAction) -> None:
             for listener in list(frozen_listeners):
-                listener.on_text_changed_async(change_count, changes)
+                listener.on_text_changed_async(change_count, changes, action)
 
-        sublime.set_timeout_async(notify)
+        sublime.set_timeout_async(partial(notify, self._last_edit_action))
+        self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
         for listener in list(self.view_listeners):
@@ -162,6 +166,15 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def on_revert_async(self) -> None:
         for listener in list(self.view_listeners):
             listener.revert_async()
+
+    def set_last_edit_action(self, action: ChangeEventAction) -> None:
+        self._last_edit_action = action
+        # ST should have already scheduled text_change event internally so resetting it from a timeout ensures it's
+        # reset after the event was triggered and also in case the change event didn't trigger.
+        sublime.set_timeout(self._reset_last_edit_action)
+
+    def _reset_last_edit_action(self) -> None:
+        self._last_edit_action = 'type'
 
     def __repr__(self) -> str:
         return f"TextChangeListener({self.buffer.buffer_id})"
@@ -201,6 +214,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
+        self._code_actions_for_selection_needs_refresh = True
         self.hover_provider_count = 0
         self._setup()
 
@@ -328,8 +342,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
         self._clear_code_actions_annotation()
-        if is_view_visible and userprefs().show_code_actions:
-            self._do_code_actions_async()
+        if userprefs().show_code_actions:
+            if is_view_visible:
+                self._do_code_actions_for_selection_async()
+            else:
+                self._code_actions_for_selection_needs_refresh = True
         self._update_diagnostic_in_status_bar_async()
         window = self.view.window()
         is_active_view = window and window.active_view() == self.view
@@ -357,10 +374,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return list(self._session_views.values())
 
     @requires_session
-    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_text_changed_async(change_count, changes)
+                sv.on_text_changed_async(change_count, changes, action)
         self._on_view_updated_async()
 
     def get_uri(self) -> DocumentUri:
@@ -381,6 +400,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             request_flags |= RequestFlags.INLAY_HINT
         if session == self.session_async('semanticTokensProvider', 0):
             request_flags |= RequestFlags.SEMANTIC_TOKENS
+        if session == self.session_async('documentOnTypeFormattingProvider', 0):
+            request_flags |= RequestFlags.ON_TYPE_FORMATTING
         return request_flags
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
@@ -410,25 +431,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session_views = self.session_views_async()
         if not session_views:
             return
-        if userprefs().show_code_actions:
-            self._do_code_actions_async()
         for sb in self.session_buffers_async():
-            if sb.code_lenses_needs_refresh:
-                sb.set_code_lenses_pending_refresh(needs_refresh=False)
+            if sb.pending_refreshes & RequestFlags.CODE_LENS:
                 sb.do_code_lenses_async(self.view)
-            if sb.document_diagnostic_needs_refresh:
-                sb.set_document_diagnostic_pending_refresh(needs_refresh=False)
+            if sb.pending_refreshes & RequestFlags.DIAGNOSTIC:
                 sb.do_document_diagnostic_async(self.view, self.view.change_count(), forced_update=True)
-            if sb.semantic_tokens.needs_refresh \
+            if sb.pending_refreshes & RequestFlags.SEMANTIC_TOKENS \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.SEMANTIC_TOKENS:
-                sb.set_semantic_tokens_pending_refresh(needs_refresh=False)
                 sb.do_semantic_tokens_async(self.view)
-            if sb.inlay_hints_needs_refresh \
+            if sb.pending_refreshes & RequestFlags.INLAY_HINT \
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
-                sb.set_inlay_hints_pending_refresh(needs_refresh=False)
                 sb.do_inlay_hints_async(self.view)
+        if userprefs().show_code_actions and self._code_actions_for_selection_needs_refresh:
+            self._do_code_actions_for_selection_async()
 
     @requires_session
     def on_selection_modified_async(self) -> None:
@@ -446,7 +463,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._do_highlights_async()
         if userprefs().show_code_actions:
-            self._do_code_actions_async()
+            self._do_code_actions_for_selection_async()
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
             if code_lenses_enabled:
@@ -594,6 +611,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
+        if edit_action := COMMAND_TO_CHANGE_EVENT_ACTION.get(command_name):
+            if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
+                text_change_listener.set_last_edit_action(edit_action)
         return None
 
     @requires_session
@@ -762,9 +782,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions_async(self) -> None:
+    def _do_code_actions_for_selection_async(self) -> None:
         if not self._stored_selection:
             return
+        self._code_actions_for_selection_needs_refresh = False
         region = self._stored_selection[0]
         self._diagnostics_for_selection = self.get_diagnostics_async(region)
         actions_manager \

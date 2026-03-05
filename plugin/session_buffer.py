@@ -8,6 +8,8 @@ from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
 from ..protocol import DocumentDiagnosticReportKind
 from ..protocol import DocumentLink
+from ..protocol import DocumentOnTypeFormattingOptions
+from ..protocol import DocumentOnTypeFormattingParams
 from ..protocol import DocumentUri
 from ..protocol import FullDocumentDiagnosticReport
 from ..protocol import InlayHint
@@ -18,9 +20,11 @@ from ..protocol import SemanticTokens
 from ..protocol import SemanticTokensDelta
 from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
+from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
+from .core.constants import AUTO_CLOSE_BRACKETS
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -28,7 +32,9 @@ from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.edit import apply_text_edits
 from .core.promise import Promise
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
@@ -42,6 +48,7 @@ from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
 from .core.url import normalize_uri
+from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -50,21 +57,24 @@ from .core.views import did_open
 from .core.views import did_save
 from .core.views import document_color_params
 from .core.views import entire_content_range
+from .core.views import first_selection_region
+from .core.views import formatting_options
 from .core.views import lsp_color_to_phantom
 from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
+from .core.views import text_document_position_params
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
 from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
+from dataclasses import dataclass
 from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Iterable
 from typing import List
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
@@ -75,12 +85,11 @@ import itertools
 import sublime
 import time
 
+P = ParamSpec('P')
+
 # If the total number of characters in the file exceeds this limit, try to send a semantic tokens request only for the
 # visible part first when the file was just opened
 HUGE_FILE_SIZE = 50000
-
-
-P = ParamSpec('P')
 
 
 def is_full_document_diagnostic_report(
@@ -99,28 +108,25 @@ class PendingChanges:
 
     __slots__ = ('version', 'changes')
 
-    def __init__(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def __init__(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes = list(changes)
 
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def update(self, version: int, changes: list[sublime.TextChange]) -> None:
         self.version = version
         self.changes.extend(changes)
 
 
+@dataclass
 class PendingDocumentDiagnosticRequest:
-
-    __slots__ = ('version', 'request_id')
-
-    def __init__(self, version: int, request_id: int) -> None:
-        self.version = version
-        self.request_id = request_id
+    version: int
+    request_id: int
 
 
 class SemanticTokensData:
 
     __slots__ = (
-        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'needs_refresh', 'pending_response')
+        'data', 'result_id', 'active_region_keys', 'tokens', 'view_change_count', 'pending_response')
 
     def __init__(self) -> None:
         self.data: list[int] = []
@@ -128,7 +134,6 @@ class SemanticTokensData:
         self.active_region_keys: set[int] = set()
         self.tokens: list[SemanticToken] = []
         self.view_change_count = 0
-        self.needs_refresh = False
         self.pending_response: int | None = None
 
 
@@ -152,13 +157,13 @@ class SessionBuffer:
         self._last_known_uri = uri
         self._id = buffer_id
         self._pending_changes: PendingChanges | None = None
+        self.pending_refreshes: RequestFlags = RequestFlags.NONE
         self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
         self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
         self._diagnostics_versions: dict[DiagnosticsIdentifier, int] = {}
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
         self.supported_diagnostic_tags: set[DiagnosticTag] = set()
-        self.document_diagnostic_needs_refresh = False
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
@@ -171,15 +176,15 @@ class SessionBuffer:
         self._supported_custom_tokens: set[str] = set()
         self._last_semantic_region_key = 0
         self._inlay_hints_phantom_set = sublime.PhantomSet(view, "lsp_inlay_hints")
-        self.inlay_hints_needs_refresh = False
-        self.code_lenses_needs_refresh = False
         self._is_saving = False
         self._has_changed_during_save = False
         self._code_lenses = CodeLensCache()
         self.code_lens_annotation_color: str = ''
         self._dynamically_registered_commands: dict[str, list[str]] = {}
         self._supported_commands: set[str] = set()
+        self._on_type_formatting_triggers: tuple[str, ...] = ()
         self._update_supported_commands()
+        self._update_on_type_formatting_triggers()
         self._update_color_scheme_rules(view)
 
     @property
@@ -306,6 +311,8 @@ class SessionBuffer:
             elif capability_path == "executeCommandProvider":
                 self._dynamically_registered_commands[registration_id] = options['commands']
                 self._update_supported_commands()
+            elif capability_path == "documentOnTypeFormattingProvider":
+                self._update_on_type_formatting_triggers()
 
     def unregister_capability_async(
         self,
@@ -321,6 +328,8 @@ class SessionBuffer:
         if capability_path == "executeCommandProvider":
             self._dynamically_registered_commands.pop(registration_id)
             self._update_supported_commands()
+        elif capability_path == "documentOnTypeFormattingProvider":
+            self._update_on_type_formatting_triggers()
 
     def get_capability(self, capability_path: str) -> Any | None:
         if self.session.config.is_disabled_capability(capability_path):
@@ -349,27 +358,33 @@ class SessionBuffer:
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(self, view: sublime.View, change_count: int,
-                              changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(
+        self, view: sublime.View, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
+    ) -> None:
         if change_count <= self._last_synced_version:
             return
         self._last_text_change_time = time.time()
-        last_change = list(changes)[-1]
+        last_change = changes[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
-            # A special situation when changes externally. We receive two changes,
+            # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
-            pass
-        else:
-            purge = False
-            if self._pending_changes is None:
-                self._pending_changes = PendingChanges(change_count, changes)
-                purge = True
-            elif self._pending_changes.version < change_count:
-                self._pending_changes.update(change_count, changes)
-                purge = True
-            if purge:
-                self._cancel_pending_requests_async()
+            return
+        purge = False
+        if self._pending_changes is None:
+            self._pending_changes = PendingChanges(change_count, changes)
+            purge = True
+        elif self._pending_changes.version < change_count:
+            self._pending_changes.update(change_count, changes)
+            purge = True
+        if purge:
+            self._cancel_pending_requests_async()
+            if userprefs().format_on_type and action == 'type' and \
+                    (params := self._get_on_type_formatting_params_async(view, last_change)):
+                self.purge_changes_async(view)
+                self.session.send_request_task(Request.onTypeFormatting(params, view)) \
+                    .then(partial(self._on_type_formatting_result_async, view, change_count))
+            else:
                 debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
@@ -460,7 +475,7 @@ class SessionBuffer:
     def on_userprefs_changed_async(self) -> None:
         self._redraw_document_links_async()
         if userprefs().semantic_highlighting:
-            self.semantic_tokens.needs_refresh = True
+            self.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
         else:
             self.clear_semantic_tokens_async()
         for sv in self.session_views:
@@ -481,6 +496,17 @@ class SessionBuffer:
             if sv.view.is_valid():
                 return sv.view
         return None
+
+    def set_pending_refresh(self, flags: RequestFlags) -> None:
+        """
+        Mark the request type(s) given by `flags` as pending for refresh. New requests according to the marked types
+        will be sent the next time when a view of this SessionBuffer gets activated.
+        """
+        self.pending_refreshes |= flags
+
+    def _reset_pending_refresh(self, flags: RequestFlags) -> None:
+        """Reset the refresh marker for the request type(s) given by `flags`."""
+        self.pending_refreshes &= ~flags
 
     def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
         """
@@ -593,9 +619,12 @@ class SessionBuffer:
         if not mgr or mgr.should_ignore_diagnostics(self._last_known_uri, self.session.config):
             return
         if version < view.change_count():
+            # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
+            # from _on_after_change_async after the didChange notification.
             return
         for identifier in get_diagnostics_identifiers(self.session, view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
+        self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     def _do_document_diagnostic_async(
         self, view: sublime.View, identifier: DiagnosticsIdentifier, version: int, *, forced_update: bool = False
@@ -650,9 +679,6 @@ class SessionBuffer:
                     lambda: self._if_view_unchanged(self._do_document_diagnostic_async, version)(identifier, version),
                     DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
                 )
-
-    def set_document_diagnostic_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.document_diagnostic_needs_refresh = needs_refresh
 
     # --- textDocument/publishDiagnostics ------------------------------------------------------------------------------
 
@@ -719,6 +745,43 @@ class SessionBuffer:
             )
         return False
 
+    # --- textDocument/onTypeFormatting --------------------------------------------------------------------------------
+
+    def _update_on_type_formatting_triggers(self) -> None:
+        capability: DocumentOnTypeFormattingOptions | None = self.get_capability('documentOnTypeFormattingProvider')
+        if capability:
+            trigger_characters = (capability['firstTriggerCharacter'], *capability.get('moreTriggerCharacter', []))
+            # Two-character pairs where the first character matches the trigger character.
+            trigger_pairs = (pair for pair in AUTO_CLOSE_BRACKETS if pair[0] in trigger_characters)
+            self._on_type_formatting_triggers = (*trigger_characters, *trigger_pairs)
+        else:
+            self._on_type_formatting_triggers = ()
+
+    def _get_on_type_formatting_params_async(
+        self, view: sublime.View, last_change: sublime.TextChange
+    ) -> DocumentOnTypeFormattingParams | None:
+        if not self._on_type_formatting_triggers:
+            return None
+        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+            return None
+        selection = first_selection_region(view)
+        if selection is None:
+            return None
+        for trigger in self._on_type_formatting_triggers:
+            if last_change.str.endswith(trigger):
+                return {
+                    **text_document_position_params(view, selection.a),
+                    'options': formatting_options(view.settings()),
+                    'ch': trigger[0],
+                }
+        return None
+
+    def _on_type_formatting_result_async(
+        self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
+    ) -> None:
+        if version == view.change_count() and not isinstance(result, Error):
+            apply_text_edits(view, result)
+
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
 
     def do_semantic_tokens_async(self, view: sublime.View, only_viewport: bool = False) -> None:
@@ -758,6 +821,7 @@ class SessionBuffer:
             }, view)
             self.semantic_tokens.pending_response = self.session.send_request_async(
                 request, self._on_semantic_tokens_async, self._on_semantic_tokens_error_async)
+        self._reset_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
     def _on_semantic_tokens_async(self, response: SemanticTokens | None) -> None:
         self.semantic_tokens.pending_response = None
@@ -850,9 +914,6 @@ class SessionBuffer:
         for region_key in self.semantic_tokens.active_region_keys:
             view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
 
-    def set_semantic_tokens_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.semantic_tokens.needs_refresh = needs_refresh
-
     def get_semantic_tokens(self) -> list[SemanticToken]:
         return self.semantic_tokens.tokens
 
@@ -876,6 +937,7 @@ class SessionBuffer:
             "range": entire_content_range(view)
         }
         self.session.send_request_async(Request.inlayHint(params, view), self._on_inlay_hints_async)
+        self._reset_pending_refresh(RequestFlags.INLAY_HINT)
 
     def _on_inlay_hints_async(self, response: list[InlayHint] | None) -> None:
         if response:
@@ -890,12 +952,9 @@ class SessionBuffer:
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
 
-    def set_inlay_hints_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.inlay_hints_needs_refresh = needs_refresh
-
     def remove_inlay_hint_phantom(self, phantom_uuid: str) -> None:
         new_phantoms = list(filter(
-            lambda p: getattr(p, 'lsp_uuid') != phantom_uuid,
+            lambda p: getattr(p, 'lsp_uuid', None) != phantom_uuid,
             self._inlay_hints_phantom_set.phantoms)
         )
         self._inlay_hints_phantom_set.update(new_phantoms)
@@ -918,6 +977,7 @@ class SessionBuffer:
                 break
         request = Request('textDocument/codeLens', {'textDocument': text_document_identifier(view)}, view)
         self.session.send_request_async(request, partial(self._on_code_lenses_async, view))
+        self._reset_pending_refresh(RequestFlags.CODE_LENS)
 
     def _on_code_lenses_async(self, view: sublime.View, response: list[CodeLens] | None) -> None:
         self._code_lenses.handle_response_async(response or [])
@@ -953,9 +1013,6 @@ class SessionBuffer:
         supported_code_lenses = self._filter_supported_code_lenses()
         for sv in self.session_views:
             sv.handle_code_lenses_async(supported_code_lenses)
-
-    def set_code_lenses_pending_refresh(self, needs_refresh: bool = True) -> None:
-        self.code_lenses_needs_refresh = needs_refresh
 
     # ------------------------------------------------------------------------------------------------------------------
 

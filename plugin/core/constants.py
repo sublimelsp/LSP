@@ -9,11 +9,16 @@ from ...protocol import LanguageKind
 from ...protocol import MessageType
 from ...protocol import SymbolKind
 from .typing import StrEnum
+from .typing import TYPE_CHECKING
 from enum import IntFlag
 from os.path import dirname
 from os.path import join
 from typing import Tuple
 import sublime
+
+if TYPE_CHECKING:
+    from .views import ChangeEventAction
+
 
 try:
     from mdpopups.marko import __version__ as marko_version  # pyright: ignore[reportMissingImports]
@@ -41,13 +46,16 @@ where $DATA means:
 - on Linux: ~/.cache/sublime-text
 """
 MARKO_MD_PARSER_VERSION: str | None = marko_version
+# Brackets that are commonly auto-paired by ST.
+AUTO_CLOSE_BRACKETS = ('{}', '()', '[]')
 
 
 class RequestFlags(IntFlag):
     """
-    A bitflag that indicates how some of the requests are prioritized between the sessions.
-    This is used for multi-session configurations, where the best session is selected for each of the relevant features
-    below and the corresponding request is made only by that one session.
+    A bitflag that holds information about selecting a subset of request types.
+
+    This is used for example to prioritize certain requests between different sessions in a multi-session configuration,
+    and to mark some requests as pending for refresh in a given document.
     """
     NONE = 0
     DOCUMENT_COLOR = 1
@@ -56,6 +64,12 @@ class RequestFlags(IntFlag):
     """ textDocument/inlayHint """
     SEMANTIC_TOKENS = 4
     """ textDocument/semanticTokens """
+    ON_TYPE_FORMATTING = 8
+    """ textDocument/onTypeFormatting """
+    CODE_LENS = 16
+    """ textDocument/codeLens """
+    DIAGNOSTIC = 32
+    """ textDocument/diagnostic """
 
 
 class RegionKey(StrEnum):
@@ -235,6 +249,17 @@ CODE_LENS_ANNOTATION_SCOPE = 'region.greenish markup.accent.codelens.lsp'
 SIGNATURE_HELP_FUNCTION_SCOPE = 'entity.name.function.sighelp.lsp'
 SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.active.lsp'
 SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.lsp'
+
+COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
+    'cut': 'cut',
+    'paste': 'paste',
+    'paste_and_indent': 'paste',
+    'redo': 'redo',
+    'redo_or_repeat': 'redo',
+    'soft_redo': 'redo',
+    'soft_undo': 'undo',
+    'undo': 'undo',
+}
 
 # These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more
 # match any of the entries here, then the rule is that we split the base scope on the ".", and take the second

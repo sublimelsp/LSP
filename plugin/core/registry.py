@@ -86,10 +86,10 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
             return session
         return None
 
-    def sessions(self) -> Generator[Session, None, None]:
+    def sessions(self) -> Generator[Session]:
         wm = windows.lookup(self.window)
         if not wm:
-            return None
+            return
         for session in wm.get_sessions():
             if self.capability and not session.has_capability(self.capability, check_views=True):
                 continue

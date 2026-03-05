@@ -79,17 +79,17 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
         headers = http.client.parse_headers(reader)  # type: ignore
         try:
             body = reader.read(int(headers.get("Content-Length")))
-        except TypeError:
+        except TypeError as ex:
             if str(headers) == '\n':
                 # Expected on process stopping. Gracefully stop the transport.
-                raise StopLoopError()
+                raise StopLoopError() from None
             else:
                 # Propagate server's output to the UI.
-                raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}")
+                raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
         try:
             return self._decode(body)
         except Exception as ex:
-            raise Exception(f"JSON decode error: {ex}")
+            raise Exception(f"JSON decode error: {ex}") from ex
 
     @staticmethod
     def _encode(data: dict[str, Any]) -> bytes:

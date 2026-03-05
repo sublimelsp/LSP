@@ -212,6 +212,10 @@ If the `fallback` command argument is set to `true` in a user-defined key bindin
 LSP highlights syntax and type errors, linter warnings and other information like hints about unused variables in the source code.
 Additionally, an icon is shown in the gutter for lines that contain diagnostics with severity *information* or higher.
 
+Diagnostics can also be presented as annotations positioned to the right of the viewport, if the `"show_diagnostics_annotations_severity_level"` setting is enabled:
+
+![Diagnostics as annotations](./images/diagnostics_annotations.png)
+
 The colors for diagnostics can be adjusted with color scheme rules for the following scopes:
 
 | [Diagnostic Severity](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnosticSeverity) | scope | drawn as |
@@ -220,10 +224,6 @@ The colors for diagnostics can be adjusted with color scheme rules for the follo
 | Warning | `markup.warning` | squiggly underline |
 | Information | `markup.info` | stippled underline |
 | Hint | `markup.info.hint` | stippled underline |
-
-Diagnostics can also be presented as annotations positioned to the right of the viewport, if the `"show_diagnostics_annotations_severity_level"` setting is enabled:
-
-![Diagnostics as annotations](./images/diagnostics_annotations.png)
 
 Diagnostics also optionally include the following scopes:
 

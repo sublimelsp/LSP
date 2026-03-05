@@ -21,10 +21,11 @@ body {
     font-size: var(--font-size);
 }
 .mdpopups kbd {
-    font-size: 0.8rem;
-    color: var(--mdpopups-fg);
     background-color: color(var(--mdpopups-bg) lightness(+ 5%));
     border-color: color(var(--mdpopups-fg) alpha(0.25));
+    color: var(--mdpopups-fg);
+    font-size: 0.8rem;
+    line-height: 0.8rem;
 }
 .mdpopups blockquote.alert {
     border-radius: 0;
@@ -71,7 +72,9 @@ body {
 .lsp_popup .m-0 {
     margin: 0;
 }
-.lsp_popup .font-size-sm {
+.lsp_popup .font-size-sm,
+.lsp_popup .font-size-sm div.highlight,
+.lsp_popup .font-size-sm pre.highlight {
     font-size: var(--font-size-sm)
 }
 .lsp_popup .font-size-xs,

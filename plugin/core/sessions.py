@@ -2284,7 +2284,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 if isinstance(self._plugin, AbstractPlugin):
                     self._plugin.on_server_response_async(cast(str, method), response)
                 else:
-                    server_response = cast(ServerResponse, cast(object, {'method': method, 'result': response}))
+                    server_response = cast(ServerResponse, cast(object, {'method': method, 'result': response.result}))
                     self._plugin.on_server_response_async(server_response)
                     response.result = server_response['result']
             return handler, response.result, None, None, None

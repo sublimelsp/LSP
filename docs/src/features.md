@@ -16,10 +16,10 @@ Almost all capabilities can also be bound to a key with a key binding.
 ![Auto Complete](./images/auto_complete.png)
 
 The LSP package enhances the auto-complete functionality of Sublime Text with results provided by the language server.
-If available, you can click the **More** link or use the default key binding <kbd>F12</kbd> to show an additional documentation popup with detailed information about the highlighted completion item.
+If available, you can click the **More** link or use the default key binding <kbd>F12</kbd> to show an additional documentation popup with detailed information about the highlighted item.
 
 Some language servers provide two different modes for inserting a completion item when the caret is in the middle of a word, in which case **Replace** or **Insert** is shown at the bottom of the auto-completion popup.
-The default insertion mode can be configured with the `"completion_insert_mode"` setting, and the opposite mode can be used by selecting a completion item with the key binding <kbd>Alt</kbd><kbd>Enter</kbd>.
+The default insertion mode can be configured with the `"completion_insert_mode"` setting, and the opposite mode can be used by confirming a completion item with the key binding <kbd>Alt</kbd><kbd>Enter</kbd>.
 
 [Example GIF for "Replace" mode](https://user-images.githubusercontent.com/22029477/189607770-1a8018f6-1fd1-40de-b6d9-be1f657dfc0d.gif)
 
@@ -28,7 +28,7 @@ The default insertion mode can be configured with the `"completion_insert_mode"`
 
 ![Signature Help](./images/signature_help.png)
 
-The signature help popup appears when typing the arguments of a function invocation.
+The signature help popup appears when typing the arguments of a function call.
 It highlights the name of the current parameter and often presents additional type information and documentation of the function and parameters.
 If multiple overloads of the function exist, you can switch between them using the up and down arrow keys.
 
@@ -66,7 +66,7 @@ See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-
 
 LSP can also highlight the word or range for which a hover popup is shown, if the `"hover_highlight_style"` setting is enabled.
 In that case you can use the scope `markup.highlight.hover` in a color scheme rule to control the highlighting color.
-If `"hover_highlight_style"` is set to `"background"`, the highlighting color can be controlled using the "background" property in the color scheme rule.
+If the setting is set to `"background"`, the highlighting color can be controlled using the "background" property in the color scheme rule.
 
 
 ## Highlights
@@ -76,12 +76,12 @@ If `"hover_highlight_style"` is set to `"background"`, the highlighting color ca
 When you select a word, Sublime Text highlights other occurrences of that word in the file (controlled by the `"match_selection"` setting).
 LSP has a similar capability to highlight the identifier name that is currently under the caret.
 It is enhanced in the sense that the highlighted locations are restricted to only the relevant part of the file, according to the scoping rules of the language.
-Furthermore it can distinguish between read and write access to a variable and may highlight them with different colors.
+Furthermore it can distinguish between read and write access of a variable and may highlight them with different colors.
 
 The highlighting color can be adjusted with color scheme rules for the following scopes:
 
-| DocumentHighlightKind | scope | description |
-| --------------------- | ----- | ----------- |
+| [Document Highlight Kind](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#documentHighlightKind) | scope | description |
+| --- | --- | --- |
 | Text | `markup.highlight.text` | A textual occurrence |
 | Read | `markup.highlight.read` | Read-access of a symbol |
 | Write | `markup.highlight.write` | Write-access of a symbol |
@@ -258,6 +258,9 @@ Alternatively they can be shown as a lightbulb icon in the gutter.
 "Refactor" code actions are accessible from the right-click context menu and under *Edit* from the main menu.
 
 The accent color for code action annotations can be controlled with a color scheme rule for the `markup.accent.codeaction` scope (blue by default).
+
+Certain code actions can also be run automatically on file save (`"lsp_code_actions_on_save"` setting) or when file formatting is triggered (`"lsp_code_actions_on_format"` setting).
+This includes actions which sort the import lines in the file, or to automatically apply all available fixes for diagnostics.
 
 
 ## Code Lenses

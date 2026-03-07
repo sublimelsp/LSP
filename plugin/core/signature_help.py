@@ -19,6 +19,7 @@ class SignatureHelpStyle(TypedDict):
     function_color: str
     active_parameter_color: str
     active_parameter_bold: bool
+    active_parameter_italic: bool
     active_parameter_underline: bool
     inactive_parameter_color: str
 
@@ -183,16 +184,21 @@ class SigHelp:
             return _wrap_with_color(
                 content,
                 self._style['active_parameter_color'],
-                self._style['active_parameter_bold'],
-                self._style['active_parameter_underline']
+                bold=self._style['active_parameter_bold'],
+                italic=self._style['active_parameter_italic'],
+                underline=self._style['active_parameter_underline']
             )
         return _wrap_with_color(content, self._style['inactive_parameter_color'])
 
 
-def _wrap_with_color(content: str, color: str, bold: bool = False, underline: bool = False) -> str:
+def _wrap_with_color(
+    content: str, color: str, *, bold: bool = False, italic: bool = False, underline: bool = False
+) -> str:
     style = f'color: {color}'
     if bold:
         style += '; font-weight: bold'
+    if italic:
+        style += '; font-style: italic'
     if underline:
         style += '; text-decoration: underline'
     return f'<span style="{style}">{html.escape(content, quote=False)}</span>'

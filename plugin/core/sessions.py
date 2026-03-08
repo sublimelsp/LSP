@@ -2111,6 +2111,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         session_view.shutdown_async()
 
     def _handle_shutdown_result(self, _: Any) -> None:
+        self._progress.clear()
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:

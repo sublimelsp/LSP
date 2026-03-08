@@ -45,7 +45,7 @@
   // auto-completions for all keys in this file, and many others as well.
   // See: https://packagecontrol.io/packages/LSP-json
   //
-  // "clients":
+  // "LSP":
   // {
   //   // Each new server configuration must have the following structure.
   //   "CLIENT_NAME": // some human-friendly name

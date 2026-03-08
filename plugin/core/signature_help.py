@@ -177,22 +177,22 @@ class SigHelp:
         return None
 
     def _function(self, content: str) -> str:
-        return _wrap_with_color(content, self._style['function_color'])
+        return _wrap_with_style(content, color=self._style['function_color'])
 
     def _parameter(self, content: str, active: bool) -> str:
         if active:
-            return _wrap_with_color(
+            return _wrap_with_style(
                 content,
-                self._style['active_parameter_color'],
+                color=self._style['active_parameter_color'],
                 bold=self._style['active_parameter_bold'],
                 italic=self._style['active_parameter_italic'],
                 underline=self._style['active_parameter_underline']
             )
-        return _wrap_with_color(content, self._style['inactive_parameter_color'])
+        return _wrap_with_style(content, color=self._style['inactive_parameter_color'])
 
 
-def _wrap_with_color(
-    content: str, color: str, *, bold: bool = False, italic: bool = False, underline: bool = False
+def _wrap_with_style(
+    content: str, *, color: str, bold: bool = False, italic: bool = False, underline: bool = False
 ) -> str:
     style = f'color: {color}'
     if bold:

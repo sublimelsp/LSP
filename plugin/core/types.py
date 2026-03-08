@@ -416,7 +416,7 @@ class Settings:
             return [None] * 4  # default styling
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticToken:
     region: sublime.Region
     type: str

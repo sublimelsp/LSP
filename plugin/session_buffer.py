@@ -117,7 +117,7 @@ class PendingChanges:
         self.changes.extend(changes)
 
 
-@dataclass
+@dataclass(slots=True)
 class PendingDocumentDiagnosticRequest:
     version: int
     request_id: int

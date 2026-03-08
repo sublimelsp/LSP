@@ -276,6 +276,7 @@ class Settings:
     show_multiline_diagnostics_highlights = cast(bool, None)
     show_multiline_document_highlights = cast(bool, None)
     show_references_in_quick_panel = cast(bool, None)
+    show_signature_help = cast(bool, None)
     show_symbol_action_links = cast(bool, None)
     show_view_status = cast(bool, None)
 
@@ -324,6 +325,7 @@ class Settings:
         r("show_multiline_diagnostics_highlights", True)
         r("show_multiline_document_highlights", True)
         r("show_references_in_quick_panel", True)
+        r("show_signature_help", True)
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 

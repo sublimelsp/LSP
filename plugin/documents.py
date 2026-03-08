@@ -1033,7 +1033,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        if selection := self._stored_selection:
+        if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
                 self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
             else:

@@ -1006,7 +1006,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         if name.startswith('m_'):
             if self._plugin:
                 # Handler added through decorator.
-                if self._plugin and (handler_name := self._plugin.handler_attr_map.get(name)):
+                if handler_name := self._plugin.handler_attr_map.get(name):
                     return getattr(self._plugin, handler_name)
                 # Handler added through 'm_*' method.
                 if plugin_handler := getattr(self._plugin, name, None):

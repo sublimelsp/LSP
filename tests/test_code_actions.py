@@ -326,6 +326,16 @@ class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
 
 
 class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
+        cls.view.settings().set('lsp_code_actions_on_format', {})
+        cls.view.settings().set("lsp_format_on_save", False)
+        userprefs().lsp_format_on_save = False
+        userprefs().lsp_code_actions_on_save = {}
+        userprefs().lsp_code_actions_on_format = {}
+
     def test_code_actions_format_on_save_task_enabled__unset(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {})
         self.view.settings().set("lsp_format_on_save", False)
@@ -337,6 +347,7 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
     def test_code_actions_format_on_save_task_enabled__unsupported(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_save', {})
         self.view.settings().set('lsp_code_actions_on_format', {"quickfix.unsupported": True})
         self.view.settings().set("lsp_format_on_save", True)
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))

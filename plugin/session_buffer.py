@@ -274,7 +274,7 @@ class SessionBuffer:
     def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
+            self.session.on_text_document_publish_diagnostics({'uri': self._last_known_uri, 'diagnostics': []})
         if wm := self.session.manager():
             wm.on_diagnostics_updated()
         self._color_phantoms.update([])

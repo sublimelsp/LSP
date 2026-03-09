@@ -77,6 +77,7 @@ from ..api import notification_handler
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
+from ..diagnostics import get_diagnostics_identifiers
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
@@ -1003,9 +1004,15 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         If we don't have a request/notification handler, look up the request/notification handler in the plugin.
         """
         if name.startswith('m_'):
-            attr = getattr(self._plugin, name)
-            if attr is not None:
-                return attr
+            if self._plugin:
+                # Handler added through decorator.
+                if self._plugin and (handler_name := self._plugin.handler_attr_map.get(name)):
+                    return getattr(self._plugin, handler_name)
+                # Handler added through 'm_*' method.
+                if plugin_handler := getattr(self._plugin, name, None):
+                    return plugin_handler
+            if (handler_name := self.handler_attr_map.get(name)) and (handler := getattr(self, handler_name)):
+                return handler
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
@@ -2102,6 +2109,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
             watcher.destroy()
         self._dynamic_file_watchers = {}
+        get_diagnostics_identifiers.cache_clear()
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 

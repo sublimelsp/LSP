@@ -161,7 +161,7 @@ class CodeActionsManager:
             .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
 
     def request_on_save_or_format_async(
-        self, view: sublime.View, on_save_actions: dict[str, bool]
+        self, view: sublime.View, code_actions: dict[str, bool]
     ) -> Generator[Promise[CodeActionsByConfigName]]:
         listener = windows.listener_for_view(view)
         if not listener:
@@ -176,12 +176,12 @@ class CodeActionsManager:
                 # Since older servers don't support the "context.only" property, those will return all
                 # actions that need to be then manually filtered.
                 session_kinds = get_session_kinds(sb)
-                matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
+                matching_kinds = get_matching_kinds(code_actions, session_kinds)
                 actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
             return (sb.session.config.name, actions)
 
         for sb in listener.session_buffers_async('codeActionProvider'):
-            matching_kinds = get_matching_on_save_kinds(on_save_actions, get_session_kinds(sb))
+            matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
                 listener.purge_changes_async()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
@@ -199,8 +199,8 @@ def get_session_kinds(sb: SessionBufferProtocol) -> list[CodeActionKind]:
     return sb.get_capability('codeActionProvider.codeActionKinds') or []
 
 
-def get_matching_on_save_kinds(
-    user_actions: dict[str, bool], session_kinds: list[CodeActionKind]
+def get_matching_kinds(
+    code_actions: dict[str, bool], session_kinds: list[CodeActionKind]
 ) -> list[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session kinds
@@ -218,7 +218,7 @@ def get_matching_on_save_kinds(
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = user_actions.get(current_part, None)
+            user_value = code_actions.get(current_part, None)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:

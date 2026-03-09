@@ -392,9 +392,19 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         expected = ['a.b.c']
         self.assertEqual(actual, expected)
 
+    def test_matches_multiple_specific_actions(self) -> None:
+        actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': True}, ['a.b.c', 'a.b.d'])
+        expected = ['a.b.c', 'a.b.d']
+        self.assertEqual(actual, expected)
+
     def test_does_not_match_disabled_action(self) -> None:
         actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected: list[str] = []
+        self.assertEqual(actual, expected)
+
+    def test_does_not_match_disabled_parent_action(self) -> None:
+        actual = get_matching_on_save_kinds({'a.b': False, 'a.b.c': True}, ['a.b.c'])
+        expected: list[str] = ['a.b.c']
         self.assertEqual(actual, expected)
 
     def test_kind_matching(self) -> None:

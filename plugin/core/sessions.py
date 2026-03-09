@@ -1011,8 +1011,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 # Handler added through 'm_*' method.
                 if plugin_handler := getattr(self._plugin, name, None):
                     return plugin_handler
-            if (handler_name := self.handler_attr_map.get(name)) and (handler := getattr(self, handler_name)):
-                return handler
+            if handler_name := self.handler_attr_map.get(name):
+                return getattr(self, handler_name)
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.

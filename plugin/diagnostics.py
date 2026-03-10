@@ -48,7 +48,7 @@ class DiagnosticsStorage:
         self._identifiers_cache[view_id] = identifiers
         return identifiers
 
-    def clear_identifier_cache_for_view(self, view: sublime.View) -> None:
+    def clear_identifiers_cache_for_view(self, view: sublime.View) -> None:
         self._identifiers_cache.pop(view.id(), None)
 
     @property

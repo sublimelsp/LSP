@@ -68,7 +68,6 @@ from .core.views import text_document_position_params
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
-from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
 from functools import partial
@@ -622,7 +621,7 @@ class SessionBuffer:
             # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
             # from _on_after_change_async after the didChange notification.
             return
-        for identifier in get_diagnostics_identifiers(self.session, view):
+        for identifier in self.session.diagnostics.get_identifiers(view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
         self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
 
@@ -741,7 +740,7 @@ class SessionBuffer:
             view_version = view.change_count()
             return all(
                 self._diagnostics_versions.get(identifier) == view_version
-                for identifier in get_diagnostics_identifiers(self.session, view)
+                for identifier in self.session.diagnostics.get_identifiers(view)
             )
         return False
 

@@ -77,7 +77,6 @@ from ..api import notification_handler
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
-from ..diagnostics import get_diagnostics_identifiers
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
@@ -2109,7 +2108,6 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         for watcher in itertools.chain.from_iterable(self._dynamic_file_watchers.values()):
             watcher.destroy()
         self._dynamic_file_watchers = {}
-        get_diagnostics_identifiers.cache_clear()
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 

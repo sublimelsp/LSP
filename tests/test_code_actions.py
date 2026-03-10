@@ -367,12 +367,12 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
 
     def test_code_actions_format_on_save_task_get_code_actions__settings_are_merged(self) -> None:
         self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False, "source.sort.json": True})
-        # Actions defined in both settings are merged, settings defined in code_actions_on_format overrule
-        # settings in code_actions_on_save
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False, "source.sort.json": False})
+        # Actions defined in both settings are merged. When a duplicate action is found it will be True (enabled)
+        # when enabled in lsp_code_actions_on_save or lsp_code_actions_on_format
         self.assertEqual(
             CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view),
-            {"source.fixAll": False, "source.organizeImports": True, "source.sort.json": True},
+            {"source.fixAll": True, "source.organizeImports": True, "source.sort.json": False},
         )
 
 

@@ -199,9 +199,7 @@ def get_session_kinds(sb: SessionBufferProtocol) -> list[CodeActionKind]:
     return sb.get_capability('codeActionProvider.codeActionKinds') or []
 
 
-def get_matching_kinds(
-    code_actions: dict[str, bool], session_kinds: list[CodeActionKind]
-) -> list[CodeActionKind]:
+def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeActionKind]) -> list[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session kinds
     are returned. Returned kinds are those that are enabled and are not overridden by more

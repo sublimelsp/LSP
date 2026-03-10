@@ -252,6 +252,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
         self._cleanup()
         self._setup()
+        for session in self.sessions_async():
+            session.diagnostics.clear_identifier_cache_for_view(self.view)
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
 

@@ -46,6 +46,9 @@ class DiagnosticsStorage:
             )
         return self._identifiers_cache[view_id]
 
+    def clear_identifier_cache_for_view(self, view: sublime.View) -> None:
+        self._identifiers_cache.pop(view.id(), None)
+
     @property
     def workspace_diagnostics_identifiers(self) -> set[DiagnosticsIdentifier]:
         return self._workspace_diagnostics_identifiers

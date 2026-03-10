@@ -39,12 +39,14 @@ class DiagnosticsStorage:
 
     def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
         view_id = view.id()
-        if view_id not in self._identifiers_cache:
-            self._identifiers_cache[view_id] = set(
-                diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
-                if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
-            )
-        return self._identifiers_cache[view_id]
+        if (identifiers := self._identifiers_cache.get(view_id)) is not None:
+            return identifiers
+        identifiers = set(
+            diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
+            if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
+        )
+        self._identifiers_cache[view_id] = identifiers
+        return identifiers
 
     def clear_identifier_cache_for_view(self, view: sublime.View) -> None:
         self._identifiers_cache.pop(view.id(), None)

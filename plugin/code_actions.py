@@ -318,8 +318,8 @@ class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
     def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
         code_actions_on_save = CodeActionsOnSaveTask.get_code_actions(view)
         code_actions_on_format = super().get_code_actions(view)
-        # Merge the code actions which should be run. A code action will be enabled when it's enabled
-        # in one of the two available settings
+        # Merge the code actions which should be run. A dupliacte code action will be enabled when
+        # it's enabled in one of the two available settings
         actions = set(code_actions_on_save).union(code_actions_on_format)
         return {
             action: code_actions_on_save.get(action, False) or code_actions_on_format.get(action, False)

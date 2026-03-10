@@ -36,13 +36,14 @@ The styles in the signature help popup can be adjusted by defining color scheme 
 
 | scope | description |
 | ----- | ----------- |
-| `entity.name.function.sighelp` | Function name and punctuations |
-| `variable.parameter.sighelp` | Function parameters |
+| `meta.signature-help` | Full signature line |
+| `meta.signature-help.parameter` | Function parameters |
 | `variable.parameter.sighelp.active` | Function parameter which is currently highlighted |
 
 !!! note
-    If there is no special rule for the `variable.parameter.sighelp.active` scope in the color scheme, the highlighted parameter is rendered with bold and underlined font style.
-    But if the color scheme defines a different `"foreground"` color for that scope, the style follows the `"font_style"` property from the color scheme rule.
+    If there is no special rule for the `variable.parameter.sighelp.active` scope in the color scheme, the highlighted parameter is rendered with bold font style by default.
+    Note that the color scheme rules are cached and therefore modifications don't take effect immediately.
+    Switch to a different color scheme and back, to apply the style changes.
 
 
 ## Hover

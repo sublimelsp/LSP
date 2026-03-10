@@ -15,7 +15,8 @@ class SignatureHelpTest(unittest.TestCase):
             'function_color': '#ffffff',
             'active_parameter_color': '#ffffff',
             'active_parameter_bold': True,
-            'active_parameter_underline': True,
+            'active_parameter_italic': False,
+            'active_parameter_underline': False,
             'inactive_parameter_color': '#ffffff'
         }
 
@@ -55,7 +56,7 @@ class SignatureHelpTest(unittest.TestCase):
             r'''
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
+            <span style="color: #\w{6}; font-weight: bold">x</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>must be in the frobnicate range</p>
@@ -95,7 +96,7 @@ class SignatureHelpTest(unittest.TestCase):
             r'''
             <div class="highlight"><pre>
             <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
+            <span style="color: #\w{6}; font-weight: bold">x</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>must be in the <strong>frobnicate</strong> range</p>
@@ -131,7 +132,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}">x</span>
             <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">y</span>
+            <span style="color: #\w{6}; font-weight: bold">y</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>hello there</p>
@@ -165,7 +166,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}">x</span>
             <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">y</span>
+            <span style="color: #\w{6}; font-weight: bold">y</span>
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>hello there</p>
@@ -216,7 +217,7 @@ class SignatureHelpTest(unittest.TestCase):
             </div>
             </p>
             <div class="highlight"><pre><span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
+            <span style="color: #\w{6}; font-weight: bold">x</span>
             <span style="color: #\w{6}">, </span>
             <span style="color: #\w{6}">a</span>
             <span style="color: #\w{6}">, </span>
@@ -253,7 +254,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}"> </span>
             <span style="color: #\w{6}">"command"</span>
             <span style="color: #\w{6}"> </span>
-            <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">"parameters"</span>
+            <span style="color: #\w{6}; font-weight: bold">"parameters"</span>
             <span style="color: #\w{6}">, </span>
             <span style="color: #\w{6}">\.\.\.</span>
             <span style="color: #\w{6}"> </span>

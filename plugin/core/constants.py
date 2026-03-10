@@ -245,9 +245,9 @@ DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
 
 CODE_ACTION_ANNOTATION_SCOPE = 'region.bluish markup.accent.codeaction.lsp'
 CODE_LENS_ANNOTATION_SCOPE = 'region.greenish markup.accent.codelens.lsp'
-SIGNATURE_HELP_FUNCTION_SCOPE = 'entity.name.function.sighelp.lsp'
-SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.active.lsp'
-SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'variable.parameter.sighelp.lsp'
+SIGNATURE_HELP_FUNCTION_SCOPE = 'meta.signature-help.lsp'
+SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp variable.parameter.sighelp.active.lsp'
+SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
     'cut': 'cut',

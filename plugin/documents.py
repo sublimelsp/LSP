@@ -723,16 +723,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         active_parameter_style = self.view.style_for_scope(SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE)
         active_parameter_color = active_parameter_style['foreground']
         inactive_parameter_color = self.view.style_for_scope(SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE)['foreground']
-        if active_parameter_color == inactive_parameter_color:
+        if active_parameter_style == self.view.style_for_scope('variable.parameter'):
+            # Default font style if there is no special color scheme rule for the active parameter
             active_parameter_bold = True
-            active_parameter_underline = True
+            active_parameter_italic = False
+            active_parameter_underline = False
         else:
+            # Font style determined by the color scheme
             active_parameter_bold = active_parameter_style.get('bold', False)
+            active_parameter_italic = active_parameter_style.get('italic', False)
             active_parameter_underline = active_parameter_style.get('underline', False)
         return {
             'function_color': function_color,
             'active_parameter_color': active_parameter_color,
             'active_parameter_bold': active_parameter_bold,
+            'active_parameter_italic': active_parameter_italic,
             'active_parameter_underline': active_parameter_underline,
             'inactive_parameter_color': inactive_parameter_color
         }

@@ -318,7 +318,7 @@ class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
         code_actions_on_format = super().get_code_actions(view)
         # Merge the code actions which should be run. A duplicate code action will be enabled when
         # it's enabled in one of the two available settings.
-        actions = set(code_actions_on_save).union(code_actions_on_format)
+        actions = set(code_actions_on_save.keys()).union(code_actions_on_format.keys())
         return {
             action: code_actions_on_save.get(action, False) or code_actions_on_format.get(action, False)
             for action in actions

@@ -308,7 +308,7 @@ class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
     """
     Run code actions on format when format_on_save is enabled.
 
-    Code actions defined in both 'lsp_code_actions_on_save' and 'lsp_code_actions_on_format' will be run.
+    Code actions enabled in either 'lsp_code_actions_on_save' or 'lsp_code_actions_on_format' will be run.
     """
 
     @classmethod

@@ -493,7 +493,13 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         },
         "diagnostic": {
             "dynamicRegistration": True,
-            "relatedDocumentSupport": True
+            "relatedDocumentSupport": True,
+            "relatedInformation": True,
+            "tagSupport": {
+                "valueSet": diagnostic_tag_value_set
+            },
+            "codeDescriptionSupport": True,
+            "dataSupport": True
         },
         "selectionRange": {
             "dynamicRegistration": True

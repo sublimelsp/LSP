@@ -61,7 +61,6 @@ from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
-from .diagnostics import get_diagnostics_identifiers
 from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
@@ -253,7 +252,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
         self._cleanup()
         self._setup()
-        get_diagnostics_identifiers.cache_clear()
+        for session in self.sessions_async():
+            session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
 
@@ -723,16 +723,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         active_parameter_style = self.view.style_for_scope(SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE)
         active_parameter_color = active_parameter_style['foreground']
         inactive_parameter_color = self.view.style_for_scope(SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE)['foreground']
-        if active_parameter_color == inactive_parameter_color:
+        if active_parameter_style == self.view.style_for_scope('variable.parameter'):
+            # Default font style if there is no special color scheme rule for the active parameter
             active_parameter_bold = True
-            active_parameter_underline = True
+            active_parameter_italic = False
+            active_parameter_underline = False
         else:
+            # Font style determined by the color scheme
             active_parameter_bold = active_parameter_style.get('bold', False)
+            active_parameter_italic = active_parameter_style.get('italic', False)
             active_parameter_underline = active_parameter_style.get('underline', False)
         return {
             'function_color': function_color,
             'active_parameter_color': active_parameter_color,
             'active_parameter_bold': active_parameter_bold,
+            'active_parameter_italic': active_parameter_italic,
             'active_parameter_underline': active_parameter_underline,
             'inactive_parameter_color': inactive_parameter_color
         }
@@ -1028,7 +1033,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        if selection := self._stored_selection:
+        if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
                 self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
             else:

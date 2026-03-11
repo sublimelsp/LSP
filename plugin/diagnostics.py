@@ -15,15 +15,9 @@ from .core.url import normalize_uri
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostics_for_annotation
-from functools import lru_cache
-from typing import TYPE_CHECKING
 from typing import Union
 import itertools
 import sublime
-
-if TYPE_CHECKING:
-    from .core.sessions import Session
-
 
 DiagnosticsIdentifier = Union[str, None]
 
@@ -31,11 +25,6 @@ DiagnosticsIdentifier = Union[str, None]
 # with the retriggerRequest flag.
 DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY = 500
 WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY = 3000
-
-
-@lru_cache
-def get_diagnostics_identifiers(session: Session, view: sublime.View) -> set[DiagnosticsIdentifier]:
-    return session.diagnostics.get_identifiers(view)
 
 
 class DiagnosticsStorage:
@@ -46,12 +35,21 @@ class DiagnosticsStorage:
         self._identifiers: set[DiagnosticsIdentifier] = set()
         self._workspace_diagnostics_identifiers: set[DiagnosticsIdentifier] = set()
         self._diagnostics: dict[DocumentUri, dict[DiagnosticsIdentifier, list[Diagnostic]]] = {}
+        self._identifiers_cache: dict[int, set[DiagnosticsIdentifier]] = {}
 
     def get_identifiers(self, view: sublime.View) -> set[DiagnosticsIdentifier]:
-        return set(
+        view_id = view.id()
+        if (identifiers := self._identifiers_cache.get(view_id)) is not None:
+            return identifiers
+        identifiers = set(
             diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
             if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
         )
+        self._identifiers_cache[view_id] = identifiers
+        return identifiers
+
+    def clear_identifiers_cache_for_view(self, view: sublime.View) -> None:
+        self._identifiers_cache.pop(view.id(), None)
 
     @property
     def workspace_diagnostics_identifiers(self) -> set[DiagnosticsIdentifier]:
@@ -62,7 +60,7 @@ class DiagnosticsStorage:
         self._workspace_diagnostics_identifiers = set(
             options.get('identifier') for options in self._providers.values() if options['workspaceDiagnostics']
         )
-        get_diagnostics_identifiers.cache_clear()
+        self._identifiers_cache = {}
 
     def register_provider(
         self, registration_id: str | None, options: DiagnosticOptions | DiagnosticRegistrationOptions

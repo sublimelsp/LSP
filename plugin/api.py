@@ -133,10 +133,13 @@ class APIHandler:
 
     def __init__(self) -> None:
         super().__init__()
-        for _, method in inspect.getmembers(self, inspect.ismethod):
-            if hasattr(method, HANDLER_MARKER):
-                # Set method with transformed name on the class instance.
-                setattr(self, method2attr(getattr(method, HANDLER_MARKER)), method)
+        # Map m_* attr names → method names (strings only, no bound methods) to avoid
+        # the reference cycle self → bound_method.__self__ → self that prevents GC.
+        handler_attr_map: dict[str, str] = {}
+        for name, value in inspect.getmembers(self, inspect.ismethod):
+            if hasattr(value, HANDLER_MARKER):
+                handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
+        self.handler_attr_map = handler_attr_map
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:

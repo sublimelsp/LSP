@@ -965,6 +965,23 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
     }
     ```
 
+## TOML
+
+1. Install [tombi](https://tombi-toml.github.io/tombi/docs/installation)
+2. Open `Preferences > Package Settings > LSP > Settings` and add the `"tombi"` client configuration to the `"clients"`:
+
+    ```jsonc
+    {
+        "clients": {
+            "tombi": {
+                "enabled": true,
+                "command": ["tombi", "lsp"],
+                "selector": "source.toml"
+            }
+        }
+    }
+    ```
+
 ## Twig
 
 Follow installation instructions on [LSP-twiggy](https://github.com/sublimelsp/LSP-twiggy).

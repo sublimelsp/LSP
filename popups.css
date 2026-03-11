@@ -1,6 +1,6 @@
 html,
 body {
-    font-family: system;
+    --mdpopups-font-mono: "${USER_FONT}", "sf mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 .lsp_popup {
     --font-size: 1.05rem;

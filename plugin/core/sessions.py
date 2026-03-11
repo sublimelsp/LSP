@@ -1003,9 +1003,15 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         If we don't have a request/notification handler, look up the request/notification handler in the plugin.
         """
         if name.startswith('m_'):
-            attr = getattr(self._plugin, name)
-            if attr is not None:
-                return attr
+            if self._plugin:
+                # Handler added through decorator.
+                if handler_name := self._plugin.handler_attr_map.get(name):
+                    return getattr(self._plugin, handler_name)
+                # Handler added through 'm_*' method.
+                if plugin_handler := getattr(self._plugin, name, None):
+                    return plugin_handler
+            if handler_name := self.handler_attr_map.get(name):
+                return getattr(self, handler_name)
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.

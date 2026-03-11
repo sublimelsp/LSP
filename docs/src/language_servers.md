@@ -967,7 +967,13 @@ Follow installation instructions on [LSP-terraform](https://github.com/sublimels
 
 ## TOML
 
-1. Install [tombi](https://tombi-toml.github.io/tombi/docs/installation)
+### Taplo
+
+Follow installation instructions on [LSP-taplo](https://github.com/sublimelsp/LSP-taplo).
+
+### Tombi
+
+1. Install [tombi](https://tombi-toml.github.io/tombi/docs/installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"tombi"` client configuration to the `"clients"`:
 
     ```jsonc

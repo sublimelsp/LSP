@@ -371,7 +371,7 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
         # Actions defined in both settings are merged. When a duplicate action is found it will be True (enabled)
         # when enabled in lsp_code_actions_on_save or lsp_code_actions_on_format
         self.assertEqual(
-            CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view),
+            CodeActionsOnFormatOnSaveTask.get_code_action_kinds(view=self.view),
             {"source.fixAll": True, "source.organizeImports": True, "source.sort.json": False},
         )
 

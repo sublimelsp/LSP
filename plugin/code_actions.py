@@ -233,7 +233,7 @@ class CodeActionsTaskBase(LspTask):
     @classmethod
     @override
     def is_applicable(cls, view: sublime.View) -> bool:
-        return bool(view.window()) and bool(cls.get_code_actions(view))
+        return bool(view.window()) and bool(cls.get_code_action_kinds(view))
 
     @classmethod
     def format_on_save_enabled(cls, view: sublime.View) -> bool:
@@ -241,20 +241,20 @@ class CodeActionsTaskBase(LspTask):
         return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
 
     @classmethod
-    def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
-        view_code_actions = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
-        code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
-        code_actions.update(view_code_actions)
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        view_code_action_kinds = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
+        code_action_kinds = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
+        code_action_kinds.update(view_code_action_kinds)
         return {
-            action: enabled for action, enabled in code_actions.items() if action.startswith(CodeActionKind.Source)
+            kind: enabled for kind, enabled in code_action_kinds.items() if kind.startswith(CodeActionKind.Source)
         }
 
     @override
     def run_async(self) -> None:
         super().run_async()
         view = self._task_runner.view
-        code_actions = self.get_code_actions(view)
-        request_iterator = actions_manager.request_on_save_or_format_async(view, code_actions)
+        code_action_kinds = self.get_code_action_kinds(view)
+        request_iterator = actions_manager.request_on_save_or_format_async(view, code_action_kinds)
         self._process_next_request(request_iterator)
 
     def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
@@ -313,15 +313,15 @@ class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
 
     @classmethod
     @override
-    def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
-        code_actions_on_save = CodeActionsOnSaveTask.get_code_actions(view)
-        code_actions_on_format = super().get_code_actions(view)
-        # Merge the code actions which should be run. A duplicate code action will be enabled when
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        code_action_kinds_on_save = CodeActionsOnSaveTask.get_code_action_kinds(view)
+        code_action_kinds_on_format = super().get_code_action_kinds(view)
+        # Merge the code action kinds which should be run. A duplicate code action kind will be enabled when
         # it's enabled in one of the two available settings.
-        actions = set(code_actions_on_save.keys()).union(code_actions_on_format.keys())
+        action_kinds = set(code_action_kinds_on_save.keys()).union(code_action_kinds_on_format.keys())
         return {
-            action: code_actions_on_save.get(action, False) or code_actions_on_format.get(action, False)
-            for action in actions
+            kind: code_action_kinds_on_save.get(kind, False) or code_action_kinds_on_format.get(kind, False)
+            for kind in action_kinds
         }
 
     @classmethod

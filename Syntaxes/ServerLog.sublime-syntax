@@ -24,9 +24,12 @@ contexts:
       scope: punctuation.accessor.lsp
       push:
         - meta_scope: meta.group.lsp
-        - match: '\[(\d{2}:\d{2}:\d{2}\.\d{3})\]'
+        - match: '(\[)(\d{2}:\d{2}:\d{2}\.\d{3})(\])'
+          scope: meta.brackets.lsp
           captures:
-            1: constant.numeric.timestamp.lsp
+            1: punctuation.section.brackets.begin.lsp
+            2: constant.numeric.timestamp.lsp
+            3: punctuation.section.brackets.end.lsp
         - match: (?:==|--)>
           scope: storage.modifier.lsp
           set: [maybe-payload, request, server-name]
@@ -61,12 +64,13 @@ contexts:
       pop: true
 
   request:
-    - match: ({{method}}) (\()({{id}})(\))
+    - match: ({{method}}) ((\()({{id}})(\)))
       captures:
         1: keyword.control.lsp
-        2: punctuation.section.parens.begin.lsp
-        3: constant.numeric.id.lsp
-        4: punctuation.section.parens.end.lsp
+        2: meta.parens.lsp
+        3: punctuation.section.parens.begin.lsp
+        4: constant.numeric.id.lsp
+        5: punctuation.section.parens.end.lsp
       pop: true
 
   notification:
@@ -75,10 +79,16 @@ contexts:
       pop: true
 
   response:
-    - match: ' \(({{id}})\) \(duration: (\d+ms|-)\)'
+    - match: ' ((\()({{id}})(\))) ((\()duration: (\d+ms|-)(\)))'
       captures:
-        1: constant.numeric.id.lsp
-        2: constant.numeric.duration.lsp
+        1: meta.parens.lsp
+        2: punctuation.section.parens.begin.lsp
+        3: constant.numeric.id.lsp
+        4: punctuation.section.parens.end.lsp
+        5: meta.parens.lsp
+        6: punctuation.section.parens.begin.lsp
+        7: constant.numeric.duration.lsp
+        8: punctuation.section.parens.end.lsp
       pop: true
 
   maybe-payload:

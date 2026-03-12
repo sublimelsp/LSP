@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .plugin.api import AbstractPlugin
 from .plugin.api import g_plugins
+from .plugin.api import LspPlugin
 from .plugin.api import register_plugin
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
@@ -180,11 +181,12 @@ def _get_final_subclasses(derived: list[type], results: list[type]) -> None:
 
 
 def _register_all_plugins() -> None:
-    plugin_classes: list[type[AbstractPlugin]] = []
+    plugin_classes: list[type[AbstractPlugin | LspPlugin]] = []
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
+    _get_final_subclasses(LspPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         try:
-            if not plugin_class.name():
+            if issubclass(plugin_class, AbstractPlugin) and not plugin_class.name():
                 continue
         except NotImplementedError:
             continue

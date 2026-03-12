@@ -26,6 +26,7 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
@@ -43,6 +44,9 @@ import posixpath
 import socket
 import sublime
 import time
+
+if TYPE_CHECKING:
+    from .workspace import WorkspaceFolder
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
@@ -1063,7 +1067,9 @@ class ClientConfig:
         """
         self._view_status_handler.on_view_status_changed(self.name, view, None)
 
-    def match_view(self, view: sublime.View, scheme: str) -> bool:
+    def match_view(
+        self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
+    ) -> bool:
         """Return `True` if this server should be active for the given view.
 
         Delegates to the registered plugin's `is_applicable` method when one is available; otherwise checks that
@@ -1072,9 +1078,15 @@ class ClientConfig:
         :param view: The view to test.
         :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
         """
+        from ..api import AbstractPlugin
         from ..api import get_plugin
+        from ..api import PluginContext
         if plugin := get_plugin(self.name):
-            return plugin.is_applicable(view, self)
+            if issubclass(plugin, AbstractPlugin):
+                return plugin.is_applicable(view, self)
+            else:
+                plugin_context = PluginContext(self, view, window, workspace_folders)
+                return plugin.is_applicable(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

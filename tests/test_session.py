@@ -186,7 +186,7 @@ class SessionTest(unittest.TestCase):
     def test_document_sync_capabilities(self) -> None:
         manager = MockManager(sublime.active_window())
         session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
-                          plugin_class=None)
+                          plugin_data=None)
         session.capabilities.assign({
             'textDocumentSync': {
                 "openClose": True,
@@ -271,7 +271,7 @@ class SessionTest(unittest.TestCase):
     def test_get_session_buffer_for_uri_with_nonfiles(self) -> None:
         manager = MockManager(sublime.active_window())
         session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
-                          plugin_class=None)
+                          plugin_data=None)
         original = MockSessionBuffer(session, "some-scheme://whatever", "somelang")
         session.register_session_buffer_async(original)
         sb = session.get_session_buffer_for_uri_async("some-scheme://whatever")

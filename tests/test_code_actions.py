@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from LSP.plugin.code_actions import CodeActionsOnFormatOnSaveTask
-from LSP.plugin.code_actions import get_matching_on_save_kinds
+from LSP.plugin.code_actions import CodeActionsOnSaveTask
+from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.constants import RegionKey
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.settings import userprefs
@@ -114,6 +115,22 @@ class CodeActionsTestCaseBase(TextDocumentTestCase):
     def doCleanups(self) -> Generator:
         yield from self.await_clear_view_and_save()
         yield from super().doCleanups()
+
+
+class CodeActionsOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True})
+        cls.view.settings().set('lsp_code_actions_on_format', {"source.fixAll.eslint": True})
+        cls.view.settings().set('lsp_format_on_save', False)
+
+    def test_applicable_when_format_on_save_disabled(self) -> None:
+        self.assertTrue(CodeActionsOnSaveTask.is_applicable(self.view))
+
+    def test_applicable_when_format_on_save_enabled(self) -> None:
+        self.view.settings().set('lsp_format_on_save', True)
+        self.assertFalse(CodeActionsOnSaveTask.is_applicable(self.view))
 
 
 class CodeActionsOnSaveTestCase(CodeActionsTestCaseBase):
@@ -309,6 +326,16 @@ class CodeActionsOnFormatTestCase(CodeActionsTestCaseBase):
 
 
 class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
+        cls.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
+        cls.view.settings().set('lsp_code_actions_on_format', {})
+        cls.view.settings().set("lsp_format_on_save", False)
+        userprefs().lsp_format_on_save = False
+        userprefs().lsp_code_actions_on_save = {}
+        userprefs().lsp_code_actions_on_format = {}
+
     def test_code_actions_format_on_save_task_enabled__unset(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {})
         self.view.settings().set("lsp_format_on_save", False)
@@ -320,6 +347,7 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
     def test_code_actions_format_on_save_task_enabled__unsupported(self) -> None:
+        self.view.settings().set('lsp_code_actions_on_save', {})
         self.view.settings().set('lsp_code_actions_on_format', {"quickfix.unsupported": True})
         self.view.settings().set("lsp_format_on_save", True)
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
@@ -331,37 +359,52 @@ class CodeActionsOnFormatOnSaveTaskTestCase(TextDocumentTestCase):
 
     def test_code_actions_format_on_save_task_enabled__user_settings(self) -> None:
         self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True})
+        userprefs().lsp_format_on_save = False
         del self.view.settings()["lsp_format_on_save"]
         self.assertFalse(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
         userprefs().lsp_format_on_save = True
         self.assertTrue(CodeActionsOnFormatOnSaveTask.is_applicable(self.view))
 
-    def test_code_actions_format_on_save_task_get_code_actions__no_duplicate_actions(self) -> None:
+    def test_code_actions_format_on_save_task_get_code_actions__settings_are_merged(self) -> None:
         self.view.settings().set('lsp_code_actions_on_save', {"source.fixAll": True, "source.organizeImports": True})
-        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": True, "source.sort.json": True})
-        # No source.fixAll action as it is already run via the CodeActionsOnSaveTask task
-        assert CodeActionsOnFormatOnSaveTask.get_code_actions(view=self.view) == {"source.sort.json": True}
+        self.view.settings().set('lsp_code_actions_on_format', {"source.fixAll": False, "source.sort.json": False})
+        # Actions defined in both settings are merged. When a duplicate action is found it will be True (enabled)
+        # when enabled in lsp_code_actions_on_save or lsp_code_actions_on_format
+        self.assertEqual(
+            CodeActionsOnFormatOnSaveTask.get_code_action_kinds(view=self.view),
+            {"source.fixAll": True, "source.organizeImports": True, "source.sort.json": False},
+        )
 
 
 class CodeActionMatchingTestCase(unittest.TestCase):
     def test_does_not_match(self) -> None:
-        actual = get_matching_on_save_kinds({'a.x': True}, ['a.b'])
+        actual = get_matching_kinds({'a.x': True}, ['a.b'])
         expected: list[str] = []
         self.assertEqual(actual, expected)
 
     def test_matches_exact_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b'])
+        actual = get_matching_kinds({'a.b': True}, ['a.b'])
         expected = ['a.b']
         self.assertEqual(actual, expected)
 
     def test_matches_more_specific_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True}, ['a.b.c'])
+        actual = get_matching_kinds({'a.b': True}, ['a.b.c'])
         expected = ['a.b.c']
         self.assertEqual(actual, expected)
 
+    def test_matches_multiple_specific_actions(self) -> None:
+        actual = get_matching_kinds({'a.b': True, 'a.b.c': True}, ['a.b.c', 'a.b.d'])
+        expected = ['a.b.c', 'a.b.d']
+        self.assertEqual(actual, expected)
+
     def test_does_not_match_disabled_action(self) -> None:
-        actual = get_matching_on_save_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
+        actual = get_matching_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected: list[str] = []
+        self.assertEqual(actual, expected)
+
+    def test_does_not_match_disabled_parent_action(self) -> None:
+        actual = get_matching_kinds({'a.b': False, 'a.b.c': True}, ['a.b.c'])
+        expected: list[str] = ['a.b.c']
         self.assertEqual(actual, expected)
 
     def test_kind_matching(self) -> None:

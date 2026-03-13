@@ -505,22 +505,7 @@ Follow installation instructions on [LSP-nimlangserver](https://github.com/subli
 
 ## OCaml/Reason
 
-1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
-2. Install the [Reason Language Server](https://github.com/jaredly/reason-language-server#sublime-text).
-3. Open `Preferences > Package Settings > LSP > Settings` and add the `"reason"` client configuration to the `"clients"`:
-
-
-    ```jsonc
-    {
-        "clients": {
-            "reason": {
-                "enabled": true,
-                "command": ["PATH/TO/reason-language-server.exe"], // Update the PATH
-                "selector": "source.ocaml | source.reason"
-            }
-        }
-    }
-    ```
+Follow installation instructions on [OCaml-LSP](https://github.com/ocaml/ocaml-lsp).
 
 ## Odin
 

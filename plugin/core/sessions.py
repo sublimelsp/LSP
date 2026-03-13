@@ -887,6 +887,11 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def lightbulb_html(self) -> str:
+        raise NotImplementedError()
+
 
 class Logger(metaclass=ABCMeta):
 

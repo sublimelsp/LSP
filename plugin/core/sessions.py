@@ -331,10 +331,10 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
     semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
     if config.semantic_tokens is not None:
         for token in config.semantic_tokens.keys():
-            token_type, separator, token_modifier = token.partition('.')
+            token_type, _, token_modifier = token.partition('.')
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-            if separator and token_modifier not in semantic_token_modifiers:
+            if token_modifier and token_modifier not in semantic_token_modifiers:
                 semantic_token_modifiers.append(token_modifier)
     supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
     folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))

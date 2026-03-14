@@ -621,6 +621,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "name": "Sublime Text LSP",
             "version": ".".join(map(str, __version__))
         },
+        "locale": "en",
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,

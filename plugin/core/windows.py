@@ -263,9 +263,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
-            cwd: str | None = None
+            cwd = workspace_folders[0].path if workspace_folders else None
             plugin_context = PluginContext(config, initiating_view, self._window, workspace_folders)
-            if plugin_class is not None:
+            if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_async(plugin_context)
@@ -286,17 +286,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     config.command = plugin_class.command(plugin_context)
                     config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
                     cwd = plugin_class.working_directory(plugin_context)
-                else:
-                    cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
+                elif plugin_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
+                    cwd = plugin_cwd
             config.set_view_status(initiating_view, "starting...")
             plugin_data = (plugin_class, plugin_context) if plugin_class else None
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_data)
-            if cwd:
-                transport_cwd: str | None = cwd
-            else:
-                transport_cwd = workspace_folders[0].path if workspace_folders else None
             transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, transport_cwd, session)
+            transport = create_transport(transport_config, cwd, session)
             if plugin_class and issubclass(plugin_class, AbstractPlugin):
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")

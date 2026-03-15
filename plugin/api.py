@@ -311,7 +311,7 @@ class LspPlugin(APIHandler):
 
     @classmethod
     def working_directory(cls, context: PluginContext) -> str | None:
-        return None
+        return context.workspace_folders[0].path if context.workspace_folders else None
 
     @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:

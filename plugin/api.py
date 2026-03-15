@@ -331,6 +331,7 @@ class LspPlugin(APIHandler):
         :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
                                   self.weaksession(), but don't hold on to that reference.
         """
+        super().__init__()
         self.weaksession: ref[Session] = weaksession
         self.context: PluginContext = context
 

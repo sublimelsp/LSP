@@ -431,10 +431,6 @@ def text_document_code_action_params(
     }
 
 
-# Workaround for limited margin-collapsing capabilities of the minihtml.
-LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
-
-
 def show_lsp_popup(
     view: sublime.View,
     contents: str,
@@ -450,7 +446,6 @@ def show_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
@@ -477,7 +472,6 @@ def update_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
@@ -558,7 +552,7 @@ def minihtml(
             is_plain_text = False
             result = f"```{language}\n{value}\n```\n"
     if is_plain_text:
-        return f"<p>{text2html(result)}</p>" if result else ''
+        return f"<span>{text2html(result)}</span>" if result else ''
     frontmatter: dict[str, Any] = {
         "allow_code_wrap": True,
     }
@@ -823,10 +817,22 @@ def _format_diagnostic_related_info(
     )
 
 
-def _html_element(name: str, text: str, class_name: str | None = None, escape: bool = True) -> str:
+def html_wrapper(content: str, *, class_name: str | None = None) -> str:
+    """
+    Wrap content in a container with default pading applied.
+
+    Automatically inserted spacer element acts as a bottom padding to workaround minihtml's margin collapsing bug.
+    Otherwise if the last element had bottom margin (for example a paragraph), it would render a double margin.
+    The `content` is NOT escaped.
+    """
+    extra_class = f' {class_name}' if class_name else ''
+    return f'<div class="wrapper{extra_class}">{content}<div class="wrapper--spacer"></div></div>'
+
+
+def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:
     return '<{0}{2}>{1}</{0}>'.format(
-        name,
-        text2html(text) if escape else text,
+        tag,
+        text2html(content) if escape else content,
         f' class="{text2html(class_name)}"' if class_name else ''
     )
 
@@ -850,9 +856,9 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
-        html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
+        html += '<hr>' + _html_element("div", info, escape=False)
     severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
-    return _html_element("pre", html, class_name=severity_class, escape=False)
+    return _html_element("div", html, class_name=severity_class, escape=False)
 
 
 def format_code_actions_for_quick_panel(

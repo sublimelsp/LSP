@@ -25,6 +25,7 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
+from .core.views import html_wrapper
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -314,9 +315,11 @@ class LspResolveDocsCommand(LspTextCommand):
             documentation = self._format_documentation(markdown, None)
         minihtml_content = ""
         if detail:
-            minihtml_content += f"<div class='highlight'>{detail}</div>"
+            minihtml_content += html_wrapper(detail)
         if documentation:
-            minihtml_content += documentation
+            if detail:
+                minihtml_content += '<hr class="m-0">'
+            minihtml_content += html_wrapper(documentation)
 
         def run_on_main_thread() -> None:
             if not self.view.is_valid():

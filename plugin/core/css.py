@@ -5,7 +5,7 @@ import sublime
 
 class CSS:
     def __init__(self) -> None:
-        self.popups = sublime.load_resource("Packages/LSP/popups.css")
+        # self.popups = sublime.load_resource("Packages/LSP/popups.css")
         self.popups_classname = "lsp_popup"
         self.notification = sublime.load_resource("Packages/LSP/notification.css")
         self.notification_classname = "notification"
@@ -14,6 +14,10 @@ class CSS:
         self.inlay_hints = sublime.load_resource("Packages/LSP/inlay_hints.css")
         self.annotations = sublime.load_resource("Packages/LSP/annotations.css")
         self.annotations_classname = "lsp_annotation"
+
+    @property
+    def popups(self) -> str:
+        return sublime.load_resource("Packages/LSP/popups.css")
 
 
 _css: CSS | None = None

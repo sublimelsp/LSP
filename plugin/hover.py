@@ -29,6 +29,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -269,8 +270,10 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(minihtml(self.view, content, allowed_formats, language_map))
-        return '<hr>'.join(contents)
+            parsed = minihtml(self.view, content, allowed_formats, language_map)
+            if parsed:
+                contents.append(html_wrapper(parsed))
+        return '<hr class="m-0">'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:
         for hover, _ in self._hover_responses:

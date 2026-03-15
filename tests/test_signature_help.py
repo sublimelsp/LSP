@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from LSP.plugin.core.signature_help import SigHelp
 from LSP.plugin.core.signature_help import SignatureHelpStyle
+from LSP.protocol import MarkupKind
 from LSP.protocol import SignatureHelp
+import re
 import sublime
 import unittest
 
@@ -31,7 +33,9 @@ class SignatureHelpTest(unittest.TestCase):
     def assert_render(self, signature_input: SignatureHelp, regex: str) -> None:
         signature = SigHelp(signature_input, None, self.style)
         assert self.view
-        self.assertRegex(signature.render(self.view), regex.replace("\n", "").replace("            ", ""))
+        # Remove newlines and any 2+ consecutive spaces to make pattern easier to write but match the rendered input.
+        pattern = re.sub(r' {2,}', '', regex.replace("\n", ""))
+        self.assertRegex(signature.render(self.view), pattern)
 
     def test_signature(self) -> None:
         self.assert_render(
@@ -54,14 +58,20 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 0
             },
             r'''
-            <div class="highlight"><pre>
-            <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold">x</span>
-            <span style="color: #\w{6}">\)</span>
-            </pre></div>
-            <p>must be in the frobnicate range</p>
-            <hr/>
-            <div style="font-size: 0\.9rem"><p>f does interesting things</p></div>
+            <div class="[^"]+">
+                <div class="highlight">
+                    <span style="color: #\w{6}">f\(</span>
+                    <span style="color: #\w{6}; font-weight: bold">x</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+                <span>must be in the frobnicate range</span>
+                <div class="wrapper--spacer"></div>
+            </div>
+            <hr[^>]*>
+            <div class="[^"]+">
+                <span>f does interesting things</span>
+                <div class="wrapper--spacer"></div>
+            </div>
             '''
         )
 
@@ -75,7 +85,7 @@ class SignatureHelpTest(unittest.TestCase):
                         "documentation":
                         {
                             "value": "f does _interesting_ things",
-                            "kind": "markdown"
+                            "kind": MarkupKind.Markdown
                         },
                         "parameters":
                         [
@@ -84,7 +94,7 @@ class SignatureHelpTest(unittest.TestCase):
                                 "documentation":
                                 {
                                     "value": "must be in the **frobnicate** range",
-                                    "kind": "markdown"
+                                    "kind": MarkupKind.Markdown
                                 }
                             }
                         ]
@@ -94,14 +104,20 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 0
             },
             r'''
-            <div class="highlight"><pre>
-            <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold">x</span>
-            <span style="color: #\w{6}">\)</span>
-            </pre></div>
-            <p>must be in the <strong>frobnicate</strong> range</p>
-            <hr/>
-            <div style="font-size: 0\.9rem"><p>f does <em>interesting</em> things</p></div>
+            <div class="[^"]+">
+                <div class="highlight">
+                    <span style="color: #\w{6}">f\(</span>
+                    <span style="color: #\w{6}; font-weight: bold">x</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+                <p>must be in the <strong>frobnicate</strong> range</p>
+                <div class="wrapper--spacer"></div>
+            </div>
+            <hr[^>]*>
+            <div class="[^"]+">
+                <p>f does <em>interesting</em> things</p>
+                <div class="wrapper--spacer"></div>
+            </div>
             '''
         )
 
@@ -128,14 +144,17 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 1
             },
             r'''
-            <div class="highlight"><pre>
-            <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}">x</span>
-            <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}; font-weight: bold">y</span>
-            <span style="color: #\w{6}">\)</span>
-            </pre></div>
-            <p>hello there</p>
+            <div class="[^"]+">
+                <div class="highlight">
+                    <span style="color: #\w{6}">f\(</span>
+                    <span style="color: #\w{6}">x</span>
+                    <span style="color: #\w{6}">, </span>
+                    <span style="color: #\w{6}; font-weight: bold">y</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+                <span>hello there</span>
+                <div class="wrapper--spacer"></div>
+            </div>
             '''
         )
 
@@ -162,14 +181,17 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 1
             },
             r'''
-            <div class="highlight"><pre>
-            <span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}">x</span>
-            <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}; font-weight: bold">y</span>
-            <span style="color: #\w{6}">\)</span>
-            </pre></div>
-            <p>hello there</p>
+            <div class="[^"]+">
+                <div class="highlight">
+                    <span style="color: #\w{6}">f\(</span>
+                    <span style="color: #\w{6}">x</span>
+                    <span style="color: #\w{6}">, </span>
+                    <span style="color: #\w{6}; font-weight: bold">y</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+                <span>hello there</span>
+                <div class="wrapper--spacer"></div>
+            </div>
             '''
         )
 
@@ -211,20 +233,22 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 0
             },
             r'''
-            <p>
-            <div style="font-size: 0\.9rem">
-            <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\):
+            <div class="[^"]+">
+                <p>
+                    <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\)
+                </p>
+                <div class="highlight">
+                    <span style="color: #\w{6}">f\(</span>
+                    <span style="color: #\w{6}; font-weight: bold">x</span>
+                    <span style="color: #\w{6}">, </span>
+                    <span style="color: #\w{6}">a</span>
+                    <span style="color: #\w{6}">, </span>
+                    <span style="color: #\w{6}">b</span>
+                    <span style="color: #\w{6}">\)</span>
+                </div>
+                <div class="wrapper--spacer">
             </div>
-            </p>
-            <div class="highlight"><pre><span style="color: #\w{6}">f\(</span>
-            <span style="color: #\w{6}; font-weight: bold">x</span>
-            <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}">a</span>
-            <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}">b</span>
-            <span style="color: #\w{6}">\)</span>
-            </pre></div>
-            '''
+            '''  # noqa: E501
         )
 
     def test_dockerfile_signature(self) -> None:
@@ -248,17 +272,17 @@ class SignatureHelpTest(unittest.TestCase):
                 "activeParameter": 2
             },
             r'''
-            <div class="highlight"><pre>
-            <span style="color: #\w{6}">RUN </span>
-            <span style="color: #\w{6}">\[</span>
-            <span style="color: #\w{6}"> </span>
-            <span style="color: #\w{6}">"command"</span>
-            <span style="color: #\w{6}"> </span>
-            <span style="color: #\w{6}; font-weight: bold">"parameters"</span>
-            <span style="color: #\w{6}">, </span>
-            <span style="color: #\w{6}">\.\.\.</span>
-            <span style="color: #\w{6}"> </span>
-            <span style="color: #\w{6}">\]</span>
-            </pre></div>
+            <div class="[^"]+">
+                <span style="color: #\w{6}">RUN </span>
+                <span style="color: #\w{6}">\[</span>
+                <span style="color: #\w{6}"> </span>
+                <span style="color: #\w{6}">"command"</span>
+                <span style="color: #\w{6}"> </span>
+                <span style="color: #\w{6}; font-weight: bold">"parameters"</span>
+                <span style="color: #\w{6}">, </span>
+                <span style="color: #\w{6}">\.\.\.</span>
+                <span style="color: #\w{6}"> </span>
+                <span style="color: #\w{6}">\]</span>
+            </div>
             '''
         )

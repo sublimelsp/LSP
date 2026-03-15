@@ -28,8 +28,12 @@ from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
 from LSP.protocol import CodeActionKind
+from LSP.protocol import ColorInformation
 from LSP.protocol import Diagnostic
 from LSP.protocol import DiagnosticSeverity
+from LSP.protocol import MarkedString
+from LSP.protocol import MarkupContent
+from LSP.protocol import MarkupKind
 from setup import make_stdio_test_config
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
@@ -197,7 +201,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_format_string(self) -> None:
         content = "<div>text\n</div>"
-        expect = "<p>&lt;div&gt;text<br>&lt;/div&gt;</p>"
+        expect = "<span>&lt;div&gt;text<br>&lt;/div&gt;</span>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
     def test_minihtml_format_marked_string(self) -> None:
@@ -206,32 +210,32 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING), expect)
 
     def test_minihtml_format_markup_content(self) -> None:
-        content = {'value': 'This is **bold** text', 'kind': 'markdown'}
+        content: MarkupContent = {'value': 'This is **bold** text', 'kind': MarkupKind.Markdown}
         expect = "<p>This is <strong>bold</strong> text</p>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_handles_markup_content_plaintext(self) -> None:
-        content = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': 'plaintext'}
-        expect = "<p>type TVec2i = specialize TGVec2&lt;Integer&gt;</p>"
+        content: MarkupContent = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': MarkupKind.PlainText}
+        expect = "<span>type TVec2i = specialize TGVec2&lt;Integer&gt;</span>"
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         self.assertEqual(minihtml(self.view, content, allowed_formats=allowed_formats), expect)
 
     def test_minihtml_handles_marked_string(self) -> None:
-        content = {'value': 'import json', 'language': 'python'}
+        content: MarkedString = {'value': 'import json', 'language': 'python'}
         expect = '<div class="highlight"><pre><span>import</span><span> </span><span>json</span><br></pre></div>'
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
         self.assertEqual(formatted, expect)
 
     def test_minihtml_handles_marked_string_mutiple_spaces(self) -> None:
-        content = {'value': 'import  json', 'language': 'python'}
+        content: MarkedString = {'value': 'import  json', 'language': 'python'}
         expect = '<div class="highlight"><pre><span>import</span><span>&nbsp; </span><span>json</span><br></pre></div>'
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
         self.assertEqual(formatted, expect)
 
     def test_minihtml_handles_marked_string_array(self) -> None:
-        content = [
+        content: list[MarkedString] = [
             {'value': 'import sys', 'language': 'python'},
             {'value': 'let x', 'language': 'js'}
         ]
@@ -249,22 +253,22 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_marked_string(self) -> None:
-        content = {'value': 'import sys', 'language': 'python'}
+        content: MarkedString = {'value': 'import sys', 'language': 'python'}
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_marked_string_array(self) -> None:
-        content = ["a", "b"]
+        content: list[MarkedString] = ["a", "b"]
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def test_minihtml_ignores_non_allowed_markup_content(self) -> None:
-        content = {'value': 'a<span>b</span>', 'kind': 'plaintext'}
+        content: MarkupContent = {'value': 'a<span>b</span>', 'kind': MarkupKind.PlainText}
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
     def test_minihtml_magiclinks(self) -> None:
-        content = {'value': 'https://github.com/sublimelsp/LSP', 'kind': 'markdown'}
+        content: MarkupContent = {'value': 'https://github.com/sublimelsp/LSP', 'kind': MarkupKind.Markdown}
         expect_attributes = [
             'class="magiclink magiclink-github magiclink-repository"',
             'href="https://github.com/sublimelsp/LSP"',
@@ -315,7 +319,7 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(text2html(content), expect)
 
     def test_lsp_color_to_phantom(self) -> None:
-        response = [
+        response: list[ColorInformation] = [
             {
                 "color": {
                     "green": 0.9725490196078431,
@@ -402,12 +406,12 @@ class ViewsTest(DeferrableTestCase):
 
     def test_escaped_newline_in_markdown(self) -> None:
         self.assertEqual(
-            minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
+            minihtml(self.view, {"kind": MarkupKind.Markdown, "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
             "<p>hello\\\nworld</p>"
         )
 
     def test_single_backslash_in_markdown(self) -> None:
         self.assertEqual(
-            minihtml(self.view, {"kind": "markdown", "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
+            minihtml(self.view, {"kind": MarkupKind.Markdown, "value": "A\\B"}, FORMAT_MARKUP_CONTENT),
             "<p>A\\B</p>"
         )

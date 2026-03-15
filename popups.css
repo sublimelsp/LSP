@@ -85,29 +85,24 @@ body {
 .color-muted {
     color: color(var(--foreground) alpha(0.6));
 }
-.diagnostics {
-    font-family: var(--mdpopups-font-mono);
-}
-.errors {
-    border-width: 0;
-    background-color: color(var(--redish) alpha(0.2));
-    padding: 0.5rem;
-    white-space: pre-wrap;
-}
-.warnings {
-    border-width: 0;
-    background-color: color(var(--yellowish) alpha(0.2));
-    padding: 0.5rem;
-}
-.info {
-    border-width: 0;
-    background-color: color(var(--bluish) alpha(0.2));
-    padding: 0.5rem;
-}
+.errors,
+.warnings,
+.info,
 .hints {
     border-width: 0;
-    background-color: color(var(--bluish) alpha(0.2));
     padding: 0.5rem;
+}
+.errors {
+    background-color: color(var(--redish) alpha(0.2));
+}
+.warnings {
+    background-color: color(var(--yellowish) alpha(0.2));
+}
+.info {
+    background-color: color(var(--bluish) alpha(0.2));
+}
+.hints {
+    background-color: color(var(--bluish) alpha(0.2));
 }
 .actions,
 .code-actions {

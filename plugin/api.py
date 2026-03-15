@@ -306,8 +306,8 @@ class LspPlugin(APIHandler):
         return context.configuration.command
 
     @classmethod
-    def initialization_options(cls, context: PluginContext) -> dict[str, Any] | DottedDict:
-        return context.configuration.initialization_options
+    def initialization_options(cls, context: PluginContext) -> dict[str, Any]:
+        return context.configuration.initialization_options.get()
 
     @classmethod
     def working_directory(cls, context: PluginContext) -> str | None:

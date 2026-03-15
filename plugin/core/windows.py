@@ -284,10 +284,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         raise DontStartPluginError(cannot_start_reason)
                 if issubclass(plugin_class, LspPlugin):
                     config.command = plugin_class.command(plugin_context)
-                    initialization_options = plugin_class.initialization_options(plugin_context)
-                    config.initialization_options = initialization_options \
-                        if isinstance(initialization_options, DottedDict) \
-                        else DottedDict(initialization_options)
+                    config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
                     cwd = plugin_class.working_directory(plugin_context)
                 else:
                     cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)

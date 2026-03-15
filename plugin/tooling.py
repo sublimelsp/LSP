@@ -529,10 +529,7 @@ class ServerTestRunner(TransportCallbacks):
                     cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
                 else:
                     config.command = plugin_class.command(plugin_context)
-                    initialization_options = plugin_class.initialization_options(plugin_context)
-                    config.initialization_options = initialization_options \
-                        if isinstance(initialization_options, DottedDict) \
-                        else DottedDict(initialization_options)
+                    config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
                     cwd = plugin_class.working_directory(plugin_context)
             if not cwd and workspace_folders:
                 cwd = workspace_folders[0].path

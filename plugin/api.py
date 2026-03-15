@@ -244,7 +244,7 @@ class PluginContext:
         self.workspace_folders = workspace_folders
 
 
-class LspPlugin:
+class LspPlugin(APIHandler):
 
     session_name: Final[str] = ''
     """

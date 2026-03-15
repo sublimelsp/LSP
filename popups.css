@@ -109,19 +109,17 @@ body {
     background-color: color(var(--bluish) alpha(0.2));
     padding: 0.5rem;
 }
-.actions {
+.actions,
+.code-actions {
     background-color: color(var(--foreground) alpha(0.1));
     padding: 0.5rem;
 }
-.actions .lightbulb {
-    padding-right: 0.3rem;
-}
-.actions .lightbulb img {
-    width: 0.9em;
-    height: 0.9em;
-}
 .actions a.icon {
     text-decoration: none;
+}
+.code-actions .lightbulb img {
+    width: 0.9rem;
+    height: 0.9rem;
 }
 .link.with-padding {
     padding: 0.5rem;

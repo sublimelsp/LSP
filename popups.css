@@ -61,22 +61,19 @@
     color: var(--foreground);
     padding: 0.5rem;
 }
-.actions {
+.actions, .code-actions {
     font-family: system;
     border-width: 0;
     background-color: color(var(--foreground) alpha(0.1));
     color: var(--foreground);
     padding: 0.5rem;
 }
-.actions .lightbulb {
-    padding-right: 0.3rem;
-}
-.actions .lightbulb img {
-    width: 0.9em;
-    height: 0.9em;
-}
 .actions a.icon {
     text-decoration: none;
+}
+.code-actions .lightbulb img {
+    width: 0.9rem;
+    height: 0.9rem;
 }
 .link.with-padding {
     padding: 0.5rem;

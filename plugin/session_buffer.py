@@ -68,7 +68,6 @@ from .core.views import text_document_position_params
 from .core.views import will_save
 from .diagnostics import DiagnosticsIdentifier
 from .diagnostics import DOCUMENT_DIAGNOSTICS_RETRIGGER_DELAY
-from .diagnostics import get_diagnostics_identifiers
 from .inlay_hint import inlay_hint_to_phantom
 from dataclasses import dataclass
 from functools import partial
@@ -274,7 +273,7 @@ class SessionBuffer:
     def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
         if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.m_textDocument_publishDiagnostics({'uri': self._last_known_uri, 'diagnostics': []})
+            self.session.on_text_document_publish_diagnostics({'uri': self._last_known_uri, 'diagnostics': []})
         if wm := self.session.manager():
             wm.on_diagnostics_updated()
         self._color_phantoms.update([])
@@ -622,7 +621,7 @@ class SessionBuffer:
             # If the document content changed in the meanwhile, new diagnostic requests will automatically be triggered
             # from _on_after_change_async after the didChange notification.
             return
-        for identifier in get_diagnostics_identifiers(self.session, view):
+        for identifier in self.session.diagnostics.get_identifiers(view):
             self._do_document_diagnostic_async(view, identifier, version, forced_update=forced_update)
         self._reset_pending_refresh(RequestFlags.DIAGNOSTIC)
 
@@ -741,7 +740,7 @@ class SessionBuffer:
             view_version = view.change_count()
             return all(
                 self._diagnostics_versions.get(identifier) == view_version
-                for identifier in get_diagnostics_identifiers(self.session, view)
+                for identifier in self.session.diagnostics.get_identifiers(view)
             )
         return False
 

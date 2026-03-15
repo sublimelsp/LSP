@@ -84,7 +84,7 @@ link_kinds = [
 ]
 
 
-def code_actions_content(actions_by_config: list[CodeActionsByConfigName], lightbulb: bool = True) -> str:
+def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_html: str = '') -> str:
     formatted = []
     for config_name, actions in actions_by_config:
         action_count = len(actions)
@@ -96,10 +96,12 @@ def code_actions_content(actions_by_config: list[CodeActionsByConfigName], light
             text = actions[0].get('title', 'code action')
         href = "{}:{}".format('code-actions', config_name)
         link = make_link(href, text)
-        lightbulb_html = '<span class="lightbulb"><img src="res://Packages/LSP/icons/lightbulb_colored.png"></span>' \
-            if lightbulb else ''
         formatted.append(
-            f'<div class="actions">{lightbulb_html}{link} <span class="color-muted">{config_name}</span></div>')
+            f'''
+            <div class="code-actions">
+                {icon_html}<span class="link with-padding">{link}</span><span class="color-muted">{config_name}</span>
+            </div>'''
+        )
     return "".join(formatted)
 
 
@@ -283,7 +285,8 @@ class LspHoverCommand(LspTextCommand):
         hover_content = self.hover_content()
         prefs = userprefs()
         diagnostics_content = self.diagnostics_content() if only_diagnostics or prefs.show_diagnostics_in_hover else ""
-        contents = diagnostics_content + hover_content + code_actions_content(self._actions_by_config)
+        contents = diagnostics_content + hover_content + \
+            code_actions_content(self._actions_by_config, listener.lightbulb_html)
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:

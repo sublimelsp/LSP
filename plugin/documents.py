@@ -21,6 +21,7 @@ from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import LIGHTBULB_SCOPE
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
@@ -61,7 +62,6 @@ from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
-from .diagnostics import get_diagnostics_identifiers
 from .folding_range import folding_range_to_range
 from .hover import code_actions_content
 from .session_buffer import SessionBuffer
@@ -82,6 +82,7 @@ from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
+import mdpopups
 import sublime
 import sublime_plugin
 import weakref
@@ -221,6 +222,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def __del__(self) -> None:
         self._cleanup()
 
+    def __repr__(self) -> str:
+        return f"ViewListener({self.view.id()})"
+
     def _setup(self) -> None:
         if syntax := self.view.syntax():
             self._language_id = basescope2languageid(syntax.scope)
@@ -230,8 +234,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._manager: WindowManager | None = None
         self._session_views: dict[str, SessionView] = {}
         self._current_color_scheme: str = self.view.settings().get('color_scheme')
-        self._code_action_annotation_color: str = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
-        self._signature_help_style = self._get_signature_help_style()
+        self._update_styles()
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
         self._lightbulb_line: int | None = None
@@ -253,11 +256,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
         self._cleanup()
         self._setup()
-        get_diagnostics_identifiers.cache_clear()
+        for session in self.sessions_async():
+            session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the async thread again
         sublime.set_timeout_async(self.on_activated_async)
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
+
+    @property
+    def lightbulb_html(self) -> str:
+        return self._lightbulb_html
 
     def on_post_move_window_async(self) -> None:
         if self._registered and self._manager:
@@ -568,7 +576,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_hover_gutter_async(self, point: int) -> None:
         content = ''
         if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._code_actions_for_selection, lightbulb=False)
+            content += code_actions_content(self._code_actions_for_selection)
         if userprefs().show_diagnostics_severity_level:
             diagnostics_with_config: list[tuple[ClientConfig, Diagnostic]] = []
             diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
@@ -723,16 +731,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         active_parameter_style = self.view.style_for_scope(SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE)
         active_parameter_color = active_parameter_style['foreground']
         inactive_parameter_color = self.view.style_for_scope(SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE)['foreground']
-        if active_parameter_color == inactive_parameter_color:
+        if active_parameter_style == self.view.style_for_scope('variable.parameter'):
+            # Default font style if there is no special color scheme rule for the active parameter
             active_parameter_bold = True
-            active_parameter_underline = True
+            active_parameter_italic = False
+            active_parameter_underline = False
         else:
+            # Font style determined by the color scheme
             active_parameter_bold = active_parameter_style.get('bold', False)
+            active_parameter_italic = active_parameter_style.get('italic', False)
             active_parameter_underline = active_parameter_style.get('underline', False)
         return {
             'function_color': function_color,
             'active_parameter_color': active_parameter_color,
             'active_parameter_bold': active_parameter_bold,
+            'active_parameter_italic': active_parameter_italic,
             'active_parameter_underline': active_parameter_underline,
             'inactive_parameter_color': inactive_parameter_color
         }
@@ -813,7 +826,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         annotations = []
         annotation_color = ""
         if userprefs().show_code_actions == 'bulb':
-            scope = 'region.yellowish lightbulb.lsp'
+            scope = LIGHTBULB_SCOPE
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
         else:  # 'annotation'
@@ -1028,7 +1041,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
-        if selection := self._stored_selection:
+        if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
                 self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
             else:
@@ -1123,15 +1136,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if something_changed:
             self._reset()
             return
-        color_scheme = settings.get('color_scheme')
-        if color_scheme != self._current_color_scheme:
+        if (color_scheme := settings.get('color_scheme')) != self._current_color_scheme:
             self._current_color_scheme = color_scheme
-            self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
-            self._signature_help_style = self._get_signature_help_style()
+            self._update_styles()
             for session_buffer in self.session_buffers_async():
                 session_buffer.on_color_scheme_changed(self.view)
             for session_view in self.session_views_async():
                 session_view.on_color_scheme_changed()
 
-    def __repr__(self) -> str:
-        return f"ViewListener({self.view.id()})"
+    def _update_styles(self) -> None:
+        self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
+        self._signature_help_style = self._get_signature_help_style()
+        lightbulb_img = mdpopups.tint(
+            'Packages/LSP/icons/lightbulb_cropped.png', self.view.style_for_scope(LIGHTBULB_SCOPE)['foreground'])
+        self._lightbulb_html = f'<span class="lightbulb">{lightbulb_img}</span>'

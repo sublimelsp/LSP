@@ -634,6 +634,11 @@
               "default": false,
               "markdownDescription": "Enable semantic highlighting in addition to standard syntax highlighting."
             },
+            "show_signature_help": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show the signature help popup when typing the arguments of a function call."
+            },
             "show_code_actions": {
               "enum": [
                 "annotation",

@@ -176,6 +176,9 @@
   // Show symbol references in Sublime's quick panel instead of the output panel.
   "show_references_in_quick_panel": true,
 
+  // Show the signature help popup when typing the arguments of a function call.
+  "show_signature_help": true,
+
   // Show code lenses:
   // "annotation" - show code lenses as annotations on the right.
   // "phantom" - show code lenses as phantoms between lines.

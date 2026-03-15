@@ -10,3 +10,4 @@ inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 48 -h 48 --e
 inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 16 -h 16 --export-filename=warning.png warning.svg
 inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 32 -h 32 --export-filename=warning@2x.png warning.svg
 inkscape --export-type=png --export-area=-1.23:-1.23:18.46:18.46 -w 48 -h 48 --export-filename=warning@3x.png warning.svg
+inkscape --export-type=png -w 32 -h 32 --export-filename=lightbulb_cropped.png lightbulb.svg

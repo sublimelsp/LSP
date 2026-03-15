@@ -333,11 +333,14 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
     completion_tag_value_set = cast(List[CompletionItemTag], _int_enum_to_list(CompletionItemTag))
     symbol_tag_value_set = cast(List[SymbolTag], _int_enum_to_list(SymbolTag))
     semantic_token_types = cast(List[str], _str_enum_to_list(SemanticTokenTypes))
+    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
     if config.semantic_tokens is not None:
-        for token_type in config.semantic_tokens.keys():
+        for token in config.semantic_tokens.keys():
+            token_type, _, token_modifier = token.partition('.')
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
+            if token_modifier and token_modifier not in semantic_token_modifiers:
+                semantic_token_modifiers.append(token_modifier)
     supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
     folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))
     first_folder = workspace_folders[0] if workspace_folders else None
@@ -498,7 +501,13 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         },
         "diagnostic": {
             "dynamicRegistration": True,
-            "relatedDocumentSupport": True
+            "relatedDocumentSupport": True,
+            "relatedInformation": True,
+            "tagSupport": {
+                "valueSet": diagnostic_tag_value_set
+            },
+            "codeDescriptionSupport": True,
+            "dataSupport": True
         },
         "selectionRange": {
             "dynamicRegistration": True
@@ -617,6 +626,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "name": "Sublime Text LSP",
             "version": ".".join(map(str, __version__))
         },
+        "locale": "en",
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
@@ -886,6 +896,11 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_request_flags(self, session: Session) -> RequestFlags:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def lightbulb_html(self) -> str:
+        raise NotImplementedError()
+
 
 class Logger(metaclass=ABCMeta):
 
@@ -1009,9 +1024,15 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         If we don't have a request/notification handler, look up the request/notification handler in the plugin.
         """
         if name.startswith('m_'):
-            attr = getattr(self._plugin, name)
-            if attr is not None:
-                return attr
+            if self._plugin:
+                # Handler added through decorator.
+                if handler_name := self._plugin.handler_attr_map.get(name):
+                    return getattr(self._plugin, handler_name)
+                # Handler added through 'm_*' method.
+                if plugin_handler := getattr(self._plugin, name, None):
+                    return plugin_handler
+            if handler_name := self.handler_attr_map.get(name):
+                return getattr(self, handler_name)
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
@@ -2127,6 +2148,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         session_view.shutdown_async()
 
     def _handle_shutdown_result(self, _: Any) -> None:
+        self._progress.clear()
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:

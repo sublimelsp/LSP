@@ -161,7 +161,7 @@ class CodeActionsManager:
             .then(lambda actions_list: list(filter(lambda actions: len(actions[1]), actions_list)))
 
     def request_on_save_or_format_async(
-        self, view: sublime.View, on_save_actions: dict[str, bool]
+        self, view: sublime.View, code_actions: dict[str, bool]
     ) -> Generator[Promise[CodeActionsByConfigName]]:
         listener = windows.listener_for_view(view)
         if not listener:
@@ -176,12 +176,12 @@ class CodeActionsManager:
                 # Since older servers don't support the "context.only" property, those will return all
                 # actions that need to be then manually filtered.
                 session_kinds = get_session_kinds(sb)
-                matching_kinds = get_matching_on_save_kinds(on_save_actions, session_kinds)
+                matching_kinds = get_matching_kinds(code_actions, session_kinds)
                 actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
             return (sb.session.config.name, actions)
 
         for sb in listener.session_buffers_async('codeActionProvider'):
-            matching_kinds = get_matching_on_save_kinds(on_save_actions, get_session_kinds(sb))
+            matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
                 listener.purge_changes_async()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
@@ -199,9 +199,7 @@ def get_session_kinds(sb: SessionBufferProtocol) -> list[CodeActionKind]:
     return sb.get_capability('codeActionProvider.codeActionKinds') or []
 
 
-def get_matching_on_save_kinds(
-    user_actions: dict[str, bool], session_kinds: list[CodeActionKind]
-) -> list[CodeActionKind]:
+def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeActionKind]) -> list[CodeActionKind]:
     """
     Filters user-enabled or disabled actions so that only ones matching the session kinds
     are returned. Returned kinds are those that are enabled and are not overridden by more
@@ -218,7 +216,7 @@ def get_matching_on_save_kinds(
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = user_actions.get(current_part, None)
+            user_value = code_actions.get(current_part, None)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:
@@ -235,23 +233,28 @@ class CodeActionsTaskBase(LspTask):
     @classmethod
     @override
     def is_applicable(cls, view: sublime.View) -> bool:
-        return bool(view.window()) and bool(cls.get_code_actions(view))
+        return bool(view.window()) and bool(cls.get_code_action_kinds(view))
 
     @classmethod
-    def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
-        view_code_actions = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
-        code_actions = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
-        code_actions.update(view_code_actions)
+    def format_on_save_enabled(cls, view: sublime.View) -> bool:
+        view_format_on_save = view.settings().get('lsp_format_on_save', None)
+        return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
+
+    @classmethod
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        view_code_action_kinds = cast('dict[str, bool]', view.settings().get(cls.SETTING_NAME) or {})
+        code_action_kinds = getattr(userprefs(), cls.SETTING_NAME, {}).copy()
+        code_action_kinds.update(view_code_action_kinds)
         return {
-            key: value for key, value in code_actions.items() if key.startswith(CodeActionKind.Source)
+            kind: enabled for kind, enabled in code_action_kinds.items() if kind.startswith(CodeActionKind.Source)
         }
 
     @override
     def run_async(self) -> None:
         super().run_async()
         view = self._task_runner.view
-        code_actions = self.get_code_actions(view)
-        request_iterator = actions_manager.request_on_save_or_format_async(view, code_actions)
+        code_action_kinds = self.get_code_action_kinds(view)
+        request_iterator = actions_manager.request_on_save_or_format_async(view, code_action_kinds)
         self._process_next_request(request_iterator)
 
     def _process_next_request(self, request_iterator: Iterator[Promise[CodeActionsByConfigName]]) -> None:
@@ -288,6 +291,11 @@ class CodeActionsOnSaveTask(CodeActionsTaskBase):
 
     SETTING_NAME: str = "lsp_code_actions_on_save"
 
+    @classmethod
+    @override
+    def is_applicable(cls, view: sublime.View) -> bool:
+        return super().is_applicable(view) and not cls.format_on_save_enabled(view)
+
 
 class CodeActionsOnFormatTask(CodeActionsTaskBase):
     """Run code actions on format."""
@@ -297,27 +305,29 @@ class CodeActionsOnFormatTask(CodeActionsTaskBase):
 
 @final
 class CodeActionsOnFormatOnSaveTask(CodeActionsOnFormatTask):
-    """Run code actions on format when format_on_save is enabled."""
+    """
+    Run code actions on format when format_on_save is enabled.
+
+    Code actions enabled in either 'lsp_code_actions_on_save' or 'lsp_code_actions_on_format' will be run.
+    """
 
     @classmethod
     @override
-    def get_code_actions(cls, view: sublime.View) -> dict[str, bool]:
-        code_actions_on_format = super().get_code_actions(view)
-        code_action_on_save = CodeActionsOnSaveTask.get_code_actions(view)
-        # Prevent triggering of duplicate code actions
+    def get_code_action_kinds(cls, view: sublime.View) -> dict[str, bool]:
+        code_action_kinds_on_save = CodeActionsOnSaveTask.get_code_action_kinds(view)
+        code_action_kinds_on_format = super().get_code_action_kinds(view)
+        # Merge the code action kinds which should be run. A duplicate code action kind will be enabled when
+        # it's enabled in one of the two available settings.
+        action_kinds = set(code_action_kinds_on_save.keys()).union(code_action_kinds_on_format.keys())
         return {
-            action: enabled
-            for action, enabled in code_actions_on_format.items()
-            if action not in code_action_on_save
+            kind: code_action_kinds_on_save.get(kind, False) or code_action_kinds_on_format.get(kind, False)
+            for kind in action_kinds
         }
 
     @classmethod
     @override
     def is_applicable(cls, view: sublime.View) -> bool:
-        if not super().is_applicable(view):
-            return False
-        view_format_on_save = view.settings().get('lsp_format_on_save', None)
-        return view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
+        return super().is_applicable(view) and cls.format_on_save_enabled(view)
 
 
 class LspCodeActionsCommand(LspTextCommand):

@@ -98,3 +98,12 @@ def resolve_images(
     resolver: Callable[[str, Callable[[bytes], None]], None],
     on_done: Callable[[str], None]
 ) -> Optional[object]: ...
+
+
+def tint(
+    img: str | bytes,
+    color: str,
+    opacity: int = ...,
+    height: int = ...,
+    width: int = ...
+) -> str: ...

@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     'APIHandler',
-    'DontStartPluginError',
     'notification_handler',
+    'PluginStartError',
     'request_handler',
 ]
 
@@ -67,7 +67,7 @@ R = TypeVar('R', bound=LSPAny)
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 
-class DontStartPluginError(Exception):
+class PluginStartError(Exception):
 
     def __init__(self, message: str, *args: Any) -> None:
         super().__init__(message, *args)
@@ -77,7 +77,7 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
     """
     Register an LSP plugin in LSP.
 
-    TODO: Document DontStartPluginError
+    TODO: Document PluginStartError
 
     You should put a call to this function in your `plugin_loaded` callback. This way, when your package is disabled
     by a user and then re-enabled again by a user, the changes in state are picked up by LSP, and your language server

@@ -9,10 +9,10 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
-from ..api import DontStartPluginError
 from ..api import get_plugin
 from ..api import LspPlugin
 from ..api import PluginContext
+from ..api import PluginStartError
 from .collections import DottedDict
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -281,7 +281,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     cannot_start_reason = plugin_class.can_start(
                         self._window, initiating_view, workspace_folders, config)
                     if cannot_start_reason:
-                        raise DontStartPluginError(cannot_start_reason)
+                        raise PluginStartError(cannot_start_reason)
                 if issubclass(plugin_class, LspPlugin):
                     config.command = plugin_class.command(plugin_context)
                     config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
@@ -307,7 +307,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
             )
             self._new_session = session
-        except DontStartPluginError as ex:
+        except PluginStartError as ex:
             config.erase_view_status(initiating_view)
             message = f"cannot start {config.name}: {str(ex)}"
             self._config_manager.disable_config(config.name, only_for_session=True)

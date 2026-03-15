@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from .settings import globalprefs
 import sublime
 
 
 class CSS:
     def __init__(self) -> None:
-        # self.popups = sublime.load_resource("Packages/LSP/popups.css") \
-        #     .replace('${USER_FONT}', globalprefs().get('font_face', 'system'))
+        # self.popups = sublime.load_resource("Packages/LSP/popups.css")
         self.popups_classname = "lsp_popup"
         self.notification = sublime.load_resource("Packages/LSP/notification.css")
         self.notification_classname = "notification"
@@ -19,8 +17,7 @@ class CSS:
 
     @property
     def popups(self) -> str:
-        return sublime.load_resource("Packages/LSP/popups.css") \
-            .replace('${USER_FONT}', globalprefs().get('font_face', 'system'))
+        return sublime.load_resource("Packages/LSP/popups.css")
 
 
 _css: CSS | None = None

@@ -234,7 +234,7 @@ class SignatureHelpTest(unittest.TestCase):
             },
             r'''
             <div class="[^"]+">
-                <p>
+                <p class="[^"]+">
                     <b>2</b> of <b>2</b> overloads \(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide\)
                 </p>
                 <div class="highlight">

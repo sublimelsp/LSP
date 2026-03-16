@@ -324,8 +324,6 @@ class SessionView:
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
-        region_scope = DIAGNOSTIC_STYLES[severity].region_scope
-        icon = diagnostic_icon(severity)
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
@@ -336,6 +334,8 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
+            region_scope = DIAGNOSTIC_STYLES[severity].region_scope
+            icon = diagnostic_icon(severity)
             self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, icon, DIAGNOSTIC_ICON_FLAGS)
             self.view.add_regions(f"{key}_underline", non_tag_regions, region_scope, "", flags)
         else:

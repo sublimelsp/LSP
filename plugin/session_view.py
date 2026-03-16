@@ -4,6 +4,7 @@ from ..protocol import Command
 from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
+from .core.constants import DIAGNOSTIC_ICON_FLAGS
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -319,7 +320,6 @@ class SessionView:
         flags: sublime.RegionFlags,
         multiline: bool
     ) -> None:
-        ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
@@ -333,7 +333,7 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, ICON_FLAGS)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, DIAGNOSTIC_ICON_FLAGS)
             self.view.add_regions(f"{key}_underline", non_tag_regions, data.scope, "", flags)
         else:
             self.view.erase_regions(f"{key}_icon")

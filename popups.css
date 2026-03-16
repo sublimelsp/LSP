@@ -61,8 +61,12 @@ body {
     color: var(--mdpopups-admon-important-accent);
     background-color: transparent;
 }
-.lsp_popup .wrapper {
+.lsp_popup,
+.lsp_popup div.highlight,
+.lsp_popup pre.highlight {
     font-size: var(--font-size);
+}
+.lsp_popup .wrapper {
     padding: 0.5rem;
     padding-bottom: 0;
 }
@@ -87,7 +91,7 @@ body {
 }
 .error,
 .warning,
-.info,
+.information,
 .hint {
     border-width: 0;
     padding: 0.5rem;
@@ -98,7 +102,7 @@ body {
 .warning {
     background-color: color(var(--yellowish) alpha(0.2));
 }
-.info {
+.information {
     background-color: color(var(--bluish) alpha(0.2));
 }
 .hint {

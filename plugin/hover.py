@@ -270,8 +270,7 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            parsed = minihtml(self.view, content, allowed_formats, language_map)
-            if parsed:
+            if parsed := minihtml(self.view, content, allowed_formats, language_map):
                 contents.append(html_wrapper(parsed))
         return '<hr class="m-0">'.join(contents)
 

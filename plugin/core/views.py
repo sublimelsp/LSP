@@ -731,10 +731,6 @@ def document_color_params(view: sublime.View) -> DocumentColorParams:
     return {"textDocument": text_document_identifier(view)}
 
 
-def format_severity(severity: DiagnosticSeverity) -> str:
-    return DIAGNOSTIC_STYLES[severity].kind if severity in DIAGNOSTIC_STYLES else "???"
-
-
 def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
@@ -773,7 +769,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
     result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
-        format_severity(diagnostic_severity(diagnostic)),
+        DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
         lines[0]
     )
     if formatted != "" or code is not None:

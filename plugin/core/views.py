@@ -126,20 +126,12 @@ DIAGNOSTIC_STYLES: dict[DiagnosticSeverity, DiagnosticStyle] = {
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('severity', 'regions', 'regions_with_tag', 'annotations')
+    __slots__ = ('regions', 'regions_with_tag', 'annotations')
 
     def __init__(self, severity: DiagnosticSeverity) -> None:
-        self.severity = severity
         self.regions: list[sublime.Region] = []
         self.regions_with_tag: dict[DiagnosticTag, list[sublime.Region]] = {}
         self.annotations: list[str] = []
-
-    @property
-    def icon(self) -> str:
-        if userprefs().diagnostics_gutter_marker == "sign":
-            return DIAGNOSTIC_STYLES[self.severity].icon_resource
-        else:
-            return "" if self.severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class InvalidUriSchemeException(Exception):
@@ -745,6 +737,13 @@ def format_severity(severity: DiagnosticSeverity) -> str:
 
 def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
+
+
+def diagnostic_icon_for_severity(severity: DiagnosticSeverity) -> str:
+    if userprefs().diagnostics_gutter_marker == "sign":
+        return DIAGNOSTIC_STYLES[severity].icon_resource
+    else:
+        return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:

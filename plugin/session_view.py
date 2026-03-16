@@ -18,6 +18,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import ChangeEventAction
+from .core.views import diagnostic_icon_for_severity
 from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
@@ -324,6 +325,7 @@ class SessionView:
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
         region_scope = DIAGNOSTIC_STYLES[severity].region_scope
+        icon = diagnostic_icon_for_severity(severity)
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
@@ -334,7 +336,7 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, data.icon, DIAGNOSTIC_ICON_FLAGS)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, icon, DIAGNOSTIC_ICON_FLAGS)
             self.view.add_regions(f"{key}_underline", non_tag_regions, region_scope, "", flags)
         else:
             self.view.erase_regions(f"{key}_icon")

@@ -702,7 +702,7 @@ class SessionBuffer:
             key = (severity, len(view.split_by_newlines(region)) > 1)
             data = data_per_severity.get(key)
             if data is None:
-                data = DiagnosticSeverityData(severity)
+                data = DiagnosticSeverityData()
                 data_per_severity[key] = data
             if tags := diagnostic.get('tags', []):
                 for tag in tags:

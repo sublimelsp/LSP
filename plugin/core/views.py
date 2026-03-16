@@ -894,7 +894,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
-    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind
+    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 

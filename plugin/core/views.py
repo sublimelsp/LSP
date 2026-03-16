@@ -735,7 +735,7 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
 
 
-def diagnostic_icon_for_severity(severity: DiagnosticSeverity) -> str:
+def diagnostic_icon(severity: DiagnosticSeverity) -> str:
     if userprefs().diagnostics_gutter_marker == "sign":
         return DIAGNOSTIC_STYLES[severity].icon_resource
     else:

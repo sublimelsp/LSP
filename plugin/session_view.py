@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..protocol import Command
+from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
@@ -295,7 +296,7 @@ class SessionView:
         if listener := self.listener():
             listener.on_session_shutdown_async(self.session)
 
-    def diagnostics_key(self, severity: int, multiline: bool) -> str:
+    def diagnostics_key(self, severity: DiagnosticSeverity, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
@@ -315,7 +316,7 @@ class SessionView:
 
     def _draw_diagnostics(
         self,
-        severity: int,
+        severity: DiagnosticSeverity,
         max_severity_level: int,
         flags: sublime.RegionFlags,
         multiline: bool
@@ -323,6 +324,7 @@ class SessionView:
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
+        region_scope = DIAGNOSTIC_STYLES[severity].region_scope
         if data and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
@@ -333,8 +335,8 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, DIAGNOSTIC_ICON_FLAGS)
-            self.view.add_regions(f"{key}_underline", non_tag_regions, data.scope, "", flags)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, data.icon, DIAGNOSTIC_ICON_FLAGS)
+            self.view.add_regions(f"{key}_underline", non_tag_regions, region_scope, "", flags)
         else:
             self.view.erase_regions(f"{key}_icon")
             self.view.erase_regions(f"{key}_underline")

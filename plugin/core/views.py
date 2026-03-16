@@ -135,10 +135,6 @@ class DiagnosticSeverityData:
         self.annotations: list[str] = []
 
     @property
-    def scope(self) -> str:
-        return DIAGNOSTIC_STYLES[self.severity].region_scope
-
-    @property
     def icon(self) -> str:
         if userprefs().diagnostics_gutter_marker == "sign":
             return DIAGNOSTIC_STYLES[self.severity].icon_resource

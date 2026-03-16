@@ -53,6 +53,7 @@ from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
+from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -76,34 +77,78 @@ MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
-DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, sublime.RegionFlags, sublime.RegionFlags]] = [
-    # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
-    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-]
+
+@dataclass
+class DiagnosticStyle:
+    kind: str
+    css_class: str
+    region_scope: str
+    icon_resource: str
+    single_line_region_flags: sublime.RegionFlags
+    multi_line_region_flags: sublime.RegionFlags
+
+
+DIAGNOSTIC_STYLES: dict[DiagnosticSeverity, DiagnosticStyle] = {
+    DiagnosticSeverity.Error: DiagnosticStyle(
+        'error',
+        'error',
+        'region.redish markup.error.lsp',
+        'Packages/LSP/icons/error.png',
+        _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Warning: DiagnosticStyle(
+        'warning',
+        'warning',
+        'region.yellowish markup.warning.lsp',
+        'Packages/LSP/icons/warning.png',
+        _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Information: DiagnosticStyle(
+        'info',
+        'information',
+        'region.bluish markup.info.lsp',
+        'Packages/LSP/icons/info.png',
+        _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Hint: DiagnosticStyle(
+        'hint',
+        'hint',
+        'region.bluish markup.info.hint.lsp',
+        '',
+        _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE,
+        _multilineflags
+    ),
+}
 
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
+    __slots__ = ('severity', 'regions', 'regions_with_tag', 'annotations')
 
-    def __init__(self, severity: int) -> None:
+    def __init__(self, severity: DiagnosticSeverity) -> None:
+        self.severity = severity
         self.regions: list[sublime.Region] = []
         self.regions_with_tag: dict[DiagnosticTag, list[sublime.Region]] = {}
         self.annotations: list[str] = []
-        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
-        if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+
+    @property
+    def scope(self) -> str:
+        return DIAGNOSTIC_STYLES[self.severity].region_scope
+
+    @property
+    def icon(self) -> str:
+        if userprefs().diagnostics_gutter_marker == "sign":
+            return DIAGNOSTIC_STYLES[self.severity].icon_resource
+        else:
+            return "" if self.severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class InvalidUriSchemeException(Exception):
     def __init__(self, uri: str) -> None:
-        self.uri = uri
-
-    def __str__(self) -> str:
-        return f"invalid URI scheme: {self.uri}"
+        super().__init__(f"invalid URI scheme: {uri}")
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
@@ -698,10 +743,8 @@ def document_color_params(view: sublime.View) -> DocumentColorParams:
     return {"textDocument": text_document_identifier(view)}
 
 
-def format_severity(severity: int) -> str:
-    if 1 <= severity <= len(DIAGNOSTIC_SEVERITY):
-        return DIAGNOSTIC_SEVERITY[severity - 1][0]
-    return "???"
+def format_severity(severity: DiagnosticSeverity) -> str:
+    return DIAGNOSTIC_STYLES[severity].kind if severity in DIAGNOSTIC_STYLES else "???"
 
 
 def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
@@ -851,7 +894,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
-    severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
+    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind
     return _html_element("pre", html, class_name=severity_class, escape=False)
 
 

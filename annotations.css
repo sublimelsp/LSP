@@ -2,15 +2,15 @@
     margin: 0;
     border-width: 0;
 }
-.lsp_annotation .errors {
+.lsp_annotation .error {
     color: color(var(--redish) alpha(0.85));
 }
-.lsp_annotation .warnings {
+.lsp_annotation .warning {
     color: color(var(--yellowish) alpha(0.85));
 }
-.lsp_annotation .info {
+.lsp_annotation .information {
     color: color(var(--bluish) alpha(0.85));
 }
-.lsp_annotation .hints {
+.lsp_annotation .hint {
     color: color(var(--bluish) alpha(0.85));
 }

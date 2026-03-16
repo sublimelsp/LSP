@@ -36,30 +36,25 @@
     margin-bottom: 0.5rem;
     font-family: var(--mdpopups-font-mono);
 }
-.errors {
+.error,
+.warning,
+.information,
+.hint {
     border-width: 0;
+    color: var(--foreground);
+    padding: 0.5rem;
+}
+.error {
     background-color: color(var(--redish) alpha(0.25));
-    color: var(--foreground);
-    padding: 0.5rem;
-    white-space: pre-wrap;
 }
-.warnings {
-    border-width: 0;
+.warning {
     background-color: color(var(--yellowish) alpha(0.25));
-    color: var(--foreground);
-    padding: 0.5rem;
 }
-.info {
-    border-width: 0;
+.information {
     background-color: color(var(--bluish) alpha(0.25));
-    color: var(--foreground);
-    padding: 0.5rem;
 }
-.hints {
-    border-width: 0;
+.hint {
     background-color: color(var(--bluish) alpha(0.25));
-    color: var(--foreground);
-    padding: 0.5rem;
 }
 .actions, .code-actions {
     font-family: system;

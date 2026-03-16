@@ -16,7 +16,7 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import ChangeEventAction
-from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
 from .core.views import range_to_region
@@ -94,7 +94,7 @@ class SessionView:
                     self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
-        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+        for severity in reversed(DIAGNOSTIC_STYLES.keys()):
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
@@ -306,9 +306,10 @@ class SessionView:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
-        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
-            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        for sev in reversed(DIAGNOSTIC_STYLES.keys()):
+            style = DIAGNOSTIC_STYLES[sev]
+            self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)
+            self._draw_diagnostics(sev, level, multiline_flags or style.multi_line_region_flags, multiline=True)
         self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
 
     def _draw_diagnostics(

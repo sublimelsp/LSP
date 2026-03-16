@@ -128,7 +128,7 @@ class DiagnosticSeverityData:
 
     __slots__ = ('regions', 'regions_with_tag', 'annotations')
 
-    def __init__(self, severity: DiagnosticSeverity) -> None:
+    def __init__(self) -> None:
         self.regions: list[sublime.Region] = []
         self.regions_with_tag: dict[DiagnosticTag, list[sublime.Region]] = {}
         self.annotations: list[str] = []

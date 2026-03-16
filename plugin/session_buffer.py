@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..protocol import CodeLens
 from ..protocol import ColorInformation
 from ..protocol import Diagnostic
+from ..protocol import DiagnosticSeverity
 from ..protocol import DiagnosticTag
 from ..protocol import DocumentDiagnosticParams
 from ..protocol import DocumentDiagnosticReport
@@ -158,7 +159,7 @@ class SessionBuffer:
         self._pending_changes: PendingChanges | None = None
         self.pending_refreshes: RequestFlags = RequestFlags.NONE
         self._diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
-        self.diagnostics_data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
+        self.diagnostics_data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
         self._diagnostics_versions: dict[DiagnosticsIdentifier, int] = {}
         self.diagnostics_flags = 0
         self._diagnostics_are_visible = False
@@ -694,14 +695,14 @@ class SessionBuffer:
             return
         diagnostics_version = version
         diagnostics: list[tuple[Diagnostic, sublime.Region]] = []
-        data_per_severity: dict[tuple[int, bool], DiagnosticSeverityData] = {}
+        data_per_severity: dict[tuple[DiagnosticSeverity, bool], DiagnosticSeverityData] = {}
         for diagnostic in raw_diagnostics:
             region = range_to_region(diagnostic["range"], view)
             severity = diagnostic_severity(diagnostic)
             key = (severity, len(view.split_by_newlines(region)) > 1)
             data = data_per_severity.get(key)
             if data is None:
-                data = DiagnosticSeverityData(severity)
+                data = DiagnosticSeverityData()
                 data_per_severity[key] = data
             if tags := diagnostic.get('tags', []):
                 for tag in tags:

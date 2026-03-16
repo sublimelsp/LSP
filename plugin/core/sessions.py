@@ -328,11 +328,14 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
     completion_tag_value_set = cast(List[CompletionItemTag], _int_enum_to_list(CompletionItemTag))
     symbol_tag_value_set = cast(List[SymbolTag], _int_enum_to_list(SymbolTag))
     semantic_token_types = cast(List[str], _str_enum_to_list(SemanticTokenTypes))
+    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
     if config.semantic_tokens is not None:
-        for token_type in config.semantic_tokens.keys():
+        for token in config.semantic_tokens.keys():
+            token_type, _, token_modifier = token.partition('.')
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
-    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
+            if token_modifier and token_modifier not in semantic_token_modifiers:
+                semantic_token_modifiers.append(token_modifier)
     supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
     folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))
     first_folder = workspace_folders[0] if workspace_folders else None
@@ -618,6 +621,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "name": "Sublime Text LSP",
             "version": ".".join(map(str, __version__))
         },
+        "locale": "en",
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,

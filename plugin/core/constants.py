@@ -85,6 +85,7 @@ HOVER_ENABLED_KEY = 'lsp_show_hover_popups'
 SHOW_DEFINITIONS_KEY = 'show_definitions'
 
 # Region flags
+DIAGNOSTIC_ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
 DOCUMENT_LINK_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_SOLID_UNDERLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
 REGIONS_INITIALIZE_FLAGS = sublime.RegionFlags.HIDDEN | sublime.RegionFlags.NO_UNDO
 SEMANTIC_TOKEN_FLAGS = sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO

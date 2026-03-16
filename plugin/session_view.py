@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from ..protocol import Command
+from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
+from .core.constants import DIAGNOSTIC_ICON_FLAGS
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
@@ -16,7 +18,8 @@ from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import ChangeEventAction
-from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import diagnostic_icon
+from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key
 from .core.views import make_command_link
 from .core.views import range_to_region
@@ -94,7 +97,7 @@ class SessionView:
                     self.session.cancel_request_async(request_id)
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
-        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+        for severity in reversed(DIAGNOSTIC_STYLES.keys()):
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_icon")
             self.view.erase_regions(f"{self.diagnostics_key(severity, False)}_underline")
             self.view.erase_regions(f"{self.diagnostics_key(severity, True)}_icon")
@@ -294,7 +297,7 @@ class SessionView:
         if listener := self.listener():
             listener.on_session_shutdown_async(self.session)
 
-    def diagnostics_key(self, severity: int, multiline: bool) -> str:
+    def diagnostics_key(self, severity: DiagnosticSeverity, multiline: bool) -> str:
         return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
@@ -306,19 +309,18 @@ class SessionView:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines
         multiline_flags = None if userprefs().show_multiline_diagnostics_highlights else sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         level = userprefs().show_diagnostics_severity_level
-        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(sev, level, flags[sev - 1] or DIAGNOSTIC_SEVERITY[sev - 1][4], multiline=False)
-            self._draw_diagnostics(sev, level, multiline_flags or DIAGNOSTIC_SEVERITY[sev - 1][5], multiline=True)
+        for sev, style in reversed(DIAGNOSTIC_STYLES.items()):
+            self._draw_diagnostics(sev, level, flags[sev - 1] or style.single_line_region_flags, multiline=False)
+            self._draw_diagnostics(sev, level, multiline_flags or style.multi_line_region_flags, multiline=True)
         self._diagnostic_annotations.draw(self.session_buffer.diagnostics)
 
     def _draw_diagnostics(
         self,
-        severity: int,
+        severity: DiagnosticSeverity,
         max_severity_level: int,
         flags: sublime.RegionFlags,
         multiline: bool
     ) -> None:
-        ICON_FLAGS = sublime.RegionFlags.HIDE_ON_MINIMAP | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO  # noqa: E501
         key = self.diagnostics_key(severity, multiline)
         tags = {tag: TagData(f'{key}_tags_{tag}') for tag in DIAGNOSTIC_TAG_SCOPES}
         data = self._session_buffer.diagnostics_data_per_severity.get((severity, multiline))
@@ -332,8 +334,10 @@ class SessionView:
                     tags[tag].scope = tag_scope
                 else:
                     non_tag_regions.extend(regions)
-            self.view.add_regions(f"{key}_icon", non_tag_regions, data.scope, data.icon, ICON_FLAGS)
-            self.view.add_regions(f"{key}_underline", non_tag_regions, data.scope, "", flags)
+            region_scope = DIAGNOSTIC_STYLES[severity].region_scope
+            icon = diagnostic_icon(severity)
+            self.view.add_regions(f"{key}_icon", non_tag_regions, region_scope, icon, DIAGNOSTIC_ICON_FLAGS)
+            self.view.add_regions(f"{key}_underline", non_tag_regions, region_scope, "", flags)
         else:
             self.view.erase_regions(f"{key}_icon")
             self.view.erase_regions(f"{key}_underline")

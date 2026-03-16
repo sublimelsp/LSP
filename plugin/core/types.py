@@ -414,7 +414,7 @@ class Settings:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
         else:
-            # Defaults are defined in DIAGNOSTIC_SEVERITY in plugin/core/views.py
+            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
             return [None] * 4  # default styling
 
 

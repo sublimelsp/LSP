@@ -85,23 +85,23 @@ body {
 .color-muted {
     color: color(var(--foreground) alpha(0.6));
 }
-.errors,
-.warnings,
+.error,
+.warning,
 .info,
-.hints {
+.hint {
     border-width: 0;
     padding: 0.5rem;
 }
-.errors {
+.error {
     background-color: color(var(--redish) alpha(0.2));
 }
-.warnings {
+.warning {
     background-color: color(var(--yellowish) alpha(0.2));
 }
 .info {
     background-color: color(var(--bluish) alpha(0.2));
 }
-.hints {
+.hint {
     background-color: color(var(--bluish) alpha(0.2));
 }
 .actions,

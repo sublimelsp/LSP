@@ -94,6 +94,7 @@ body {
 .information,
 .hint {
     border-width: 0;
+    color: var(--foreground);
     padding: 0.5rem;
 }
 .error {

@@ -31,7 +31,7 @@ def update_popup(
     md: bool = True,
     css=None,  # type: Optional[str]
     wrapper_class=None,  # type: Optional[str]
-    template_vars=None,  # type: Optional[str]
+    template_vars=None,  # type: Optional[dict]
     nl2br: bool = True,
     allow_code_wrap: bool = False
 ) -> None: ...

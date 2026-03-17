@@ -3,9 +3,15 @@ body {
     font-family: system;
 }
 .lsp_popup {
+{% if plugin.is_windows %}
+    --font-size: 1rem;
+    --font-size-sm: 0.9rem;
+    --font-size-xs: 0.9rem;
+{% else %}
     --font-size: 1.05rem;
     --font-size-sm: 1rem;
-    --font-size-xs: .9rem;
+    --font-size-xs: 0.9rem;
+{% endif %}
 }
 .mdpopups hr {
     margin-top: 0.5rem;

@@ -83,7 +83,7 @@ class SigHelp:
         blocks.append(self._render_label(signature))
         if parameter_doc := self._parameter_documentation(view, signature):
             blocks.append(parameter_doc)
-        formatted = [html_wrapper(''.join(blocks), class_name='font-size-sm')]
+        formatted = [html_wrapper(''.join(blocks))]
         if signature_doc := self._signature_documentation(view, signature):
             formatted.append('<hr class="m-0">')
             formatted.append(html_wrapper(''.join(signature_doc), class_name='font-size-xs'))

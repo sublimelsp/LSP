@@ -119,7 +119,7 @@ body {
 .actions {
     font-size: var(--font-size-sm);
 }
-.actions a.icon {
+.actions a {
     text-decoration: none;
 }
 .code-actions .lightbulb img {

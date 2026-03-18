@@ -70,6 +70,9 @@ body {
 .lsp_popup pre.highlight {
     font-size: var(--font-size);
 }
+.lsp_popup code.highlight {
+    font-size: var(--font-size-sm);
+}
 .lsp_popup .wrapper {
     padding: 0.5rem;
     padding-bottom: 0;

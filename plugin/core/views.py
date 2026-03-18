@@ -42,7 +42,6 @@ from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
-from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
@@ -489,7 +488,6 @@ def show_lsp_popup(
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        template_vars={'is_windows': ST_PLATFORM == 'windows'},
         max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
         max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
         on_navigate=on_navigate,
@@ -508,13 +506,7 @@ def update_lsp_popup(
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
-    mdpopups.update_popup(
-        view,
-        body_wrapper.format(contents),
-        css=css,
-        md=md,
-        wrapper_class=wrapper_class,
-        template_vars={'is_windows': ST_PLATFORM == 'windows'})
+    mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
 
 FORMAT_STRING = 0x1

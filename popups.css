@@ -1,10 +1,7 @@
-html,
-body {
-    font-family: system;
-}
 .lsp_popup {
     --font-size: 1rem;
     --font-size-sm: 0.9rem;
+    font-family: system;
 }
 .lsp_popup,
 .lsp_popup div.highlight,

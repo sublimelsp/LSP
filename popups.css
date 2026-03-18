@@ -11,10 +11,18 @@ body {
     --font-size-sm: 0.95rem;
 {% endif %}
 }
-.mdpopups hr {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    border-color: color(var(--foreground) alpha(0.10));
+.lsp_popup,
+.lsp_popup div.highlight,
+.lsp_popup pre.highlight {
+    font-size: var(--font-size);
+}
+.lsp_popup code.highlight {
+    font-size: var(--font-size-sm);
+}
+.lsp_popup .font-size-sm,
+.lsp_popup .font-size-sm div.highlight,
+.lsp_popup .font-size-sm pre.highlight {
+    font-size: var(--font-size-sm);
 }
 .mdpopups h1,
 .mdpopups h2,
@@ -23,6 +31,11 @@ body {
 .mdpopups h5,
 .mdpopups h6 {
     font-size: var(--font-size);
+}
+.mdpopups hr {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-color: color(var(--foreground) alpha(0.10));
 }
 .mdpopups kbd {
     background-color: color(var(--mdpopups-bg) lightness(+ 5%));
@@ -65,14 +78,6 @@ body {
     color: var(--mdpopups-admon-important-accent);
     background-color: transparent;
 }
-.lsp_popup,
-.lsp_popup div.highlight,
-.lsp_popup pre.highlight {
-    font-size: var(--font-size);
-}
-.lsp_popup code.highlight {
-    font-size: var(--font-size-sm);
-}
 .lsp_popup .wrapper {
     padding: 0.5rem;
     padding-bottom: 0;
@@ -82,11 +87,6 @@ body {
 }
 .lsp_popup .m-0 {
     margin: 0;
-}
-.lsp_popup .font-size-sm,
-.lsp_popup .font-size-sm div.highlight,
-.lsp_popup .font-size-sm pre.highlight {
-    font-size: var(--font-size-sm);
 }
 .color-muted {
     color: color(var(--foreground) alpha(0.6));

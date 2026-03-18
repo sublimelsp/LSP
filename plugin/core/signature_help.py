@@ -86,7 +86,7 @@ class SigHelp:
         formatted = [html_wrapper(''.join(blocks))]
         if signature_doc := self._signature_documentation(view, signature):
             formatted.append('<hr class="m-0">')
-            formatted.append(html_wrapper(''.join(signature_doc), class_name='font-size-xs'))
+            formatted.append(html_wrapper(''.join(signature_doc)))
         return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
@@ -106,7 +106,7 @@ class SigHelp:
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
     def _render_intro(self) -> str:
-        return '<p class="font-size-xs">' + \
+        return '<p class="font-size-sm">' + \
                f'<b>{self._active_signature_index + 1}</b> of <b>{len(self._signatures)}</b> overloads ' + \
                '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide)</p>'
 

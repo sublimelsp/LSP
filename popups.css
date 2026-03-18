@@ -6,11 +6,9 @@ body {
 {% if plugin.is_windows %}
     --font-size: 1rem;
     --font-size-sm: 0.9rem;
-    --font-size-xs: 0.9rem;
 {% else %}
     --font-size: 1.05rem;
-    --font-size-sm: 1rem;
-    --font-size-xs: 0.9rem;
+    --font-size-sm: 0.95rem;
 {% endif %}
 }
 .mdpopups hr {
@@ -86,11 +84,6 @@ body {
 .lsp_popup .font-size-sm div.highlight,
 .lsp_popup .font-size-sm pre.highlight {
     font-size: var(--font-size-sm)
-}
-.lsp_popup .font-size-xs,
-.lsp_popup .font-size-xs div.highlight,
-.lsp_popup .font-size-xs pre.highlight {
-    font-size: var(--font-size-xs)
 }
 .color-muted {
     color: color(var(--foreground) alpha(0.6));

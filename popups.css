@@ -98,7 +98,8 @@
 .code-actions {
     background-color: color(var(--foreground) alpha(0.1));
 }
-.actions {
+.actions,
+.signature-help-intro {
     font-size: var(--font-size-sm);
 }
 .actions a {

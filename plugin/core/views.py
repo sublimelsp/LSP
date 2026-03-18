@@ -860,7 +860,8 @@ def html_wrapper(content: str, *, class_name: str | None = None) -> str:
     The `content` is NOT escaped.
     """
     extra_class = f' {class_name}' if class_name else ''
-    return f'<div class="wrapper{extra_class}">{content}<div class="wrapper--spacer"></div></div>'
+    return _html_element(
+        'div', f'{content}<div class="wrapper--spacer"></div>', class_name=f'wrapper{extra_class}', escape=False)
 
 
 def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:

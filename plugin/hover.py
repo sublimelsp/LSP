@@ -97,12 +97,8 @@ def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_
             text = actions[0].get('title', 'code action')
         href = "{}:{}".format('code-actions', config_name)
         link = make_link(href, text)
-        formatted.append(
-            f'''
-            <div class="code-actions">
-                {icon_html}<span class="link with-padding">{link}</span><span class="color-muted">{config_name}</span>
-            </div>'''
-        )
+        formatted.append(html_wrapper(f'{icon_html} {link} <span class="color-muted">{config_name}</span>',
+                                      class_name='code-actions'))
     return "".join(formatted)
 
 
@@ -298,9 +294,9 @@ class LspHoverCommand(LspTextCommand):
                     symbol_actions_content += ' | '
                 symbol_actions_content += link_content
             if symbol_actions_content:
-                contents += '<div class="actions">' + symbol_actions_content + '</div>'
+                contents += html_wrapper(symbol_actions_content, class_name='actions')
         elif link_content:
-            contents += '<div class="{}">{}</div>'.format('link with-padding' if contents else 'link', link_content)
+            contents += html_wrapper(link_content)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only

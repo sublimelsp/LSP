@@ -14,11 +14,6 @@ body {
 .lsp_popup code.highlight {
     font-size: var(--font-size-sm);
 }
-.lsp_popup .font-size-sm,
-.lsp_popup .font-size-sm div.highlight,
-.lsp_popup .font-size-sm pre.highlight {
-    font-size: var(--font-size-sm);
-}
 .mdpopups h1,
 .mdpopups h2,
 .mdpopups h3,
@@ -90,9 +85,7 @@ body {
 .warning,
 .information,
 .hint {
-    border-width: 0;
     color: var(--foreground);
-    padding: 0.5rem;
 }
 .error {
     background-color: color(var(--redish) alpha(0.2));
@@ -109,7 +102,6 @@ body {
 .actions,
 .code-actions {
     background-color: color(var(--foreground) alpha(0.1));
-    padding: 0.5rem;
 }
 .actions {
     font-size: var(--font-size-sm);
@@ -120,9 +112,6 @@ body {
 .code-actions .lightbulb img {
     width: 0.9rem;
     height: 0.9rem;
-}
-.link.with-padding {
-    padding: 0.5rem;
 }
 a.copy-icon {
     padding: 0.5rem;

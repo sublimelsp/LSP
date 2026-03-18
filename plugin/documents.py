@@ -832,7 +832,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:  # 'annotation'
             title = f'{action_count} code actions' if action_count > 1 else first_action_title
             code_actions_link = make_link('code-actions:', title)
-            annotations = [f"<div class=\"actions\" style=\"font-family:system\">{code_actions_link}</div>"]
+            annotations = [f'<div class="actions" style="font-family:system">{code_actions_link}</div>']
             annotation_color = self._code_action_annotation_color
         self.view.add_regions(
             RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,

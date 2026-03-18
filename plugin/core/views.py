@@ -892,7 +892,7 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         html += '<hr>' + _html_element("div", info, escape=False)
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
-    return _html_element("div", html, class_name=severity_class, escape=False)
+    return html_wrapper(html, class_name=severity_class)
 
 
 def format_code_actions_for_quick_panel(

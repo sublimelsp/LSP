@@ -83,7 +83,7 @@ body {
 .lsp_popup .font-size-sm,
 .lsp_popup .font-size-sm div.highlight,
 .lsp_popup .font-size-sm pre.highlight {
-    font-size: var(--font-size-sm)
+    font-size: var(--font-size-sm);
 }
 .color-muted {
     color: color(var(--foreground) alpha(0.6));
@@ -112,6 +112,9 @@ body {
 .code-actions {
     background-color: color(var(--foreground) alpha(0.1));
     padding: 0.5rem;
+}
+.actions {
+    font-size: var(--font-size-sm);
 }
 .actions a.icon {
     text-decoration: none;

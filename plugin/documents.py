@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlight
@@ -13,7 +15,6 @@ from ..protocol import SignatureHelpContext
 from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
 from .code_actions import actions_manager
-from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
@@ -42,7 +43,6 @@ from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
 from .core.types import basescope2languageid
-from .core.types import ClientConfig
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
@@ -53,7 +53,7 @@ from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_diagnostic_for_html
+from .core.views import format_diagnostics_for_html
 from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -63,7 +63,6 @@ from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
 from .folding_range import folding_range_to_range
-from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -569,31 +568,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
-        content = ''
-        if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._code_actions_for_selection)
-        if userprefs().show_diagnostics_severity_level:
-            diagnostics_with_config: list[tuple[ClientConfig, Diagnostic]] = []
-            diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
-            max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
-            if userprefs().diagnostics_gutter_marker:
-                diagnostics_by_session_buffer = self.get_diagnostics_async(self.view.line(point))
-            elif content:
-                diagnostics_by_session_buffer = self._diagnostics_for_selection
-            if content:
-                max_severity_level = userprefs().show_diagnostics_severity_level
-            for sb, diagnostics in diagnostics_by_session_buffer:
-                diagnostics_with_config.extend(
-                    (sb.session.config, diagnostic) for diagnostic in diagnostics
-                    if diagnostic_severity(diagnostic) <= max_severity_level
-                )
-            if diagnostics_with_config:
-                diagnostics_with_config.sort(key=lambda d: diagnostic_severity(d[1]))
-                content += '<div class="diagnostics">'
-                for config, diagnostic in diagnostics_with_config:
-                    content += format_diagnostic_for_html(config, diagnostic)
-                content += '</div>'
-        if content:
+        if userprefs().diagnostics_gutter_marker:
+            diagnostics = self.get_diagnostics_async(self.view.line(point), userprefs().show_diagnostics_severity_level)
+            code_actions = dict(self._code_actions_for_selection) \
+                if self._lightbulb_line == self.view.rowcol(point)[0] else {}
+            content = format_diagnostics_for_html(diagnostics, code_actions, self.lightbulb_color)
             show_lsp_popup(
                 self.view,
                 content,
@@ -862,7 +841,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             debug('on_navigate unhandled href:', href)
 
-    def handle_code_action_select(self, config_name: str, actions: list[CodeActionOrCommand], index: int) -> None:
+    def handle_code_action_select(self, config_name: str, actions: list[Command | CodeAction], index: int) -> None:
         if index == -1:
             return
 

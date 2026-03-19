@@ -51,16 +51,21 @@ from .protocol import Point
 from .protocol import Request
 from .settings import userprefs
 from .types import ClientConfig
+from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
 from dataclasses import dataclass
+from functools import lru_cache
+from operator import itemgetter
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 from typing import Tuple
+from typing import TYPE_CHECKING
 import html
 import itertools
 import linecache
@@ -70,6 +75,10 @@ import re
 import sublime
 import sublime_plugin
 import tempfile
+
+if TYPE_CHECKING:
+    from .sessions import SessionBufferProtocol
+
 
 ChangeEventAction = Literal['cut', 'paste', 'redo', 'undo', 'type']
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
@@ -872,8 +881,40 @@ def _html_element(tag: str, content: str, *, class_name: str | None = None, esca
     )
 
 
-def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
-    html = _html_element('span', diagnostic["message"])
+@lru_cache
+def lightbulb_html(color: str) -> str:
+    img = mdpopups.tint('Packages/LSP/icons/lightbulb_cropped.png', color)
+    return f'<span class="lightbulb" title="Preferred Quick Fix">{img}</span> '
+
+
+def format_diagnostics_for_html(
+    diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
+    code_actions_by_config: dict[str, list[Command | CodeAction]],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    diagnostics_html: list[tuple[DiagnosticSeverity, str]] = []
+    for sb, diagnostics in diagnostics_by_config:
+        actions_for_config = code_actions_by_config.get(sb.session.config.name, [])
+        single_diagnostic = len(diagnostics) == 1
+        for diagnostic in diagnostics:
+            code_actions = actions_for_config if single_diagnostic else [
+                action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
+            ]
+            diagnostic_html = format_diagnostic_for_html(
+                sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
+            diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
+    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>'
+
+
+def format_diagnostic_for_html(
+    config: ClientConfig,
+    diagnostic: Diagnostic,
+    code_actions: list[Command | CodeAction],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    content = _html_element('span', diagnostic["message"])
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
@@ -881,19 +922,25 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
         if source:
             meta_info += text2html(source)
         if code is not None:
-            code_description = diagnostic.get("codeDescription")
-            meta_info += "({})".format(
-                make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
-        html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
+            if code_description := diagnostic.get("codeDescription"):
+                href = code_description["href"]
+                meta_info += f'({make_link(href, str(code), tooltip=html.escape(href))})'
+            else:
+                meta_info += f'({text2html(str(code))})'
+        content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
     copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip().replace(' ', ' ')
-    html += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
+    content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
         'lsp_copy_text', {'text': copy_text}
     )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
-        html += '<hr>' + _html_element("div", info, escape=False)
+        content += '<hr>' + _html_element("div", info, escape=False)
+    for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
+        icon = lightbulb_html(lightbulb_color) if code_action.get('isPreferred', False) else ''
+        code_action_uri = encode_code_action_uri(code_action, config.name)
+        content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
-    return html_wrapper(html, class_name=severity_class)
+    return html_wrapper(content, class_name=severity_class)
 
 
 def format_code_actions_for_quick_panel(

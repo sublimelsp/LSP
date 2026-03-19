@@ -40,6 +40,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
+from functools import lru_cache
 from functools import partial
 from typing import Sequence
 from typing import Union
@@ -85,7 +86,12 @@ link_kinds = [
 ]
 
 
-def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_html: str = '') -> str:
+@lru_cache
+def lightbulb_html(color: str) -> str:
+    return f'<span class="lightbulb">{mdpopups.tint("Packages/LSP/icons/lightbulb_cropped.png", color)}</span> '
+
+
+def code_actions_content(actions_by_config: list[CodeActionsByConfigName], lightbulb_color: str | None = None) -> str:
     formatted = []
     for config_name, actions in actions_by_config:
         action_count = len(actions)
@@ -97,7 +103,8 @@ def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_
             text = actions[0].get('title', 'code action')
         href = "{}:{}".format('code-actions', config_name)
         link = make_link(href, text)
-        formatted.append(html_wrapper(f'{icon_html} {link} <span class="color-muted">{config_name}</span>',
+        icon_html = lightbulb_html(lightbulb_color) if lightbulb_color else ''
+        formatted.append(html_wrapper(f'{icon_html}{link} <span class="color-muted">{config_name}</span>',
                                       class_name='code-actions'))
     return "".join(formatted)
 
@@ -284,7 +291,7 @@ class LspHoverCommand(LspTextCommand):
         prefs = userprefs()
         diagnostics_content = self.diagnostics_content() if only_diagnostics or prefs.show_diagnostics_in_hover else ""
         contents = diagnostics_content + hover_content + \
-            code_actions_content(self._actions_by_config, listener.lightbulb_html)
+            code_actions_content(self._actions_by_config, listener.lightbulb_color)
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:

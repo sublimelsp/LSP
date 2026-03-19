@@ -82,7 +82,6 @@ from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
-import mdpopups
 import sublime
 import sublime_plugin
 import weakref
@@ -262,10 +261,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout_async(self.on_activated_async)
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
-
-    @property
-    def lightbulb_html(self) -> str:
-        return self._lightbulb_html
 
     def on_post_move_window_async(self) -> None:
         if self._registered and self._manager:
@@ -1147,6 +1142,4 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _update_styles(self) -> None:
         self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
         self._signature_help_style = self._get_signature_help_style()
-        lightbulb_img = mdpopups.tint(
-            'Packages/LSP/icons/lightbulb_cropped.png', self.view.style_for_scope(LIGHTBULB_SCOPE)['foreground'])
-        self._lightbulb_html = f'<span class="lightbulb">{lightbulb_img}</span>'
+        self.lightbulb_color = self.view.style_for_scope(LIGHTBULB_SCOPE)['foreground']

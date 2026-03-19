@@ -806,6 +806,7 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     view = cast(sublime.View, None)
     hover_provider_count = 0
+    lightbulb_color: str = ''
 
     @abstractmethod
     def session_async(self, capability: str, point: int | None = None) -> Session | None:
@@ -889,11 +890,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def get_request_flags(self, session: Session) -> RequestFlags:
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def lightbulb_html(self) -> str:
         raise NotImplementedError()
 
 

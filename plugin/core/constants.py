@@ -78,6 +78,7 @@ class RegionKey(StrEnum):
 
 class ChangeEventAction(IntEnum):
     CUT = auto()
+    INSERT_NEWLINE = auto()
     OTHER = auto()
     PASTE = auto()
     REDO = auto()

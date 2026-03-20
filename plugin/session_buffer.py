@@ -379,8 +379,9 @@ class SessionBuffer:
             purge = True
         if purge:
             self._cancel_pending_requests_async()
-            if userprefs().format_on_type and action == ChangeEventAction.TYPE and \
-                    (params := self._get_on_type_formatting_params_async(view, last_change.str)):
+            if userprefs().format_on_type and \
+                    (action in {ChangeEventAction.TYPE, ChangeEventAction.INSERT_NEWLINE}) and \
+                    (params := self._get_on_type_formatting_params_async(view, action, last_change.str)):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
                     .then(partial(self._on_type_formatting_result_async, view, change_count))
@@ -758,7 +759,7 @@ class SessionBuffer:
             self._on_type_formatting_triggers = ()
 
     def _get_on_type_formatting_params_async(
-        self, view: sublime.View, text: str
+        self, view: sublime.View, action: ChangeEventAction, text: str
     ) -> DocumentOnTypeFormattingParams | None:
         if not self._on_type_formatting_triggers:
             return None
@@ -768,7 +769,8 @@ class SessionBuffer:
         if selection is None:
             return None
         for trigger in self._on_type_formatting_triggers:
-            if text.endswith(trigger):
+            if (action == ChangeEventAction.TYPE and text.endswith(trigger) or
+                action == ChangeEventAction.INSERT_NEWLINE and text.rstrip(' ').endswith(trigger)):
                 return {
                     **text_document_position_params(view, selection.a),
                     'options': formatting_options(view.settings()),

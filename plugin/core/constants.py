@@ -259,6 +259,7 @@ LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
     'cut': ChangeEventAction.CUT,
+    'duplicate_line': ChangeEventAction.OTHER,
     'paste': ChangeEventAction.PASTE,
     'paste_and_indent': ChangeEventAction.PASTE,
     'redo': ChangeEventAction.REDO,

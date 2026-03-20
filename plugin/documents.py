@@ -17,6 +17,7 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
+from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
@@ -48,7 +49,6 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
@@ -135,7 +135,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self) -> None:
         super().__init__()
         self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
-        self._last_edit_action: ChangeEventAction = 'type'
+        self._last_edit_action: ChangeEventAction = ChangeEventAction.TYPE
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -174,7 +174,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         sublime.set_timeout(self._reset_last_edit_action)
 
     def _reset_last_edit_action(self) -> None:
-        self._last_edit_action = 'type'
+        self._last_edit_action = ChangeEventAction.TYPE
 
     def __repr__(self) -> str:
         return f"TextChangeListener({self.buffer.buffer_id})"
@@ -602,7 +602,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 on_navigate=lambda href: self._on_navigate(href, point))
 
     @requires_session
-    def on_text_command(self, command_name: str, args: dict | None) -> tuple[str, dict] | None:
+    def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:

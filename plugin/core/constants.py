@@ -9,16 +9,13 @@ from ...protocol import LanguageKind
 from ...protocol import MessageType
 from ...protocol import SymbolKind
 from .typing import StrEnum
-from .typing import TYPE_CHECKING
+from enum import auto
+from enum import IntEnum
 from enum import IntFlag
 from os.path import dirname
 from os.path import join
 from typing import Tuple
 import sublime
-
-if TYPE_CHECKING:
-    from .views import ChangeEventAction
-
 
 try:
     from mdpopups.marko import __version__ as marko_version  # pyright: ignore[reportMissingImports]
@@ -77,6 +74,15 @@ class RegionKey(StrEnum):
     DOCUMENT_LINK = 'lsp_document_link'
     HOVER_HIGHLIGHT = 'lsp_hover_highlight'
     REFERENCE_HIGHLIGHT = 'lsp_reference_highlight'
+
+
+class ChangeEventAction(IntEnum):
+    CUT = auto()
+    OTHER = auto()
+    PASTE = auto()
+    REDO = auto()
+    TYPE = auto()
+    UNDO = auto()
 
 
 # Setting keys
@@ -252,14 +258,14 @@ SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE = 'meta.signature-help.parameter.lsp'
 LIGHTBULB_SCOPE = 'region.yellowish lightbulb.lsp'
 
 COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
-    'cut': 'cut',
-    'paste': 'paste',
-    'paste_and_indent': 'paste',
-    'redo': 'redo',
-    'redo_or_repeat': 'redo',
-    'soft_redo': 'redo',
-    'soft_undo': 'undo',
-    'undo': 'undo',
+    'cut': ChangeEventAction.CUT,
+    'paste': ChangeEventAction.PASTE,
+    'paste_and_indent': ChangeEventAction.PASTE,
+    'redo': ChangeEventAction.REDO,
+    'redo_or_repeat': ChangeEventAction.REDO,
+    'soft_redo': ChangeEventAction.REDO,
+    'soft_undo': ChangeEventAction.UNDO,
+    'undo': ChangeEventAction.UNDO,
 }
 
 # These are the "exceptional" base scopes. If a base scope is not in this map, nor the first two components or more

@@ -5,6 +5,7 @@ from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlightKind
 from ..protocol import DocumentUri
 from .core.active_request import ActiveRequest
+from .core.constants import ChangeEventAction
 from .core.constants import DIAGNOSTIC_ICON_FLAGS
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
@@ -17,7 +18,6 @@ from .core.protocol import ResolvedCodeLens
 from .core.sessions import AbstractViewListener
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.views import ChangeEventAction
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
 from .core.views import document_highlight_key

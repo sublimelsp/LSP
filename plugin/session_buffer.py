@@ -26,6 +26,7 @@ from ..protocol import UnchangedDocumentDiagnosticReport
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import AUTO_CLOSE_BRACKETS
+from .core.constants import ChangeEventAction
 from .core.constants import CODE_LENS_ANNOTATION_SCOPE
 from .core.constants import DIAGNOSTIC_TAG_SCOPES
 from .core.constants import DOCUMENT_LINK_FLAGS
@@ -49,7 +50,6 @@ from .core.types import DebouncerNonThreadSafe
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SemanticToken
 from .core.url import normalize_uri
-from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import DiagnosticSeverityData
 from .core.views import did_change
@@ -379,8 +379,8 @@ class SessionBuffer:
             purge = True
         if purge:
             self._cancel_pending_requests_async()
-            if userprefs().format_on_type and action == 'type' and \
-                    (params := self._get_on_type_formatting_params_async(view, last_change)):
+            if userprefs().format_on_type and action == ChangeEventAction.TYPE and \
+                    (params := self._get_on_type_formatting_params_async(view, last_change.str)):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
                     .then(partial(self._on_type_formatting_result_async, view, change_count))
@@ -758,7 +758,7 @@ class SessionBuffer:
             self._on_type_formatting_triggers = ()
 
     def _get_on_type_formatting_params_async(
-        self, view: sublime.View, last_change: sublime.TextChange
+        self, view: sublime.View, text: str
     ) -> DocumentOnTypeFormattingParams | None:
         if not self._on_type_formatting_triggers:
             return None
@@ -768,7 +768,7 @@ class SessionBuffer:
         if selection is None:
             return None
         for trigger in self._on_type_formatting_triggers:
-            if last_change.str.endswith(trigger):
+            if text.endswith(trigger):
                 return {
                     **text_document_position_params(view, selection.a),
                     'options': formatting_options(view.settings()),

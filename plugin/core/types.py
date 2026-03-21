@@ -18,7 +18,6 @@ from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -43,6 +42,7 @@ import posixpath
 import socket
 import sublime
 import time
+import weakref
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
@@ -175,7 +175,13 @@ class SettingsRegistration:
     ) -> None:
         self.settings = settings
         self.settings_path = settings_path
-        settings.add_on_change("LSP", partial(on_change, self))
+        weak_self = weakref.ref(self)
+
+        def on_change_handler() -> None:
+            if _self := weak_self():
+                on_change(_self)
+
+        self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
         self.settings.clear_on_change("LSP")

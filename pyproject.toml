@@ -56,7 +56,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "plugin/core/typing.py" = ["F401"]
-"protocol/__init__.py" = ["D400"]
+"protocol/__init__.py" = ["D400", "D415"]
 "plugin/core/protocol.py" = ["UP006", "UP007"]
 
 [tool.ruff.lint]
@@ -89,7 +89,6 @@ ignore = [
     "D212",  # https://docs.astral.sh/ruff/rules/multi-line-summary-first-line/
     "D401",  # https://docs.astral.sh/ruff/rules/non-imperative-mood/
     "D413",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-last-section/
-    "D415",  # https://docs.astral.sh/ruff/rules/missing-terminal-punctuation/
     "DOC201",  # https://docs.astral.sh/ruff/rules/docstring-missing-returns/
     "DOC402",  # https://docs.astral.sh/ruff/rules/docstring-missing-yields/
     "DOC501",  # https://docs.astral.sh/ruff/rules/docstring-missing-exception/

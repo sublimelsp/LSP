@@ -540,7 +540,6 @@ def method_to_capability(method: str) -> tuple[str, str]:
     Given a method, returns the corresponding capability path, and the associated path to stash the registration key.
 
     Examples:
-
         textDocument/definition --> (definitionProvider, definitionProvider.id)
         textDocument/references --> (referencesProvider, referencesProvider.id)
         textDocument/didOpen --> (textDocumentSync.didOpen, textDocumentSync.didOpen.id)

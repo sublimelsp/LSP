@@ -849,7 +849,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if len(actions) > 1:
                 if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
-                        map(lambda action: (config_name, action), actions))
+                        (config_name, action) for action in actions)
                     window.show_quick_panel(
                         items,
                         lambda i: self.handle_code_action_select(config_name, actions, i),

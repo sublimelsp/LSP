@@ -73,7 +73,6 @@ ignore = [
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
     "BLE",  # https://docs.astral.sh/ruff/rules/blind-except/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/
-    "C417",  # https://docs.astral.sh/ruff/rules/unnecessary-map/
     "C901",  # https://docs.astral.sh/ruff/rules/complex-structure/
     "COM812",  # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "CPY001",  # https://docs.astral.sh/ruff/rules/missing-copyright-notice/

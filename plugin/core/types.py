@@ -533,7 +533,7 @@ def method2attr(method: str) -> str:
     # window/messageRequest -> m_window_messageRequest
     # $/progress -> m___progress
     # client/registerCapability -> m_client_registerCapability
-    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
+    return 'm_' + ''.join(c if c.isalpha() else '_' for c in method)
 
 
 def method_to_capability(method: str) -> tuple[str, str]:

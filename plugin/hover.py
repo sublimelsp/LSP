@@ -198,8 +198,9 @@ class LspHoverCommand(LspTextCommand):
     def _on_all_document_links_resolved(
         self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
     ) -> None:
-        self._document_links = list(filter(None, links))
-        self.show_hover(listener, point, only_diagnostics=False)
+        if document_links := list(filter(None, links)):
+            self._document_links = document_links
+            self.show_hover(listener, point, only_diagnostics=False)
 
     def _filter_code_actions(
         self, config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
@@ -225,8 +226,9 @@ class LspHoverCommand(LspTextCommand):
         point: int,
         responses: list[tuple[str, list[Command | CodeAction]]]
     ) -> None:
-        self._actions_by_config = {config_name: code_actions for config_name, code_actions in responses if code_actions}
-        self.show_hover(listener, point, only_diagnostics=False)
+        if actions := {config_name: code_actions for config_name, code_actions in responses if code_actions}:
+            self._actions_by_config = actions
+            self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
         return bool(listener.session_async(f'{link.lsp_name}Provider'))

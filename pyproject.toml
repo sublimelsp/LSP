@@ -83,10 +83,9 @@ ignore = [
     "D104",  # https://docs.astral.sh/ruff/rules/undocumented-public-package/
     "D105",  # https://docs.astral.sh/ruff/rules/undocumented-magic-method/
     "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
-    "D203",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
+    "D203",  # https://docs.astral.sh/ruff/rules/incorrect-blank-line-before-class/
     "D205",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
     "D209",  # https://docs.astral.sh/ruff/rules/new-line-after-last-paragraph/
-    "D210",  # https://docs.astral.sh/ruff/rules/surrounding-whitespace/
     "D212",  # https://docs.astral.sh/ruff/rules/multi-line-summary-first-line/
     "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
     "D300",  # https://docs.astral.sh/ruff/rules/triple-single-quotes/

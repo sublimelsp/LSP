@@ -28,7 +28,7 @@ WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY = 3000
 
 
 class DiagnosticsStorage:
-    """ Per session storage for diagnostics from pull diangostics streams and from publishDiagnostics notifications. """
+    """Per session storage for diagnostics from pull diangostics streams and from publishDiagnostics notifications."""
 
     def __init__(self) -> None:
         self._providers: dict[str | None, DiagnosticOptions | DiagnosticRegistrationOptions] = {}

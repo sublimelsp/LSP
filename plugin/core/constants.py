@@ -70,7 +70,7 @@ class RequestFlags(IntFlag):
 
 
 class RegionKey(StrEnum):
-    """ Key names for use with the `View.add_regions` method. """
+    """Key names for use with the `View.add_regions` method."""
 
     CODE_ACTION = 'lsp_code_action'
     DOCUMENT_LINK = 'lsp_document_link'

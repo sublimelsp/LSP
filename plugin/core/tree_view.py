@@ -105,18 +105,18 @@ class TreeDataProvider(metaclass=ABCMeta):
 
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:
-        """ Implement this to return the children for the given element or root (if no element is passed). """
+        """Implement this to return the children for the given element or root (if no element is passed)."""
         raise NotImplementedError()
 
     @abstractmethod
     def get_tree_item(self, element: T) -> TreeItem:
-        """ Implement this to return the UI representation (TreeItem) of the element that gets displayed in the
+        """Implement this to return the UI representation (TreeItem) of the element that gets displayed in the
         TreeViewSheet. """
         raise NotImplementedError()
 
 
 class TreeViewSheet(sublime.HtmlSheet):
-    """ A special HtmlSheet which can render interactive tree data structures. """
+    """A special HtmlSheet which can render interactive tree data structures."""
 
     def __init__(self, sheet_id: int, name: str, data_provider: TreeDataProvider, header: str = "") -> None:
         super().__init__(sheet_id)
@@ -131,7 +131,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         return 'TreeViewSheet(%r)' % self.sheet_id
 
     def set_provider(self, data_provider: TreeDataProvider, header: str = "") -> None:
-        """ Use this method if you want to render an entire new tree. This allows to reuse a single HtmlSheet, e.g. when
+        """Use this method if you want to render an entire new tree. This allows to reuse a single HtmlSheet, e.g. when
         using a feature consecutively on different symbols. """
         self.nodes.clear()
         self.root_nodes.clear()

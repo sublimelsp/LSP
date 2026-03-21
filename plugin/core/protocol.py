@@ -1,3 +1,4 @@
+# ruff: noqa: F405
 from __future__ import annotations
 
 from ...protocol import *  # For backward compatibility with LSP packages.  # noqa: F403

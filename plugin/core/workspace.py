@@ -99,8 +99,10 @@ class ProjectFolders:
         return True
 
     def includes_excluded_path(self, file_path: str) -> bool:
-        """Path is excluded if it's within one or more workspace folders and in at least one of the folders it's not
-        excluded using `folder_exclude_patterns`."""
+        """
+        Path is excluded if it's within one or more workspace folders and in at least one of the folders it's not
+        excluded using `folder_exclude_patterns`.
+        """
         if not self.folders:
             return False
         is_excluded = False

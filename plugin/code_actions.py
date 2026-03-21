@@ -283,7 +283,8 @@ class CodeActionsTaskBase(LspTask):
 
 @final
 class CodeActionsOnSaveTask(CodeActionsTaskBase):
-    """Request code actions from sessions before save and run them.
+    """
+    Request code actions from sessions before save and run them.
 
     The amount of time the task is allowed to run is defined by user-controlled setting. If the task
     runs longer, the native save will be triggered before waiting for results.

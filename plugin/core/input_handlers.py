@@ -23,7 +23,8 @@ P = ParamSpec('P')
 
 
 def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
-    """A decorator which debounces the calls to a function.
+    """
+    A decorator which debounces the calls to a function.
 
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
@@ -51,7 +52,8 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
 
 
 class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """A ListInputHandler which can preselect a value.
+    """
+    A ListInputHandler which can preselect a value.
 
     Subclasses of PreselectedListInputHandler must not implement the `list_items` method, but instead `get_list_items`,
     i.e. just prepend `get_` to the regular `list_items` method.
@@ -89,7 +91,8 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
 
 
 class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
-    """A ListInputHandler which can update its items while typing in the input field.
+    """
+    A ListInputHandler which can update its items while typing in the input field.
 
     Subclasses of DynamicListInputHandler must not implement the `list_items` method, but can override
     `get_list_items` for the initial list items. The `on_modified` method will be called after a small delay (debounced)

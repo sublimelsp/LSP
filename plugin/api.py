@@ -143,7 +143,8 @@ class APIHandler:
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
-    """Decorator to mark a method as a handler for a specific LSP notification.
+    """
+    Decorator to mark a method as a handler for a specific LSP notification.
 
     Usage:
         ```py
@@ -169,7 +170,8 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 def request_handler(
     method: str
 ) -> Callable[[Callable[[Any, P], Promise[R]]], Callable[[Any, P, int], Promise[Response[R]]]]:
-    """Decorator to mark a method as a handler for a specific LSP request.
+    """
+    Decorator to mark a method as a handler for a specific LSP request.
 
     Usage:
         ```py

@@ -168,7 +168,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("settings", "settings_path", "__weakref__")
+    __slots__ = ("settings", "settings_path", "__weakref__")  # pyright: ignore[reportUninitializedInstanceVariable]
 
     def __init__(
         self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]

@@ -770,6 +770,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
     is that QueryCompletionsTests has the completion item resolve capability enabled
     and the QueryCompletionsNoResolverTests has the resolve capability disabled
     '''
+
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())

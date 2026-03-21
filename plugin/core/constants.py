@@ -53,6 +53,7 @@ class RequestFlags(IntFlag):
     This is used for example to prioritize certain requests between different sessions in a multi-session configuration,
     and to mark some requests as pending for refresh in a given document.
     """
+
     NONE = 0
     DOCUMENT_COLOR = 1
     """ textDocument/documentColor """
@@ -70,6 +71,7 @@ class RequestFlags(IntFlag):
 
 class RegionKey(StrEnum):
     """ Key names for use with the `View.add_regions` method. """
+
     CODE_ACTION = 'lsp_code_action'
     DOCUMENT_LINK = 'lsp_document_link'
     HOVER_HIGHLIGHT = 'lsp_hover_highlight'

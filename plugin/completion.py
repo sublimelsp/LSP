@@ -187,6 +187,7 @@ class QueryCompletionsTask:
     All public methods must only be called on the async thread and the "on_done_async" callback will also be called
     on the async thread.
     """
+
     def __init__(
         self,
         view: sublime.View,

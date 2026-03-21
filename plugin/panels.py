@@ -74,6 +74,7 @@ class LspToggleLogPanelLinesLimitCommand(sublime_plugin.TextCommand):
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
     """A clear_panel command to clear the error panel."""
+
     def run(self, edit: sublime.Edit) -> None:
         with mutable(self.view):
             self.view.erase(edit, sublime.Region(0, self.view.size()))

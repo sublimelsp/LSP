@@ -95,7 +95,7 @@ T = TypeVar("T")
 
 
 def diff(old: Iterable[T], new: Iterable[T]) -> tuple[set[T], set[T]]:
-    """Return a tuple of (added, removed) items"""
+    """Return a tuple of (added, removed) items."""
     old_set = old if isinstance(old, set) else set(old)
     new_set = new if isinstance(new, set) else set(new)
     added = new_set - old_set
@@ -398,7 +398,7 @@ class Settings:
         return None
 
     def diagnostics_highlight_style_flags(self) -> list[sublime.RegionFlags | None]:
-        """Returns flags for highlighting diagnostics on single lines per severity"""
+        """Returns flags for highlighting diagnostics on single lines per severity."""
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
@@ -431,9 +431,10 @@ class ClientStates:
 
 class DocumentFilter_:
     """
-    A document filter denotes a document through properties like language, scheme or pattern. An example is a filter
-    that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
-    package.json:
+    A document filter denotes a document through properties like language, scheme or pattern.
+
+    An example is a filter that applies to TypeScript files on disk. Another example is a filter that applies to JSON
+    files with name package.json:
 
         { "language": "typescript", scheme: "file" }
         { "language": "json", "pattern": "**/package.json" }
@@ -556,7 +557,7 @@ def method_to_capability(method: str) -> tuple[str, str]:
 
 
 def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind | None) -> dict[str, Any]:
-    """Brings legacy text sync capabilities to the most modern format"""
+    """Brings legacy text sync capabilities to the most modern format."""
     result: dict[str, Any] = {}
     if isinstance(textsync, int):
         change = {"syncKind": textsync}
@@ -594,7 +595,7 @@ def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind
 
 class Capabilities(DottedDict):
     """
-    Maintains static and dynamic capabilities
+    Maintains static and dynamic capabilities.
 
     Static capabilities come from a response to the initialize request (from Client -> Server).
     Dynamic capabilities can be registered at any moment with client/registerCapability and client/unregisterCapability

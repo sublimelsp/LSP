@@ -88,7 +88,7 @@ def open_file(
     """
     Open a file asynchronously.
     It is only safe to call this function from the UI thread.
-    The provided uri MUST be a file URI
+    The provided uri MUST be a file URI.
     """
     file = parse_uri(uri)[1]
     # window.open_file brings the file to focus if it's already opened, which we don't want (unless it's supposed
@@ -130,7 +130,7 @@ def open_resource(window: sublime.Window, uri: DocumentUri, group: int = -1) -> 
     """
     Open a resource file.
     It is only safe to call this function from the UI thread.
-    The provided uri MUST be a res URI
+    The provided uri MUST be a res URI.
     """
     prefix = 'res:/Packages/'
     if not uri.startswith(prefix):

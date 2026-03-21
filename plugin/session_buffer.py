@@ -256,7 +256,7 @@ class SessionBuffer:
     @property
     @deprecated("Use get_language_id() instead")
     def language_id(self) -> str:
-        """Deprecated: use get_language_id"""
+        """Deprecated: use get_language_id."""
         return self.get_language_id() or ""
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:

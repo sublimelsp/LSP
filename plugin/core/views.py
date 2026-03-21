@@ -232,7 +232,7 @@ def get_uri_and_position_from_location(location: Location | LocationLink) -> tup
 
 
 def location_to_encoded_filename(location: Location | LocationLink) -> str:
-    """DEPRECATED"""
+    """DEPRECATED."""
     uri, position = get_uri_and_position_from_location(location)
     scheme, parsed = parse_uri(uri)
     if scheme == "file":
@@ -789,7 +789,7 @@ def location_to_human_readable(
     base_dir: str | None,
     location: Location | LocationLink
 ) -> str:
-    """Format an LSP Location (or LocationLink) into a string suitable for a human to read"""
+    """Format an LSP Location (or LocationLink) into a string suitable for a human to read."""
     uri, position = get_uri_and_position_from_location(location)
     scheme, _ = parse_uri(uri)
     if scheme == "file":
@@ -808,7 +808,7 @@ def location_to_human_readable(
 
 
 def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
-    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml"""
+    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml."""
     uri, position = get_uri_and_position_from_location(location)
     return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
 

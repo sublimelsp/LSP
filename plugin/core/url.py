@@ -19,7 +19,7 @@ def normalize_uri(uri: DocumentUri) -> DocumentUri:
 
 
 def filename_to_uri(file_name: str) -> str:
-    """Convert a file name obtained from view.file_name() into an URI"""
+    """Convert a file name obtained from view.file_name() into an URI."""
     prefix = ST_INSTALLED_PACKAGES_PATH
     if file_name.startswith(prefix):
         return _to_resource_uri(file_name, prefix)

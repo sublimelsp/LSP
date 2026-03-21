@@ -45,7 +45,7 @@ def _translate_description(translations: dict[str, str] | None, descr: str) -> t
 
 def _preprocess_properties(translations: dict[str, str] | None, properties: dict[str, Any]) -> None:
     """
-    Preprocess the server settings from a package.json file:
+    Preprocess the server settings from a package.json file.
 
     - Replace description translation placeholders by their English translation
     - Discard the "scope" key

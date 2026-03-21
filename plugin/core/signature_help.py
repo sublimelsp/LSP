@@ -95,7 +95,7 @@ class SigHelp:
         return self._state
 
     def has_multiple_signatures(self) -> bool:
-        """Does the current signature help state contain more than one overload?"""
+        """Check if the current signature help state contain more than one overload."""
         return len(self._signatures) > 1
 
     def select_signature(self, forward: bool) -> None:

@@ -295,6 +295,7 @@ class AbstractPlugin(APIHandler, ABC):
     def storage_path(cls) -> str:
         """
         The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
+
         You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
         ```python

@@ -144,7 +144,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_var_prefix_added_in_insertText(self) -> Generator:
         """
-        https://github.com/sublimelsp/LSP/issues/294
+        https://github.com/sublimelsp/LSP/issues/294.
 
         User types '$env:U', server replaces '$env:U' with '$env:USERPROFILE'
         """
@@ -174,7 +174,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_pure_insertion_text_edit(self) -> Generator:
         """
-        https://github.com/sublimelsp/LSP/issues/368
+        https://github.com/sublimelsp/LSP/issues/368.
 
         User types '$so', server returns pure insertion completion 'meParam', completing it to '$someParam'.
 
@@ -203,7 +203,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="$someParam")
 
     def test_space_added_in_label(self) -> Generator:
-        """Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)"""
+        """Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)."""
         yield from self.verify(
             completion_items=[{
                 "label": " const",
@@ -232,7 +232,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_dash_missing_from_label(self) -> Generator:
         """
-        Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId"
+        Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId".
 
         (https://github.com/sublimelsp/LSP/issues/572)
         """
@@ -263,7 +263,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="-UniqueId")
 
     def test_edit_before_cursor(self) -> Generator:
-        """https://github.com/sublimelsp/LSP/issues/536"""
+        """https://github.com/sublimelsp/LSP/issues/536."""
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
@@ -296,7 +296,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text='override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> Generator:
-        """https://github.com/sublimelsp/LSP/issues/645"""
+        """https://github.com/sublimelsp/LSP/issues/645."""
         yield from self.verify(
             completion_items=[{
                 "textEdit": {
@@ -328,7 +328,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def test_filter_text_is_not_a_prefix_of_label(self) -> Generator:
         """
-        Metals: "Implement all members"
+        Metals: "Implement all members".
 
         The filterText is 'e', so when the user types 'e', one of the completion items should be
         "Implement all members".
@@ -768,7 +768,7 @@ class QueryCompletionsNoResolverTests(CompletionsTestsBase):
     """
     The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
     is that QueryCompletionsTests has the completion item resolve capability enabled
-    and the QueryCompletionsNoResolverTests has the resolve capability disabled
+    and the QueryCompletionsNoResolverTests has the resolve capability disabled.
     """
 
     @classmethod

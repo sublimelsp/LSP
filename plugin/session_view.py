@@ -177,7 +177,7 @@ class SessionView:
         self._diagnostic_annotations.initialize_region_keys()
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
-        '''Remove all of our modifications to the view's "auto_complete_triggers"'''
+        """Remove all of our modifications to the view's "auto_complete_triggers"."""
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
             triggers = [t for t in triggers if isinstance(t, dict) and self.session.config.name != t.get("server", "")]

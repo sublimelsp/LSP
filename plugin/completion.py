@@ -146,7 +146,7 @@ def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
 
 
 def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItemDefaults) -> CompletionItem:
-    """Currently supports defaults for: ["editRange", "insertTextFormat", "data"]"""
+    """Currently supports defaults for: ["editRange", "insertTextFormat", "data"]."""
     if not item_defaults:
         return item
     default_text_edit: TextEdit | InsertReplaceEdit | None = None

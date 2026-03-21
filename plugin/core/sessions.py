@@ -252,7 +252,7 @@ class Manager(metaclass=ABCMeta):
 
     @abstractmethod
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
-        """Should the diagnostics for this URI be shown in the view? Return a reason why not"""
+        """Should the diagnostics for this URI be shown in the view? Return a reason why not."""
 
     # Mutators
 
@@ -1036,7 +1036,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
-        """It is only safe to iterate over this in the async thread"""
+        """It is only safe to iterate over this in the async thread."""
         yield from self._session_views
 
     def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:
@@ -1088,7 +1088,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self._session_buffers.discard(sb)
 
     def session_buffers_async(self) -> Generator[SessionBufferProtocol, None, None]:
-        """It is only safe to iterate over this in the async thread"""
+        """It is only safe to iterate over this in the async thread."""
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> SessionBufferProtocol | None:
@@ -2022,7 +2022,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     @notification_handler('$/progress')
     def on_progress(self, params: ProgressParams) -> None:
-        """handles the $/progress notification"""
+        """handles the $/progress notification."""
         token = params['token']
         value = params['value']
         # Partial Result Progress

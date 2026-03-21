@@ -95,9 +95,7 @@ T = TypeVar("T")
 
 
 def diff(old: Iterable[T], new: Iterable[T]) -> tuple[set[T], set[T]]:
-    """
-    Return a tuple of (added, removed) items
-    """
+    """Return a tuple of (added, removed) items"""
     old_set = old if isinstance(old, set) else set(old)
     new_set = new if isinstance(new, set) else set(new)
     added = new_set - old_set
@@ -558,9 +556,7 @@ def method_to_capability(method: str) -> tuple[str, str]:
 
 
 def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind | None) -> dict[str, Any]:
-    """
-    Brings legacy text sync capabilities to the most modern format
-    """
+    """Brings legacy text sync capabilities to the most modern format"""
     result: dict[str, Any] = {}
     if isinstance(textsync, int):
         change = {"syncKind": textsync}

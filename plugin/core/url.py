@@ -19,9 +19,7 @@ def normalize_uri(uri: DocumentUri) -> DocumentUri:
 
 
 def filename_to_uri(file_name: str) -> str:
-    """
-    Convert a file name obtained from view.file_name() into an URI
-    """
+    """Convert a file name obtained from view.file_name() into an URI"""
     prefix = ST_INSTALLED_PACKAGES_PATH
     if file_name.startswith(prefix):
         return _to_resource_uri(file_name, prefix)
@@ -77,9 +75,7 @@ def parse_uri(uri: str) -> tuple[str, str]:
 
 
 def unparse_uri(parsed_uri: tuple[str, str]) -> str:
-    """
-    Reverse of `parse_uri()`.
-    """
+    """Reverse of `parse_uri()`."""
     scheme, path = parsed_uri
     return filename_to_uri(path) if scheme == "file" else path
 
@@ -94,7 +90,5 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 
 
 def _uppercase_driveletter(match: Any) -> str:
-    """
-    For compatibility with Sublime's VCS status in the status bar.
-    """
+    """For compatibility with Sublime's VCS status in the status bar."""
     return f"{match.group(1).upper()}:"

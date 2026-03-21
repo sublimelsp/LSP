@@ -232,9 +232,7 @@ def get_uri_and_position_from_location(location: Location | LocationLink) -> tup
 
 
 def location_to_encoded_filename(location: Location | LocationLink) -> str:
-    """
-    DEPRECATED
-    """
+    """DEPRECATED"""
     uri, position = get_uri_and_position_from_location(location)
     scheme, parsed = parse_uri(uri)
     if scheme == "file":
@@ -791,9 +789,7 @@ def location_to_human_readable(
     base_dir: str | None,
     location: Location | LocationLink
 ) -> str:
-    """
-    Format an LSP Location (or LocationLink) into a string suitable for a human to read
-    """
+    """Format an LSP Location (or LocationLink) into a string suitable for a human to read"""
     uri, position = get_uri_and_position_from_location(location)
     scheme, _ = parse_uri(uri)
     if scheme == "file":
@@ -812,17 +808,13 @@ def location_to_human_readable(
 
 
 def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
-    """
-    Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml
-    """
+    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml"""
     uri, position = get_uri_and_position_from_location(location)
     return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
 
 
 def unpack_href_location(href: str) -> tuple[str, str, int, int]:
-    """
-    Return the session name, URI, row, and col_utf16 from an encoded href.
-    """
+    """Return the session name, URI, row, and col_utf16 from an encoded href."""
     session_name, uri_with_fragment = href[len("location:"):].split("@")
     uri, fragment = uri_with_fragment.split("#")
     row, col_utf16 = map(int, fragment.split(","))
@@ -830,9 +822,7 @@ def unpack_href_location(href: str) -> tuple[str, str, int, int]:
 
 
 def is_location_href(href: str) -> bool:
-    """
-    Check whether this href is an encoded location.
-    """
+    """Check whether this href is an encoded location."""
     return href.startswith("location:")
 
 

@@ -203,9 +203,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="$someParam")
 
     def test_space_added_in_label(self) -> Generator:
-        """
-        Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
-        """
+        """Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)"""
         yield from self.verify(
             completion_items=[{
                 "label": " const",
@@ -265,9 +263,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text="-UniqueId")
 
     def test_edit_before_cursor(self) -> Generator:
-        """
-        https://github.com/sublimelsp/LSP/issues/536
-        """
+        """https://github.com/sublimelsp/LSP/issues/536"""
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
@@ -300,9 +296,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
             expected_text='override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> Generator:
-        """
-        https://github.com/sublimelsp/LSP/issues/645
-        """
+        """https://github.com/sublimelsp/LSP/issues/645"""
         yield from self.verify(
             completion_items=[{
                 "textEdit": {

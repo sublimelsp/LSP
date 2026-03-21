@@ -428,9 +428,7 @@ class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
 
 
 class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
-    """
-    Very basic command to dump all of the window's resolved configurations.
-    """
+    """Very basic command to dump all of the window's resolved configurations."""
 
     def run(self) -> None:
         wm = windows.lookup(self.window)
@@ -446,9 +444,7 @@ class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
 
 
 class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
-    """
-    Very basic command to dump the current view's static and dynamically registered capabilities.
-    """
+    """Very basic command to dump the current view's static and dynamically registered capabilities."""
 
     def run(self, edit: sublime.Edit) -> None:
         wm = windows.lookup(self.view.window())

@@ -90,9 +90,7 @@ class SigHelp:
         return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
-        """
-        Extract the state out of this state machine to send back to the language server.
-        """
+        """Extract the state out of this state machine to send back to the language server."""
         self._state["activeSignature"] = self._active_signature_index
         return self._state
 

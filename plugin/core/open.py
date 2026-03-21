@@ -161,9 +161,7 @@ def open_in_browser(uri: str) -> None:
 
 
 def open_externally(uri: str) -> bool:
-    """
-    A blocking function that invokes the OS's "open with default extension"
-    """
+    """A blocking function that invokes the OS's `open with default extension`."""
     try:
         if ST_PLATFORM == "windows":
             os.startfile(uri)  # type: ignore

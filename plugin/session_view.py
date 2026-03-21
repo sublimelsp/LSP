@@ -43,9 +43,7 @@ class TagData:
 
 
 class SessionView:
-    """
-    Holds state per session per view.
-    """
+    """Holds state per session per view."""
 
     HOVER_PROVIDER_KEY = "hoverProvider"
     AC_TRIGGERS_KEY = "auto_complete_triggers"

@@ -286,9 +286,7 @@ class AbstractPlugin(APIHandler, ABC):
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
-        """
-        In addition to the above variables, add more variables here to be expanded.
-        """
+        """In addition to the above variables, add more variables here to be expanded."""
         return None
 
     @classmethod
@@ -494,15 +492,11 @@ class AbstractPlugin(APIHandler, ABC):
         return False
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """
-        Called when the context of the session buffer has changed or a new buffer was opened.
-        """
+        """Called when the context of the session buffer has changed or a new buffer was opened."""
         pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
-        """
-        Called after the selection has been modified in a view (debounced).
-        """
+        """Called after the selection has been modified in a view (debounced)."""
         pass
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:

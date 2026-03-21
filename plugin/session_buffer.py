@@ -859,7 +859,7 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = dict()
+        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = {}
         prev_line = 0
         prev_col_utf16 = 0
         types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))

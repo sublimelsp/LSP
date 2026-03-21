@@ -73,7 +73,6 @@ ignore = [
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
     "BLE",  # https://docs.astral.sh/ruff/rules/blind-except/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/
-    "C408",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
     "C413",  # https://docs.astral.sh/ruff/rules/unnecessary-call-around-sorted/
     "C414",  # https://docs.astral.sh/ruff/rules/unnecessary-double-cast-or-process/
     "C416",  # https://docs.astral.sh/ruff/rules/unnecessary-comprehension/

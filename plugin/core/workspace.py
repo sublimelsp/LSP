@@ -140,9 +140,9 @@ def sorted_workspace_folders(folders: list[str], file_path: str) -> list[Workspa
 def enable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = True
         window.set_project_data(project_data)
     else:
@@ -153,9 +153,9 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
 def disable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = False
         window.set_project_data(project_data)
     else:

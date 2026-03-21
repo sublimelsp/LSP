@@ -2022,7 +2022,6 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     @notification_handler('$/progress')
     def on_progress(self, params: ProgressParams) -> None:
-        """handles the $/progress notification."""
         token = params['token']
         value = params['value']
         # Partial Result Progress

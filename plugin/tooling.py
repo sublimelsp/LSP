@@ -246,7 +246,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "properties": {
                                         "settings": {
                                             "additionalProperties": False,
-                                            "properties": {k: v for k, v in properties.items()}
+                                            "properties": dict(properties.items())
                                         }
                                     },
                                 },

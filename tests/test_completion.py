@@ -765,11 +765,11 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
 
 class QueryCompletionsNoResolverTests(CompletionsTestsBase):
-    '''
+    """
     The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
     is that QueryCompletionsTests has the completion item resolve capability enabled
     and the QueryCompletionsNoResolverTests has the resolve capability disabled
-    '''
+    """
 
     @classmethod
     def get_test_server_capabilities(cls) -> dict:

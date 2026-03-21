@@ -138,10 +138,10 @@ class InvalidUriSchemeException(Exception):
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
-    '''
+    """
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
-    '''
+    """
     if view := window.find_open_file(file_name):
         # get from buffer
         point = view.text_point(row, 0)

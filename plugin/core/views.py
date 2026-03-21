@@ -62,7 +62,6 @@ from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -80,7 +79,6 @@ if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
 
 
-ChangeEventAction = Literal['cut', 'paste', 'redo', 'undo', 'type']
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501

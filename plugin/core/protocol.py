@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...protocol import *  # For backward compatibility with LSP packages.
+from ...protocol import *  # For backward compatibility with LSP packages.  # noqa: F403
 from functools import total_ordering
 from typing import Any
 from typing import Callable

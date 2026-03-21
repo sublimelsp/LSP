@@ -71,8 +71,7 @@ ignore = [
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
-    "C400",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
+    "BLE",  # https://docs.astral.sh/ruff/rules/blind-except/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/
     "C405",  # https://docs.astral.sh/ruff/rules/unnecessary-literal-set/
     "C408",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/

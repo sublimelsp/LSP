@@ -290,11 +290,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             )
             self._new_session = session
         except Exception as e:
-            message = "".join((
-                "Failed to start {0} - disabling for this window for the duration of the current session.\n",
-                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
-                "\n\n--- Error: ---\n{1}"
-            )).format(config.name, str(e))
+            message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
+                        'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
+                       f'Palette.\n\n--- Error: ---\n{e}')
             exception_log(f"Unable to start subprocess for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
@@ -393,12 +391,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             config = session.config
             restart = self._config_manager.record_crash(config.name, exit_code, exception)
             if not restart:
-                msg = "".join((
-                    "The {0} server has crashed {1} times in the last {2} seconds.\n\n",
-                    "You can try to Restart it or you can choose Cancel to disable it for this window for the ",
-                    "duration of the current session. ",
-                    "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-                )).format(config.name, RETRY_MAX_COUNT, int(RETRY_COUNT_TIMEDELTA.total_seconds()))
+                msg = (f'The {config.name} server has crashed {RETRY_MAX_COUNT} times in the last '
+                       f'{int(RETRY_COUNT_TIMEDELTA.total_seconds())} seconds.\n\nYou can try to Restart it or you can '
+                        'choose Cancel to disable it for this window for the duration of the current session. '
+                        'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
                     msg += f"\n\n--- Error: ---\n{str(exception)}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")

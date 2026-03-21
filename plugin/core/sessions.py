@@ -200,7 +200,7 @@ def decode_semantic_token(
     token_modifiers_encoded: int
 ) -> tuple[str, list[str], str | None]:
     """
-    This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
+    Converts the token type and token modifiers from encoded numbers into names, based on the legend from
     the server. It also returns the corresponding scope name, which will be used for the highlighting color, either
     derived from a predefined scope map if the token type is one of the types defined in the LSP specs, or from a scope
     for custom token types if it was added in the client configuration (will be `None` if no scope has been defined for

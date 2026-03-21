@@ -467,7 +467,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
 
     def verify_multi_cursor(self, completion: dict[str, Any]) -> Generator:
         """
-        This checks whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
+        Check whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
         Turning the `d` into an `m` is an important part of the test.
         """
         self.type('fd\nfd\nfd')

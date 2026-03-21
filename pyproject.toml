@@ -88,7 +88,6 @@ ignore = [
     "D205",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
     "D212",  # https://docs.astral.sh/ruff/rules/multi-line-summary-first-line/
     "D401",  # https://docs.astral.sh/ruff/rules/non-imperative-mood/
-    "D404",  # https://docs.astral.sh/ruff/rules/docstring-starts-with-this/
     "D412",  # https://docs.astral.sh/ruff/rules/blank-lines-between-header-and-content/
     "D413",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-last-section/
     "D415",  # https://docs.astral.sh/ruff/rules/missing-terminal-punctuation/

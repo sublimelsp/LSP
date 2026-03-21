@@ -410,7 +410,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
     def destroy(self) -> None:
         """
-        This is called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
+        Called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
         from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful.
         """
         self._end_sessions_async()

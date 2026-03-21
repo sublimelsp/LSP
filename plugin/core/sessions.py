@@ -206,7 +206,6 @@ def decode_semantic_token(
     for custom token types if it was added in the client configuration (will be `None` if no scope has been defined for
     the custom token type).
     """
-
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
         modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"

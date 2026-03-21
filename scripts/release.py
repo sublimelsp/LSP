@@ -58,7 +58,7 @@ def version_history() -> list[str]:
             if ext.lower() == '.txt':
                 yield basename
 
-    return sorted(tuple(generator()), key=parse_version)
+    return sorted(generator(), key=parse_version)
 
 
 def parse_version(version: str) -> tuple[int, int, int]:

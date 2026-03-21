@@ -192,7 +192,7 @@ def _sort_by_application_order(changes: Iterable[TextEditTuple]) -> list[TextEdi
     # So we sort by start position. But if multiple text edits start at the same position,
     # we use the index in the array as the key.
 
-    return list(sorted(changes, key=operator.itemgetter(0)))
+    return sorted(changes, key=operator.itemgetter(0))
 
 
 def prompt_for_workspace_edits(session: Session, response: WorkspaceEdit, label: str) -> Promise[bool]:

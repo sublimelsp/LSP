@@ -882,7 +882,7 @@ def _html_element(tag: str, content: str, *, class_name: str | None = None, esca
 @lru_cache
 def lightbulb_html(color: str) -> str:
     img = mdpopups.tint('Packages/LSP/icons/lightbulb_cropped.png', color)
-    return f'<span class="lightbulb" title="Preferred Quick Fix">{img}</span> '
+    return f' <span class="lightbulb" title="Preferred Quick Fix">{img}</span>'
 
 
 def format_diagnostics_for_html(
@@ -936,7 +936,7 @@ def format_diagnostic_for_html(
     for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
         icon = lightbulb_html(lightbulb_color) if code_action.get('isPreferred', False) else ''
         code_action_uri = encode_code_action_uri(code_action, config.name)
-        content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
+        content += '<hr>' + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action') + icon
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
     return html_wrapper(content, class_name=severity_class)
 

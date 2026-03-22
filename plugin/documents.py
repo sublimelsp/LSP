@@ -572,7 +572,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             diagnostics = self.get_diagnostics_async(self.view.line(point), userprefs().show_diagnostics_severity_level)
             code_actions = dict(self._code_actions_for_selection) \
                 if self._lightbulb_line == self.view.rowcol(point)[0] else {}
-            content = format_diagnostics_for_html(diagnostics, code_actions, self.lightbulb_color)
+            base_dir = self._manager.get_project_path(filename) \
+                if self._manager and (filename := self.view.file_name()) else None
+            content = format_diagnostics_for_html(diagnostics, code_actions, self.lightbulb_color, base_dir)
             show_lsp_popup(
                 self.view,
                 content,

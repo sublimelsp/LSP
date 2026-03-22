@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import CodeAction
-from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlight
@@ -31,6 +29,7 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
 from .core.protocol import Request
@@ -47,12 +46,13 @@ from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
+from .core.url import CODE_ACTION_SCHEME
+from .core.url import decode_code_action_uri
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
-from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
 from .core.views import MarkdownLangMap
@@ -580,7 +580,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 content,
                 flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
                 location=point,
-                on_navigate=lambda href: self._on_navigate(href, point))
+                on_navigate=self._on_navigate)
+
+    def _on_navigate(self, href: str) -> None:
+        scheme = parse_uri(href)[0]
+        if scheme == 'subl':
+            pass
+        elif scheme == 'file':
+            if window := self.view.window():
+                open_file_uri(window, href)
+        elif scheme == CODE_ACTION_SCHEME:
+            session_name, action = decode_code_action_uri(href)
+            if session := self.session_by_name(session_name):
+                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
+            open_in_browser(href)
 
     @requires_session
     def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
@@ -822,36 +836,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(RegionKey.CODE_ACTION)
         self._lightbulb_line = None
-
-    def _on_navigate(self, href: str, point: int) -> None:
-        if href.startswith('code-actions:'):
-            _, config_name = href.split(":")
-            actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
-            if len(actions) > 1:
-                if window := self.view.window():
-                    items, selected_index = format_code_actions_for_quick_panel(
-                        map(lambda action: (config_name, action), actions))
-                    window.show_quick_panel(
-                        items,
-                        lambda i: self.handle_code_action_select(config_name, actions, i),
-                        selected_index=selected_index,
-                        placeholder="Code actions")
-            else:
-                self.handle_code_action_select(config_name, actions, 0)
-        elif href.startswith("http"):
-            open_in_browser(href)
-        else:
-            debug('on_navigate unhandled href:', href)
-
-    def handle_code_action_select(self, config_name: str, actions: list[Command | CodeAction], index: int) -> None:
-        if index == -1:
-            return
-
-        def run_async() -> None:
-            if session := self.session_by_name(config_name):
-                session.run_code_action_async(actions[index], progress=True, view=self.view)
-
-        sublime.set_timeout_async(run_async)
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 

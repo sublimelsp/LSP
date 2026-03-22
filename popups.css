@@ -103,9 +103,13 @@
 .actions a {
     text-decoration: none;
 }
+.lightbulb {
+    position: relative;
+    bottom: -2px;
+}
 .lightbulb img {
-    width: 0.9rem;
-    height: 0.9rem;
+    width: 1.1rem;
+    height: 1.1rem;
 }
 a.copy-icon {
     padding: 0.5rem;

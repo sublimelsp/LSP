@@ -887,7 +887,7 @@ def lightbulb_html(color: str, star: bool) -> str:
     else:
         img = 'Packages/LSP/icons/lightbulb-32.png'
         tooltip = 'Quick Fix'
-    return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span> '
+    return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
 
 
 def format_diagnostics_for_html(

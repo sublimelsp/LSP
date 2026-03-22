@@ -20,10 +20,7 @@
   // specific (from LSP or Sublime settings).
   //
   // Only "source.*" actions are supported.
-  "lsp_code_actions_on_save": {
-    // "source.fixAll": true,
-    // "source.organizeImports": true,
-  },
+  "lsp_code_actions_on_save": {},
 
   // The dictionary of your configured language servers or overrides for
   // existing configurations. The keys of this dictionary are free-form. They

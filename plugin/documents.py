@@ -584,9 +584,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_navigate(self, href: str) -> None:
         scheme = parse_uri(href)[0]
-        if scheme == 'subl':
-            pass
-        elif scheme == 'file':
+        if scheme == 'file':
             if window := self.view.window():
                 open_file_uri(window, href)
         elif scheme == CODE_ACTION_SCHEME:

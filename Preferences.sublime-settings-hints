@@ -22,6 +22,21 @@
   // Only "source.*" actions are supported.
   "lsp_code_actions_on_save": {},
 
+  // A dictionary of code action identifiers that should be triggered on format.
+  //
+  // These will also be triggered when `lsp_format_on_save` is enabled.
+  // Code action identifiers are not officially standardized so refer to specific
+  // server's documentation on what is supported but `source.fixAll` is commonly
+  // used to apply fix-on-format code actions.
+  //
+  // This option is also supported in syntax-specific settings and/or in the
+  // "settings" section of project files. Settings from all those places will be
+  // merged and more specific (syntax and project) settings will override less
+  // specific (from LSP or Sublime settings).
+  //
+  // Only "source.*" actions are supported.
+  "lsp_code_actions_on_format": {},
+
   // The dictionary of your configured language servers or overrides for
   // existing configurations. The keys of this dictionary are free-form. They
   // give a humany-friendly name to the server configuration. They are shown

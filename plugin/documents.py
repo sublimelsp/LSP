@@ -17,6 +17,7 @@ from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
+from .core.constants import ChangeEventAction
 from .core.constants import CODE_ACTION_ANNOTATION_SCOPE
 from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
@@ -48,7 +49,6 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import parse_uri
 from .core.url import view_to_uri
-from .core.views import ChangeEventAction
 from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
@@ -82,7 +82,6 @@ from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import itertools
-import mdpopups
 import sublime
 import sublime_plugin
 import weakref
@@ -136,7 +135,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self) -> None:
         super().__init__()
         self.view_listeners: WeakSet[DocumentSyncListener] = WeakSet()
-        self._last_edit_action: ChangeEventAction = 'type'
+        self._last_edit_action: ChangeEventAction = ChangeEventAction.TYPE
 
     def attach(self, buffer: sublime.Buffer) -> None:
         super().attach(buffer)
@@ -175,7 +174,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         sublime.set_timeout(self._reset_last_edit_action)
 
     def _reset_last_edit_action(self) -> None:
-        self._last_edit_action = 'type'
+        self._last_edit_action = ChangeEventAction.TYPE
 
     def __repr__(self) -> str:
         return f"TextChangeListener({self.buffer.buffer_id})"
@@ -262,10 +261,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         sublime.set_timeout_async(self.on_activated_async)
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
-
-    @property
-    def lightbulb_html(self) -> str:
-        return self._lightbulb_html
 
     def on_post_move_window_async(self) -> None:
         if self._registered and self._manager:
@@ -607,7 +602,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 on_navigate=lambda href: self._on_navigate(href, point))
 
     @requires_session
-    def on_text_command(self, command_name: str, args: dict | None) -> tuple[str, dict] | None:
+    def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:
@@ -832,7 +827,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:  # 'annotation'
             title = f'{action_count} code actions' if action_count > 1 else first_action_title
             code_actions_link = make_link('code-actions:', title)
-            annotations = [f"<div class=\"actions\" style=\"font-family:system\">{code_actions_link}</div>"]
+            annotations = [f'<div class="actions" style="font-family:system">{code_actions_link}</div>']
             annotation_color = self._code_action_annotation_color
         self.view.add_regions(
             RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,
@@ -854,7 +849,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if len(actions) > 1:
                 if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
-                        map(lambda action: (config_name, action), actions))
+                        (config_name, action) for action in actions)
                     window.show_quick_panel(
                         items,
                         lambda i: self.handle_code_action_select(config_name, actions, i),
@@ -1147,6 +1142,4 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _update_styles(self) -> None:
         self._code_action_annotation_color = self.view.style_for_scope(CODE_ACTION_ANNOTATION_SCOPE)['foreground']
         self._signature_help_style = self._get_signature_help_style()
-        lightbulb_img = mdpopups.tint(
-            'Packages/LSP/icons/lightbulb_cropped.png', self.view.style_for_scope(LIGHTBULB_SCOPE)['foreground'])
-        self._lightbulb_html = f'<span class="lightbulb">{lightbulb_img}</span>'
+        self.lightbulb_color = self.view.style_for_scope(LIGHTBULB_SCOPE)['foreground']

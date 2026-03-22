@@ -16,9 +16,7 @@ import sublime
 
 
 class LspExecuteCommand(LspTextCommand):
-    """
-    Helper command for triggering workspace/executeCommand requests.
-    """
+    """Helper command for triggering workspace/executeCommand requests."""
 
     def run(self,
             edit: sublime.Edit,

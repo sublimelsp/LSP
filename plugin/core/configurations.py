@@ -49,8 +49,9 @@ class WindowConfigManager:
 
     def match_view(self, view: sublime.View, workspace_folders: list[WorkspaceFolder]) -> Generator[ClientConfig]:
         """
-        Yields configurations where:
+        Yields matching configuration.
 
+        Matches if:
         - the configuration's "selector" matches with the view's base scope, and
         - the view's URI scheme is an element of the configuration's "schemes".
         """

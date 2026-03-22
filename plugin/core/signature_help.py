@@ -7,6 +7,7 @@ from .logging import debug
 from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
+from .views import html_wrapper
 from .views import MarkdownLangMap
 from .views import minihtml
 from typing import TypedDict
@@ -76,22 +77,25 @@ class SigHelp:
             signature = self._signatures[self._active_signature_index]
         except IndexError:
             return ""
-        formatted: list[str] = []
+        blocks: list[str] = []
         if self.has_multiple_signatures():
-            formatted.append(self._render_intro())
-        formatted.extend(self._render_label(signature))
-        formatted.extend(self._render_docs(view, signature))
-        return "".join(formatted)
+            blocks.append(self._render_intro())
+        blocks.append(self._render_label(signature))
+        if parameter_doc := self._parameter_documentation(view, signature):
+            blocks.append(parameter_doc)
+        formatted = [html_wrapper(''.join(blocks))]
+        if signature_doc := self._signature_documentation(view, signature):
+            formatted.append('<hr class="m-0">')
+            formatted.append(html_wrapper(''.join(signature_doc)))
+        return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
-        """
-        Extract the state out of this state machine to send back to the language server.
-        """
+        """Extract the state out of this state machine to send back to the language server."""
         self._state["activeSignature"] = self._active_signature_index
         return self._state
 
     def has_multiple_signatures(self) -> bool:
-        """Does the current signature help state contain more than one overload?"""
+        """Check if the current signature help state contain more than one overload."""
         return len(self._signatures) > 1
 
     def select_signature(self, forward: bool) -> None:
@@ -100,18 +104,12 @@ class SigHelp:
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
     def _render_intro(self) -> str:
-        fmt = '<p><div style="font-size: 0.9rem"><b>{}</b> of <b>{}</b> overloads ' + \
-              '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide):</div></p>'
-        return fmt.format(
-            self._active_signature_index + 1,
-            len(self._signatures),
-        )
+        return '<p class="signature-help-intro">' + \
+               f'<b>{self._active_signature_index + 1}</b> of <b>{len(self._signatures)}</b> overloads ' + \
+               '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide)</p>'
 
-    def _render_label(self, signature: SignatureInformation) -> list[str]:
+    def _render_label(self, signature: SignatureInformation) -> str:
         formatted: list[str] = []
-        # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
-        # its output style, we must update this literal string accordingly.
-        formatted.append('<div class="highlight"><pre>')
         label = signature["label"]
         if parameters := signature.get("parameters"):
             prev, start, end = 0, 0, 0
@@ -141,20 +139,7 @@ class SigHelp:
                 formatted.append(self._function(label[end:]))
         else:
             formatted.append(self._function(label))
-        formatted.append("</pre></div>")
-        return formatted
-
-    def _render_docs(self, view: sublime.View, signature: SignatureInformation) -> list[str]:
-        formatted: list[str] = []
-        if docs := self._parameter_documentation(view, signature):
-            formatted.append(docs)
-        if docs := self._signature_documentation(view, signature):
-            if formatted:
-                formatted.append("<hr/>")
-            formatted.append('<div style="font-size: 0.9rem">')
-            formatted.append(docs)
-            formatted.append('</div>')
-        return formatted
+        return f'<div class="highlight">{"".join(formatted)}</div>'
 
     def _parameter_documentation(self, view: sublime.View, signature: SignatureInformation) -> str | None:
         parameters = signature.get("parameters")

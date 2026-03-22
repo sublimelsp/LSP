@@ -27,7 +27,8 @@ PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 
 
 class Promise(Generic[T]):
-    """A simple implementation of the Promise specification.
+    """
+    A simple implementation of the Promise specification.
 
     See: https://promisesaplus.com
 
@@ -73,7 +74,8 @@ class Promise(Generic[T]):
 
     @staticmethod
     def resolve(resolve_value: S) -> Promise[S]:
-        """Immediately resolves a Promise.
+        """
+        Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
         resolved with the specified value.
@@ -137,7 +139,8 @@ class Promise(Generic[T]):
         return Promise.resolve([])
 
     def __init__(self, executor_func: ExecutorFunc[T]) -> None:
-        """Initialize Promise object.
+        """
+        Initialize Promise object.
 
         Arguments:
             executor_func: A function that is executed immediately by this Promise.
@@ -155,7 +158,8 @@ class Promise(Generic[T]):
         return 'Promise(<pending>)'
 
     def then(self, onfullfilled: FullfillFunc[T, TResult]) -> Promise[TResult]:
-        """Create a new promise and chain it with this promise.
+        """
+        Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
         value that this promise resolved with.
@@ -166,7 +170,8 @@ class Promise(Generic[T]):
             onfullfilled: The callback to call when this promise gets resolved.
         """
         def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: T) -> None:
-            """A wrapper called when this promise resolves.
+            """
+            A wrapper called when this promise resolves.
 
             Arguments:
                 resolve_fn: A resolve function of newly created promise.
@@ -181,7 +186,8 @@ class Promise(Generic[T]):
                 resolve_fn(result)
 
         def sync_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
-            """Call resolve_fn immediately with the resolved value.
+            """
+            Call resolve_fn immediately with the resolved value.
 
             A wrapper function that will immediately resolve resolve_fn with the
             resolved value of this promise.
@@ -189,7 +195,8 @@ class Promise(Generic[T]):
             callback_wrapper(resolve_fn, self._get_value())
 
         def async_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
-            """Queue resolve_fn to be called after this promise resolves later.
+            """
+            Queue resolve_fn to be called after this promise resolves later.
 
             A wrapper function that will resolve received resolve_fn when this promise
             resolves later.

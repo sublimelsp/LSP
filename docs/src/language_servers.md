@@ -50,6 +50,10 @@ Also see [Shell](#shell).
 
 Follow installation instructions on [LSP-Bicep](https://github.com/sublimelsp/LSP-Bicep).
 
+## Bitbake/Yocto
+
+Follow installation instructions on [LSP-bitbake](https://github.com/sublimelsp/LSP-bitbake).
+
 ## C/C++
 
 Follow installation instructions on [LSP-clangd](https://github.com/sublimelsp/LSP-clangd).

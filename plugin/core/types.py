@@ -18,7 +18,6 @@ from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -44,6 +43,7 @@ import posixpath
 import socket
 import sublime
 import time
+import weakref
 
 if TYPE_CHECKING:
     from .workspace import WorkspaceFolder
@@ -99,9 +99,7 @@ T = TypeVar("T")
 
 
 def diff(old: Iterable[T], new: Iterable[T]) -> tuple[set[T], set[T]]:
-    """
-    Return a tuple of (added, removed) items
-    """
+    """Return a tuple of (added, removed) items."""
     old_set = old if isinstance(old, set) else set(old)
     new_set = new if isinstance(new, set) else set(new)
     added = new_set - old_set
@@ -172,14 +170,20 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 
 
 class SettingsRegistration:
-    __slots__ = ("settings", "settings_path")
+    __slots__ = ("settings", "settings_path", "__weakref__")  # pyright: ignore[reportUninitializedInstanceVariable]
 
     def __init__(
         self, settings: sublime.Settings, settings_path: str, on_change: Callable[[SettingsRegistration], None]
     ) -> None:
         self.settings = settings
         self.settings_path = settings_path
-        settings.add_on_change("LSP", partial(on_change, self))
+        weak_self = weakref.ref(self)
+
+        def on_change_handler() -> None:
+            if _self := weak_self():
+                on_change(_self)
+
+        self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
         self.settings.clear_on_change("LSP")
@@ -404,7 +408,7 @@ class Settings:
         return None
 
     def diagnostics_highlight_style_flags(self) -> list[sublime.RegionFlags | None]:
-        """Returns flags for highlighting diagnostics on single lines per severity"""
+        """Returns flags for highlighting diagnostics on single lines per severity."""
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
@@ -418,7 +422,7 @@ class Settings:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
         else:
-            # Defaults are defined in DIAGNOSTIC_SEVERITY in plugin/core/views.py
+            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
             return [None] * 4  # default styling
 
 
@@ -437,9 +441,10 @@ class ClientStates:
 
 class DocumentFilter_:
     """
-    A document filter denotes a document through properties like language, scheme or pattern. An example is a filter
-    that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
-    package.json:
+    A document filter denotes a document through properties like language, scheme or pattern.
+
+    An example is a filter that applies to TypeScript files on disk. Another example is a filter that applies to JSON
+    files with name package.json:
 
         { "language": "typescript", scheme: "file" }
         { "language": "json", "pattern": "**/package.json" }
@@ -537,7 +542,7 @@ def method2attr(method: str) -> str:
     # window/messageRequest -> m_window_messageRequest
     # $/progress -> m___progress
     # client/registerCapability -> m_client_registerCapability
-    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
+    return 'm_' + ''.join(c if c.isalpha() else '_' for c in method)
 
 
 def method_to_capability(method: str) -> tuple[str, str]:
@@ -545,7 +550,6 @@ def method_to_capability(method: str) -> tuple[str, str]:
     Given a method, returns the corresponding capability path, and the associated path to stash the registration key.
 
     Examples:
-
         textDocument/definition --> (definitionProvider, definitionProvider.id)
         textDocument/references --> (referencesProvider, referencesProvider.id)
         textDocument/didOpen --> (textDocumentSync.didOpen, textDocumentSync.didOpen.id)
@@ -562,9 +566,7 @@ def method_to_capability(method: str) -> tuple[str, str]:
 
 
 def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind | None) -> dict[str, Any]:
-    """
-    Brings legacy text sync capabilities to the most modern format
-    """
+    """Brings legacy text sync capabilities to the most modern format."""
     result: dict[str, Any] = {}
     if isinstance(textsync, int):
         change = {"syncKind": textsync}
@@ -602,7 +604,7 @@ def normalize_text_sync(textsync: TextDocumentSyncOptions | TextDocumentSyncKind
 
 class Capabilities(DottedDict):
     """
-    Maintains static and dynamic capabilities
+    Maintains static and dynamic capabilities.
 
     Static capabilities come from a response to the initialize request (from Client -> Server).
     Dynamic capabilities can be registered at any moment with client/registerCapability and client/unregisterCapability
@@ -755,7 +757,8 @@ default_status_view_handler = DefaultViewStatusHandler()
 
 
 class ClientConfig:
-    """Represents the configuration for a language server.
+    """
+    Represents the configuration for a language server.
 
     Holds all settings needed to start and communicate with a language server, including the command to launch it, the
     file types it applies to, transport options, and LSP-level options such as initialization options and capability
@@ -875,7 +878,8 @@ class ClientConfig:
 
     @classmethod
     def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
-        """Create a ClientConfig from a Sublime Text `Settings` object.
+        """
+        Create a ClientConfig from a Sublime Text `Settings` object.
 
         Plugin-defined defaults are read from a resource path to the plugin's `.sublime-settings` file) and user
         overrides are layered on top from `Settings`.
@@ -931,7 +935,8 @@ class ClientConfig:
 
     @classmethod
     def from_dict(cls, name: str, d: dict[str, Any]) -> ClientConfig:
-        """Create a ClientConfig from a plain dictionary.
+        """
+        Create a ClientConfig from a plain dictionary.
 
         :param name: Unique server name.
         :param d: Dictionary of configuration values.
@@ -955,11 +960,11 @@ class ClientConfig:
             enabled=d.get("enabled", False),
             initialization_options=DottedDict(d.get("initialization_options", d.get("initializationOptions"))),
             settings=DottedDict(d.get("settings")),
-            env=d.get("env", dict()),
+            env=d.get("env", {}),
             experimental_capabilities=d.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=d.get("file_watcher", dict()),
-            semantic_tokens=d.get("semantic_tokens", dict()),
+            file_watcher=d.get("file_watcher", {}),
+            semantic_tokens=d.get("semantic_tokens", {}),
             diagnostics_mode=d.get("diagnostics_mode", "open_files"),
             path_maps=PathMap.parse(d.get("path_maps")),
             all_settings=d
@@ -967,7 +972,8 @@ class ClientConfig:
 
     @classmethod
     def from_config(cls, src_config: ClientConfig, override: dict[str, Any]) -> ClientConfig:
-        """Create a ClientConfig by applying overrides to an existing config.
+        """
+        Create a ClientConfig by applying overrides to an existing config.
 
         Values present in `override` take precedence over those in `src_config`. Structured
         values (`initialization_options`, `settings`) are deep-merged rather than replaced wholesale. The raw
@@ -1008,7 +1014,8 @@ class ClientConfig:
         )
 
     def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
-        """Build a :class:`TransportConfig` ready for starting the language server.
+        """
+        Build a :class:`TransportConfig` ready for starting the language server.
 
         Expands variables in the command arguments and environment, resolves the TCP port (including binding a listener
         socket when LSP is hosting the server), and returns the resulting transport configuration.
@@ -1050,7 +1057,8 @@ class ClientConfig:
         self._view_status_handler = handler
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
-        """Update the view status bar entry for this server.
+        """
+        Update the view status bar entry for this server.
 
         Shows `"<name> (<message>)"` when `message` is non-empty, or just `"<name>"` otherwise. Does nothing (and erases
         any existing entry) when `show_view_status` is disabled in `LSP.sublime-settings`.
@@ -1061,7 +1069,8 @@ class ClientConfig:
         self._view_status_handler.on_view_status_changed(self.name, view, message)
 
     def erase_view_status(self, view: sublime.View) -> None:
-        """Remove this server's entry from the view's status bar.
+        """
+        Remove this server's entry from the view's status bar.
 
         :param view: The view whose status bar entry should be cleared.
         """
@@ -1070,7 +1079,8 @@ class ClientConfig:
     def match_view(
         self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
     ) -> bool:
-        """Return `True` if this server should be active for the given view.
+        """
+        Return `True` if this server should be active for the given view.
 
         Delegates to the registered plugin's `is_applicable` method when one is available; otherwise checks that
         `scheme` is in :attr:`schemes` and that the view's syntax scope matches :attr:`selector`.
@@ -1092,7 +1102,8 @@ class ClientConfig:
         return False
 
     def map_client_path_to_server_uri(self, path: str) -> str:
-        """Convert a local filesystem path to the URI the language server expects.
+        """
+        Convert a local filesystem path to the URI the language server expects.
 
         Applies any configured :attr:`path_maps` to translate the path (e.g. from a local path to a container path),
         then converts the result to a `file://` URI.
@@ -1108,7 +1119,8 @@ class ClientConfig:
         return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: DocumentUri) -> str:
-        """Convert a URI from the language server to a local filesystem path.
+        """
+        Convert a URI from the language server to a local filesystem path.
 
         Only `file://` and `res://` URIs are supported; other schemes raise :exc:`ValueError`. Applies any
         configured :attr:`path_maps` in reverse to translate the server path back to the local path.
@@ -1128,7 +1140,8 @@ class ClientConfig:
         return path
 
     def is_disabled_capability(self, capability_path: str) -> bool:
-        """Return `True` if the given capability has been disabled in the config.
+        """
+        Return `True` if the given capability has been disabled in the config.
 
         Walks :attr:`disabled_capabilities` along `capability_path` (a string such as `"hoverProvider"` or dotted string
         like `textDocumentSync.didOpen`). A capability is considered disabled when the value at that path is `True`, or

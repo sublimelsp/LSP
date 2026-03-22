@@ -53,12 +53,12 @@ from .settings import userprefs
 from .types import ClientConfig
 from .url import parse_uri
 from .workspace import is_subpath_of
+from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterable
-from typing import Literal
 from typing import Tuple
 import html
 import itertools
@@ -70,47 +70,78 @@ import sublime
 import sublime_plugin
 import tempfile
 
-ChangeEventAction = Literal['cut', 'paste', 'redo', 'undo', 'type']
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
 
-DIAGNOSTIC_SEVERITY: list[tuple[str, str, str, str, sublime.RegionFlags, sublime.RegionFlags]] = [
-    # Kind       CSS class   Scope for color                        Icon resource                    add_regions flags for single-line diagnostic  multi-line diagnostic   # noqa: E501
-    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png",   _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png", _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE, _multilineflags),  # noqa: E501
-    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png",    _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "",                               _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE, _multilineflags),  # noqa: E501
-]
+
+@dataclass
+class DiagnosticStyle:
+    kind: str
+    css_class: str
+    region_scope: str
+    icon_resource: str
+    single_line_region_flags: sublime.RegionFlags
+    multi_line_region_flags: sublime.RegionFlags
+
+
+DIAGNOSTIC_STYLES: dict[DiagnosticSeverity, DiagnosticStyle] = {
+    DiagnosticSeverity.Error: DiagnosticStyle(
+        'error',
+        'error',
+        'region.redish markup.error.lsp',
+        'Packages/LSP/icons/error.png',
+        _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Warning: DiagnosticStyle(
+        'warning',
+        'warning',
+        'region.yellowish markup.warning.lsp',
+        'Packages/LSP/icons/warning.png',
+        _baseflags | sublime.RegionFlags.DRAW_SQUIGGLY_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Information: DiagnosticStyle(
+        'info',
+        'information',
+        'region.bluish markup.info.lsp',
+        'Packages/LSP/icons/info.png',
+        _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE,
+        _multilineflags
+    ),
+    DiagnosticSeverity.Hint: DiagnosticStyle(
+        'hint',
+        'hint',
+        'region.bluish markup.info.hint.lsp',
+        '',
+        _baseflags | sublime.RegionFlags.DRAW_STIPPLED_UNDERLINE,
+        _multilineflags
+    ),
+}
 
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
+    __slots__ = ('regions', 'regions_with_tag', 'annotations')
 
-    def __init__(self, severity: int) -> None:
+    def __init__(self) -> None:
         self.regions: list[sublime.Region] = []
         self.regions_with_tag: dict[DiagnosticTag, list[sublime.Region]] = {}
         self.annotations: list[str] = []
-        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
-        if userprefs().diagnostics_gutter_marker != "sign":
-            self.icon = "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 class InvalidUriSchemeException(Exception):
     def __init__(self, uri: str) -> None:
-        self.uri = uri
-
-    def __str__(self) -> str:
-        return f"invalid URI scheme: {self.uri}"
+        super().__init__(f"invalid URI scheme: {uri}")
 
 
 def get_line(window: sublime.Window, file_name: str, row: int, strip: bool = True) -> str:
-    '''
+    """
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
-    '''
+    """
     if view := window.find_open_file(file_name):
         # get from buffer
         point = view.text_point(row, 0)
@@ -201,9 +232,7 @@ def get_uri_and_position_from_location(location: Location | LocationLink) -> tup
 
 
 def location_to_encoded_filename(location: Location | LocationLink) -> str:
-    """
-    DEPRECATED
-    """
+    """DEPRECATED."""
     uri, position = get_uri_and_position_from_location(location)
     scheme, parsed = parse_uri(uri)
     if scheme == "file":
@@ -431,10 +460,6 @@ def text_document_code_action_params(
     }
 
 
-# Workaround for limited margin-collapsing capabilities of the minihtml.
-LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
-
-
 def show_lsp_popup(
     view: sublime.View,
     contents: str,
@@ -450,7 +475,6 @@ def show_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.show_popup(
         view,
@@ -477,7 +501,6 @@ def update_lsp_popup(
 ) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
-    contents += LSP_POPUP_SPACER_HTML
     body_wrapper = f'<body id="{body_id}">{{}}</body>' if body_id else '<body>{}</body>'
     mdpopups.update_popup(view, body_wrapper.format(contents), css=css, md=md, wrapper_class=wrapper_class)
 
@@ -558,7 +581,7 @@ def minihtml(
             is_plain_text = False
             result = f"```{language}\n{value}\n```\n"
     if is_plain_text:
-        return f"<p>{text2html(result)}</p>" if result else ''
+        return f"<span>{text2html(result)}</span>" if result else ''
     frontmatter: dict[str, Any] = {
         "allow_code_wrap": True,
     }
@@ -698,14 +721,15 @@ def document_color_params(view: sublime.View) -> DocumentColorParams:
     return {"textDocument": text_document_identifier(view)}
 
 
-def format_severity(severity: int) -> str:
-    if 1 <= severity <= len(DIAGNOSTIC_SEVERITY):
-        return DIAGNOSTIC_SEVERITY[severity - 1][0]
-    return "???"
-
-
 def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
     return diagnostic.get("severity", DiagnosticSeverity.Error)
+
+
+def diagnostic_icon(severity: DiagnosticSeverity) -> str:
+    if userprefs().diagnostics_gutter_marker == "sign":
+        return DIAGNOSTIC_STYLES[severity].icon_resource
+    else:
+        return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:
@@ -735,7 +759,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
     result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
-        format_severity(diagnostic_severity(diagnostic)),
+        DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
         lines[0]
     )
     if formatted != "" or code is not None:
@@ -765,9 +789,7 @@ def location_to_human_readable(
     base_dir: str | None,
     location: Location | LocationLink
 ) -> str:
-    """
-    Format an LSP Location (or LocationLink) into a string suitable for a human to read
-    """
+    """Format an LSP Location (or LocationLink) into a string suitable for a human to read."""
     uri, position = get_uri_and_position_from_location(location)
     scheme, _ = parse_uri(uri)
     if scheme == "file":
@@ -786,17 +808,13 @@ def location_to_human_readable(
 
 
 def location_to_href(config: ClientConfig, location: Location | LocationLink) -> str:
-    """
-    Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml
-    """
+    """Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml."""
     uri, position = get_uri_and_position_from_location(location)
     return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
 
 
 def unpack_href_location(href: str) -> tuple[str, str, int, int]:
-    """
-    Return the session name, URI, row, and col_utf16 from an encoded href.
-    """
+    """Return the session name, URI, row, and col_utf16 from an encoded href."""
     session_name, uri_with_fragment = href[len("location:"):].split("@")
     uri, fragment = uri_with_fragment.split("#")
     row, col_utf16 = map(int, fragment.split(","))
@@ -804,9 +822,7 @@ def unpack_href_location(href: str) -> tuple[str, str, int, int]:
 
 
 def is_location_href(href: str) -> bool:
-    """
-    Check whether this href is an encoded location.
-    """
+    """Check whether this href is an encoded location."""
     return href.startswith("location:")
 
 
@@ -823,10 +839,23 @@ def _format_diagnostic_related_info(
     )
 
 
-def _html_element(name: str, text: str, class_name: str | None = None, escape: bool = True) -> str:
+def html_wrapper(content: str, *, class_name: str | None = None) -> str:
+    """
+    Wrap content in a container with default pading applied.
+
+    Automatically inserted spacer element acts as a bottom padding to workaround minihtml's margin collapsing bug.
+    Otherwise if the last element had bottom margin (for example a paragraph), it would render a double margin.
+    The `content` is NOT escaped.
+    """
+    extra_class = f' {class_name}' if class_name else ''
+    return _html_element(
+        'div', f'{content}<div class="wrapper--spacer"></div>', class_name=f'wrapper{extra_class}', escape=False)
+
+
+def _html_element(tag: str, content: str, *, class_name: str | None = None, escape: bool = True) -> str:
     return '<{0}{2}>{1}</{0}>'.format(
-        name,
-        text2html(text) if escape else text,
+        tag,
+        text2html(content) if escape else content,
         f' class="{text2html(class_name)}"' if class_name else ''
     )
 
@@ -850,9 +879,9 @@ def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, bas
     )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
-        html += '<br>' + _html_element("pre", info, class_name="related_info", escape=False)
-    severity_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
-    return _html_element("pre", html, class_name=severity_class, escape=False)
+        html += '<hr>' + _html_element("div", info, escape=False)
+    severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
+    return html_wrapper(html, class_name=severity_class)
 
 
 def format_code_actions_for_quick_panel(

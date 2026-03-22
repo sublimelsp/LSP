@@ -29,6 +29,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -39,6 +40,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
+from functools import lru_cache
 from functools import partial
 from typing import Sequence
 from typing import Union
@@ -84,7 +86,12 @@ link_kinds = [
 ]
 
 
-def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_html: str = '') -> str:
+@lru_cache
+def lightbulb_html(color: str) -> str:
+    return f'<span class="lightbulb">{mdpopups.tint("Packages/LSP/icons/lightbulb_cropped.png", color)}</span> '
+
+
+def code_actions_content(actions_by_config: list[CodeActionsByConfigName], lightbulb_color: str | None = None) -> str:
     formatted = []
     for config_name, actions in actions_by_config:
         action_count = len(actions)
@@ -96,12 +103,9 @@ def code_actions_content(actions_by_config: list[CodeActionsByConfigName], icon_
             text = actions[0].get('title', 'code action')
         href = "{}:{}".format('code-actions', config_name)
         link = make_link(href, text)
-        formatted.append(
-            f'''
-            <div class="code-actions">
-                {icon_html}<span class="link with-padding">{link}</span><span class="color-muted">{config_name}</span>
-            </div>'''
-        )
+        icon_html = lightbulb_html(lightbulb_color) if lightbulb_color else ''
+        formatted.append(html_wrapper(f'{icon_html}{link} <span class="color-muted">{config_name}</span>',
+                                      class_name='code-actions'))
     return "".join(formatted)
 
 
@@ -269,8 +273,9 @@ class LspHoverCommand(LspTextCommand):
         for hover, language_map in self._hover_responses:
             content = (hover.get('contents') or '') if isinstance(hover, dict) else ''
             allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
-            contents.append(minihtml(self.view, content, allowed_formats, language_map))
-        return '<hr>'.join(contents)
+            if parsed := minihtml(self.view, content, allowed_formats, language_map):
+                contents.append(html_wrapper(parsed))
+        return '<hr class="m-0">'.join(contents)
 
     def hover_range(self) -> sublime.Region | None:
         for hover, _ in self._hover_responses:
@@ -286,7 +291,7 @@ class LspHoverCommand(LspTextCommand):
         prefs = userprefs()
         diagnostics_content = self.diagnostics_content() if only_diagnostics or prefs.show_diagnostics_in_hover else ""
         contents = diagnostics_content + hover_content + \
-            code_actions_content(self._actions_by_config, listener.lightbulb_html)
+            code_actions_content(self._actions_by_config, listener.lightbulb_color)
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
@@ -296,9 +301,9 @@ class LspHoverCommand(LspTextCommand):
                     symbol_actions_content += ' | '
                 symbol_actions_content += link_content
             if symbol_actions_content:
-                contents += '<div class="actions">' + symbol_actions_content + '</div>'
+                contents += html_wrapper(symbol_actions_content, class_name='actions')
         elif link_content:
-            contents += '<div class="{}">{}</div>'.format('link with-padding' if contents else 'link', link_content)
+            contents += html_wrapper(link_content)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only
@@ -344,7 +349,7 @@ class LspHoverCommand(LspTextCommand):
             if len(actions) > 1:
                 if window := self.view.window():
                     items, selected_index = format_code_actions_for_quick_panel(
-                        map(lambda action: (config_name, action), actions))
+                        (config_name, action) for action in actions)
                     window.show_quick_panel(
                         items,
                         lambda i: self.handle_code_action_select(config_name, actions, i),

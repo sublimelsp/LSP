@@ -58,7 +58,7 @@ def version_history() -> list[str]:
             if ext.lower() == '.txt':
                 yield basename
 
-    return sorted(tuple(generator()), key=parse_version)
+    return sorted(generator(), key=parse_version)
 
 
 def parse_version(version: str) -> tuple[int, int, int]:
@@ -86,7 +86,7 @@ def git(*args: str) -> str | None:
     else:
         startupinfo = None
     proc = subprocess.Popen(
-        args=['git'] + [arg for arg in args], startupinfo=startupinfo,
+        args=['git'] + list(args), startupinfo=startupinfo,
         stdout=subprocess.PIPE, stdin=subprocess.PIPE, cwd=PACKAGE_PATH)
     stdout, _ = proc.communicate()
     return stdout.decode('utf-8').strip() if stdout else None

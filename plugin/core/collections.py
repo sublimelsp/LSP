@@ -1,6 +1,4 @@
-"""
-Module with additional collections.
-"""
+"""Module with additional collections."""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -123,9 +121,7 @@ class DottedDict:
         return deepcopy(self.get(path))
 
     def __bool__(self) -> bool:
-        """
-        If this collection has at least one key-value pair, return True, else return False.
-        """
+        """If this collection has at least one key-value pair, return True, else return False."""
         return bool(self._d)
 
     def __contains__(self, path: object) -> bool:
@@ -135,9 +131,7 @@ class DottedDict:
         return value is not None and value is not False
 
     def clear(self) -> None:
-        """
-        Remove all key-value pairs.
-        """
+        """Remove all key-value pairs."""
         self._d.clear()
 
     def assign(self, d: dict[str, Any]) -> None:

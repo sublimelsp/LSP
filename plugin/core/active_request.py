@@ -11,9 +11,7 @@ import sublime
 
 
 class ActiveRequest:
-    """
-    Holds state per request.
-    """
+    """Holds state per request."""
 
     def __init__(self, sv: SessionViewProtocol, request_id: int, request: Request[Any, Any]) -> None:
         # sv is the parent object; there is no need to keep it alive explicitly.

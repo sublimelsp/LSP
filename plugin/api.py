@@ -291,13 +291,12 @@ class LspPlugin(APIHandler):
 
     @classmethod
     def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
-        """
-        In addition to the above variables, add more variables here to be expanded.
-        """
+        """In addition to the above variables, add more variables here to be expanded."""
 
     @classmethod
     def install_async(cls, context: PluginContext) -> None:
-        """Update or install the server binary if this plugin manages one. Called before server is started.
+        """
+        Update or install the server binary if this plugin manages one. Called before server is started.
 
         Make sure to call `params.set_installing_status()` before starting long-running operations to give user
         a better feedback that something is happening.
@@ -427,14 +426,10 @@ class LspPlugin(APIHandler):
         """
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """
-        Called when the context of the session buffer has changed or a new buffer was opened.
-        """
+        """Called when the context of the session buffer has changed or a new buffer was opened."""
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
-        """
-        Called after the selection has been modified in a view (debounced).
-        """
+        """Called after the selection has been modified in a view (debounced)."""
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """

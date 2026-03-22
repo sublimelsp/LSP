@@ -256,9 +256,7 @@ class SessionBuffer:
     @property
     @deprecated("Use get_language_id() instead")
     def language_id(self) -> str:
-        """
-        Deprecated: use get_language_id
-        """
+        """Deprecated: use get_language_id."""
         return self.get_language_id() or ""
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
@@ -510,9 +508,7 @@ class SessionBuffer:
         self.pending_refreshes &= ~flags
 
     def _if_view_unchanged(self, f: Callable[Concatenate[sublime.View, P], None], version: int) -> Callable[P, None]:
-        """
-        Ensures that the view is at the same version when we were called, before calling the `f` function.
-        """
+        """Ensures that the view is at the same version when we were called, before calling the `f` function."""
         def handler(*args: P.args, **kwargs: P.kwargs) -> None:
             if (view := self.some_view()) and view.change_count() == version:
                 f(view, *args, **kwargs)
@@ -861,7 +857,7 @@ class SessionBuffer:
         if view is None:
             return
         self.semantic_tokens.tokens.clear()
-        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = dict()
+        scope_regions: dict[int, tuple[str, list[sublime.Region]]] = {}
         prev_line = 0
         prev_col_utf16 = 0
         types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))

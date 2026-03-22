@@ -146,7 +146,7 @@ def is_edit_range(val: Any) -> TypeGuard[EditRangeWithInsertReplace]:
 
 
 def completion_with_defaults(item: CompletionItem, item_defaults: CompletionItemDefaults) -> CompletionItem:
-    """ Currently supports defaults for: ["editRange", "insertTextFormat", "data"] """
+    """Currently supports defaults for: ["editRange", "insertTextFormat", "data"]."""
     if not item_defaults:
         return item
     default_text_edit: TextEdit | InsertReplaceEdit | None = None
@@ -187,6 +187,7 @@ class QueryCompletionsTask:
     All public methods must only be called on the async thread and the "on_done_async" callback will also be called
     on the async thread.
     """
+
     def __init__(
         self,
         view: sublime.View,

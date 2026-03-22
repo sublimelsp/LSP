@@ -56,6 +56,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "plugin/core/typing.py" = ["F401"]
+"protocol/__init__.py" = ["D400", "D415"]
 "plugin/core/protocol.py" = ["UP006", "UP007"]
 
 [tool.ruff.lint]
@@ -71,15 +72,8 @@ ignore = [
     "ARG003",  # https://docs.astral.sh/ruff/rules/unused-class-method-argument/
     "ARG005",  # https://docs.astral.sh/ruff/rules/unused-lambda-argument/
     "B010",  # https://docs.astral.sh/ruff/rules/set-attr-with-constant/
-    "BLE",  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
-    "C400",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
+    "BLE",  # https://docs.astral.sh/ruff/rules/blind-except/
     "C401",  # https://docs.astral.sh/ruff/rules/unnecessary-generator-set/
-    "C405",  # https://docs.astral.sh/ruff/rules/unnecessary-literal-set/
-    "C408",  # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
-    "C413",  # https://docs.astral.sh/ruff/rules/unnecessary-call-around-sorted/
-    "C414",  # https://docs.astral.sh/ruff/rules/unnecessary-double-cast-or-process/
-    "C416",  # https://docs.astral.sh/ruff/rules/unnecessary-comprehension/
-    "C417",  # https://docs.astral.sh/ruff/rules/unnecessary-map/
     "C901",  # https://docs.astral.sh/ruff/rules/complex-structure/
     "COM812",  # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "CPY001",  # https://docs.astral.sh/ruff/rules/missing-copyright-notice/
@@ -90,38 +84,21 @@ ignore = [
     "D104",  # https://docs.astral.sh/ruff/rules/undocumented-public-package/
     "D105",  # https://docs.astral.sh/ruff/rules/undocumented-magic-method/
     "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
-    "D200",  # https://docs.astral.sh/ruff/rules/unnecessary-multiline-docstring/
-    "D202",  # https://docs.astral.sh/ruff/rules/blank-line-after-function/
-    "D203",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
-    "D204",  # https://docs.astral.sh/ruff/rules/incorrect-blank-line-after-class/
+    "D203",  # https://docs.astral.sh/ruff/rules/incorrect-blank-line-before-class/
     "D205",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-summary/
-    "D209",  # https://docs.astral.sh/ruff/rules/new-line-after-last-paragraph/
-    "D210",  # https://docs.astral.sh/ruff/rules/surrounding-whitespace/
     "D212",  # https://docs.astral.sh/ruff/rules/multi-line-summary-first-line/
-    "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
-    "D300",  # https://docs.astral.sh/ruff/rules/triple-single-quotes/
-    "D400",  # https://docs.astral.sh/ruff/rules/missing-trailing-period/
     "D401",  # https://docs.astral.sh/ruff/rules/non-imperative-mood/
-    "D403",  # https://docs.astral.sh/ruff/rules/first-word-uncapitalized/
-    "D404",  # https://docs.astral.sh/ruff/rules/docstring-starts-with-this/
-    "D412",  # https://docs.astral.sh/ruff/rules/blank-lines-between-header-and-content/
     "D413",  # https://docs.astral.sh/ruff/rules/missing-blank-line-after-last-section/
-    "D415",  # https://docs.astral.sh/ruff/rules/missing-terminal-punctuation/
     "DOC201",  # https://docs.astral.sh/ruff/rules/docstring-missing-returns/
     "DOC402",  # https://docs.astral.sh/ruff/rules/docstring-missing-yields/
     "DOC501",  # https://docs.astral.sh/ruff/rules/docstring-missing-exception/
     "DTZ005",  # https://docs.astral.sh/ruff/rules/call-datetime-now-without-tzinfo/
-    "E241",  # https://docs.astral.sh/ruff/rules/multiple-spaces-after-comma/
     "EM",  # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
     "ERA001",  # https://docs.astral.sh/ruff/rules/commented-out-code/
-    "F403",  # https://docs.astral.sh/ruff/rules/undefined-local-with-import-star/
-    "F405",  # https://docs.astral.sh/ruff/rules/undefined-local-with-import-star-usage/
-    "FA100",  # https://docs.astral.sh/ruff/rules/future-rewritable-type-annotation/
     "FBT001",  # https://docs.astral.sh/ruff/rules/boolean-type-hint-positional-argument/
     "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
     "FBT003",  # https://docs.astral.sh/ruff/rules/boolean-positional-value-in-call/
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
-    "FLY002",  # https://docs.astral.sh/ruff/rules/static-join-to-f-string/
     "FURB101",  # https://docs.astral.sh/ruff/rules/read-whole-file/
     "FURB103",  # https://docs.astral.sh/ruff/rules/write-whole-file/
     "FURB110",  # https://docs.astral.sh/ruff/rules/if-exp-instead-of-or-operator/

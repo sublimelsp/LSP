@@ -43,9 +43,7 @@ class TagData:
 
 
 class SessionView:
-    """
-    Holds state per session per view.
-    """
+    """Holds state per session per view."""
 
     HOVER_PROVIDER_KEY = "hoverProvider"
     AC_TRIGGERS_KEY = "auto_complete_triggers"
@@ -179,7 +177,7 @@ class SessionView:
         self._diagnostic_annotations.initialize_region_keys()
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
-        '''Remove all of our modifications to the view's "auto_complete_triggers"'''
+        """Remove all of our modifications to the view's "auto_complete_triggers"."""
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
             triggers = [t for t in triggers if isinstance(t, dict) and self.session.config.name != t.get("server", "")]
@@ -216,7 +214,7 @@ class SessionView:
         trigger_chars: list[str],
         registration_id: str | None = None
     ) -> None:
-        """This method actually modifies the auto_complete_triggers entries for the view."""
+        """Modify the auto_complete_triggers entries for the view."""
         selector = self.session.config.auto_complete_selector
         if not selector:
             # If the user did not set up an auto_complete_selector for this server configuration, fallback to the

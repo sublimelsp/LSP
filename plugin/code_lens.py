@@ -96,7 +96,7 @@ class CodeLensCache:
         ]
 
     def code_lenses_with_command(self) -> list[ResolvedCodeLens]:
-        """ Returns only the code lenses that are either resolved, or have a cached command. """
+        """Returns only the code lenses that are either resolved, or have a cached command."""
         code_lenses: list[ResolvedCodeLens] = []
         for cached_code_lens in itertools.chain.from_iterable(self.code_lenses.values()):
             code_lens = cached_code_lens.data.copy()

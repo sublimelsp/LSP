@@ -200,13 +200,12 @@ def decode_semantic_token(
     token_modifiers_encoded: int
 ) -> tuple[str, list[str], str | None]:
     """
-    This function converts the token type and token modifiers from encoded numbers into names, based on the legend from
+    Converts the token type and token modifiers from encoded numbers into names, based on the legend from
     the server. It also returns the corresponding scope name, which will be used for the highlighting color, either
     derived from a predefined scope map if the token type is one of the types defined in the LSP specs, or from a scope
     for custom token types if it was added in the client configuration (will be `None` if no scope has been defined for
     the custom token type).
     """
-
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
         modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
@@ -231,39 +230,29 @@ def decode_semantic_token(
 
 
 class Manager(metaclass=ABCMeta):
-    """
-    A Manager is a container of Sessions.
-    """
+    """A Manager is a container of Sessions."""
 
     # Observers
 
     @property
     @abstractmethod
     def window(self) -> sublime.Window:
-        """
-        Get the window associated with this manager.
-        """
+        """Get the window associated with this manager."""
         raise NotImplementedError()
 
     @abstractmethod
     def get_session(self, config_name: str, file_path: str) -> Session | None:
-        """
-        Gets the session by name and file path.
-        """
+        """Gets the session by name and file path."""
         raise NotImplementedError()
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> str | None:
-        """
-        Get the project path for the given file.
-        """
+        """Get the project path for the given file."""
         raise NotImplementedError()
 
     @abstractmethod
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
-        """
-        Should the diagnostics for this URI be shown in the view? Return a reason why not
-        """
+        """Should the diagnostics for this URI be shown in the view? Return a reason why not."""
 
     # Mutators
 
@@ -286,9 +275,7 @@ class Manager(metaclass=ABCMeta):
 
     @abstractmethod
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
-        """
-        The given Session has stopped with the given exit code.
-        """
+        """The given Session has stopped with the given exit code."""
         raise NotImplementedError()
 
     @abstractmethod
@@ -1010,9 +997,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         super().__init__()
 
     def __getattr__(self, name: str) -> Any:
-        """
-        If we don't have a request/notification handler, look up the request/notification handler in the plugin.
-        """
+        """If we don't have a request/notification handler, look up the request/notification handler in the plugin."""
         if name.startswith('m_'):
             if self._plugin:
                 # Handler added through decorator.
@@ -1051,9 +1036,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
-        """
-        It is only safe to iterate over this in the async thread
-        """
+        """It is only safe to iterate over this in the async thread."""
         yield from self._session_views
 
     def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:
@@ -1105,9 +1088,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self._session_buffers.discard(sb)
 
     def session_buffers_async(self) -> Generator[SessionBufferProtocol, None, None]:
-        """
-        It is only safe to iterate over this in the async thread
-        """
+        """It is only safe to iterate over this in the async thread."""
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> SessionBufferProtocol | None:
@@ -2041,7 +2022,6 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     @notification_handler('$/progress')
     def on_progress(self, params: ProgressParams) -> None:
-        """handles the $/progress notification"""
         token = params['token']
         value = params['value']
         # Partial Result Progress

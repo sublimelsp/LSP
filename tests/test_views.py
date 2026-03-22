@@ -239,10 +239,8 @@ class ViewsTest(DeferrableTestCase):
             {'value': 'import sys', 'language': 'python'},
             {'value': 'let x', 'language': 'js'}
         ]
-        expect = '\n\n'.join([
-            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>',
-            '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>'
-        ])
+        expect = ('<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>\n\n'
+                  '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>')
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
         self.assertEqual(formatted, expect)

@@ -23,7 +23,7 @@ class MessageRequestHandler:
     def __init__(self, view: sublime.View, params: ShowMessageRequestParams, source: str) -> None:
         self.view = view
         self.actions = params.get("actions", [])
-        self.action_titles = list(action.get("title") for action in self.actions)
+        self.action_titles = [action.get("title") for action in self.actions]
         self.message = params['message']
         self.message_type = params.get('type', 4)
         self.source = source

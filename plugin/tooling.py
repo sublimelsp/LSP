@@ -45,7 +45,7 @@ def _translate_description(translations: dict[str, str] | None, descr: str) -> t
 
 def _preprocess_properties(translations: dict[str, str] | None, properties: dict[str, Any]) -> None:
     """
-    Preprocess the server settings from a package.json file:
+    Preprocess the server settings from a package.json file.
 
     - Replace description translation placeholders by their English translation
     - Discard the "scope" key
@@ -246,7 +246,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "properties": {
                                         "settings": {
                                             "additionalProperties": False,
-                                            "properties": {k: v for k, v in properties.items()}
+                                            "properties": dict(properties.items())
                                         }
                                     },
                                 },
@@ -428,9 +428,7 @@ class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
 
 
 class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
-    """
-    Very basic command to dump all of the window's resolved configurations.
-    """
+    """Very basic command to dump all of the window's resolved configurations."""
 
     def run(self) -> None:
         wm = windows.lookup(self.window)
@@ -446,9 +444,7 @@ class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
 
 
 class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
-    """
-    Very basic command to dump the current view's static and dynamically registered capabilities.
-    """
+    """Very basic command to dump the current view's static and dynamically registered capabilities."""
 
     def run(self, edit: sublime.Edit) -> None:
         wm = windows.lookup(self.view.window())

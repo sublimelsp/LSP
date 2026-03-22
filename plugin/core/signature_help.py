@@ -90,14 +90,12 @@ class SigHelp:
         return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:
-        """
-        Extract the state out of this state machine to send back to the language server.
-        """
+        """Extract the state out of this state machine to send back to the language server."""
         self._state["activeSignature"] = self._active_signature_index
         return self._state
 
     def has_multiple_signatures(self) -> bool:
-        """Does the current signature help state contain more than one overload?"""
+        """Check if the current signature help state contain more than one overload."""
         return len(self._signatures) > 1
 
     def select_signature(self, forward: bool) -> None:

@@ -171,9 +171,9 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             window = window_manager.window
             project_data = window.project_data()
             if isinstance(project_data, dict):
-                project_settings = project_data.setdefault('settings', dict())
-                project_lsp_settings = project_settings.setdefault('LSP', dict())
-                project_formatter_settings = project_lsp_settings.setdefault('formatters', dict())
+                project_settings = project_data.setdefault('settings', {})
+                project_lsp_settings = project_settings.setdefault('LSP', {})
+                project_formatter_settings = project_lsp_settings.setdefault('formatters', {})
                 project_formatter_settings[base_scope] = session_name
                 window_manager.suppress_sessions_restart_on_project_update = True
                 window.set_project_data(project_data)

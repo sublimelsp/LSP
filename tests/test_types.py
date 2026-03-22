@@ -12,28 +12,28 @@ class TestDiff(unittest.TestCase):
 
     def test_add(self) -> None:
         added, removed = diff(("a", "b", "c"), ("a", "b", "c", "d"))
-        self.assertEqual(added, set(("d",)))
+        self.assertEqual(added, {"d"})
         self.assertFalse(removed)
 
     def test_remove(self) -> None:
         added, removed = diff(("a", "b", "c"), ("c", "b"))
         self.assertFalse(added)
-        self.assertEqual(removed, set(("a",)))
+        self.assertEqual(removed, {"a"})
 
     def test_add_and_remove(self) -> None:
         added, removed = diff(("a", "b", "c"), ("c", "d"))
-        self.assertEqual(added, set(("d",)))
-        self.assertEqual(removed, set(("a", "b")))
+        self.assertEqual(added, {"d"})
+        self.assertEqual(removed, {"a", "b"})
 
     def test_with_sets(self) -> None:
-        added, removed = diff(set(("a", "b", "c")), ("x", "y", "z"))
-        self.assertEqual(added, set(("x", "y", "z")))
-        self.assertEqual(removed, set(("a", "b", "c")))
+        added, removed = diff({"a", "b", "c"}, ("x", "y", "z"))
+        self.assertEqual(added, {"x", "y", "z"})
+        self.assertEqual(removed, {"a", "b", "c"})
 
     def test_with_more_sets(self) -> None:
-        added, removed = diff(set(("a", "b")), set(("b", "c")))
-        self.assertEqual(added, set(("c",)))
-        self.assertEqual(removed, set(("a",)))
+        added, removed = diff({"a", "b"}, {"b", "c"})
+        self.assertEqual(added, {"c"})
+        self.assertEqual(removed, {"a"})
 
     def test_completely_new(self) -> None:
         new = {"ocaml", "polymer-ide", "elixir-ls", "jdtls", "dart", "reason", "golsp", "clangd", "pwsh", "vhdl_ls"}
@@ -78,14 +78,14 @@ class TestDocumentSelector(unittest.TestCase):
         return self._make_view("Packages/HTML/HTML.sublime-syntax", file_name)
 
     def test_pattern_asterisk(self) -> None:
-        """`*` to match one or more characters in a path segment"""
+        """`*` to match one or more characters in a path segment."""
         selector = DocumentSelector_([{"language": "html", "pattern": "a*c.html"}])
         # self.assertFalse(selector.matches(self._make_html_view("ac.html")))
         self.assertTrue(selector.matches(self._make_html_view("abc.html")))
         self.assertTrue(selector.matches(self._make_html_view("axyc.html")))
 
     def test_pattern_optional(self) -> None:
-        """`?` to match on one character in a path segment"""
+        """`?` to match on one character in a path segment."""
         selector = DocumentSelector_([{"language": "html", "pattern": "a?c.html"}])
         self.assertTrue(selector.matches(self._make_html_view("axc.html")))
         self.assertTrue(selector.matches(self._make_html_view("ayc.html")))
@@ -93,13 +93,13 @@ class TestDocumentSelector(unittest.TestCase):
         self.assertFalse(selector.matches(self._make_html_view("axyc.html")))
 
     def test_pattern_globstar(self) -> None:
-        """`**` to match any number of path segments, including none"""
+        """`**` to match any number of path segments, including none."""
         selector = DocumentSelector_([{"language": "html", "pattern": "**/abc.html"}])
         self.assertTrue(selector.matches(self._make_html_view("foo/bar/abc.html")))
         self.assertFalse(selector.matches(self._make_html_view("asdf/qwerty/abc.htm")))
 
     def test_pattern_grouping(self) -> None:
-        """`{}` to group conditions (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)"""
+        """`{}` to group conditions (e.g. `**/*.{ts,js}` matches all TypeScript and JavaScript files)."""
         selector = DocumentSelector_([{"pattern": "**/*.{ts,js}"}])
         self.assertTrue(selector.matches(self._make_view(
             "Packages/JavaScript/TypeScript.sublime-syntax", "foo/bar.ts")))
@@ -113,7 +113,7 @@ class TestDocumentSelector(unittest.TestCase):
     def test_pattern_character_range(self) -> None:
         """
         `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on
-        `example.0`, `example.1`, …)
+        `example.0`, `example.1`, …).
         """
         selector = DocumentSelector_([{"language": "html", "pattern": "example.[0-9]"}])
         self.assertTrue(selector.matches(self._make_html_view("example.0")))
@@ -131,7 +131,7 @@ class TestDocumentSelector(unittest.TestCase):
     def test_pattern_negated_character_range(self) -> None:
         """
         `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on
-        `example.a`, `example.b`, but not `example.0`)
+        `example.a`, `example.b`, but not `example.0`).
         """
         selector = DocumentSelector_([{"language": "html", "pattern": "example.[!0-9]"}])
         self.assertTrue(selector.matches(self._make_html_view("example.a")))

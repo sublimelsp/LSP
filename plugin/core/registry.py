@@ -165,9 +165,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 
 class LspOpenLocationCommand(LspWindowCommand):
-    """
-    A command to be used by third-party ST packages that need to open an URI with some abstract scheme.
-    """
+    """A command to be used by third-party ST packages that need to open an URI with some abstract scheme."""
 
     def run(
         self,

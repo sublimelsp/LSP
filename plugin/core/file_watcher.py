@@ -77,9 +77,7 @@ class FileWatcher(metaclass=ABCMeta):
 
     @abstractmethod
     def destroy(self) -> None:
-        """
-        Called before the file watcher is disabled.
-        """
+        """Called before the file watcher is disabled."""
         pass
 
 

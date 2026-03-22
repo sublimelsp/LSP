@@ -143,7 +143,8 @@ class APIHandler:
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
-    """Decorator to mark a method as a handler for a specific LSP notification.
+    """
+    Decorator to mark a method as a handler for a specific LSP notification.
 
     Usage:
         ```py
@@ -169,7 +170,8 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 def request_handler(
     method: str
 ) -> Callable[[Callable[[Any, P], Promise[R]]], Callable[[Any, P, int], Promise[Response[R]]]]:
-    """Decorator to mark a method as a handler for a specific LSP request.
+    """
+    Decorator to mark a method as a handler for a specific LSP request.
 
     Usage:
         ```py
@@ -286,15 +288,14 @@ class AbstractPlugin(APIHandler, ABC):
 
     @classmethod
     def additional_variables(cls) -> dict[str, str] | None:
-        """
-        In addition to the above variables, add more variables here to be expanded.
-        """
+        """In addition to the above variables, add more variables here to be expanded."""
         return None
 
     @classmethod
     def storage_path(cls) -> str:
         """
         The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
+
         You should have an additional subdirectory preferably the same name as your plugin. For instance:
 
         ```python
@@ -405,7 +406,6 @@ class AbstractPlugin(APIHandler, ABC):
         :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
                                   self.weaksession(), but don't hold on to that reference.
         """
-
         super().__init__()
         self.weaksession = weaksession
 
@@ -494,15 +494,11 @@ class AbstractPlugin(APIHandler, ABC):
         return False
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """
-        Called when the context of the session buffer has changed or a new buffer was opened.
-        """
+        """Called when the context of the session buffer has changed or a new buffer was opened."""
         pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
-        """
-        Called after the selection has been modified in a view (debounced).
-        """
+        """Called after the selection has been modified in a view (debounced)."""
         pass
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:

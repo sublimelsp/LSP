@@ -985,7 +985,7 @@ class SessionBuffer:
             'range': region_to_range(view, region),
             'context': context
         }
-        request: Request[CodeActionParams, list[Command | CodeAction] | None] = Request.codeAction(params, view)
+        request = Request.codeAction(params, view)
         return self.session.send_request_task(request)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------

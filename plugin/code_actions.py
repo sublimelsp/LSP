@@ -20,7 +20,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
@@ -434,7 +434,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
-class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
+class LspMenuActionCommand(LspWindowCommand, ABC):
     """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'

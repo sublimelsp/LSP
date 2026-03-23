@@ -7,7 +7,7 @@ from .types import ClientConfig
 from .url import parse_uri
 from .workspace import disable_in_project
 from .workspace import enable_in_project
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from collections import deque
 from datetime import datetime
@@ -20,7 +20,7 @@ RETRY_MAX_COUNT = 5
 RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 
 
-class WindowConfigChangeListener(metaclass=ABCMeta):
+class WindowConfigChangeListener(ABC):
 
     @abstractmethod
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:

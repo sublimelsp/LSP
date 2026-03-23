@@ -7,7 +7,7 @@ from .types import debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from os.path import basename
@@ -15,7 +15,7 @@ import json
 import sublime
 
 
-class LspSettingsChangeListener(metaclass=ABCMeta):
+class LspSettingsChangeListener(ABC):
 
     @abstractmethod
     def on_client_config_updated(self, config_name: str | None = None) -> None:

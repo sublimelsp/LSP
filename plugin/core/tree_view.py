@@ -5,7 +5,7 @@ from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
@@ -101,7 +101,7 @@ class Node:
         self.is_resolved = False
 
 
-class TreeDataProvider(metaclass=ABCMeta):
+class TreeDataProvider(ABC):
 
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:

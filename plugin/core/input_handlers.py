@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .constants import ST_VERSION
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from typing import Any
 from typing import Callable
@@ -51,7 +51,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     return wrapped_function
 
 
-class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can preselect a value.
 
@@ -90,7 +90,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
         raise NotImplementedError()
 
 
-class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can update its items while typing in the input field.
 

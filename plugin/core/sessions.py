@@ -132,7 +132,7 @@ from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from enum import IntFlag
@@ -230,7 +230,7 @@ def decode_semantic_token(
     return token_type, token_modifiers, scope
 
 
-class Manager(metaclass=ABCMeta):
+class Manager(ABC):
     """A Manager is a container of Sessions."""
 
     # Observers
@@ -798,7 +798,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
 
-class AbstractViewListener(metaclass=ABCMeta):
+class AbstractViewListener(ABC):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
@@ -891,7 +891,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class Logger(metaclass=ABCMeta):
+class Logger(ABC):
 
     @abstractmethod
     def stderr_message(self, message: str) -> None:

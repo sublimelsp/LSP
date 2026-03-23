@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ...protocol import FileChangeType
 from ...protocol import WatchKind
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from typing import Literal
 from typing import Protocol
@@ -46,7 +46,7 @@ class FileWatcherProtocol(Protocol):
         ...
 
 
-class FileWatcher(metaclass=ABCMeta):
+class FileWatcher(ABC):
     """
     A public interface of a file watcher implementation.
 

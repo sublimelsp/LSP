@@ -336,6 +336,7 @@ class LspHoverCommand(LspTextCommand):
             session_name, action = decode_code_action_uri(href)
             if session := self.session_by_name(session_name):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                self.view.hide_popup()
         elif href == "quick-panel:DocumentLink":
             if window := self.view.window():
                 targets = [link["target"] for link in self._document_links]  # pyright: ignore

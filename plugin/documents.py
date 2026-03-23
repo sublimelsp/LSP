@@ -568,8 +568,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
-        if userprefs().diagnostics_gutter_marker:
-            diagnostics = self.get_diagnostics_async(self.view.line(point), userprefs().show_diagnostics_severity_level)
+        if userprefs().diagnostics_gutter_marker and (diagnostics := self.get_diagnostics_async(
+                self.view.line(point), userprefs().show_diagnostics_severity_level)):
             code_actions = dict(self._code_actions_for_selection) \
                 if self._lightbulb_line == self.view.rowcol(point)[0] else {}
             base_dir = self._manager.get_project_path(filename) \

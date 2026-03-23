@@ -35,8 +35,7 @@ def get_message(fname: str) -> str:
 
 
 def put_message(fname: str, text: str) -> None:
-    with open(fname, 'w', encoding='utf-8') as file:
-        file.write(text)
+    Path(fname).write_text(text, encoding='utf-8')
 
 
 def build_messages_json(version_history: list[str]) -> None:

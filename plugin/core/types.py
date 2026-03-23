@@ -1150,11 +1150,9 @@ class ClientConfig:
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for k, v in options.items():
-            if not self.is_disabled_capability(f"{capability_path}.{k}"):
-                result[k] = v
-        return result
+        return {
+            k: v for k, v in options.items() if not self.is_disabled_capability(f"{capability_path}.{k}")
+        }
 
     def __repr__(self) -> str:
         items: list[str] = []

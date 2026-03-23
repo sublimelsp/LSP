@@ -435,7 +435,7 @@ class ClientStates:
     STOPPING = 2
 
 
-class DocumentFilter_:
+class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
 
@@ -477,7 +477,7 @@ class DocumentFilter_:
         return True
 
 
-class DocumentSelector_:
+class DocumentSelectorMatcher:
     """
     A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
     filters matches against the view.
@@ -486,7 +486,7 @@ class DocumentSelector_:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilter_(**cast(dict, document_filter)) for document_filter in document_selector]
+        self.filters = [DocumentFilterMatcher(**cast(dict, document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)

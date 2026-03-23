@@ -117,7 +117,7 @@ from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
-from .types import DocumentSelector_
+from .types import DocumentSelectorMatcher
 from .types import method2attr
 from .types import method_to_capability
 from .types import SemanticToken
@@ -947,7 +947,7 @@ class _RegistrationData:
         document_selector = options.pop("documentSelector", None)
         if not isinstance(document_selector, list):
             document_selector = []
-        self.selector = DocumentSelector_(document_selector)
+        self.selector = DocumentSelectorMatcher(document_selector)
         self.options = options
         self.session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
 

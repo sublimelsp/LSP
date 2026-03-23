@@ -99,7 +99,6 @@ ignore = [
     "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
     "FBT003",  # https://docs.astral.sh/ruff/rules/boolean-positional-value-in-call/
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
-    "N801",  # https://docs.astral.sh/ruff/rules/invalid-class-name/
     "N802",  # https://docs.astral.sh/ruff/rules/invalid-function-name/#invalid-function-name-n802
     "N805",  # https://docs.astral.sh/ruff/rules/invalid-first-argument-name-for-method/
     "N806",  # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function/

@@ -10,7 +10,7 @@ from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Point
 from .core.settings import userprefs
-from .core.types import DocumentSelector_
+from .core.types import DocumentSelectorMatcher
 from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import DIAGNOSTIC_STYLES
@@ -43,7 +43,7 @@ class DiagnosticsStorage:
             return identifiers
         identifiers = set(
             diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
-            if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
+            if DocumentSelectorMatcher(diagnostic_options.get('documentSelector') or []).matches(view)
         )
         self._identifiers_cache[view_id] = identifiers
         return identifiers

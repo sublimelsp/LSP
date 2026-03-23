@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from .setup import make_stdio_test_config
 from copy import deepcopy
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
@@ -34,7 +34,7 @@ from LSP.protocol import DiagnosticSeverity
 from LSP.protocol import MarkedString
 from LSP.protocol import MarkupContent
 from LSP.protocol import MarkupKind
-from setup import make_stdio_test_config
+from typing import Any
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import re

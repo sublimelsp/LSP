@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .setup import expand
+from .setup import TextDocumentTestCase
 from LSP.plugin import filename_to_uri
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
@@ -12,8 +14,6 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import sublime_pattern_to_glob
 from LSP.protocol import WatchKind
 from os.path import join
-from setup import expand
-from setup import TextDocumentTestCase
 from typing import Generator
 from typing import TYPE_CHECKING
 import sublime

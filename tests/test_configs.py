@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import DottedDict
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
 from os import environ

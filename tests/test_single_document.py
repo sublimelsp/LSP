@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
+from .setup import TIMEOUT_TIME
+from .setup import YieldPromise
 from copy import deepcopy
 from LSP.plugin import apply_text_edits
 from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from setup import TextDocumentTestCase
-from setup import TIMEOUT_TIME
-from setup import YieldPromise
 from unittest import skip
 import os
 import sublime

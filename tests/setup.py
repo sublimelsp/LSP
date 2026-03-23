@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .test_mocks import basic_responses
 from collections.abc import Generator
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
@@ -12,7 +13,6 @@ from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
-from test_mocks import basic_responses
 from typing import Any
 from unittesting import DeferrableTestCase
 import sublime

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
+from .test_protocol import LSP_RANGE
 from LSP.plugin import apply_text_edits
 from LSP.plugin.core.edit import parse_workspace_edit
 from LSP.plugin.core.url import filename_to_uri
@@ -10,8 +12,6 @@ from LSP.plugin.edit import temporary_setting
 from LSP.protocol import TextDocumentEdit
 from LSP.protocol import TextEdit
 from LSP.protocol import WorkspaceEdit
-from setup import TextDocumentTestCase
-from test_protocol import LSP_RANGE
 import sublime
 import unittest
 

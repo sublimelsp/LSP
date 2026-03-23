@@ -101,7 +101,6 @@ ignore = [
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
     "N802",  # https://docs.astral.sh/ruff/rules/invalid-function-name/#invalid-function-name-n802
     "PERF203",  # https://docs.astral.sh/ruff/rules/try-except-in-loop/
-    "PERF401",  # https://docs.astral.sh/ruff/rules/manual-list-comprehension/
     "PERF403",  # https://docs.astral.sh/ruff/rules/manual-dict-comprehension/
     "PGH003",  # https://docs.astral.sh/ruff/rules/blanket-type-ignore/
     "PGH004",  # https://docs.astral.sh/ruff/rules/blanket-noqa/

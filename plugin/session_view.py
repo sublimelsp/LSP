@@ -140,15 +140,13 @@ class SessionView:
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
-        keys: list[str] = []
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
-        for key in range(1, 100):
-            keys.append(f"lsp_semantic_{session_name}_{key}")
+        keys = [f"lsp_semantic_{session_name}_{key}" for key in range(1, 100)]
         if document_highlight_style in ("background", "fill"):
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
@@ -157,15 +155,12 @@ class SessionView:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
-                for tag in range(1, 3):
-                    keys.append(f"lsp{session_name}d{mode}{severity}_tags_{tag}")
+                keys.extend(f"lsp{session_name}d{mode}{severity}_tags_{tag}" for tag in range(1, 3))
         keys.append(RegionKey.DOCUMENT_LINK)
         for severity in range(1, 5):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_icon")
+            keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_underline")
+            keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
         if document_highlight_style in ("underline", "stippled"):
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),

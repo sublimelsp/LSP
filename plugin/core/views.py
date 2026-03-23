@@ -341,8 +341,7 @@ def did_change_text_document_params(
         content_changes.append({"text": entire_content(view)})
     else:
         # TextDocumentSyncKind.Incremental
-        for change in changes:
-            content_changes.append(render_text_change(change))
+        content_changes.extend(render_text_change(change) for change in changes)
     return result
 
 

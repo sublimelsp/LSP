@@ -209,7 +209,7 @@ def decode_semantic_token(
     """
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
-        modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
+        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == "1"
     ]
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup

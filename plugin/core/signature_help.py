@@ -103,9 +103,9 @@ class SigHelp:
         self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
 
     def _render_intro(self) -> str:
-        return '<p class="signature-help-intro">' + \
-               f'<b>{self._active_signature_index + 1}</b> of <b>{len(self._signatures)}</b> overloads ' + \
-               '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide)</p>'
+        return ('<p class="signature-help-intro">'
+                f'<b>{self._active_signature_index + 1}</b> of <b>{len(self._signatures)}</b> overloads '
+                '(use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, press <kbd>Esc</kbd> to hide)</p>')
 
     def _render_label(self, signature: SignatureInformation) -> str:
         formatted: list[str] = []

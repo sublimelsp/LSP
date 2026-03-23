@@ -59,8 +59,8 @@ class ErrorCode(IntEnum):
     MethodNotFound = -32601
     InvalidParams = -32602
     InternalError = -32603
-    serverErrorStart = -32099
-    serverErrorEnd = -32000
+    serverErrorStart = -32099  # noqa: N815
+    serverErrorEnd = -32000  # noqa: N815
     ServerNotInitialized = -32002
     UnknownErrorCode = -32001
 

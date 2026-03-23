@@ -824,7 +824,7 @@ class ClientConfig:
         """
         self.name = name
         self.selector = selector
-        self.priority_selector = priority_selector if priority_selector else self.selector
+        self.priority_selector = priority_selector or self.selector
         if isinstance(schemes, list):
             self.schemes: list[str] = schemes
         else:
@@ -1004,7 +1004,7 @@ class ClientConfig:
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override if path_map_override else src_config.path_maps,
+            path_maps=path_map_override or src_config.path_maps,
             settings_registration=src_config._settings_registration,
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )

@@ -151,8 +151,8 @@ class SessionView:
             keys.append(f"lsp_semantic_{session_name}_{key}")
         if document_highlight_style in ("background", "fill"):
             for kind in DocumentHighlightKind:
-                keys.append(document_highlight_key(kind, multiline=True))
-                keys.append(document_highlight_key(kind, multiline=False))
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
         if hover_highlight_style in ("background", "fill"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
@@ -168,8 +168,8 @@ class SessionView:
                 keys.append(f"lsp{session_name}d{mode}{severity}_underline")
         if document_highlight_style in ("underline", "stippled"):
             for kind in DocumentHighlightKind:
-                keys.append(document_highlight_key(kind, multiline=True))
-                keys.append(document_highlight_key(kind, multiline=False))
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
         if hover_highlight_style in ("underline", "stippled"):
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:

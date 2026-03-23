@@ -99,7 +99,6 @@ ignore = [
     "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
     "FBT003",  # https://docs.astral.sh/ruff/rules/boolean-positional-value-in-call/
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
-    "FURB113",  # https://docs.astral.sh/ruff/rules/repeated-append/
     "FURB116",  # https://docs.astral.sh/ruff/rules/f-string-number-format/
     "FURB140",  # https://docs.astral.sh/ruff/rules/reimplemented-starmap/
     "FURB154",  # https://docs.astral.sh/ruff/rules/repeated-global/

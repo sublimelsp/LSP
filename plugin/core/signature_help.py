@@ -85,8 +85,7 @@ class SigHelp:
             blocks.append(parameter_doc)
         formatted = [html_wrapper(''.join(blocks))]
         if signature_doc := self._signature_documentation(view, signature):
-            formatted.append('<hr class="m-0">')
-            formatted.append(html_wrapper(''.join(signature_doc)))
+            formatted.extend(('<hr class="m-0">', html_wrapper(''.join(signature_doc))))
         return ''.join(formatted)
 
     def active_signature_help(self) -> SignatureHelp:

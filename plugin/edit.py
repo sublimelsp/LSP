@@ -34,6 +34,8 @@ TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
 # Workspace edit panel resolvers keyed on Window ID.
 g_workspace_edit_panel_resolvers: dict[int, Callable[[bool], None]] = {}
 
+ROWCOL_PREFIX = " {:>4}:{:<4} {}"
+
 BUTTONS_TEMPLATE = """
 <style>
     html {{
@@ -241,7 +243,6 @@ def _render_workspace_edit_panel(
     header_lines = f"{total_changes} changes across {file_count} files - {label}\n"
     to_render.append(header_lines)
     reference_document.append(header_lines)
-    ROWCOL_PREFIX = " {:>4}:{:<4} {}"
     for uri, (changes, _, _) in changes_per_uri.items():
         scheme, file = parse_uri(uri)
         filename_line = '{}:'.format(_get_relative_path(wm, file) if scheme == 'file' else uri)

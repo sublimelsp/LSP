@@ -148,9 +148,7 @@ def _on_sublime_settings_changed(settings_registration: SettingsRegistration) ->
 
 
 def load_settings() -> None:
-    global _global_settings
-    global _settings
-    global _settings_registration
+    global _global_settings, _settings, _settings_registration
     if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
     if _settings_registration is None:
@@ -161,8 +159,7 @@ def load_settings() -> None:
 
 
 def unload_settings() -> None:
-    global _settings
-    global _settings_registration
+    global _settings, _settings_registration
     if _settings_registration:
         _settings_registration = None
         _settings = Settings(sublime.load_settings(""))

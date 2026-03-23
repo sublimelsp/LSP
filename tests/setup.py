@@ -260,8 +260,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert isinstance(self.view, sublime.View)
 
         def condition() -> bool:
-            nonlocal self
-            nonlocal expected_change_count
+            nonlocal self, expected_change_count
             assert self.view
             v = self.view
             return v.change_count() == expected_change_count

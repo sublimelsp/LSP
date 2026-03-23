@@ -63,8 +63,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
         def commit_completion() -> bool:
             if not self.view.is_auto_complete_visible():
                 return False
-            nonlocal committed
-            nonlocal current_change_count
+            nonlocal committed, current_change_count
             if not committed:
                 self.view.run_command(commit_completion_command)
                 committed = True

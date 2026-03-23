@@ -214,11 +214,11 @@ class LspHoverCommand(LspTextCommand):
         else:
             # If there are multiple diagnostics for the hover region, we can only use those code actions which include
             # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
-            code_actions = [
+            code_actions: list[Command | CodeAction] = [
                 action for action in response
                 if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
             ]
-        return config_name, code_actions  # pyright: ignore[reportReturnType]
+        return config_name, code_actions
 
     def _handle_code_actions(
         self,

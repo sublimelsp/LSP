@@ -141,7 +141,7 @@ class DiagnosticSeverityData:
         self.annotations: list[str] = []
 
 
-class InvalidUriSchemeException(Exception):
+class InvalidUriSchemeError(Exception):
     def __init__(self, uri: str) -> None:
         super().__init__(f"invalid URI scheme: {uri}")
 
@@ -246,7 +246,7 @@ def location_to_encoded_filename(location: Location | LocationLink) -> str:
     scheme, parsed = parse_uri(uri)
     if scheme == "file":
         return to_encoded_filename(parsed, position)
-    raise InvalidUriSchemeException(uri)
+    raise InvalidUriSchemeError(uri)
 
 
 class MissingUriError(Exception):

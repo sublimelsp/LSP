@@ -64,7 +64,7 @@ class ViewsTest(DeferrableTestCase):
 
         class MockSettings:
 
-            def get(value: str, default: Any) -> Any:
+            def get(self, value: str, default: Any | None = None) -> Any:
                 return "file:///hello/there.txt"
 
         mock_settings = MockSettings()

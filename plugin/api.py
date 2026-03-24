@@ -304,7 +304,7 @@ class LspPlugin(APIHandler):
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:
         """
-        Determine whether the server should run on the given view.
+        Determine whether the server should run on the view given by `context.view`.
 
         The default implementation checks whether the URI scheme and the syntax scope match against the schemes and
         selector from the settings file. You can override this method for example to dynamically evaluate the applicable

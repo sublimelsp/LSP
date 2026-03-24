@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import CodeActionKind
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlight
@@ -14,6 +17,7 @@ from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
+from .code_actions import filter_code_actions_for_diagnostics
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import ChangeEventAction
@@ -32,6 +36,7 @@ from .core.logging import debug
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
+from .core.promise import Promise
 from .core.protocol import Request
 from .core.registry import best_session
 from .core.registry import get_position
@@ -568,19 +573,35 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
-        if userprefs().diagnostics_gutter_marker and (diagnostics := self.get_diagnostics_async(
-                self.view.line(point), userprefs().show_diagnostics_severity_level)):
-            code_actions = dict(self._code_actions_for_selection) \
-                if self._lightbulb_line == self.view.rowcol(point)[0] else {}
-            base_dir = self._manager.get_project_path(filename) \
-                if self._manager and (filename := self.view.file_name()) else None
-            content = format_diagnostics_for_html(diagnostics, code_actions, self.lightbulb_color, base_dir)
-            show_lsp_popup(
-                self.view,
-                content,
-                flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                on_navigate=self._on_navigate)
+        if userprefs().diagnostics_gutter_marker:
+            region = self.view.line(point)
+            if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
+                kinds = [CodeActionKind.QuickFix]
+                code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
+                for sb, diagnostics in sb_diagnostics:
+                    if sb.has_capability('codeActionProvider'):
+                        config_name = sb.session.config.name
+                        promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
+                        code_action_promises.append(promise)
+                Promise.all(code_action_promises).then(
+                    partial(self._on_code_actions_for_hover_gutter_async, point, sb_diagnostics))
+
+    def _on_code_actions_for_hover_gutter_async(
+        self,
+        point: int,
+        diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
+        code_actions: list[tuple[str, list[Command | CodeAction]]]
+    ) -> None:
+        base_dir = self._manager.get_project_path(filename) \
+            if self._manager and (filename := self.view.file_name()) else None
+        content = format_diagnostics_for_html(diagnostics, dict(code_actions), self.lightbulb_color, base_dir)
+        show_lsp_popup(
+            self.view,
+            content,
+            flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            on_navigate=self._on_navigate)
 
     def _on_navigate(self, href: str) -> None:
         scheme = parse_uri(href)[0]

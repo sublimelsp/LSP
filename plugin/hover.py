@@ -8,6 +8,7 @@ from ..protocol import DocumentLink
 from ..protocol import Hover
 from ..protocol import Position
 from ..protocol import Range
+from .code_actions import filter_code_actions_for_diagnostics
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
@@ -42,7 +43,6 @@ from .core.views import update_lsp_popup
 from functools import partial
 from typing import Sequence
 from typing import Union
-from typing_extensions import TypeGuard
 from urllib.parse import urlparse
 import html
 import mdpopups
@@ -80,10 +80,6 @@ link_kinds = [
     LinkKind("references", "References", "lsp_symbol_references", False),
     LinkKind("rename", "Rename", "lsp_symbol_rename", False),
 ]
-
-
-def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[CodeAction]:
-    return bool(action.get('diagnostics'))
 
 
 class LspHoverCommand(LspTextCommand):
@@ -132,8 +128,9 @@ class LspHoverCommand(LspTextCommand):
                 code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
                 for sb, diagnostics in self._diagnostics_by_config:
                     if sb.has_capability('codeActionProvider'):
+                        config_name = sb.session.config.name
                         promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                                    .then(partial(self._filter_code_actions, sb.session.config.name, len(diagnostics)))
+                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
                         code_action_promises.append(promise)
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
@@ -201,24 +198,6 @@ class LspHoverCommand(LspTextCommand):
         if document_links := list(filter(None, links)):
             self._document_links = document_links
             self.show_hover(listener, point, only_diagnostics=False)
-
-    def _filter_code_actions(
-        self, config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
-    ) -> tuple[str, list[Command | CodeAction]]:
-        if isinstance(response, Error) or not response:
-            code_actions: list[Command | CodeAction] = []
-        elif diagnostics_count == 1:
-            # If there is only a single diagnostic from this server, all enabled code actions can be shown, because only
-            # "Quickfix" actions were requested.
-            code_actions = [action for action in response if not action.get('disabled', False)]
-        else:
-            # If there are multiple diagnostics for the hover region, we can only use those code actions which include
-            # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
-            code_actions = [
-                action for action in response
-                if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
-            ]
-        return config_name, code_actions
 
     def _handle_code_actions(
         self,

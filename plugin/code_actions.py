@@ -51,6 +51,30 @@ def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
     return isinstance(action.get('command'), str)
 
 
+def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[CodeAction]:
+    return bool(action.get('diagnostics'))
+
+
+def filter_code_actions_for_diagnostics(
+    config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
+) -> tuple[str, list[Command | CodeAction]]:
+    if isinstance(response, Error) or not response:
+        code_actions: list[Command | CodeAction] = []
+    elif diagnostics_count == 1:
+        # If there is only a single diagnostic from this server, all enabled code actions can be shown, because only
+        # "Quickfix" actions were requested. Strictly speaking, the code actions aren't necessarily associated with the
+        # diagnostic, but this heuristic works quite well in practice.
+        code_actions = [action for action in response if not action.get('disabled', False)]
+    else:
+        # If there are multiple diagnostics for the hover region, we can only use those code actions which include
+        # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
+        code_actions = [
+            action for action in response
+            if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
+        ]
+    return config_name, code_actions
+
+
 class CodeActionsManager:
     """Manager for per-location caching of code action responses."""
 

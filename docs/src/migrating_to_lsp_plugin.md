@@ -204,8 +204,7 @@ def __init__(self, weaksession, context: PluginContext) -> None:
 
 ### 7. Update `is_applicable` and `additional_variables`
 
-Both methods now receive a single `PluginContext` argument instead of individual parameters.
-`context.view` and `context.configuration` replace the former `view` and `config` arguments:
+Both methods now receive a single `PluginContext` argument instead of individual parameters. `context.view` and `context.configuration` replace the former `view` and `config` arguments. `additional_variables` now always expects a dict value (default implementation returns empty dict):
 
 ```python
 # Before
@@ -225,7 +224,7 @@ def is_applicable(cls, context: PluginContext) -> bool:
     return super().is_applicable(context) and my_condition(context.view)
 
 @classmethod
-def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
+def additional_variables(cls, context: PluginContext) -> dict[str, str]:
     return {"server_version": SERVER_VERSION}
 ```
 

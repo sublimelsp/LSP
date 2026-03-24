@@ -349,18 +349,18 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
+    def additional_variables(cls, context: PluginContext) -> dict[str, str]:
         """
-        Return extra template variables to be substituted in ``command``, ``env``, and
-        ``initialization_options`` from the settings file.
+        Return extra template variables to be substituted in ``command``, ``env``, and ``initialization_options``.
 
         By default includes variables like ``$storage_path``, ``$cache_path``, ``$temp_dir``, ``$home`` and also
         all variables extracted from the window (the ``window.extract_variables()`` API). Override this method
         to inject additional variables specific to your plugin.
 
         :param      context:    The plugin context.
-        :returns:   A dictionary of variable name → value pairs, or ``None``.
+        :returns:   A dictionary of variable name → value pairs.
         """
+        return {}
 
     @classmethod
     def install_async(cls, context: PluginContext) -> None:

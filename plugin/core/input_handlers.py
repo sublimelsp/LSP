@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .constants import ST_VERSION
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from typing import Any
 from typing import Callable
@@ -29,7 +29,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
     """
-    DEBOUNCE_TIME = 0.5  # seconds
+    DEBOUNCE_TIME = 0.5  # seconds  # noqa: N806
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
@@ -51,7 +51,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     return wrapped_function
 
 
-class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can preselect a value.
 
@@ -90,7 +90,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
         raise NotImplementedError()
 
 
-class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can update its items while typing in the input field.
 

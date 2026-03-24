@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Generator
 import argparse
 import json
@@ -30,14 +31,11 @@ PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
 
 
 def get_message(fname: str) -> str:
-    with open(fname, encoding='utf-8') as file:
-        message = file.read()
-    return message
+    return Path(fname).read_text(encoding='utf-8')
 
 
 def put_message(fname: str, text: str) -> None:
-    with open(fname, 'w', encoding='utf-8') as file:
-        file.write(text)
+    Path(fname).write_text(text, encoding='utf-8')
 
 
 def build_messages_json(version_history: list[str]) -> None:

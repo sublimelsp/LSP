@@ -80,8 +80,8 @@ class ProjectFolders:
                 elif pattern.startswith('/'):
                     exclude_patterns.append(sublime_pattern_to_glob(pattern, True))
                 else:
-                    exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
-                    exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
+                    exclude_patterns.extend((sublime_pattern_to_glob('//' + pattern, True, path),
+                                             sublime_pattern_to_glob('//**/' + pattern, True, path)))
             self._folders_exclude_patterns[i] = exclude_patterns
 
     def update(self) -> bool:

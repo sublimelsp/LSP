@@ -5,7 +5,7 @@ from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
@@ -73,7 +73,7 @@ class TreeItem:
             disclosure_button_html = '<span class="disclosure-button">&nbsp;</span>'
         kind_class_name = KIND_CLASS_NAMES.get(self.kind[0], 'kind kind_ambiguous')
         icon_html = '<span class="{}" title="{}">{}</span>'.format(
-            kind_class_name, self.kind[2], self.kind[1] if self.kind[1] else '&nbsp;')
+            kind_class_name, self.kind[2], self.kind[1] or '&nbsp;')
         if self.command_url and self.tooltip:
             label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
                 self.command_url, html.escape(self.tooltip), html.escape(self.label))
@@ -101,7 +101,7 @@ class Node:
         self.is_resolved = False
 
 
-class TreeDataProvider(metaclass=ABCMeta):
+class TreeDataProvider(ABC):
 
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:

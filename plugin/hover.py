@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import CodeActionKind
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DocumentLink
 from ..protocol import Hover
 from ..protocol import Position
 from ..protocol import Range
-from .code_actions import actions_manager
-from .code_actions import CodeActionOrCommand
-from .code_actions import CodeActionsByConfigName
+from .code_actions import filter_code_actions_for_diagnostics
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
@@ -23,16 +24,15 @@ from .core.registry import windows
 from .core.sessions import AbstractViewListener
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
+from .core.url import CODE_ACTION_SCHEME
+from .core.url import decode_code_action_uri
 from .core.url import parse_uri
-from .core.views import diagnostic_severity
-from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_diagnostic_for_html
+from .core.views import format_diagnostics_for_html
 from .core.views import FORMAT_MARKED_STRING
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
-from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
@@ -40,7 +40,6 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from functools import lru_cache
 from functools import partial
 from typing import Sequence
 from typing import Union
@@ -52,9 +51,6 @@ import sublime_plugin
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]
-
-
-_test_contents: list[str] = []
 
 
 class LinkKind:
@@ -86,29 +82,6 @@ link_kinds = [
 ]
 
 
-@lru_cache
-def lightbulb_html(color: str) -> str:
-    return f'<span class="lightbulb">{mdpopups.tint("Packages/LSP/icons/lightbulb_cropped.png", color)}</span> '
-
-
-def code_actions_content(actions_by_config: list[CodeActionsByConfigName], lightbulb_color: str | None = None) -> str:
-    formatted = []
-    for config_name, actions in actions_by_config:
-        action_count = len(actions)
-        if action_count == 0:
-            continue
-        if action_count > 1:
-            text = f"choose ({action_count} available)"
-        else:
-            text = actions[0].get('title', 'code action')
-        href = "{}:{}".format('code-actions', config_name)
-        link = make_link(href, text)
-        icon_html = lightbulb_html(lightbulb_color) if lightbulb_color else ''
-        formatted.append(html_wrapper(f'{icon_html}{link} <span class="color-muted">{config_name}</span>',
-                                      class_name='code-actions'))
-    return "".join(formatted)
-
-
 class LspHoverCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
@@ -132,7 +105,7 @@ class LspHoverCommand(LspTextCommand):
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses: list[tuple[Hover, MarkdownLangMap | None]] = []
         self._document_links: list[DocumentLink] = []
-        self._actions_by_config: list[CodeActionsByConfigName] = []
+        self._actions_by_config: dict[str, list[Command | CodeAction]] = {}
         self._diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]] = []
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
@@ -149,11 +122,17 @@ class LspHoverCommand(LspTextCommand):
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
-            if not only_diagnostics and userprefs().show_code_actions_in_hover:
+            if userprefs().show_code_actions_in_hover:
                 region = sublime.Region(hover_point, hover_point)
-                actions_manager \
-                    .request_for_region_async(self.view, region, self._diagnostics_by_config, manual=False) \
-                    .then(lambda results: self._handle_code_actions(listener, hover_point, results))
+                kinds = [CodeActionKind.QuickFix]
+                code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
+                for sb, diagnostics in self._diagnostics_by_config:
+                    if sb.has_capability('codeActionProvider'):
+                        config_name = sb.session.config.name
+                        promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
+                        code_action_promises.append(promise)
+                Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
         sublime.set_timeout_async(run_async)
 
@@ -216,17 +195,19 @@ class LspHoverCommand(LspTextCommand):
     def _on_all_document_links_resolved(
         self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
     ) -> None:
-        self._document_links = list(filter(None, links))
-        self.show_hover(listener, point, only_diagnostics=False)
+        if document_links := list(filter(None, links)):
+            self._document_links = document_links
+            self.show_hover(listener, point, only_diagnostics=False)
 
     def _handle_code_actions(
         self,
         listener: AbstractViewListener,
         point: int,
-        responses: list[CodeActionsByConfigName]
+        responses: list[tuple[str, list[Command | CodeAction]]]
     ) -> None:
-        self._actions_by_config = responses
-        self.show_hover(listener, point, only_diagnostics=False)
+        if actions := {config_name: code_actions for config_name, code_actions in responses if code_actions}:
+            self._actions_by_config = actions
+            self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
         return bool(listener.session_async(f'{link.lsp_name}Provider'))
@@ -255,19 +236,6 @@ class LspHoverCommand(LspTextCommand):
         else:
             return "", None
 
-    def diagnostics_content(self) -> str:
-        formatted = []
-        for sb, diagnostics in self._diagnostics_by_config:
-            by_severity: dict[int, list[str]] = {}
-            formatted.append('<div class="diagnostics">')
-            for diagnostic in diagnostics:
-                by_severity.setdefault(diagnostic_severity(diagnostic), []).append(
-                    format_diagnostic_for_html(sb.session.config, diagnostic, self._base_dir))
-            for items in by_severity.values():
-                formatted.extend(items)
-            formatted.append("</div>")
-        return "".join(formatted)
-
     def hover_content(self) -> str:
         contents: list[str] = []
         for hover, language_map in self._hover_responses:
@@ -287,11 +255,14 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
-        hover_content = self.hover_content()
+        # TODO clean up this method, it is a total mess currently with all that conditional logic
+        contents = ''
         prefs = userprefs()
-        diagnostics_content = self.diagnostics_content() if only_diagnostics or prefs.show_diagnostics_in_hover else ""
-        contents = diagnostics_content + hover_content + \
-            code_actions_content(self._actions_by_config, listener.lightbulb_color)
+        if only_diagnostics or prefs.show_diagnostics_in_hover:
+            contents += format_diagnostics_for_html(
+                self._diagnostics_by_config, self._actions_by_config, listener.lightbulb_color, self._base_dir)
+        hover_content = self.hover_content()
+        contents += hover_content
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
@@ -304,9 +275,6 @@ class LspHoverCommand(LspTextCommand):
                 contents += html_wrapper(symbol_actions_content, class_name='actions')
         elif link_content:
             contents += html_wrapper(link_content)
-
-        _test_contents.clear()
-        _test_contents.append(contents)  # for testing only
 
         if contents:
             if prefs.hover_highlight_style:
@@ -326,7 +294,7 @@ class LspHoverCommand(LspTextCommand):
                     contents,
                     flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,
-                    on_navigate=lambda href: self._on_navigate(href, point),
+                    on_navigate=self._on_navigate,
                     on_hide=lambda: self.view.erase_regions(RegionKey.HOVER_HIGHLIGHT))
             self._image_resolver = mdpopups.resolve_images(
                 contents, mdpopups.worker_thread_resolver, partial(self._on_images_resolved, contents))
@@ -336,34 +304,25 @@ class LspHoverCommand(LspTextCommand):
         if contents != original_contents and self.view.is_popup_visible():
             update_lsp_popup(self.view, contents)
 
-    def _on_navigate(self, href: str, point: int) -> None:
-        if href.startswith("subl:"):
+    def _on_navigate(self, href: str) -> None:
+        scheme = parse_uri(href)[0]
+        if scheme == 'subl':
             pass
-        elif href.startswith("file:"):
+        elif scheme == 'file':
             if window := self.view.window():
                 open_file_uri(window, href)
-        elif href.startswith('code-actions:'):
-            self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
-            _, config_name = href.split(":")
-            actions = next(actions for name, actions in self._actions_by_config if name == config_name)
-            if len(actions) > 1:
-                if window := self.view.window():
-                    items, selected_index = format_code_actions_for_quick_panel(
-                        (config_name, action) for action in actions)
-                    window.show_quick_panel(
-                        items,
-                        lambda i: self.handle_code_action_select(config_name, actions, i),
-                        selected_index=selected_index,
-                        placeholder="Code actions")
-            else:
-                self.handle_code_action_select(config_name, actions, 0)
+        elif scheme == CODE_ACTION_SCHEME:
+            session_name, action = decode_code_action_uri(href)
+            if session := self.session_by_name(session_name):
+                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                self.view.hide_popup()
         elif href == "quick-panel:DocumentLink":
             if window := self.view.window():
                 targets = [link["target"] for link in self._document_links]  # pyright: ignore
 
                 def on_select(targets: list[str], idx: int) -> None:
                     if idx > -1:
-                        self._on_navigate(targets[idx], 0)
+                        self._on_navigate(targets[idx])
 
                 window.show_quick_panel(
                     [parse_uri(target)[1] for target in targets], partial(on_select, targets), placeholder="Open Link")
@@ -373,20 +332,10 @@ class LspHoverCommand(LspTextCommand):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif parse_uri(href)[0].lower() in ("", "http", "https"):
+        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
             open_in_browser(href)
-        else:
+        elif scheme:
             sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
-
-    def handle_code_action_select(self, config_name: str, actions: list[CodeActionOrCommand], index: int) -> None:
-        if index == -1:
-            return
-
-        def run_async() -> None:
-            if session := self.session_by_name(config_name):
-                session.run_code_action_async(actions[index], progress=True, view=self.view)
-
-        sublime.set_timeout_async(run_async)
 
     def try_open_custom_uri_async(self, href: str) -> None:
         r = lsp_range_from_uri_fragment(urlparse(href).fragment)

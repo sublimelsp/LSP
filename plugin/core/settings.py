@@ -7,7 +7,7 @@ from .types import debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import SettingsRegistration
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from os.path import basename
@@ -15,7 +15,7 @@ import json
 import sublime
 
 
-class LspSettingsChangeListener(metaclass=ABCMeta):
+class LspSettingsChangeListener(ABC):
 
     @abstractmethod
     def on_client_config_updated(self, config_name: str | None = None) -> None:
@@ -148,9 +148,7 @@ def _on_sublime_settings_changed(settings_registration: SettingsRegistration) ->
 
 
 def load_settings() -> None:
-    global _global_settings
-    global _settings
-    global _settings_registration
+    global _global_settings, _settings, _settings_registration
     if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
     if _settings_registration is None:
@@ -161,8 +159,7 @@ def load_settings() -> None:
 
 
 def unload_settings() -> None:
-    global _settings
-    global _settings_registration
+    global _settings, _settings_registration
     if _settings_registration:
         _settings_registration = None
         _settings = Settings(sublime.load_settings(""))

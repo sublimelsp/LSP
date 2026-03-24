@@ -147,7 +147,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return listener.session_async(capability, point) if listener else None
 
     def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
-        target = name if name else self.session_name
+        target = name or self.session_name
         if listener := self.get_listener():
             for sv in listener.session_views_async():
                 if sv.session.config.name == target:

@@ -24,7 +24,7 @@ class LspExecuteCommand(LspTextCommand):
             command_args: list[Any] | None = None,
             session_name: str | None = None,
             event: dict | None = None) -> None:
-        session = self.session_by_name(session_name if session_name else self.session_name)
+        session = self.session_by_name(session_name or self.session_name)
         if session and command_name:
             params: ExecuteCommandParams = {"command": command_name}
             if command_args:

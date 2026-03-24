@@ -59,8 +59,8 @@ class ErrorCode(IntEnum):
     MethodNotFound = -32601
     InvalidParams = -32602
     InternalError = -32603
-    serverErrorStart = -32099
-    serverErrorEnd = -32000
+    serverErrorStart = -32099  # noqa: N815
+    serverErrorEnd = -32000  # noqa: N815
     ServerNotInitialized = -32002
     UnknownErrorCode = -32001
 
@@ -132,7 +132,7 @@ class MessageType:
     log = 4
 
 
-class StopLoopException(Exception):
+class StopLoopError(Exception):
     pass
 
 
@@ -324,7 +324,7 @@ class Session:
                     continue
                 body = await self._reader.readexactly(num_bytes)
                 asyncio.get_event_loop().create_task(self._handle_body(body))
-        except (BrokenPipeError, ConnectionResetError, StopLoopException):
+        except (BrokenPipeError, ConnectionResetError, StopLoopError):
             pass
         return self._received_shutdown
 
@@ -401,7 +401,7 @@ class Session:
     async def _on_exit(self, params: PayloadLike) -> None:
         if params is not None:
             raise Error(ErrorCode.InvalidParams, "expected exit params to be null")
-        self._reader.set_exception(StopLoopException())
+        self._reader.set_exception(StopLoopError())
 
 
 # START: https://stackoverflow.com/a/52702646/990142

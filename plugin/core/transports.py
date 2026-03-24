@@ -346,7 +346,7 @@ def _start_subprocess(
     env: dict[str, str],
     cwd: str | None
 ) -> subprocess.Popen:
-    debug(f"starting {args} in {cwd if cwd else os.getcwd()}")
+    debug(f"starting {args} in {cwd or os.getcwd()}")
     process = subprocess.Popen(
         args=args,
         stdin=stdin,

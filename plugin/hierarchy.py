@@ -22,7 +22,7 @@ from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.views import make_command_link
 from .core.views import text_document_position_params
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
@@ -140,7 +140,7 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
     }, tooltip=tooltip))
 
 
-class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
+class LspHierarchyCommand(LspTextCommand, ABC):
 
     @classmethod
     @abstractmethod

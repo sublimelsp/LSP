@@ -20,7 +20,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
@@ -49,6 +49,30 @@ MENU_ACTIONS_KINDS = [CodeActionKind.Refactor, CodeActionKind.Source]
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
     return isinstance(action.get('command'), str)
+
+
+def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[CodeAction]:
+    return bool(action.get('diagnostics'))
+
+
+def filter_code_actions_for_diagnostics(
+    config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
+) -> tuple[str, list[Command | CodeAction]]:
+    if isinstance(response, Error) or not response:
+        code_actions: list[Command | CodeAction] = []
+    elif diagnostics_count == 1:
+        # If there is only a single diagnostic from this server, all enabled code actions can be shown, because only
+        # "Quickfix" actions were requested. Strictly speaking, the code actions aren't necessarily associated with the
+        # diagnostic, but this heuristic works quite well in practice.
+        code_actions = [action for action in response if not action.get('disabled', False)]
+    else:
+        # If there are multiple diagnostics for the hover region, we can only use those code actions which include
+        # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
+        code_actions = [
+            action for action in response
+            if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
+        ]
+    return config_name, code_actions
 
 
 class CodeActionsManager:
@@ -410,7 +434,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
-class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
+class LspMenuActionCommand(LspWindowCommand, ABC):
     """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'

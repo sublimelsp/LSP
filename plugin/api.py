@@ -88,8 +88,6 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
 
     ```python
     from LSP.plugin import register_plugin
-    from LSP.plugin import unregister_plugin
-    from LSP.plugin import AbstractPlugin
 
 
     class MyPlugin(AbstractPlugin):
@@ -97,10 +95,10 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
 
 
     def plugin_loaded():
-        register_plugin(MyPlugin)
+        MyPlugin.register_plugin()
 
     def plugin_unloaded():
-        unregister_plugin(MyPlugin)
+        MyPlugin.unregister_plugin()
     ```
 
     If you need to install supplementary files (e.g. javascript source code that implements the actual server), do so
@@ -255,8 +253,6 @@ class LspPlugin(APIHandler):
 
     ```py
     from LSP.plugin import LspPlugin
-    from LSP.plugin import register_plugin
-    from LSP.plugin import unregister_plugin
 
 
     class LspFooPlugin(LspPlugin):
@@ -264,11 +260,11 @@ class LspPlugin(APIHandler):
 
 
     def plugin_loaded() -> None:
-        register_plugin(LspFoo)
+        LspFooPlugin.register()
 
 
     def plugin_unloaded() -> None:
-        unregister_plugin(LspFoo)
+        LspFooPlugin.unregister()
     ```
 
     LSP will look for a settings file at ``Packages/<package_name>/<package_name>.sublime-settings``
@@ -300,6 +296,36 @@ class LspPlugin(APIHandler):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         cls.session_name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.session_name)  # pyright: ignore[reportAttributeAccessIssue]
+
+    @classmethod
+    def register(cls) -> None:
+        """
+        Register this plugin with LSP.
+
+        Call this from your `plugin_loaded` callback so that LSP picks up configuration changes when your package
+        is disabled and re-enabled:
+
+        ```py
+        def plugin_loaded() -> None:
+            LspFooPlugin.register()
+        ```
+        """
+        register_plugin(cls)
+
+    @classmethod
+    def unregister(cls) -> None:
+        """
+        Unregister this plugin from LSP.
+
+        Call this from your `plugin_unloaded` callback so that the language server is shut down when your package
+        is disabled:
+
+        ```py
+        def plugin_unloaded() -> None:
+            LspFooPlugin.unregister()
+        ```
+        """
+        unregister_plugin(cls)
 
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:

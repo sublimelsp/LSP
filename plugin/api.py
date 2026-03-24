@@ -235,8 +235,8 @@ class PluginContext:
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
-    initiating_view: sublime.View
-    """The view that triggered the session to start."""
+    view: sublime.View
+    """The view relevant to the method being called."""
     window: sublime.Window
     """The window in which the session is running."""
     workspace_folders: list[WorkspaceFolder]
@@ -317,9 +317,8 @@ class LspPlugin(APIHandler):
 
         :param      context:           The plugin context.
         """
-        view = context.initiating_view
-        if (syntax := view.syntax()) and (selector := context.configuration.selector.strip()):
-            scheme, _ = parse_uri(uri_from_view(view))
+        if (syntax := context.view.syntax()) and (selector := context.configuration.selector.strip()):
+            scheme, _ = parse_uri(uri_from_view(context.view))
             return scheme in context.configuration.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False
 

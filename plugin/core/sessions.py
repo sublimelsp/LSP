@@ -5,6 +5,7 @@ from ...protocol import ApplyWorkspaceEditResult
 from ...protocol import ClientCapabilities
 from ...protocol import CodeAction
 from ...protocol import CodeActionKind
+from ...protocol import CodeActionTriggerKind
 from ...protocol import Command
 from ...protocol import CompletionItemKind
 from ...protocol import CompletionItemTag
@@ -785,6 +786,16 @@ class SessionBufferProtocol(Protocol):
     def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[CodeActionKind] | None = ...,
+        trigger_kind: CodeActionTriggerKind = ...
+    ) -> Promise[list[Command | CodeAction] | None | Error]:
+        ...
+
     def do_code_lenses_async(self, view: sublime.View) -> None:
         ...
 
@@ -1329,7 +1340,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise[R | Error | None]:
+    ) -> Promise[R | Error | None]:  # pyright: ignore[reportInvalidTypeVarUse]
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):

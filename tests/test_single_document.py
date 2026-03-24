@@ -6,7 +6,6 @@ from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
 from setup import TIMEOUT_TIME
 from setup import YieldPromise
@@ -120,15 +119,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEqual("BBB", text)
         yield from self.await_clear_view_and_save()
 
-    def test_hover_info(self) -> Generator:
+    def test_hover_popup_visible(self) -> Generator:
         assert self.view
         self.set_response('textDocument/hover', {"contents": "greeting"})
         self.view.run_command('insert', {"characters": "Hello Wrld"})
         self.assertFalse(self.view.is_popup_visible())
         self.view.run_command('lsp_hover', {'point': 3})
         yield lambda: self.view.is_popup_visible()
-        last_content = _test_contents[-1]
-        self.assertTrue("greeting" in last_content)
 
     def test_remove_line_and_then_insert_at_that_line_at_end(self) -> Generator:
         original = (

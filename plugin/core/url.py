@@ -1,17 +1,26 @@
 from __future__ import annotations
 
+from ...protocol import CodeAction
+from ...protocol import Command
 from ...protocol import DocumentUri
+from ...protocol import URI
 from .constants import ST_INSTALLED_PACKAGES_PATH
 from .constants import ST_PACKAGES_PATH
+from base64 import urlsafe_b64decode
+from base64 import urlsafe_b64encode
 from typing import Any
+from typing import cast
 from typing_extensions import deprecated
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
 from urllib.request import url2pathname
+import json
 import os
 import re
 import sublime
+
+CODE_ACTION_SCHEME = 'code-action'
 
 
 def normalize_uri(uri: DocumentUri) -> DocumentUri:
@@ -92,3 +101,16 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 def _uppercase_driveletter(match: Any) -> str:
     """For compatibility with Sublime's VCS status in the status bar."""
     return f"{match.group(1).upper()}:"
+
+
+def encode_code_action_uri(session_name: str, action: Command | CodeAction) -> URI:
+    return f'{CODE_ACTION_SCHEME}:{session_name}/{urlsafe_b64encode(json.dumps(action).encode()).decode()}'
+
+
+def decode_code_action_uri(uri: URI) -> tuple[str, Command | CodeAction]:
+    scheme = parse_uri(uri)[0]
+    if scheme != CODE_ACTION_SCHEME:
+        raise ValueError(f'Unsupported URI scheme: {scheme}')
+    session_name, _, data = uri[len(CODE_ACTION_SCHEME) + 1:].partition('/')
+    action = cast('Command | CodeAction', json.loads(urlsafe_b64decode(data.encode()).decode()))
+    return session_name, action

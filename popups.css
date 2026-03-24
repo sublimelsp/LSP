@@ -94,19 +94,23 @@
 .hint {
     background-color: color(var(--bluish) alpha(0.2));
 }
-.actions,
-.code-actions {
-    background-color: color(var(--foreground) alpha(0.1));
-}
 .signature-help-intro {
     font-size: var(--font-size-sm);
+}
+.actions {
+    background-color: color(var(--foreground) alpha(0.1));
 }
 .actions a {
     text-decoration: none;
 }
-.code-actions .lightbulb img {
-    width: 0.9rem;
-    height: 0.9rem;
+.lightbulb {
+    position: relative;
+    bottom: -2px;
+    padding-right: 0.5rem;
+}
+.lightbulb img {
+    width: 1rem;
+    height: 1rem;
 }
 a.copy-icon {
     padding: 0.5rem;

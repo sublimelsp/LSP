@@ -398,8 +398,8 @@ class ViewsTest(DeferrableTestCase):
         client_config = make_stdio_test_config()
         # They should result in the same minihtml.
         self.assertEqual(
-            format_diagnostic_for_html(client_config, diagnostic1, "/foo/bar"),
-            format_diagnostic_for_html(client_config, diagnostic2, "/foo/bar")
+            format_diagnostic_for_html(client_config, diagnostic1, [], '#ffffff', "/foo/bar"),
+            format_diagnostic_for_html(client_config, diagnostic2, [], '#ffffff', "/foo/bar")
         )
 
     def test_escaped_newline_in_markdown(self) -> None:

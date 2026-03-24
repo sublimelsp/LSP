@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import CodeActionContext
+from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
+from ..protocol import CodeActionTriggerKind
 from ..protocol import CodeLens
 from ..protocol import ColorInformation
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DiagnosticTag
@@ -957,6 +963,30 @@ class SessionBuffer:
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeAction --------------------------------------------------------------------------------------
+
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[CodeActionKind] | None = None,
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
+    ) -> Promise[list[Command | CodeAction] | None | Error]:
+        context: CodeActionContext = {
+            'diagnostics': diagnostics,
+            'triggerKind': trigger_kind
+        }
+        if kinds:
+            context['only'] = kinds
+        params: CodeActionParams = {
+            'textDocument': text_document_identifier(view),
+            'range': region_to_range(view, region),
+            'context': context
+        }
+        request = Request.codeAction(params, view)
+        return self.session.send_request_task(request)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 

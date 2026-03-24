@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import CodeActionKind
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DocumentHighlight
@@ -13,8 +16,8 @@ from ..protocol import SignatureHelpContext
 from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
 from .code_actions import actions_manager
-from .code_actions import CodeActionOrCommand
 from .code_actions import CodeActionsByConfigName
+from .code_actions import filter_code_actions_for_diagnostics
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import ChangeEventAction
@@ -30,8 +33,10 @@ from .core.constants import SIGNATURE_HELP_FUNCTION_SCOPE
 from .core.constants import SIGNATURE_HELP_INACTIVE_PARAMETER_SCOPE
 from .core.constants import ST_VERSION
 from .core.logging import debug
+from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.panels import PanelName
+from .core.promise import Promise
 from .core.protocol import Request
 from .core.registry import best_session
 from .core.registry import get_position
@@ -43,17 +48,17 @@ from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.signature_help import SignatureHelpStyle
 from .core.types import basescope2languageid
-from .core.types import ClientConfig
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
+from .core.url import CODE_ACTION_SCHEME
+from .core.url import decode_code_action_uri
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
 from .core.views import document_highlight_key
 from .core.views import first_selection_region
-from .core.views import format_code_actions_for_quick_panel
-from .core.views import format_diagnostic_for_html
+from .core.views import format_diagnostics_for_html
 from .core.views import make_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -63,7 +68,6 @@ from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import WindowManager
 from .folding_range import folding_range_to_range
-from .hover import code_actions_content
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -569,37 +573,48 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
-        content = ''
-        if self._lightbulb_line == self.view.rowcol(point)[0]:
-            content += code_actions_content(self._code_actions_for_selection)
-        if userprefs().show_diagnostics_severity_level:
-            diagnostics_with_config: list[tuple[ClientConfig, Diagnostic]] = []
-            diagnostics_by_session_buffer: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
-            max_severity_level = min(userprefs().show_diagnostics_severity_level, DiagnosticSeverity.Information)
-            if userprefs().diagnostics_gutter_marker:
-                diagnostics_by_session_buffer = self.get_diagnostics_async(self.view.line(point))
-            elif content:
-                diagnostics_by_session_buffer = self._diagnostics_for_selection
-            if content:
-                max_severity_level = userprefs().show_diagnostics_severity_level
-            for sb, diagnostics in diagnostics_by_session_buffer:
-                diagnostics_with_config.extend(
-                    (sb.session.config, diagnostic) for diagnostic in diagnostics
-                    if diagnostic_severity(diagnostic) <= max_severity_level
-                )
-            if diagnostics_with_config:
-                diagnostics_with_config.sort(key=lambda d: diagnostic_severity(d[1]))
-                content += '<div class="diagnostics">'
-                for config, diagnostic in diagnostics_with_config:
-                    content += format_diagnostic_for_html(config, diagnostic)
-                content += '</div>'
-        if content:
-            show_lsp_popup(
-                self.view,
-                content,
-                flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                on_navigate=lambda href: self._on_navigate(href, point))
+        if userprefs().diagnostics_gutter_marker:
+            region = self.view.line(point)
+            if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
+                kinds = [CodeActionKind.QuickFix]
+                code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
+                for sb, diagnostics in sb_diagnostics:
+                    if sb.has_capability('codeActionProvider'):
+                        config_name = sb.session.config.name
+                        promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
+                        code_action_promises.append(promise)
+                Promise.all(code_action_promises).then(
+                    partial(self._on_code_actions_for_hover_gutter_async, point, sb_diagnostics))
+
+    def _on_code_actions_for_hover_gutter_async(
+        self,
+        point: int,
+        diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
+        code_actions: list[tuple[str, list[Command | CodeAction]]]
+    ) -> None:
+        base_dir = self._manager.get_project_path(filename) \
+            if self._manager and (filename := self.view.file_name()) else None
+        content = format_diagnostics_for_html(diagnostics, dict(code_actions), self.lightbulb_color, base_dir)
+        show_lsp_popup(
+            self.view,
+            content,
+            flags=sublime.PopupFlags.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            on_navigate=self._on_navigate)
+
+    def _on_navigate(self, href: str) -> None:
+        scheme = parse_uri(href)[0]
+        if scheme == 'file':
+            if window := self.view.window():
+                open_file_uri(window, href)
+        elif scheme == CODE_ACTION_SCHEME:
+            session_name, action = decode_code_action_uri(href)
+            if session := self.session_by_name(session_name):
+                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                self.view.hide_popup()
+        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
+            open_in_browser(href)
 
     @requires_session
     def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
@@ -841,36 +856,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(RegionKey.CODE_ACTION)
         self._lightbulb_line = None
-
-    def _on_navigate(self, href: str, point: int) -> None:
-        if href.startswith('code-actions:'):
-            _, config_name = href.split(":")
-            actions = next(actions for name, actions in self._code_actions_for_selection if name == config_name)
-            if len(actions) > 1:
-                if window := self.view.window():
-                    items, selected_index = format_code_actions_for_quick_panel(
-                        (config_name, action) for action in actions)
-                    window.show_quick_panel(
-                        items,
-                        lambda i: self.handle_code_action_select(config_name, actions, i),
-                        selected_index=selected_index,
-                        placeholder="Code actions")
-            else:
-                self.handle_code_action_select(config_name, actions, 0)
-        elif href.startswith("http"):
-            open_in_browser(href)
-        else:
-            debug('on_navigate unhandled href:', href)
-
-    def handle_code_action_select(self, config_name: str, actions: list[CodeActionOrCommand], index: int) -> None:
-        if index == -1:
-            return
-
-        def run_async() -> None:
-            if session := self.session_by_name(config_name):
-                session.run_code_action_async(actions[index], progress=True, view=self.view)
-
-        sublime.set_timeout_async(run_async)
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 

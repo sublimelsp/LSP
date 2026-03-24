@@ -122,7 +122,7 @@ from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
-from .types import DocumentSelector_
+from .types import DocumentSelectorMatcher
 from .types import method2attr
 from .types import method_to_capability
 from .types import SemanticToken
@@ -137,7 +137,7 @@ from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from enum import IntFlag
@@ -214,7 +214,7 @@ def decode_semantic_token(
     """
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
-        modifiers_legend[idx] for idx, val in enumerate(reversed(bin(token_modifiers_encoded)[2:])) if val == "1"
+        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == "1"
     ]
     scope = None
     tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
@@ -235,7 +235,7 @@ def decode_semantic_token(
     return token_type, token_modifiers, scope
 
 
-class Manager(metaclass=ABCMeta):
+class Manager(ABC):
     """A Manager is a container of Sessions."""
 
     # Observers
@@ -803,7 +803,7 @@ class SessionBufferProtocol(Protocol):
         ...
 
 
-class AbstractViewListener(metaclass=ABCMeta):
+class AbstractViewListener(ABC):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
@@ -896,7 +896,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class Logger(metaclass=ABCMeta):
+class Logger(ABC):
 
     @abstractmethod
     def stderr_message(self, message: str) -> None:
@@ -952,7 +952,7 @@ class _RegistrationData:
         document_selector = options.pop("documentSelector", None)
         if not isinstance(document_selector, list):
             document_selector = []
-        self.selector = DocumentSelector_(document_selector)
+        self.selector = DocumentSelectorMatcher(document_selector)
         self.options = options
         self.session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
 

@@ -151,8 +151,7 @@ class LspCodeLensCommand(LspTextCommand):
         for region in self.view.sel():
             for sv in listener.session_views_async():
                 session_name = sv.session.config.name
-                for command in sv.get_code_lenses_for_region(region):
-                    commands.append((session_name, command))
+                commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:
             return
         elif len(commands) == 1:

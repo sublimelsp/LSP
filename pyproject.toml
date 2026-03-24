@@ -99,26 +99,8 @@ ignore = [
     "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
     "FBT003",  # https://docs.astral.sh/ruff/rules/boolean-positional-value-in-call/
     "FIX",  # https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
-    "FURB101",  # https://docs.astral.sh/ruff/rules/read-whole-file/
-    "FURB103",  # https://docs.astral.sh/ruff/rules/write-whole-file/
-    "FURB110",  # https://docs.astral.sh/ruff/rules/if-exp-instead-of-or-operator/
-    "FURB113",  # https://docs.astral.sh/ruff/rules/repeated-append/
-    "FURB116",  # https://docs.astral.sh/ruff/rules/f-string-number-format/
-    "FURB140",  # https://docs.astral.sh/ruff/rules/reimplemented-starmap/
-    "FURB154",  # https://docs.astral.sh/ruff/rules/repeated-global/
-    "FURB180",  # https://docs.astral.sh/ruff/rules/meta-class-abc-meta/
-    "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
-    "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
-    "ISC003",  # https://docs.astral.sh/ruff/rules/explicit-string-concatenation/
-    "N801",  # https://docs.astral.sh/ruff/rules/invalid-class-name/
     "N802",  # https://docs.astral.sh/ruff/rules/invalid-function-name/#invalid-function-name-n802
-    "N805",  # https://docs.astral.sh/ruff/rules/invalid-first-argument-name-for-method/
-    "N806",  # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function/
-    "N815",  # https://docs.astral.sh/ruff/rules/mixed-case-variable-in-class-scope/
-    "N818",  # https://docs.astral.sh/ruff/rules/error-suffix-on-exception-name/
     "PERF203",  # https://docs.astral.sh/ruff/rules/try-except-in-loop/
-    "PERF401",  # https://docs.astral.sh/ruff/rules/manual-list-comprehension/
-    "PERF403",  # https://docs.astral.sh/ruff/rules/manual-dict-comprehension/
     "PGH003",  # https://docs.astral.sh/ruff/rules/blanket-type-ignore/
     "PGH004",  # https://docs.astral.sh/ruff/rules/blanket-noqa/
     "PIE790",  # https://docs.astral.sh/ruff/rules/unnecessary-placeholder/

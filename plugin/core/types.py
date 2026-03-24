@@ -439,7 +439,7 @@ class ClientStates:
     STOPPING = 2
 
 
-class DocumentFilter_:
+class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
 
@@ -481,7 +481,7 @@ class DocumentFilter_:
         return True
 
 
-class DocumentSelector_:
+class DocumentSelectorMatcher:
     """
     A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
     filters matches against the view.
@@ -490,7 +490,7 @@ class DocumentSelector_:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilter_(**cast(dict, document_filter)) for document_filter in document_selector]
+        self.filters = [DocumentFilterMatcher(**cast(dict, document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -828,7 +828,7 @@ class ClientConfig:
         """
         self.name = name
         self.selector = selector
-        self.priority_selector = priority_selector if priority_selector else self.selector
+        self.priority_selector = priority_selector or self.selector
         if isinstance(schemes, list):
             self.schemes: list[str] = schemes
         else:
@@ -1008,7 +1008,7 @@ class ClientConfig:
             file_watcher=override.get("file_watcher", src_config.file_watcher),
             semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
             diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override if path_map_override else src_config.path_maps,
+            path_maps=path_map_override or src_config.path_maps,
             settings_registration=src_config._settings_registration,
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )
@@ -1162,11 +1162,9 @@ class ClientConfig:
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for k, v in options.items():
-            if not self.is_disabled_capability(f"{capability_path}.{k}"):
-                result[k] = v
-        return result
+        return {
+            k: v for k, v in options.items() if not self.is_disabled_capability(f"{capability_path}.{k}")
+        }
 
     def __repr__(self) -> str:
         items: list[str] = []

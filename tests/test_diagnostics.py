@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
+from .test_single_document import TEST_FILE_PATH
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
-from setup import TextDocumentTestCase
-from test_single_document import TEST_FILE_PATH
 from typing import TYPE_CHECKING
 from unittesting import AWAIT_WORKER
 import sublime

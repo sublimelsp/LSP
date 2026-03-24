@@ -103,7 +103,7 @@ def _uppercase_driveletter(match: Any) -> str:
     return f"{match.group(1).upper()}:"
 
 
-def encode_code_action_uri(action: Command | CodeAction, session_name: str) -> URI:
+def encode_code_action_uri(session_name: str, action: Command | CodeAction) -> URI:
     return f'{CODE_ACTION_SCHEME}:{session_name}/{urlsafe_b64encode(json.dumps(action).encode()).decode()}'
 
 

@@ -930,7 +930,7 @@ def format_diagnostic_for_html(
         content += '<hr>' + _html_element("div", info, escape=False)
     for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
         icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
-        code_action_uri = encode_code_action_uri(code_action, config.name)
+        code_action_uri = encode_code_action_uri(config.name, code_action)
         content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
     return html_wrapper(content, class_name=severity_class)

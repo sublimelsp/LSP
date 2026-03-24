@@ -22,12 +22,12 @@ from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Final
-from typing import final
 from typing import TYPE_CHECKING
 from typing import TypeVar
 import inspect
@@ -69,15 +69,13 @@ g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 class PluginStartError(Exception):
 
-    def __init__(self, message: str, *args: Any) -> None:
-        super().__init__(message, *args)
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
 
 
 def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
-
-    TODO: Document PluginStartError
 
     You should put a call to this function in your `plugin_loaded` callback. This way, when your package is disabled
     by a user and then re-enabled again by a user, the changes in state are picked up by LSP, and your language server
@@ -231,28 +229,64 @@ def request_handler(
     return decorator
 
 
-@final
+@dataclass
 class PluginContext:
-    def __init__(
-        self,
-        configuration: ClientConfig,
-        initiating_view: sublime.View,
-        window: sublime.Window,
-        workspace_folders: list[WorkspaceFolder]
-    ) -> None:
-        self.configuration = configuration
-        self.initiating_view = initiating_view
-        self.window = window
-        self.workspace_folders = workspace_folders
+    """Plugin context information passed to various `LspPlugin` classmethods."""
+
+    configuration: ClientConfig
+    """The resolved `ClientConfig` for this session."""
+    initiating_view: sublime.View
+    """The view that triggered the session to start."""
+    window: sublime.Window
+    """The window in which the session is running."""
+    workspace_folders: list[WorkspaceFolder]
+    """The workspace folders active for this session."""
 
 
 class LspPlugin(APIHandler):
+    """
+    Base class for LSP helper packages.
+
+    Subclass this to integrate a language server with LSP. The session name is automatically
+    derived from the top-level package name (i.e. ``__module__.split('.')[0]``), so no manual
+    configuration is needed.
+
+    A minimal integration looks like this:
+
+    ```py
+    from LSP.plugin import LspPlugin
+    from LSP.plugin import register_plugin
+    from LSP.plugin import unregister_plugin
+
+
+    class LspFooPlugin(LspPlugin):
+        pass
+
+
+    def plugin_loaded() -> None:
+        register_plugin(LspFoo)
+
+
+    def plugin_unloaded() -> None:
+        unregister_plugin(LspFoo)
+    ```
+
+    LSP will look for a settings file at ``Packages/<package_name>/<package_name>.sublime-settings``
+    to read the ``command``, ``selector``, ``schemes``, and other server configuration. Override
+    the classmethods below to customise behaviour beyond what the settings file provides.
+
+    Raise ``PluginStartError`` exception from any of the classmethods (but typically from ``install_async``) to
+    prevent plugin from starting while showing relevant message in the status field.
+
+    Use `@notification_handler` and `@request_handler` decorators to handle non-standard
+    server-to-client notifications and requests respectively.
+    """
 
     session_name: Final[str] = ''
     """
     The name of the plugin.
 
-    This becomes the session name and the key of the settings object (in project settings, for example).
+    This is the session name and the key of the settings object (in project settings, for example).
     It is automatically inferred from package name and is not to be changed manually.
     """
 
@@ -260,7 +294,7 @@ class LspPlugin(APIHandler):
     """
     The storage path for the plugin.
 
-    Use this as your directory to install server files. Its path is '$DATA/Package Storage/<Package Name>'.
+    Use this as your directory to install server files. Its path is `$DATA/Package Storage/<Package Name>`.
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -281,7 +315,7 @@ class LspPlugin(APIHandler):
         This method is called when the view gets opened. To manually trigger this method again, run the
         `lsp_check_applicable` TextCommand for the given view and with a `session_name` keyword argument.
 
-        :param      context:           The plugin context
+        :param      context:           The plugin context.
         """
         view = context.initiating_view
         if (syntax := view.syntax()) and (selector := context.configuration.selector.strip()):
@@ -291,27 +325,70 @@ class LspPlugin(APIHandler):
 
     @classmethod
     def additional_variables(cls, context: PluginContext) -> dict[str, str] | None:
-        """In addition to the above variables, add more variables here to be expanded."""
+        """
+        Return extra template variables to be substituted in ``command``, ``env``, and
+        ``initialization_options`` from the settings file.
+
+        By default includes variables like ``$storage_path``, ``$cache_path``, ``$temp_dir``, ``$home`` and also
+        all variables extracted from the window (the ``window.extract_variables()`` API). Override this method
+        to inject additional variables specific to your plugin.
+
+        :param      context:    The plugin context.
+        :returns:   A dictionary of variable name → value pairs, or ``None``.
+        """
 
     @classmethod
     def install_async(cls, context: PluginContext) -> None:
         """
-        Update or install the server binary if this plugin manages one. Called before server is started.
+        Update or install the server binary if this plugin manages one. Called before the server is started.
 
-        Make sure to call `params.set_installing_status()` before starting long-running operations to give user
-        a better feedback that something is happening.
+        This method runs on a worker thread. Perform any blocking I/O (e.g. downloading a binary,
+        running ``npm install``) directly here without spawning additional threads.
+
+        :param      context:    The plugin context.
         """
 
     @classmethod
     def command(cls, context: PluginContext) -> list[str]:
+        """
+        Return the command used to start the language server subprocess.
+
+        The default implementation returns the ``command`` from the settings file after
+        template variable substitution. Override this method to build the command
+        programmatically (e.g. to resolve a binary path at runtime).
+
+        :param      context:    The plugin context.
+        :returns:   A non-empty list where the first element is the executable and the
+                    remaining elements are its arguments.
+        """
         return context.configuration.command
 
     @classmethod
     def initialization_options(cls, context: PluginContext) -> dict[str, Any]:
+        """
+        Return the ``initializationOptions`` sent to the server in the ``initialize`` request.
+
+        The default implementation returns the ``initialization_options`` from the settings
+        file after template variable substitution. Override this method to compute the options
+        dynamically or to merge in runtime values.
+
+        :param      context:    The plugin context.
+        :returns:   A dictionary of initialization options.
+        """
         return context.configuration.initialization_options.get()
 
     @classmethod
     def working_directory(cls, context: PluginContext) -> str | None:
+        """
+        Return the working directory for the language server subprocess.
+
+        The default implementation returns the path of the first workspace folder, or
+        ``None`` when there are no workspace folders. Override this method if the server
+        requires a specific working directory.
+
+        :param      context:    The plugin context.
+        :returns:   An absolute path to use as the working directory, or ``None`` to let the OS choose a default.
+        """
         return context.workspace_folders[0].path if context.workspace_folders else None
 
     @classmethod
@@ -336,32 +413,10 @@ class LspPlugin(APIHandler):
         self.weaksession: ref[Session] = weaksession
         self.context: PluginContext = context
 
-    # ------------- OLD --------------
-
-    """
-    Inherit from this class to handle non-standard requests and notifications.
-    Given a request/notification, replace the non-alphabetic characters with an underscore, and prepend it with "m_".
-    This will be the name of your method.
-    For instance, to implement the non-standard eslint/openDoc request, define the Python method
-
-        def m_eslint_openDoc(self, params, request_id):
-            session = self.weaksession()
-            if session:
-                webbrowser.open_tab(params['url'])
-                session.send_response(Response(request_id, None))
-
-    To handle the non-standard eslint/status notification, define the Python method
-
-        def m_eslint_status(self, params):
-            pass
-
-    To understand how this works, see the __getattr__ method of the Session class.
-    """
-
     def on_settings_changed(self, settings: DottedDict) -> None:
         """
-        Override this method to alter the settings that are returned to the server for the
-        workspace/didChangeConfiguration notification and the workspace/configuration requests.
+        Override this method to alter the settings that are sent to the server for the
+        `workspace/didChangeConfiguration` notification and the `workspace/configuration` request.
 
         :param      settings:      The settings that the server should receive.
         """
@@ -389,7 +444,6 @@ class LspPlugin(APIHandler):
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         """
         Notifies about a request that is about to be sent to the language server.
-        This API is triggered on async thread.
 
         :param    request:     The request object. The request['params'] can be modified by the plugin.
         :param    view:        The corresponding View if applicable.
@@ -398,7 +452,6 @@ class LspPlugin(APIHandler):
     def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
         """
         Notifies about a notification that is about to be sent to the language server.
-        This API is triggered on async thread.
 
         :param    notification:  The notification object. The notification['params'] can be modified by the plugin.
         """
@@ -406,6 +459,7 @@ class LspPlugin(APIHandler):
     def on_server_response_async(self, response: ServerResponse) -> None:
         """
         Notifies about a response message that has been received from the language server.
+
         Only successful responses are passed to this method.
 
         :param    response:  The response object to the request. The response['result'] field can be modified by the

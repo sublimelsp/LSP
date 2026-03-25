@@ -41,7 +41,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
                     setattr(wrapped_function, '_target_time', None)
                     sublime.set_timeout(check_call_function, int(additional_delay * 1000))
                     return
-            delattr(wrapped_function, '_target_time')
+            delattr(wrapped_function, '_target_time')  # noqa: B043
             user_function(*args, **kwargs)
         if hasattr(wrapped_function, '_target_time'):
             setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)

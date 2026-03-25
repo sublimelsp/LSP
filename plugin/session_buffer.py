@@ -369,7 +369,7 @@ class SessionBuffer:
             return
         self._last_text_change_time = time.time()
         last_change = changes[-1]
-        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and not last_change.str and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
             # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.

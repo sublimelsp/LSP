@@ -332,7 +332,7 @@ class LspHoverCommand(LspTextCommand):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
+        elif scheme.lower() in ("http", "https") or not scheme and href.startswith('www.'):
             open_in_browser(href)
         elif scheme:
             sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))

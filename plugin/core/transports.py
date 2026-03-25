@@ -233,7 +233,7 @@ class ProcessTransport(Transport[T]):
                     # None message already posted, just return
                     return
                 message = self._stderr.readline().decode('utf-8', 'replace')
-                if message == '':
+                if not message:
                     continue
                 callback_object = self._callback_object()
                 if callback_object:

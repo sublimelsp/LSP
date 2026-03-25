@@ -770,7 +770,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
         DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
         lines[0]
     )
-    if formatted != "" or code is not None:
+    if formatted or code is not None:
         # \u200B is the zero-width space
         result += f" \u200B{formatted}"
     offset = len(result) if href else None

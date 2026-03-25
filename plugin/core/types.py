@@ -390,7 +390,7 @@ class Settings:
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
         default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
         # This method could be a dict or lru_cache
-        if style_str == "":
+        if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE
         if style_str == "box":
             return default

@@ -9,19 +9,11 @@ from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
+from typing import Generator
+from typing import Iterable
 from unittest import skip
 import os
 import sublime
-
-try:
-    from typing import Generator
-    from typing import Iterable
-    from typing import List
-    from typing import Optional
-    from typing import Tuple
-    assert Generator and Optional and Iterable and Tuple and List
-except ImportError:
-    pass
 
 SELFDIR = os.path.dirname(__file__)
 TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')

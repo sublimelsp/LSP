@@ -271,7 +271,8 @@ def create_transport(config: TransportConfig, cwd: str | None,
         return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
 
     if config.listener_socket:
-        assert isinstance(config.tcp_port, int) and config.tcp_port > 0
+        assert isinstance(config.tcp_port, int)
+        assert config.tcp_port > 0
         if config.command:
             process, sock, reader, writer = _start_subprocess_and_await_connection(
                 config.listener_socket, start_subprocess

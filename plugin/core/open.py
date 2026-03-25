@@ -75,8 +75,8 @@ def _return_existing_view(flags: int, existing_view_group: int, active_group: in
 
 def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> sublime.View | None:
     """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
-    _group = window.active_group() if group == -1 else group
-    view = window.active_view_in_group(_group)
+    group_ = window.active_group() if group == -1 else group
+    view = window.active_view_in_group(group_)
     if view and fname == view.file_name():
         return view
     return window.find_open_file(fname, group) if ST_VERSION >= 4136 else window.find_open_file(fname)

@@ -176,8 +176,8 @@ class SettingsRegistration:
         weak_self = weakref.ref(self)
 
         def on_change_handler() -> None:
-            if _self := weak_self():
-                on_change(_self)
+            if self_ := weak_self():
+                on_change(self_)
 
         self.settings.add_on_change("LSP", on_change_handler)
 
@@ -513,7 +513,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
             flags |= IGNORECASE
         return globmatch(file_name, pattern['glob'], flags=flags)
 
-    return any(matches(_filter) for _filter in filters)
+    return any(matches(filter_) for filter_ in filters)
 
 
 # method -> (capability dotted path, optional registration dotted path)

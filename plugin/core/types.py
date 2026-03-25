@@ -1157,7 +1157,7 @@ class ClientConfig:
         items: list[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
-                items.append(f"{k}={repr(v)}")
+                items.append(f"{k}={v!r}")
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
     def __eq__(self, other: object) -> bool:

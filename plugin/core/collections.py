@@ -189,7 +189,7 @@ class DottedDict:
             current[last_key] = value
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({repr(self._d)})"
+        return f"{self.__class__.__name__}({self._d!r})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, DottedDict):

@@ -57,7 +57,7 @@ class LspExecuteCommand(LspTextCommand):
         :param error: The Error object.
         :param command_name: The name of the command that was executed.
         """
-        msg = f"command {command_name} failed: {str(error)}"
+        msg = f"command {command_name} failed: {error}"
         debug(msg)
         if window := self.view.window():
             window.status_message(msg)

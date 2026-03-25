@@ -395,7 +395,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         'choose Cancel to disable it for this window for the duration of the current session. '
                         'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
-                    msg += f"\n\n--- Error: ---\n{str(exception)}"
+                    msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:

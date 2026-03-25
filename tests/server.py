@@ -43,7 +43,7 @@ __version__ = "1.0.0"
 
 if sys.version_info[:2] < (3, 6):
     print("only works for python3.6 and higher")
-    exit(1)
+    sys.exit(1)
 
 
 StringDict = Dict[str, Any]
@@ -517,7 +517,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.version:
         print(__package__, __version__)
-        exit(0)
+        sys.exit(0)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     shutdown_received = False
@@ -527,4 +527,4 @@ if __name__ == '__main__':
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
-    exit(0 if shutdown_received else 1)
+    sys.exit(0 if shutdown_received else 1)

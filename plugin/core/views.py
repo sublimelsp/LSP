@@ -57,6 +57,8 @@ from .workspace import is_subpath_of
 from dataclasses import dataclass
 from functools import lru_cache
 from operator import itemgetter
+from os.path import commonpath
+from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -69,7 +71,6 @@ import html
 import itertools
 import linecache
 import mdpopups
-import os
 import re
 import sublime
 import sublime_plugin
@@ -167,7 +168,7 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
-    variables["home"] = os.path.expanduser('~')
+    variables["home"] = expanduser('~')
     return variables
 
 
@@ -804,7 +805,7 @@ def location_to_human_readable(
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):
-            pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+            pathname = pathname[len(commonpath((pathname, base_dir))) + 1:]
     elif scheme == "res":
         fmt = "{}:{}"
         pathname = uri

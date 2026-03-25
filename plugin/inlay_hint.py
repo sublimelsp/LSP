@@ -113,7 +113,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
-    html = f"""
+    return f"""
     <body id="lsp-inlay-hint">
         <style>
             .inlay-hint {{
@@ -126,7 +126,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
         </div>
     </body>
     """
-    return html
 
 
 def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:

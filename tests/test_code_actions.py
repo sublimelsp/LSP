@@ -75,14 +75,13 @@ def create_test_code_action2(command_name: str, command_args: list[Any] | None =
 
 
 def create_disabled_code_action(view: sublime.View, version: int, edits: list[tuple[str, Range]]) -> dict[str, Any]:
-    action = {
+    return {
         "title": "Fix errors",
         "edit": create_code_action_edit(view, version, edits),
         "disabled": {
             "reason": "Do not use"
         },
     }
-    return action
 
 
 def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:

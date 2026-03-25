@@ -20,7 +20,7 @@ import sublime_plugin
 import subprocess
 import webbrowser
 
-opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
+g_opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
@@ -108,21 +108,20 @@ def open_file(
         return Promise.resolve(view)
 
     # Is the view opening right now? Then return the associated unresolved promise
-    for fn, value in opening_files.items():
+    for fn, value in g_opening_files.items():
         if fn == file or os.path.samefile(fn, file):
             # Return the unresolved promise. A future on_load event will resolve the promise.
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
     def fullfill(resolve: ResolveFunc[sublime.View | None]) -> None:
-        global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
-        opening_files[file] = (None, resolve)  # type: ignore
+        g_opening_files[file] = (None, resolve)  # type: ignore
 
     promise = Promise(fullfill)
-    tup = opening_files[file]
+    tup = g_opening_files[file]
     # Save the promise in the first element of the tuple so that the for-loop above can return it
-    opening_files[file] = (promise, tup[1])
+    g_opening_files[file] = (promise, tup[1])
     return promise
 
 

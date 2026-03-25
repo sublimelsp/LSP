@@ -303,14 +303,13 @@ _subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:
-    global _subprocesses
-    subprocesses = list(_subprocesses)
-    for p in subprocesses:
+    g_subprocesses = list(_subprocesses)
+    for p in g_subprocesses:
         try:
             p.kill()
         except Exception:
             pass
-    for p in subprocesses:
+    for p in g_subprocesses:
         try:
             p.wait()
         except Exception:

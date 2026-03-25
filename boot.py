@@ -18,7 +18,7 @@ from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.constants import ST_VERSION
 from .plugin.core.css import load as load_css
-from .plugin.core.open import opening_files
+from .plugin.core.open import g_opening_files
 from .plugin.core.panels import PanelName
 from .plugin.core.registry import LspCheckApplicableCommand
 from .plugin.core.registry import LspNextDiagnosticCommand
@@ -255,19 +255,19 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in opening_files.keys():
+        for fn in g_opening_files.keys():
             if fn == file_name or os.path.samefile(fn, file_name):
                 # Remove it from the pending opening files, and resolve the promise.
-                opening_files.pop(fn)[1](view)
+                g_opening_files.pop(fn)[1](view)
                 break
 
     def on_pre_close(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in opening_files.keys():
+        for fn in g_opening_files.keys():
             if fn == file_name or os.path.samefile(fn, file_name):
-                tup = opening_files.pop(fn, None)
+                tup = g_opening_files.pop(fn, None)
                 if tup:
                     # The view got closed before it finished loading. This can happen.
                     tup[1](None)

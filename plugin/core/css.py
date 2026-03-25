@@ -16,15 +16,14 @@ class CSS:
         self.annotations_classname = "lsp_annotation"
 
 
-_css: CSS | None = None
+g_css: CSS | None = None
 
 
 def load() -> None:
-    global _css
-    _css = CSS()
+    global g_css
+    g_css = CSS()
 
 
 def css() -> CSS:
-    global _css
-    assert _css is not None
-    return _css
+    assert g_css is not None
+    return g_css

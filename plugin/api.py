@@ -438,14 +438,6 @@ class LspPlugin(APIHandler):
         self.weaksession: ref[Session] = weaksession
         self.context: PluginContext = context
 
-    def on_settings_changed(self, settings: DottedDict) -> None:
-        """
-        Override this method to alter the settings that are sent to the server for the
-        `workspace/didChangeConfiguration` notification and the `workspace/configuration` request.
-
-        :param      settings:      The settings that the server should receive.
-        """
-
     def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
         Override to augment configuration returned for the workspace/configuration request.

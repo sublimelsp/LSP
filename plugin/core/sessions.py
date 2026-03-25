@@ -1321,7 +1321,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            if self._plugin:
+            if isinstance(self._plugin, AbstractPlugin):
                 self._plugin.on_settings_changed(self.config.settings)
             variables = self._template_variables()
             resolved = self.config.settings.get_resolved(variables)

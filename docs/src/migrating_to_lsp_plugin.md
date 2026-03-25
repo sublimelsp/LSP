@@ -18,6 +18,7 @@
 | `can_start(window, view, folders, config)` | Raise `PluginStartError` from `install_async` (or other `@classmethod`) |
 | `on_pre_start(window, view, folders, config)` | `command(context)`, `working_directory(context)`, `initialization_options(context)` |
 | `on_post_start(window, view, folders, config)` | `__init__(weaksession, context)` |
+| `on_settings_changed(settings: DottedDict)` | `__init__(weaksession, context)` |
 | `is_applicable(view, config)` | `is_applicable(context)` |
 | `additional_variables()` | `additional_variables(context)` |
 | `on_pre_server_command(command, done_callback)` | `on_execute_command(command)` - return a `Promise` instead of invoking a callback |
@@ -202,7 +203,27 @@ def __init__(self, weaksession, context: PluginContext) -> None:
 
 ---
 
-### 7. Update `is_applicable` and `additional_variables`
+### 7. Replace `on_settings_changed` with `__init__`
+
+`on_settings_changed` ran right after the `initialize` response. In `LspPlugin`, `__init__` is also called after a successful `initialize` response. The `context` argument gives you access to the `settings`:
+
+```python
+# Before
+@classmethod
+def on_settings_changed(self, settings: DottedDict) -> None:
+    settings.set('foo', 'bar')
+```
+
+```python
+# After
+def __init__(self, weaksession, context: PluginContext) -> None:
+    super().__init__(weaksession, context)
+    context.configuration.settings.set('foo', 'bar')
+```
+
+---
+
+### 8. Update `is_applicable` and `additional_variables`
 
 Both methods now receive a single `PluginContext` argument instead of individual parameters. `context.view` and `context.configuration` replace the former `view` and `config` arguments. `additional_variables` now always expects a dict value (default implementation returns empty dict):
 
@@ -230,7 +251,7 @@ def additional_variables(cls, context: PluginContext) -> dict[str, str]:
 
 ---
 
-### 8. Replace `on_pre_server_command` with `on_execute_command`
+### 9. Replace `on_pre_server_command` with `on_execute_command`
 
 The callback-based approach is replaced by returning a `Promise`:
 
@@ -256,7 +277,7 @@ def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | N
 
 ---
 
-### 9. Update `on_pre_send_request_async` and `on_server_response_async`
+### 10. Update `on_pre_send_request_async` and `on_server_response_async`
 
 Both methods have had their signatures simplified.
 
@@ -291,7 +312,7 @@ def on_server_response_async(self, response: ServerResponse) -> None:
 
 ---
 
-### 10. Use `@notification_handler` and `@request_handler` for custom messages
+### 11. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 

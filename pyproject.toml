@@ -115,7 +115,6 @@ ignore = [
     "PLR0917",  # https://docs.astral.sh/ruff/rules/too-many-positional-arguments/
     "PLR1702",  # https://docs.astral.sh/ruff/rules/too-many-nested-blocks/
     "PLR2004",  # https://docs.astral.sh/ruff/rules/magic-value-comparison/
-    "PLR5501",  # https://docs.astral.sh/ruff/rules/collapsible-else-if/
     "PLR6201",  # https://docs.astral.sh/ruff/rules/literal-membership/
     "PLR6301",  # https://docs.astral.sh/ruff/rules/no-self-use/
     "PLW0108",  # https://docs.astral.sh/ruff/rules/unnecessary-lambda/

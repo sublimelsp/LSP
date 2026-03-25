@@ -267,9 +267,8 @@ class Session:
             elif request_id is not None:
                 self._error(request_id, Error(
                     ErrorCode.MethodNotFound, f"method '{method}' not found"))
-            else:
-                if unhandled:
-                    self._log(f"unhandled {typestr} {method}")
+            elif unhandled:
+                self._log(f"unhandled {typestr} {method}")
         elif request_id is not None:
             # handle request
             try:

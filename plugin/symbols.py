@@ -304,7 +304,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
             for index, item in enumerate(items):
                 start = item.value['range']['start']
                 if start['line'] < caret_point.row or \
-                        start['line'] == caret_point.row and start['character'] <= caret_point.col:
+                        (start['line'] == caret_point.row and start['character'] <= caret_point.col):
                     selected_index = index
                 else:
                     break

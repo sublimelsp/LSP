@@ -612,7 +612,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if session := self.session_by_name(session_name):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
-        elif scheme.lower() in {"http", "https"} or not scheme and href.startswith('www.'):
+        elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
 
     @requires_session

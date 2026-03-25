@@ -376,7 +376,7 @@ class Settings:
 
     def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
         default = sublime.RegionFlags.NO_UNDO
-        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
+        if style_str in {"background", "fill"}:  # Backwards-compatible with "fill"
             style = default | sublime.RegionFlags.DRAW_NO_OUTLINE
             return style, style
         if style_str == "outline":
@@ -677,7 +677,7 @@ def _translate_path(path: str, source: str, destination: str) -> tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
+    if path.startswith(source) and len(path) > len(source) and path[len(source)] in {"/", "\\"}:
         return path.replace(source, destination, 1), True
     return path, False
 
@@ -1118,7 +1118,7 @@ class ClientConfig:
         :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
         """
         scheme, path = parse_uri(uri)
-        if scheme not in ("file", "res"):
+        if scheme not in {"file", "res"}:
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
         if self.path_maps:
             for path_map in self.path_maps:

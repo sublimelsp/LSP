@@ -66,30 +66,30 @@ class LspExecuteCommand(LspTextCommand):
         view = self.view
         region = first_selection_region(view)
         for i, arg in enumerate(command_args):
-            if arg in ["$document_id", "${document_id}"]:
+            if arg in {"$document_id", "${document_id}"}:
                 command_args[i] = text_document_identifier(view)
-            elif arg in ["$versioned_document_id", "${versioned_document_id}"]:
+            elif arg in {"$versioned_document_id", "${versioned_document_id}"}:
                 command_args[i] = versioned_text_document_identifier(view, view.change_count())
-            elif arg in ["$file_uri", "${file_uri}"]:
+            elif arg in {"$file_uri", "${file_uri}"}:
                 command_args[i] = uri_from_view(view)
             elif region is not None:
-                if arg in ["$selection", "${selection}"]:
+                if arg in {"$selection", "${selection}"}:
                     command_args[i] = view.substr(region)
-                elif arg in ["$offset", "${offset}"]:
+                elif arg in {"$offset", "${offset}"}:
                     command_args[i] = region.b
-                elif arg in ["$selection_begin", "${selection_begin}"]:
+                elif arg in {"$selection_begin", "${selection_begin}"}:
                     command_args[i] = region.begin()
-                elif arg in ["$selection_end", "${selection_end}"]:
+                elif arg in {"$selection_end", "${selection_end}"}:
                     command_args[i] = region.end()
-                elif arg in ["$position", "${position}"]:
+                elif arg in {"$position", "${position}"}:
                     command_args[i] = offset_to_point(view, region.b).to_lsp()
-                elif arg in ["$line", "${line}"]:
+                elif arg in {"$line", "${line}"}:
                     command_args[i] = offset_to_point(view, region.b).row
-                elif arg in ["$character", "${character}"]:
+                elif arg in {"$character", "${character}"}:
                     command_args[i] = offset_to_point(view, region.b).col
-                elif arg in ["$range", "${range}"]:
+                elif arg in {"$range", "${range}"}:
                     command_args[i] = region_to_range(view, region)
-                elif arg in ["$text_document_position", "${text_document_position}"]:
+                elif arg in {"$text_document_position", "${text_document_position}"}:
                     command_args[i] = text_document_position_params(view, region.b)
         window = view.window()
         window_variables = window.extract_variables() if window else {}

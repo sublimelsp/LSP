@@ -231,7 +231,7 @@ class SessionBuffer:
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
@@ -445,7 +445,7 @@ class SessionBuffer:
             self.do_document_diagnostic_async(view, version)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)

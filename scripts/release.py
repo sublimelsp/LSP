@@ -14,9 +14,7 @@ import sys
 PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
-
-with open(os.path.join(PACKAGE_PATH, '.release.json')) as f:
-    CONFIGURATION = json.load(f)
+CONFIGURATION = json.loads(Path(PACKAGE_PATH, '.release.json').read_text(encoding='utf-8'))
 
 # Project configuration
 # The name of the branch to push to the remote on releasing.

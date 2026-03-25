@@ -76,7 +76,7 @@ class ServerRequests(TextDocumentTestCase):
             file_paths = []
             for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                Path(file_paths[-1]).write_text(initial_text[i])
+                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
             yield from verify(
                 self,
                 "workspace/applyEdit",

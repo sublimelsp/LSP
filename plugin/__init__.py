@@ -31,6 +31,7 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
+from .core.transports import Transport
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
@@ -81,6 +82,7 @@ __all__ = [
     'Session',
     'SessionBufferProtocol',
     'SessionViewProtocol',
+    'Transport',
     'unregister_plugin',
     'uri_from_view',
     'uri_to_filename',  # deprecated

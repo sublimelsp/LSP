@@ -293,8 +293,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_data)
             transport_config = config.resolve_transport_config(variables)
             transport = create_transport(transport_config, cwd, session)
-            if plugin_class and issubclass(plugin_class, AbstractPlugin):
-                plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
+            if plugin_class:
+                if issubclass(plugin_class, AbstractPlugin):
+                    plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
+                else:
+                    plugin_class.on_before_initialize(plugin_context, transport)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
                 variables=variables,

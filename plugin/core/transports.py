@@ -39,13 +39,13 @@ class StopLoopError(Exception):
     pass
 
 
-class Transport(Generic[T]):
+class Transport(Protocol[T_contra]):
 
-    def send(self, payload: T) -> None:
-        raise NotImplementedError()
+    def send(self, payload: T_contra) -> None:
+        ...
 
     def close(self) -> None:
-        raise NotImplementedError()
+        ...
 
 
 class TransportCallbacks(Protocol[T_contra]):

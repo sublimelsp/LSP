@@ -14,6 +14,7 @@ from .core.protocol import Response
 from .core.protocol import ServerNotification
 from .core.protocol import ServerResponse
 from .core.settings import client_configs
+from .core.transports import Transport
 from .core.types import ClientConfig
 from .core.types import method2attr
 from .core.url import parse_uri
@@ -415,6 +416,26 @@ class LspPlugin(APIHandler):
         :returns:   An absolute path to use as the working directory, or ``None`` to let the OS choose a default.
         """
         return context.workspace_folders[0].path if context.workspace_folders else None
+
+    @classmethod
+    def on_before_initialize(cls, context: PluginContext, transport: Transport[str]) -> None:
+        """
+        Called after the transport is established but before the LSP ``initialize`` request is sent.
+
+        Override this method when your server requires out-of-band communication that must happen
+        before LSP negotiation begins — for example, sending a proprietary handshake or
+        authentication token over the raw transport.
+
+        .. warning::
+            Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
+            hook for pre-initialization messages that your server explicitly expects before the
+            ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
+
+        :param context:     The plugin context.
+        :param transport:   The live transport connected to the language server process.
+                            Use ``transport.send()`` to write raw payloads.
+        """
+        pass
 
     @classmethod
     def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:

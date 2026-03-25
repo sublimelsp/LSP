@@ -132,10 +132,7 @@ ignore = [
     "PTH121",  # https://docs.astral.sh/ruff/rules/os-path-samefile/
     "PTH122",  # https://docs.astral.sh/ruff/rules/os-path-splitext/
     "PTH208",  # https://docs.astral.sh/ruff/rules/os-listdir/
-    "Q000",  # https://docs.astral.sh/ruff/rules/bad-quotes-inline-string/
-    "Q001",  # https://docs.astral.sh/ruff/rules/bad-quotes-multiline-string/
-    "Q002",  # https://docs.astral.sh/ruff/rules/bad-quotes-docstring/
-    "Q003",  # https://docs.astral.sh/ruff/rules/avoidable-escaped-quote/
+    "Q",  # flake8-quotes - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
     "RET503",  # https://docs.astral.sh/ruff/rules/implicit-return/
     "RET504",  # https://docs.astral.sh/ruff/rules/unnecessary-assign/
     "RET505",  # https://docs.astral.sh/ruff/rules/superfluous-else-return/

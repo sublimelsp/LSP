@@ -426,7 +426,7 @@ class LspPlugin(APIHandler):
         before LSP negotiation begins — for example, sending a proprietary handshake or
         authentication token over the raw transport.
 
-        .. warning::
+        Warning:
             Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
             hook for pre-initialization messages that your server explicitly expects before the
             ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.

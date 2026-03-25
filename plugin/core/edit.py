@@ -85,7 +85,7 @@ def apply_text_edits(
         }
     )
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
-    # thread, and that we’ve received view changes in the asynchronous thread.
+    # thread, and that we've received view changes in the asynchronous thread.
     return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))
 
 

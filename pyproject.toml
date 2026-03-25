@@ -134,7 +134,6 @@ ignore = [
     "PTH208",  # https://docs.astral.sh/ruff/rules/os-listdir/
     "Q",  # flake8-quotes - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
     "RUF001",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-string/
-    "RUF003",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-comment/
     "RUF005",  # https://docs.astral.sh/ruff/rules/collection-literal-concatenation/
     "RUF010",  # https://docs.astral.sh/ruff/rules/explicit-f-string-type-conversion/
     "RUF012",  # https://docs.astral.sh/ruff/rules/mutable-class-default/

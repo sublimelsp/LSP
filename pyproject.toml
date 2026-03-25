@@ -132,7 +132,6 @@ ignore = [
     "PTH121",  # https://docs.astral.sh/ruff/rules/os-path-samefile/
     "PTH122",  # https://docs.astral.sh/ruff/rules/os-path-splitext/
     "PTH208",  # https://docs.astral.sh/ruff/rules/os-listdir/
-    "PYI041",  # https://docs.astral.sh/ruff/rules/redundant-numeric-union/
     "Q000",  # https://docs.astral.sh/ruff/rules/bad-quotes-inline-string/
     "Q001",  # https://docs.astral.sh/ruff/rules/bad-quotes-multiline-string/
     "Q002",  # https://docs.astral.sh/ruff/rules/bad-quotes-docstring/

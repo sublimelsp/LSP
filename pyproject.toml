@@ -135,7 +135,6 @@ ignore = [
     "Q",  # flake8-quotes - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
     "RUF001",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-string/
     "RUF012",  # https://docs.astral.sh/ruff/rules/mutable-class-default/
-    "RUF013",  # https://docs.astral.sh/ruff/rules/implicit-optional/
     "RUF015",  # https://docs.astral.sh/ruff/rules/unnecessary-iterable-allocation-for-first-element/
     "RUF021",  # https://docs.astral.sh/ruff/rules/parenthesize-chained-operators/
     "RUF022",  # https://docs.astral.sh/ruff/rules/unsorted-dunder-all/

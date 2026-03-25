@@ -373,6 +373,7 @@ class LspPlugin(APIHandler):
 
         :param      context:    The plugin context.
         """
+        pass
 
     @classmethod
     def command(cls, context: PluginContext) -> list[str]:
@@ -447,6 +448,7 @@ class LspPlugin(APIHandler):
 
         :returns:   The markdown language map, or None
         """
+        pass
 
     def __init__(self, weaksession: ref[Session], context: PluginContext) -> None:
         """
@@ -478,6 +480,7 @@ class LspPlugin(APIHandler):
 
         :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
         """
+        pass
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         """
@@ -486,6 +489,7 @@ class LspPlugin(APIHandler):
         :param    request:     The request object. The request['params'] can be modified by the plugin.
         :param    view:        The corresponding View if applicable.
         """
+        pass
 
     def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
         """
@@ -493,6 +497,7 @@ class LspPlugin(APIHandler):
 
         :param    notification:  The notification object. The notification['params'] can be modified by the plugin.
         """
+        pass
 
     def on_server_response_async(self, response: ServerResponse) -> None:
         """
@@ -503,6 +508,7 @@ class LspPlugin(APIHandler):
         :param    response:  The response object to the request. The response['result'] field can be modified by the
                              plugin, before it gets further handled by the LSP package.
         """
+        pass
 
     def on_server_notification_async(self, notification: ServerNotification) -> None:
         """
@@ -510,18 +516,22 @@ class LspPlugin(APIHandler):
 
         :param    notification:  The notification object.
         """
+        pass
 
     def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
         """
         Called when a language server reports to open an URI. If you know how to handle this URI, then return a Promise
         resolved with `sublime.Sheet` instance.
         """
+        pass
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
         """Called when the context of the session buffer has changed or a new buffer was opened."""
+        pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
         """Called after the selection has been modified in a view (debounced)."""
+        pass
 
     def on_session_end_async(self, exit_code: int | None, exception: Exception | None) -> None:
         """
@@ -535,6 +545,7 @@ class LspPlugin(APIHandler):
 
         This API is triggered on async thread.
         """
+        pass
 
 
 class AbstractPlugin(APIHandler, ABC):

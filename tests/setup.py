@@ -200,7 +200,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             yielder = promise
         else:
             yielder = YieldPromise()
-            promise.then(lambda result: yielder.fulfill(result))
+            promise.then(yielder.fulfill)
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
         return yielder.result()  # noqa: B901
 

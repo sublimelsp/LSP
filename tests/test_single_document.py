@@ -125,7 +125,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.run_command('insert', {"characters": "Hello Wrld"})
         self.assertFalse(self.view.is_popup_visible())
         self.view.run_command('lsp_hover', {'point': 3})
-        yield lambda: self.view.is_popup_visible()
+        yield self.view.is_popup_visible
 
     def test_remove_line_and_then_insert_at_that_line_at_end(self) -> Generator:
         original = (

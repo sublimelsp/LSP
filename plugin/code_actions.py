@@ -475,6 +475,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def description(self, index: int, event: dict | None = None) -> str | None:
         if -1 < index < len(self.actions_cache):
             return self.actions_cache[index][1]['title']
+        return None
 
     def want_event(self) -> bool:
         return True

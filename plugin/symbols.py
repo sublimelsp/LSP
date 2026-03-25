@@ -279,6 +279,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         if (kind := args.get('kind')) is not None:
             return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
+        return None
 
 
 class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):

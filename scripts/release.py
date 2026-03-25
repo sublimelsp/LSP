@@ -39,7 +39,7 @@ def put_message(fname: str, text: str) -> None:
 def build_messages_json(version_history: list[str]) -> None:
     """Write the version history to the messages.json file."""
     output = os.path.join(PACKAGE_PATH, 'messages.json')
-    with open(output, 'w+', encoding='utf-8') as file:
+    with Path(output).open('w+', encoding='utf-8') as file:
         json.dump(
             obj={v: MESSAGE_DIR + '/' + v + '.txt' for v in version_history},
             fp=file, indent=4, separators=(',', ': '), sort_keys=True)

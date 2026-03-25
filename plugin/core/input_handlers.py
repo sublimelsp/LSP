@@ -148,7 +148,7 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
                 return items
             # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
             sublime.set_timeout(self._select_first_row)
-            return [sublime.ListInputItem("", "")] + items
+            return [sublime.ListInputItem("", ""), *items]
         return [sublime.ListInputItem(f'No Symbol found: "{self.text}"', "")]
 
     def _select_first_row(self) -> None:

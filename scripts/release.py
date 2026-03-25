@@ -81,7 +81,7 @@ def git(*args: str) -> str | None:
     else:
         startupinfo = None
     proc = subprocess.Popen(
-        args=['git'] + list(args), startupinfo=startupinfo,
+        args=['git', *list(args)], startupinfo=startupinfo,
         stdout=subprocess.PIPE, stdin=subprocess.PIPE, cwd=PACKAGE_PATH)
     stdout, _ = proc.communicate()
     return stdout.decode('utf-8').strip() if stdout else None

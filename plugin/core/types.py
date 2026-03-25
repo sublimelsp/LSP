@@ -710,7 +710,7 @@ class PathMap:
             result.append(PathMap(local, remote))
         return result
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathMap):
             return False
         return self._local == other._local and self._remote == other._remote
@@ -1164,7 +1164,7 @@ class ClientConfig:
                 items.append(f"{k}={repr(v)}")
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
         for k, v in self.__dict__.items():

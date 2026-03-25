@@ -1144,9 +1144,8 @@ class ClientConfig:
                 if value:
                     # If it's not empty we'll continue the walk
                     continue
-                else:
-                    # This might be a leaf node
-                    return True
+                # This might be a leaf node
+                return True
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:

@@ -527,7 +527,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         else:
             self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
         if userprefs().show_view_status:
-            statuses = [status.replace('LSP-', '') for (_, status) in self._view_statuses[view_id].items()]
+            statuses = [status.replace('LSP-', '') for status in self._view_statuses[view_id].values()]
             if statuses:
                 statuses.sort()
                 view_status = f"LSP: {' | '.join(statuses)}"

@@ -239,17 +239,17 @@ class Manager(ABC):
     @abstractmethod
     def window(self) -> sublime.Window:
         """Get the window associated with this manager."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_session(self, config_name: str, file_path: str) -> Session | None:
         """Gets the session by name and file path."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> str | None:
         """Get the project path for the given file."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
@@ -266,18 +266,18 @@ class Manager(ABC):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_diagnostics_updated(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     # Event callbacks
 
     @abstractmethod
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         """The given Session has stopped with the given exit code."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def handle_message_request(
@@ -808,53 +808,53 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def session_async(self, capability: str, point: int | None = None) -> Session | None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def sessions_async(self, capability: str | None = None) -> list[Session]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def session_views_async(self) -> list[SessionViewProtocol]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def purge_changes_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def trigger_on_pre_save_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_session_shutdown_async(self, session: Session) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_diagnostics_async(
         self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_language_id(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_uri(self) -> DocumentUri:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @overload
     def do_signature_help_async(
@@ -872,23 +872,23 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def navigate_signature_help(self, forward: bool) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_documentation_popup_toggle(self, *, opened: bool) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_post_move_window_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_request_flags(self, session: Session) -> RequestFlags:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class Logger(ABC):

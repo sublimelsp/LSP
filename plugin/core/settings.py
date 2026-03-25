@@ -19,11 +19,11 @@ class LspSettingsChangeListener(ABC):
 
     @abstractmethod
     def on_client_config_updated(self, config_name: str | None = None) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_userprefs_updated(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ClientConfigs:

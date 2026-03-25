@@ -86,7 +86,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
 
     @abstractmethod
     def get_list_items(self) -> ListItemsReturn:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):

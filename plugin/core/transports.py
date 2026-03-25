@@ -42,10 +42,10 @@ class StopLoopError(Exception):
 class Transport(Generic[T]):
 
     def send(self, payload: T) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def close(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class TransportCallbacks(Protocol[T_contra]):
@@ -63,10 +63,10 @@ class TransportCallbacks(Protocol[T_contra]):
 class AbstractProcessor(Generic[T]):
 
     def write_data(self, writer: IO[bytes], data: T) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def read_data(self, reader: IO[bytes]) -> T | None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
@@ -82,7 +82,7 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
         except TypeError as ex:
             if str(headers) == '\n':
                 # Expected on process stopping. Gracefully stop the transport.
-                raise StopLoopError() from None
+                raise StopLoopError from None
             # Propagate server's output to the UI.
             raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
         try:

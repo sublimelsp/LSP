@@ -211,7 +211,7 @@ class AbstractPlugin(APIHandler, ABC):
         have your settings file called "LSP-foobar.sublime-settings", then you don't even need to re-implement the
         configuration method (see below).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:

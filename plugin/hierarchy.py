@@ -148,7 +148,7 @@ class LspHierarchyCommand(LspTextCommand, ABC):
         cls, params: TextDocumentPositionParams, view: sublime.View
     ) -> Request[Any, list[HierarchyItem] | None]:
         """A function that generates the initial request when this command is invoked."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.applies_to_context_menu(event):

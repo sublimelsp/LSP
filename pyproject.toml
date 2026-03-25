@@ -133,7 +133,6 @@ ignore = [
     "PTH122",  # https://docs.astral.sh/ruff/rules/os-path-splitext/
     "PTH208",  # https://docs.astral.sh/ruff/rules/os-listdir/
     "Q",  # flake8-quotes - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
-    "RET506",  # https://docs.astral.sh/ruff/rules/superfluous-else-raise/
     "RET507",  # https://docs.astral.sh/ruff/rules/superfluous-else-continue/
     "RSE102",  # https://docs.astral.sh/ruff/rules/unnecessary-paren-on-raise-exception/
     "RUF001",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-string/

@@ -83,9 +83,8 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
             if str(headers) == '\n':
                 # Expected on process stopping. Gracefully stop the transport.
                 raise StopLoopError() from None
-            else:
-                # Propagate server's output to the UI.
-                raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
+            # Propagate server's output to the UI.
+            raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
         try:
             return self._decode(body)
         except Exception as ex:

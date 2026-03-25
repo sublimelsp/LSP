@@ -104,7 +104,6 @@ ignore = [
     "PGH003",  # https://docs.astral.sh/ruff/rules/blanket-type-ignore/
     "PGH004",  # https://docs.astral.sh/ruff/rules/blanket-noqa/
     "PIE790",  # https://docs.astral.sh/ruff/rules/unnecessary-placeholder/
-    "PIE808",  # https://docs.astral.sh/ruff/rules/unnecessary-range-start/
     "PLC0415",  # https://docs.astral.sh/ruff/rules/import-outside-top-level/
     "PLC1901",  # https://docs.astral.sh/ruff/rules/compare-to-empty-string/
     "PLC2701",  # https://docs.astral.sh/ruff/rules/import-private-name/

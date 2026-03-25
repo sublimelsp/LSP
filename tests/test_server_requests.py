@@ -74,7 +74,7 @@ class ServerRequests(TextDocumentTestCase):
         with tempfile.TemporaryDirectory() as dirpath:
             initial_text = ["a b", "c d"]
             file_paths = []
-            for i in range(0, 2):
+            for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
                 Path(file_paths[-1]).write_text(initial_text[i])
             yield from verify(
@@ -112,7 +112,7 @@ class ServerRequests(TextDocumentTestCase):
             )
             # Changes should have been applied
             expected = ["hello there", "general kenobi"]
-            for i in range(0, 2):
+            for i in range(2):
                 view = self.view.window().find_open_file(file_paths[i])
                 self.assertTrue(view)
                 view.set_scratch(True)

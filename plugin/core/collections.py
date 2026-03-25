@@ -82,7 +82,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):
@@ -99,7 +99,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):
@@ -173,7 +173,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):

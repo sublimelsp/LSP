@@ -112,7 +112,7 @@ class LspUpdateLogPanelCommand(sublime_plugin.TextCommand):
                 last_region_end = 0  # Starting from point 0 in the panel ...
                 total_lines, _ = self.view.rowcol(self.view.size())
                 max_lines = LspToggleLogPanelLinesLimitCommand.get_lines_limit(self.view.window())
-                for _ in range(0, max(0, total_lines - max_lines)):
+                for _ in range(max(0, total_lines - max_lines)):
                     # ... collect all regions that span an entire line ...
                     region = self.view.full_line(last_region_end)
                     last_region_end = region.b

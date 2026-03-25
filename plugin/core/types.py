@@ -715,6 +715,9 @@ class PathMap:
             return False
         return self._local == other._local and self._remote == other._remote
 
+    def __hash__(self) -> int:
+        return hash(self.__slots__)
+
     def map_from_local_to_remote(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._local, self._remote)
 
@@ -1168,6 +1171,9 @@ class ClientConfig:
             if not k.startswith("_") and v != getattr(other, k):
                 return False
         return True
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
 
 
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:

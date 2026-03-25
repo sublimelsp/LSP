@@ -195,3 +195,6 @@ class DottedDict:
         if not isinstance(other, DottedDict):
             return False
         return self._d == other._d
+
+    def __hash__(self) -> int:
+        return hash(self._d)

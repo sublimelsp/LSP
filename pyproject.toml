@@ -117,7 +117,6 @@ ignore = [
     "PLR2004",  # https://docs.astral.sh/ruff/rules/magic-value-comparison/
     "PLR6301",  # https://docs.astral.sh/ruff/rules/no-self-use/
     "PLW0603",  # https://docs.astral.sh/ruff/rules/global-statement/
-    "PLW1641",  # https://docs.astral.sh/ruff/rules/eq-without-hash/
     "PLW2901",  # https://docs.astral.sh/ruff/rules/redefined-loop-name/
     "PT009",  # https://docs.astral.sh/ruff/rules/pytest-unittest-assertion/
     "PT018",  # https://docs.astral.sh/ruff/rules/pytest-composite-assertion/

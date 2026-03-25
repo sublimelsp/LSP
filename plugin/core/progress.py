@@ -8,7 +8,7 @@ class ProgressReporter:
     def __init__(self, title: str) -> None:
         self.title = title
         self._message: str | None = None
-        self._percentage: None | int | float = None
+        self._percentage: int | float | None = None
 
     def __del__(self) -> None:
         pass
@@ -22,7 +22,7 @@ class ProgressReporter:
             result += fmt.format(self._percentage)
         return result
 
-    def __call__(self, message: str | None, percentage: None | float) -> None:
+    def __call__(self, message: str | None, percentage: float | None) -> None:
         if percentage is not None:
             self._percentage = percentage
         if message is not None:
@@ -32,7 +32,7 @@ class ProgressReporter:
 class ViewProgressReporter(ProgressReporter):
 
     def __init__(self, view: sublime.View, key: str, title: str, message: str | None = None,
-                 percentage: None | float = None) -> None:
+                 percentage: float | None = None) -> None:
         super().__init__(title)
         self._view = view
         self._key = key
@@ -42,7 +42,7 @@ class ViewProgressReporter(ProgressReporter):
         self._view.erase_status(self._key)
         super().__del__()
 
-    def __call__(self, message: str | None = None, percentage: None | float = None) -> None:
+    def __call__(self, message: str | None = None, percentage: float | None = None) -> None:
         super().__call__(message, percentage)
         self._view.set_status(self._key, self._render())
 
@@ -50,7 +50,7 @@ class ViewProgressReporter(ProgressReporter):
 class WindowProgressReporter(ProgressReporter):
 
     def __init__(self, window: sublime.Window, key: str, title: str, message: str | None = None,
-                 percentage: None | float = None) -> None:
+                 percentage: float | None = None) -> None:
         super().__init__(title)
         self._window = window
         self._key = key
@@ -61,7 +61,7 @@ class WindowProgressReporter(ProgressReporter):
             view.erase_status(self._key)
         super().__del__()
 
-    def __call__(self, message: str | None = None, percentage: None | float = None) -> None:
+    def __call__(self, message: str | None = None, percentage: float | None = None) -> None:
         super().__call__(message, percentage)
         display = self._render()
         for view in self._window.views():
@@ -71,7 +71,7 @@ class WindowProgressReporter(ProgressReporter):
 class ApplicationProgressReporter(ProgressReporter):
 
     def __init__(self, key: str, title: str, message: str | None = None,
-                 percentage: None | float = None) -> None:
+                 percentage: float | None = None) -> None:
         super().__init__(title)
         self._key = key
         self.__call__(message, percentage)
@@ -82,7 +82,7 @@ class ApplicationProgressReporter(ProgressReporter):
                 view.erase_status(self._key)
         super().__del__()
 
-    def __call__(self, message: str | None = None, percentage: None | float = None) -> None:
+    def __call__(self, message: str | None = None, percentage: float | None = None) -> None:
         super().__call__(message, percentage)
         display = self._render()
         for window in sublime.windows():

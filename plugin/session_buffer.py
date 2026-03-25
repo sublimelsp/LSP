@@ -973,7 +973,7 @@ class SessionBuffer:
         diagnostics: list[Diagnostic],
         kinds: list[CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
-    ) -> Promise[list[Command | CodeAction] | None | Error]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
             'triggerKind': trigger_kind

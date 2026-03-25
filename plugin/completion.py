@@ -47,7 +47,7 @@ import weakref
 import webbrowser
 
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None, Error]
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
 ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 

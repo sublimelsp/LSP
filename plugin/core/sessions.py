@@ -788,7 +788,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> Promise[list[Command | CodeAction] | None | Error]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
 
     def do_code_lenses_async(self, view: sublime.View) -> None:
@@ -1995,7 +1995,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def on_window_show_document(self, params: ShowDocumentParams) -> Promise[ShowDocumentResult]:
         uri = params.get("uri")
 
-        def success(b: None | bool | sublime.View) -> ShowDocumentResult:
+        def success(b: bool | sublime.View | None) -> ShowDocumentResult:
             if isinstance(b, bool):
                 pass
             elif isinstance(b, sublime.View):

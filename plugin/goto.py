@@ -97,7 +97,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool,
         group: int,
         position: int,
-        response: None | Location | list[Location] | list[LocationLink]
+        response: Location | list[Location] | list[LocationLink] | None
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})

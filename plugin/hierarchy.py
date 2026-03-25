@@ -99,17 +99,17 @@ def make_data_provider(
     return HierarchyDataProvider(weaksession, request, handler, response)
 
 
-def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [
         to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
-def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
-def type_hierarchy_handler(response: list[TypeHierarchyItem] | None | Error) -> list[HierarchyItemWrapper]:
+def type_hierarchy_handler(response: list[TypeHierarchyItem] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 

@@ -611,7 +611,7 @@ def minihtml(
             }
         ]
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)  # noqa: RUF039
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
     return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)

@@ -896,7 +896,8 @@ def format_diagnostics_for_html(
             diagnostic_html = format_diagnostic_for_html(
                 sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
             diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
-    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>'
+    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
+        diagnostics_html else ''
 
 
 def format_diagnostic_for_html(

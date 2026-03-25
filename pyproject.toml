@@ -137,7 +137,6 @@ ignore = [
     "RUF012",  # https://docs.astral.sh/ruff/rules/mutable-class-default/
     "RUF023",  # https://docs.astral.sh/ruff/rules/unsorted-dunder-slots/
     "RUF031",  # https://docs.astral.sh/ruff/rules/incorrectly-parenthesized-tuple-in-subscript/
-    "RUF059",  # https://docs.astral.sh/ruff/rules/unused-unpacked-variable/
     "RUF067",  # https://docs.astral.sh/ruff/rules/non-empty-init-module/
     "RUF100",  # https://docs.astral.sh/ruff/rules/unused-noqa/
     "S101",  # https://docs.astral.sh/ruff/rules/assert/

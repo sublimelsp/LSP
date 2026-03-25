@@ -64,8 +64,7 @@ def parse_version(version: str) -> tuple[int, int, int]:
     if match:
         _prefix, major, minor, patch = match.groups()
         return int(major), int(minor), int(patch)
-    else:
-        return 0, 0, 0
+    return 0, 0, 0
 
 
 def get_version_with_prefix(version: str) -> str:

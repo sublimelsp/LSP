@@ -1024,16 +1024,15 @@ class SessionBuffer:
             # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
             return code_lenses
-        else:
-            supported_code_lenses: list[ResolvedCodeLens] = []
-            # Filter out CodeLenses with commands that are not handled directly by the language server
-            for code_lens in code_lenses:
-                command_name = code_lens['command']['command']
-                if command_name in self._supported_commands:
-                    supported_code_lenses.append(code_lens)
-                else:
-                    self.session.check_log_unsupported_command(command_name)
-            return supported_code_lenses
+        supported_code_lenses: list[ResolvedCodeLens] = []
+        # Filter out CodeLenses with commands that are not handled directly by the language server
+        for code_lens in code_lenses:
+            command_name = code_lens['command']['command']
+            if command_name in self._supported_commands:
+                supported_code_lenses.append(code_lens)
+            else:
+                self.session.check_log_unsupported_command(command_name)
+        return supported_code_lenses
 
     def _on_visible_code_lenses_resolved_async(self) -> None:
         supported_code_lenses = self._filter_supported_code_lenses()

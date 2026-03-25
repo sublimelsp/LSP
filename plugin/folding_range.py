@@ -128,10 +128,9 @@ class LspFoldCommand(LspTextCommand):
                 kind = folding_range.get('kind')
                 if kind == FoldingRangeKind.Imports:
                     return "LSP: Fold Imports"
-                elif kind:
+                if kind:
                     return f"LSP: Fold this {kind.title()}"
-                else:
-                    return "LSP: Fold"
+                return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
 
     def run(

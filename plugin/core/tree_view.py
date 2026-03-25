@@ -171,10 +171,9 @@ class TreeViewSheet(sublime.HtmlSheet):
         if node.is_resolved:
             self._update_contents()
             return
-        else:
-            self.data_provider.get_children(node.element) \
-                .then(partial(self._add_children, node_id)) \
-                .then(lambda _: self._update_contents())
+        self.data_provider.get_children(node.element) \
+            .then(partial(self._add_children, node_id)) \
+            .then(lambda _: self._update_contents())
 
     def collapse_item(self, node_id: str) -> None:
         assert node_id in self.nodes

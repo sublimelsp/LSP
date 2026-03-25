@@ -108,8 +108,7 @@ class CodeActionsManager:
                 cache_key, task = self._response_cache
                 if location_cache_key == cache_key:
                     return task
-                else:
-                    self._response_cache = None
+                self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
             self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
             self.refactor_actions_cache.clear()

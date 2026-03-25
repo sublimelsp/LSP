@@ -408,8 +408,7 @@ async def stdio() -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     loop = asyncio.get_event_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
-    else:
-        return await _unix_stdio(loop)
+    return await _unix_stdio(loop)
 
 
 async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
@@ -503,10 +502,9 @@ async def main(tcp_port: int | None = None) -> bool:
         # But, it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
         await server.serve_forever()
         return callback.received_shutdown
-    else:
-        reader, writer = await stdio()
-        session = Session(reader, writer)
-        return await session.run_forever()
+    reader, writer = await stdio()
+    session = Session(reader, writer)
+    return await session.run_forever()
 
 
 if __name__ == '__main__':

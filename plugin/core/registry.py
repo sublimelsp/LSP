@@ -153,8 +153,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
                 if sv.session.config.name == target:
                     if capability_path is None or sv.has_capability_async(capability_path):
                         return sv.session
-                    else:
-                        return None
+                    return None
         return None
 
     def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:

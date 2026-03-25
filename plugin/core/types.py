@@ -408,7 +408,7 @@ class Settings:
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
-        elif isinstance(self.diagnostics_highlight_style, dict):
+        if isinstance(self.diagnostics_highlight_style, dict):
             flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
@@ -417,9 +417,8 @@ class Settings:
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
-        else:
-            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
-            return [None] * 4  # default styling
+        # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
+        return [None] * 4  # default styling
 
 
 @dataclass
@@ -631,15 +630,14 @@ class Capabilities(DottedDict):
         if not isinstance(stored_registration_id, str):
             debug("stored registration ID at", registration_path, "is not a string")
             return None
-        elif stored_registration_id != registration_id:
+        if stored_registration_id != registration_id:
             msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
             debug(msg.format(stored_registration_id, registration_id))
             return None
-        else:
-            discarded = self.get(capability_path)
-            self.remove(capability_path)
-            self.remove(registration_path)
-            return discarded
+        discarded = self.get(capability_path)
+        self.remove(capability_path)
+        self.remove(registration_path)
+        return discarded
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
@@ -664,10 +662,9 @@ class Capabilities(DottedDict):
         save = self.get("textDocumentSync.save")
         if isinstance(save, bool):
             return save, False
-        elif isinstance(save, dict):
+        if isinstance(save, dict):
             return True, bool(save.get("includeText"))
-        else:
-            return False, False
+        return False, False
 
     def should_notify_did_close(self) -> bool:
         return "textDocumentSync.didClose" in self
@@ -1143,7 +1140,7 @@ class ClientConfig:
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 if value:
                     # If it's not empty we'll continue the walk
                     continue

@@ -60,9 +60,8 @@ class ActiveRequest:
         if self.request.view is not None:
             key = f"lspprogressview-{sv.session.config.name}-{self.request.view.id()}-{self.request_id}"
             return ViewProgressReporter(self.request.view, key, title, message, percentage)
-        else:
-            key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
-            return WindowProgressReporter(sv.session.window, key, title, message, percentage)
+        key = f"lspprogresswindow-{sv.session.config.name}-{sv.session.window.id()}-{self.request_id}"
+        return WindowProgressReporter(sv.session.window, key, title, message, percentage)
 
     def update_progress_async(self, params: dict[str, Any]) -> None:
         if self.canceled:

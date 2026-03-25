@@ -534,20 +534,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     return True
             return False
         # You can filter key bindings by the precense of a specific name of a configuration.
-        elif key == "lsp.session_with_name" and operator == sublime.QueryOperator.EQUAL and isinstance(operand, str):
+        if key == "lsp.session_with_name" and operator == sublime.QueryOperator.EQUAL and isinstance(operand, str):
             return bool(self.session_by_name(operand))
         # You can check if there is at least one session attached to this view.
-        elif key in {"lsp.sessions", "setting.lsp_active"}:
+        if key in {"lsp.sessions", "setting.lsp_active"}:
             return bool(self._session_views)
         # Signature Help handling
-        elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.signature_help_multiple_choices_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(
                 self._sighelp and self._sighelp.has_multiple_signatures() and
                 self.view.is_popup_visible() and not self.view.is_auto_complete_visible()
             )
-        elif key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
-        elif key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
             position = get_position(self.view)
             if position is None:
                 return not operand

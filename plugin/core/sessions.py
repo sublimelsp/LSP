@@ -1144,7 +1144,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             if not file_name:
                 # We're closing down
                 return False
-            elif not self.handles_path(file_name, inside_workspace):
+            if not self.handles_path(file_name, inside_workspace):
                 return False
         if self.config.match_view(view, scheme):
             # If there's no capability requirement then this session can handle the view
@@ -1152,8 +1152,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return True
             if sv := self.session_view_for_view_async(view):
                 return sv.has_capability_async(capability)
-            else:
-                return self.has_capability(capability)
+            return self.has_capability(capability)
         return False
 
     def has_capability(self, capability: str, *, check_views: bool = False) -> bool:

@@ -737,8 +737,7 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
 def diagnostic_icon(severity: DiagnosticSeverity) -> str:
     if userprefs().diagnostics_gutter_marker == "sign":
         return DIAGNOSTIC_STYLES[severity].icon_resource
-    else:
-        return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+    return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:

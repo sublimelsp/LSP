@@ -223,9 +223,8 @@ class LspHoverCommand(LspTextCommand):
                 combined_region = combined_region.cover(range_to_region(link["range"], self.view))
             if all(link.get("target") for link in self._document_links):
                 return '<a href="quick-panel:DocumentLink">Follow Link…</a>', combined_region
-            else:
-                return "Follow Link…", combined_region
-        elif len(self._document_links) == 1:
+            return "Follow Link…", combined_region
+        if len(self._document_links) == 1:
             link = self._document_links[0]
             target = link.get("target")
             label = "Follow Link" if link.get("target", "file:").startswith("file:") else "Open in Browser"
@@ -233,8 +232,7 @@ class LspHoverCommand(LspTextCommand):
             tooltip = f' title="{html.escape(title)}"' if title else ""
             region = range_to_region(link["range"], self.view)
             return f'<a href="{html.escape(target)}"{tooltip}>{label}</a>' if target else label, region
-        else:
-            return "", None
+        return "", None
 
     def hover_content(self) -> str:
         contents: list[str] = []

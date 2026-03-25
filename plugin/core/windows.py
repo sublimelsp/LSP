@@ -326,13 +326,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loggers.append(logger_map[logger_type])
         if len(loggers) == 0:
             return RouterLogger()  # logs nothing
-        elif len(loggers) == 1:
+        if len(loggers) == 1:
             return loggers[0](self, config_name)
-        else:
-            router_logger = RouterLogger()
-            for logger in loggers:
-                router_logger.append(logger(self, config_name))
-            return router_logger
+        router_logger = RouterLogger()
+        for logger in loggers:
+            router_logger.append(logger(self, config_name))
+        return router_logger
 
     def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams

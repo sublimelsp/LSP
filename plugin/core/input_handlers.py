@@ -77,8 +77,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
             return [self._initial_value], 0  # pyright: ignore[reportReturnType]
-        else:
-            return self.get_list_items()
+        return self.get_list_items()
 
     def _select_and_reset(self) -> None:
         self._initial_value = None
@@ -147,10 +146,9 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
         if items := getattr(self.command, '_items', None):  # Items were updated after typing
             if ST_VERSION >= 4157:
                 return items
-            else:
-                # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_row)
-                return [sublime.ListInputItem("", "")] + items
+            # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
+            sublime.set_timeout(self._select_first_row)
+            return [sublime.ListInputItem("", "")] + items
         return [sublime.ListInputItem(f'No Symbol found: "{self.text}"', "")]
 
     def _select_first_row(self) -> None:

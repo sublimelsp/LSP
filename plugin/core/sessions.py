@@ -110,8 +110,8 @@ from .protocol import Response
 from .protocol import ResponseError
 from .settings import globalprefs
 from .settings import userprefs
-from .transports import Transport
 from .transports import TransportCallbacks
+from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
@@ -952,15 +952,15 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
+class Session(APIHandler, TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
-        self.transport: Transport | None = None
+        self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1232,7 +1232,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: Transport,
+        transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
         self.transport = transport
@@ -2040,7 +2040,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
                 #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
                 try:
-                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])  # type: ignore
+                    token = str(token)
+                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
                     self._invoke_views(request, "on_request_progress", request_id, params)
                     return
@@ -2190,21 +2191,20 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def exit(self) -> None:
         self.send_notification(Notification.exit())
-        try:
-            self.transport.close()  # type: ignore
-        except AttributeError:
-            pass
+        if self.transport:
+            self.transport.close()
+            self.transport = None
 
     def send_payload(self, payload: JSONRPCMessage) -> None:
         try:
-            self.transport.send(payload)  # type: ignore
+            self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
         except AttributeError:
             pass
 
     def deduce_payload(
         self,
-        payload: dict[str, Any]
-    ) -> tuple[Callable | None, Any, int | None, str | None, str | None]:
+        payload: JSONRPCMessage
+    ) -> tuple[Callable | None, Any, str | int | None, str | None, str | None]:
         if "method" in payload:
             method = payload["method"]
             handler = self._get_handler(method)
@@ -2224,7 +2224,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return res
         elif "id" in payload:
             response_id = payload["id"]
-            if response_id is None:
+            if response_id is None:  # pyright: ignore[reportUnnecessaryComparison]
                 self._logger.incoming_response('<missing>', payload.get("error"), True)
                 return (None, None, None, None, None)
             handler, method, result, is_error = self.response_handler(response_id, payload)
@@ -2234,10 +2234,10 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 self._plugin.on_server_response_async(method, response)  # type: ignore
             return handler, response.result, None, None, None
         else:
-            debug("Unknown payload type: ", payload)
+            debug("Unknown payload type: ", payload)  # pyright: ignore[reportUnreachable]
         return (None, None, None, None, None)
 
-    def on_payload(self, payload: dict[str, Any]) -> None:
+    def on_payload(self, payload: JSONRPCMessage) -> None:
         handler, result, req_id, typestr, _method = self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
@@ -2262,7 +2262,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 result_promise.then(self.send_response)
 
     def response_handler(
-        self, response_id: int, response: dict[str, Any]
+        self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
         matching_handler = self._response_handlers.pop(response_id)
         if not matching_handler:

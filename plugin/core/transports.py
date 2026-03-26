@@ -299,17 +299,17 @@ def create_transport(config: TransportConfig, cwd: str | None,
         config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
-_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
+g_subprocesses: weakref.WeakSet[subprocess.Popen[bytes]] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:
-    g_subprocesses = list(_subprocesses)
-    for p in g_subprocesses:
+    subprocesses = list(g_subprocesses)
+    for p in subprocesses:
         try:
             p.kill()
         except Exception:
             pass
-    for p in g_subprocesses:
+    for p in subprocesses:
         try:
             p.wait()
         except Exception:
@@ -354,7 +354,7 @@ def _start_subprocess(
         startupinfo=startupinfo,
         env=env,
         cwd=cwd)
-    _subprocesses.add(process)
+    g_subprocesses.add(process)
     return process
 
 

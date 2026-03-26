@@ -73,9 +73,7 @@ def filter_code_actions_for_diagnostics(
         # If there is only a single diagnostic from this server, all enabled quickfix code actions can be shown.
         # Strictly speaking, the code actions aren't necessarily associated with the diagnostic, but this heuristic
         # works quite well in practice.
-        code_actions = [
-            action for action in response if is_quickfix(action) and not action.get('disabled', False)
-        ]
+        code_actions = [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
     else:
         # If there are multiple diagnostics for the hover region, we can only use those code actions which include
         # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.

@@ -55,22 +55,33 @@ def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[C
     return bool(action.get('diagnostics'))
 
 
+def is_quickfix(action: Command | CodeAction) -> bool:
+    # We consider code actions without `kind` property also to be a "quickfix".
+    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction  # noqa: E501
+    # > In version 1.0 of the protocol, there weren't any source or refactoring code actions. Code actions were solely
+    # > used to (quick) fix code, not to write / rewrite code. So if a client asks for code actions without any kind,
+    # > the standard quick fix code actions should be returned.
+    return kind_contains_other_kind(CodeActionKind.QuickFix, action.get('kind', CodeActionKind.QuickFix))
+
+
 def filter_code_actions_for_diagnostics(
     config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
 ) -> tuple[str, list[Command | CodeAction]]:
     if isinstance(response, Error) or not response:
         code_actions: list[Command | CodeAction] = []
     elif diagnostics_count == 1:
-        # If there is only a single diagnostic from this server, all enabled code actions can be shown, because only
-        # "Quickfix" actions were requested. Strictly speaking, the code actions aren't necessarily associated with the
-        # diagnostic, but this heuristic works quite well in practice.
-        code_actions = [action for action in response if not action.get('disabled', False)]
+        # If there is only a single diagnostic from this server, all enabled quickfix code actions can be shown.
+        # Strictly speaking, the code actions aren't necessarily associated with the diagnostic, but this heuristic
+        # works quite well in practice.
+        code_actions = [
+            action for action in response if is_quickfix(action) and not action.get('disabled', False)
+        ]
     else:
         # If there are multiple diagnostics for the hover region, we can only use those code actions which include
         # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
         code_actions = [
             action for action in response
-            if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
+            if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
         ]
     return config_name, code_actions
 

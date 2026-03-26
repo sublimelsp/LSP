@@ -57,7 +57,7 @@ def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[C
 
 def is_quickfix(action: Command | CodeAction) -> bool:
     # We consider code actions without `kind` property also to be a "quickfix".
-    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction  # noqa: E501
+    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction
     # > In version 1.0 of the protocol, there weren't any source or refactoring code actions. Code actions were solely
     # > used to (quick) fix code, not to write / rewrite code. So if a client asks for code actions without any kind,
     # > the standard quick fix code actions should be returned.

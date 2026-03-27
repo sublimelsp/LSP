@@ -766,17 +766,24 @@ class SessionBuffer:
                 action not in {ChangeEventAction.TYPE, ChangeEventAction.INSERT_NEWLINE} or \
                 not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
-        selection = first_selection_region(view)
-        if selection is None:
-            return None
-        for trigger in self._on_type_formatting_triggers:
-            if ((action == ChangeEventAction.TYPE and text.endswith(trigger)) or
-                (action == ChangeEventAction.INSERT_NEWLINE and text.rstrip(' ').endswith(trigger))):
-                return {
-                    **text_document_position_params(view, selection.a),
-                    'options': formatting_options(view.settings()),
-                    'ch': trigger[0],
-                }
+        if action == ChangeEventAction.INSERT_NEWLINE and '\n' in self._on_type_formatting_triggers \
+                and text.rstrip(' ').endswith('\n'):
+            return self._create_on_type_formatting_params_async(view, '\n')
+        if action == ChangeEventAction.TYPE:
+            for trigger in self._on_type_formatting_triggers:
+                if text.endswith(trigger):
+                    return self._create_on_type_formatting_params_async(view, trigger)
+        return None
+
+    def _create_on_type_formatting_params_async(
+        self, view: sublime.View, trigger: str
+    ) -> DocumentOnTypeFormattingParams | None:
+        if (selection := first_selection_region(view)) is not None:
+            return {
+                **text_document_position_params(view, selection.a),
+                'options': formatting_options(view.settings()),
+                'ch': trigger[0],
+            }
         return None
 
     def _on_type_formatting_result_async(

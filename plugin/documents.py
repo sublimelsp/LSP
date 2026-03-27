@@ -515,9 +515,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if panel_manager.is_panel_open(PanelName.Diagnostics):
             if not has_relevant_diagnostcs:
                 panel_manager.hide_diagnostics_panel_async()
-        else:
-            if has_relevant_diagnostcs:
-                panel_manager.show_diagnostics_panel_async()
+        elif has_relevant_diagnostcs:
+            panel_manager.show_diagnostics_panel_async()
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -535,20 +534,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     return True
             return False
         # You can filter key bindings by the precense of a specific name of a configuration.
-        elif key == "lsp.session_with_name" and operator == sublime.QueryOperator.EQUAL and isinstance(operand, str):
+        if key == "lsp.session_with_name" and operator == sublime.QueryOperator.EQUAL and isinstance(operand, str):
             return bool(self.session_by_name(operand))
         # You can check if there is at least one session attached to this view.
-        elif key in ("lsp.sessions", "setting.lsp_active"):
+        if key in {"lsp.sessions", "setting.lsp_active"}:
             return bool(self._session_views)
         # Signature Help handling
-        elif key == "lsp.signature_help_multiple_choices_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.signature_help_multiple_choices_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(
                 self._sighelp and self._sighelp.has_multiple_signatures() and
                 self.view.is_popup_visible() and not self.view.is_auto_complete_visible()
             )
-        elif key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.signature_help_available" and operator == sublime.QueryOperator.EQUAL:
             return operand == bool(not self.view.is_popup_visible() and self._get_signature_help_session())
-        elif key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
+        if key == "lsp.link_available" and operator == sublime.QueryOperator.EQUAL:
             position = get_position(self.view)
             if position is None:
                 return not operand
@@ -613,7 +612,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if session := self.session_by_name(session_name):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
-        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
+        elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
 
     @requires_session
@@ -646,12 +645,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
-        elif command_name in ("next_field", "prev_field") and args is None:
+        elif command_name in {"next_field", "prev_field"} and args is None:
             sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
         if not self.view.is_popup_visible():
             return
-        if self._is_documenation_popup_open and command_name in ("move", "commit_completion", "delete_word",
-                                                                 "delete_to_mark", "left_delete", "right_delete"):
+        if self._is_documenation_popup_open and command_name in {"move", "commit_completion", "delete_word",
+                                                                 "delete_to_mark", "left_delete", "right_delete"}:
             self.view.hide_popup()
 
     @requires_session

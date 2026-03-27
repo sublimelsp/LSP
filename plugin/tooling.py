@@ -256,7 +256,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "$ref": "sublime://settings/LSP-plugin-base"
                                 },
                                 {
-                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                 }
                             ]
                         }
@@ -272,7 +272,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                         "LSP": {
                                             "properties": {
                                                 f"LSP-{base_package_name}": {
-                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                                 }
                                             }
                                         }

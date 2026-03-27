@@ -43,7 +43,7 @@ __version__ = "1.0.0"
 
 if sys.version_info[:2] < (3, 6):
     print("only works for python3.6 and higher")
-    exit(1)
+    sys.exit(1)
 
 
 StringDict = Dict[str, Any]
@@ -267,9 +267,8 @@ class Session:
             elif request_id is not None:
                 self._error(request_id, Error(
                     ErrorCode.MethodNotFound, f"method '{method}' not found"))
-            else:
-                if unhandled:
-                    self._log(f"unhandled {typestr} {method}")
+            elif unhandled:
+                self._log(f"unhandled {typestr} {method}")
         elif request_id is not None:
             # handle request
             try:
@@ -409,8 +408,7 @@ async def stdio() -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     loop = asyncio.get_event_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
-    else:
-        return await _unix_stdio(loop)
+    return await _unix_stdio(loop)
 
 
 async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
@@ -504,10 +502,9 @@ async def main(tcp_port: int | None = None) -> bool:
         # But, it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
         await server.serve_forever()
         return callback.received_shutdown
-    else:
-        reader, writer = await stdio()
-        session = Session(reader, writer)
-        return await session.run_forever()
+    reader, writer = await stdio()
+    session = Session(reader, writer)
+    return await session.run_forever()
 
 
 if __name__ == '__main__':
@@ -517,7 +514,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.version:
         print(__package__, __version__)
-        exit(0)
+        sys.exit(0)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     shutdown_received = False
@@ -527,4 +524,4 @@ if __name__ == '__main__':
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
-    exit(0 if shutdown_received else 1)
+    sys.exit(0 if shutdown_received else 1)

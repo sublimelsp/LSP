@@ -176,8 +176,8 @@ class SettingsRegistration:
         weak_self = weakref.ref(self)
 
         def on_change_handler() -> None:
-            if _self := weak_self():
-                on_change(_self)
+            if self_ := weak_self():
+                on_change(self_)
 
         self.settings.add_on_change("LSP", on_change_handler)
 
@@ -376,7 +376,7 @@ class Settings:
 
     def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
         default = sublime.RegionFlags.NO_UNDO
-        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
+        if style_str in {"background", "fill"}:  # Backwards-compatible with "fill"
             style = default | sublime.RegionFlags.DRAW_NO_OUTLINE
             return style, style
         if style_str == "outline":
@@ -390,7 +390,7 @@ class Settings:
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
         default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
         # This method could be a dict or lru_cache
-        if style_str == "":
+        if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE
         if style_str == "box":
             return default
@@ -408,7 +408,7 @@ class Settings:
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
-        elif isinstance(self.diagnostics_highlight_style, dict):
+        if isinstance(self.diagnostics_highlight_style, dict):
             flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
@@ -417,9 +417,8 @@ class Settings:
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
-        else:
-            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
-            return [None] * 4  # default styling
+        # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
+        return [None] * 4  # default styling
 
 
 @dataclass
@@ -514,7 +513,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
             flags |= IGNORECASE
         return globmatch(file_name, pattern['glob'], flags=flags)
 
-    return any(matches(_filter) for _filter in filters)
+    return any(matches(filter_) for filter_ in filters)
 
 
 # method -> (capability dotted path, optional registration dotted path)
@@ -631,15 +630,14 @@ class Capabilities(DottedDict):
         if not isinstance(stored_registration_id, str):
             debug("stored registration ID at", registration_path, "is not a string")
             return None
-        elif stored_registration_id != registration_id:
+        if stored_registration_id != registration_id:
             msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
             debug(msg.format(stored_registration_id, registration_id))
             return None
-        else:
-            discarded = self.get(capability_path)
-            self.remove(capability_path)
-            self.remove(registration_path)
-            return discarded
+        discarded = self.get(capability_path)
+        self.remove(capability_path)
+        self.remove(registration_path)
+        return discarded
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
@@ -664,10 +662,9 @@ class Capabilities(DottedDict):
         save = self.get("textDocumentSync.save")
         if isinstance(save, bool):
             return save, False
-        elif isinstance(save, dict):
+        if isinstance(save, dict):
             return True, bool(save.get("includeText"))
-        else:
-            return False, False
+        return False, False
 
     def should_notify_did_close(self) -> bool:
         return "textDocumentSync.didClose" in self
@@ -677,7 +674,7 @@ def _translate_path(path: str, source: str, destination: str) -> tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
+    if path.startswith(source) and len(path) > len(source) and path[len(source)] in {"/", "\\"}:
         return path.replace(source, destination, 1), True
     return path, False
 
@@ -710,10 +707,13 @@ class PathMap:
             result.append(PathMap(local, remote))
         return result
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathMap):
             return False
         return self._local == other._local and self._remote == other._remote
+
+    def __hash__(self) -> int:
+        return hash(self.__slots__)
 
     def map_from_local_to_remote(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._local, self._remote)
@@ -1118,7 +1118,7 @@ class ClientConfig:
         :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
         """
         scheme, path = parse_uri(uri)
-        if scheme not in ("file", "res"):
+        if scheme not in {"file", "res"}:
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
         if self.path_maps:
             for path_map in self.path_maps:
@@ -1140,13 +1140,12 @@ class ClientConfig:
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 if value:
                     # If it's not empty we'll continue the walk
                     continue
-                else:
-                    # This might be a leaf node
-                    return True
+                # This might be a leaf node
+                return True
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:
@@ -1158,16 +1157,19 @@ class ClientConfig:
         items: list[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
-                items.append(f"{k}={repr(v)}")
+                items.append(f"{k}={v!r}")
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
         for k, v in self.__dict__.items():
             if not k.startswith("_") and v != getattr(other, k):
                 return False
         return True
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
 
 
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:

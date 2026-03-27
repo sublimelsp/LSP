@@ -19,11 +19,11 @@ class LspSettingsChangeListener(ABC):
 
     @abstractmethod
     def on_client_config_updated(self, config_name: str | None = None) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_userprefs_updated(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ClientConfigs:
@@ -96,11 +96,11 @@ class ClientConfigs:
             return
         settings_obj = _settings_registration.settings
         clients_dict = read_dict_setting(settings_obj, "clients", {})
-        _clients_hash = hash(json.dumps(clients_dict, sort_keys=True))
-        if _clients_hash == self._clients_hash:
+        clients_hash = hash(json.dumps(clients_dict, sort_keys=True))
+        if clients_hash == self._clients_hash:
             self._notify_userprefs_listener()
             return
-        self._clients_hash = _clients_hash
+        self._clients_hash = clients_hash
         clients = DottedDict(read_dict_setting(settings_obj, "default_clients", {}))
         clients.update(clients_dict)
         self.all.clear()

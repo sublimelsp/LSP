@@ -147,11 +147,11 @@ class SessionView:
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
         keys = [f"lsp_semantic_{session_name}_{key}" for key in range(1, 100)]
-        if document_highlight_style in ("background", "fill"):
+        if document_highlight_style in {"background", "fill"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if hover_highlight_style in ("background", "fill"):
+        if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
@@ -161,11 +161,11 @@ class SessionView:
             keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
             keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
-        if document_highlight_style in ("underline", "stippled"):
+        if document_highlight_style in {"underline", "stippled"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if hover_highlight_style in ("underline", "stippled"):
+        if hover_highlight_style in {"underline", "stippled"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)

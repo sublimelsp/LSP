@@ -42,10 +42,10 @@ class StopLoopError(Exception):
 class Transport(Generic[T]):
 
     def send(self, payload: T) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def close(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class TransportCallbacks(Protocol[T_contra]):
@@ -63,10 +63,10 @@ class TransportCallbacks(Protocol[T_contra]):
 class AbstractProcessor(Generic[T]):
 
     def write_data(self, writer: IO[bytes], data: T) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def read_data(self, reader: IO[bytes]) -> T | None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
@@ -82,10 +82,9 @@ class JsonRpcProcessor(AbstractProcessor[Dict[str, Any]]):
         except TypeError as ex:
             if str(headers) == '\n':
                 # Expected on process stopping. Gracefully stop the transport.
-                raise StopLoopError() from None
-            else:
-                # Propagate server's output to the UI.
-                raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
+                raise StopLoopError from None
+            # Propagate server's output to the UI.
+            raise Exception(f"Unexpected payload in server's stdout:\n\n{headers}") from ex
         try:
             return self._decode(body)
         except Exception as ex:
@@ -233,7 +232,7 @@ class ProcessTransport(Transport[T]):
                     # None message already posted, just return
                     return
                 message = self._stderr.readline().decode('utf-8', 'replace')
-                if message == '':
+                if not message:
                     continue
                 callback_object = self._callback_object()
                 if callback_object:
@@ -271,7 +270,8 @@ def create_transport(config: TransportConfig, cwd: str | None,
         return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
 
     if config.listener_socket:
-        assert isinstance(config.tcp_port, int) and config.tcp_port > 0
+        assert isinstance(config.tcp_port, int)
+        assert config.tcp_port > 0
         if config.command:
             process, sock, reader, writer = _start_subprocess_and_await_connection(
                 config.listener_socket, start_subprocess
@@ -299,12 +299,11 @@ def create_transport(config: TransportConfig, cwd: str | None,
         config.name, process, sock, reader, writer, stderr, json_rpc_processor, callback_object)  # type: ignore
 
 
-_subprocesses: weakref.WeakSet[subprocess.Popen] = weakref.WeakSet()
+g_subprocesses: weakref.WeakSet[subprocess.Popen[bytes]] = weakref.WeakSet()
 
 
 def kill_all_subprocesses() -> None:
-    global _subprocesses
-    subprocesses = list(_subprocesses)
+    subprocesses = list(g_subprocesses)
     for p in subprocesses:
         try:
             p.kill()
@@ -355,7 +354,7 @@ def _start_subprocess(
         startupinfo=startupinfo,
         env=env,
         cwd=cwd)
-    _subprocesses.add(process)
+    g_subprocesses.add(process)
     return process
 
 

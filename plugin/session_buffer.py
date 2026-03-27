@@ -231,7 +231,7 @@ class SessionBuffer:
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
@@ -369,7 +369,7 @@ class SessionBuffer:
             return
         self._last_text_change_time = time.time()
         last_change = changes[-1]
-        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and not last_change.str and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
             # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
@@ -446,7 +446,7 @@ class SessionBuffer:
             self.do_document_diagnostic_async(view, version)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
@@ -569,7 +569,7 @@ class SessionBuffer:
 
     def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
         # None-check guards against spec violation from vue server - https://github.com/volarjs/volar.js/issues/301.
-        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison] # noqa: E501
+        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison]
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:
@@ -951,7 +951,7 @@ class SessionBuffer:
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
-            sublime.set_timeout(lambda: self.remove_all_inlay_hints())
+            sublime.set_timeout(self.remove_all_inlay_hints)
 
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
@@ -975,7 +975,7 @@ class SessionBuffer:
         diagnostics: list[Diagnostic],
         kinds: list[CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
-    ) -> Promise[list[Command | CodeAction] | None | Error]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         context: CodeActionContext = {
             'diagnostics': diagnostics,
             'triggerKind': trigger_kind
@@ -1026,16 +1026,15 @@ class SessionBuffer:
             # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
             return code_lenses
-        else:
-            supported_code_lenses: list[ResolvedCodeLens] = []
-            # Filter out CodeLenses with commands that are not handled directly by the language server
-            for code_lens in code_lenses:
-                command_name = code_lens['command']['command']
-                if command_name in self._supported_commands:
-                    supported_code_lenses.append(code_lens)
-                else:
-                    self.session.check_log_unsupported_command(command_name)
-            return supported_code_lenses
+        supported_code_lenses: list[ResolvedCodeLens] = []
+        # Filter out CodeLenses with commands that are not handled directly by the language server
+        for code_lens in code_lenses:
+            command_name = code_lens['command']['command']
+            if command_name in self._supported_commands:
+                supported_code_lenses.append(code_lens)
+            else:
+                self.session.check_log_unsupported_command(command_name)
+        return supported_code_lenses
 
     def _on_visible_code_lenses_resolved_async(self) -> None:
         supported_code_lenses = self._filter_supported_code_lenses()

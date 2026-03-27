@@ -20,7 +20,7 @@ skipsdist = true
 deps = [
     "mypy==1.18.2",
     "pyright==1.1.408",
-    "ruff==0.15.4",
+    "ruff==0.15.7",
     "orjson==3.11.4",
 ]
 commands = [
@@ -104,9 +104,7 @@ ignore = [
     "PGH003",  # https://docs.astral.sh/ruff/rules/blanket-type-ignore/
     "PGH004",  # https://docs.astral.sh/ruff/rules/blanket-noqa/
     "PIE790",  # https://docs.astral.sh/ruff/rules/unnecessary-placeholder/
-    "PIE808",  # https://docs.astral.sh/ruff/rules/unnecessary-range-start/
     "PLC0415",  # https://docs.astral.sh/ruff/rules/import-outside-top-level/
-    "PLC1901",  # https://docs.astral.sh/ruff/rules/compare-to-empty-string/
     "PLC2701",  # https://docs.astral.sh/ruff/rules/import-private-name/
     "PLR0904",  # https://docs.astral.sh/ruff/rules/too-many-public-methods/
     "PLR0911",  # https://docs.astral.sh/ruff/rules/too-many-return-statements/
@@ -116,20 +114,11 @@ ignore = [
     "PLR0915",  # https://docs.astral.sh/ruff/rules/too-many-statements/
     "PLR0917",  # https://docs.astral.sh/ruff/rules/too-many-positional-arguments/
     "PLR1702",  # https://docs.astral.sh/ruff/rules/too-many-nested-blocks/
-    "PLR1716",  # https://docs.astral.sh/ruff/rules/boolean-chained-comparison/
-    "PLR1722",  # https://docs.astral.sh/ruff/rules/sys-exit-alias/
     "PLR2004",  # https://docs.astral.sh/ruff/rules/magic-value-comparison/
-    "PLR5501",  # https://docs.astral.sh/ruff/rules/collapsible-else-if/
-    "PLR6201",  # https://docs.astral.sh/ruff/rules/literal-membership/
     "PLR6301",  # https://docs.astral.sh/ruff/rules/no-self-use/
-    "PLW0108",  # https://docs.astral.sh/ruff/rules/unnecessary-lambda/
-    "PLW0602",  # https://docs.astral.sh/ruff/rules/global-variable-not-assigned/
     "PLW0603",  # https://docs.astral.sh/ruff/rules/global-statement/
-    "PLW1514",  # https://docs.astral.sh/ruff/rules/unspecified-encoding/
-    "PLW1641",  # https://docs.astral.sh/ruff/rules/eq-without-hash/
     "PLW2901",  # https://docs.astral.sh/ruff/rules/redefined-loop-name/
     "PT009",  # https://docs.astral.sh/ruff/rules/pytest-unittest-assertion/
-    "PT018",  # https://docs.astral.sh/ruff/rules/pytest-composite-assertion/
     "PT027",  # https://docs.astral.sh/ruff/rules/pytest-unittest-raises-assertion/
     "PTH100",  # https://docs.astral.sh/ruff/rules/os-path-abspath/
     "PTH109",  # https://docs.astral.sh/ruff/rules/os-getcwd/
@@ -142,38 +131,13 @@ ignore = [
     "PTH120",  # https://docs.astral.sh/ruff/rules/os-path-dirname/
     "PTH121",  # https://docs.astral.sh/ruff/rules/os-path-samefile/
     "PTH122",  # https://docs.astral.sh/ruff/rules/os-path-splitext/
-    "PTH123",  # https://docs.astral.sh/ruff/rules/builtin-open/
     "PTH208",  # https://docs.astral.sh/ruff/rules/os-listdir/
-    "PYI030",  # https://docs.astral.sh/ruff/rules/unnecessary-literal-union/
-    "PYI032",  # https://docs.astral.sh/ruff/rules/any-eq-ne-annotation/
-    "PYI041",  # https://docs.astral.sh/ruff/rules/redundant-numeric-union/
-    "Q000",  # https://docs.astral.sh/ruff/rules/bad-quotes-inline-string/
-    "Q001",  # https://docs.astral.sh/ruff/rules/bad-quotes-multiline-string/
-    "Q002",  # https://docs.astral.sh/ruff/rules/bad-quotes-docstring/
-    "Q003",  # https://docs.astral.sh/ruff/rules/avoidable-escaped-quote/
-    "RET503",  # https://docs.astral.sh/ruff/rules/implicit-return/
-    "RET504",  # https://docs.astral.sh/ruff/rules/unnecessary-assign/
-    "RET505",  # https://docs.astral.sh/ruff/rules/superfluous-else-return/
-    "RET506",  # https://docs.astral.sh/ruff/rules/superfluous-else-raise/
-    "RET507",  # https://docs.astral.sh/ruff/rules/superfluous-else-continue/
-    "RSE102",  # https://docs.astral.sh/ruff/rules/unnecessary-paren-on-raise-exception/
+    "Q",  # flake8-quotes - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
     "RUF001",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-string/
-    "RUF003",  # https://docs.astral.sh/ruff/rules/ambiguous-unicode-character-comment/
-    "RUF005",  # https://docs.astral.sh/ruff/rules/collection-literal-concatenation/
-    "RUF010",  # https://docs.astral.sh/ruff/rules/explicit-f-string-type-conversion/
     "RUF012",  # https://docs.astral.sh/ruff/rules/mutable-class-default/
-    "RUF013",  # https://docs.astral.sh/ruff/rules/implicit-optional/
-    "RUF015",  # https://docs.astral.sh/ruff/rules/unnecessary-iterable-allocation-for-first-element/
-    "RUF021",  # https://docs.astral.sh/ruff/rules/parenthesize-chained-operators/
-    "RUF022",  # https://docs.astral.sh/ruff/rules/unsorted-dunder-all/
     "RUF023",  # https://docs.astral.sh/ruff/rules/unsorted-dunder-slots/
     "RUF031",  # https://docs.astral.sh/ruff/rules/incorrectly-parenthesized-tuple-in-subscript/
-    "RUF036",  # https://docs.astral.sh/ruff/rules/none-not-at-end-of-union/
-    "RUF039",  # https://docs.astral.sh/ruff/rules/unraw-re-pattern/
-    "RUF052",  # https://docs.astral.sh/ruff/rules/used-dummy-variable/
-    "RUF059",  # https://docs.astral.sh/ruff/rules/unused-unpacked-variable/
     "RUF067",  # https://docs.astral.sh/ruff/rules/non-empty-init-module/
-    "RUF100",  # https://docs.astral.sh/ruff/rules/unused-noqa/
     "S101",  # https://docs.astral.sh/ruff/rules/assert/
     "S110",  # https://docs.astral.sh/ruff/rules/try-except-pass/
     "S307",  # https://docs.astral.sh/ruff/rules/suspicious-eval-usage/

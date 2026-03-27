@@ -57,6 +57,8 @@ from .workspace import is_subpath_of
 from dataclasses import dataclass
 from functools import lru_cache
 from operator import itemgetter
+from os.path import commonpath
+from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -69,7 +71,6 @@ import html
 import itertools
 import linecache
 import mdpopups
-import os
 import re
 import sublime
 import sublime_plugin
@@ -167,7 +168,7 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
-    variables["home"] = os.path.expanduser('~')
+    variables["home"] = expanduser('~')
     return variables
 
 
@@ -398,7 +399,7 @@ def did_close(uri: DocumentUri) -> Notification[DidCloseTextDocumentParams]:
 def formatting_options(settings: sublime.Settings) -> FormattingOptions:
     # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
     # backwards-compatible way.
-    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, None, "none")
+    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in {False, None, "none"}
     return {
         # Size of a tab in spaces.
         "tabSize": settings.get("tab_size", 4),
@@ -610,7 +611,7 @@ def minihtml(
             }
         ]
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)  # noqa: RUF039
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
     return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
@@ -736,8 +737,7 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
 def diagnostic_icon(severity: DiagnosticSeverity) -> str:
     if userprefs().diagnostics_gutter_marker == "sign":
         return DIAGNOSTIC_STYLES[severity].icon_resource
-    else:
-        return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+    return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
 def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:
@@ -770,7 +770,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
         DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
         lines[0]
     )
-    if formatted != "" or code is not None:
+    if formatted or code is not None:
         # \u200B is the zero-width space
         result += f" \u200B{formatted}"
     offset = len(result) if href else None
@@ -804,7 +804,7 @@ def location_to_human_readable(
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):
-            pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+            pathname = pathname[len(commonpath((pathname, base_dir))) + 1:]
     elif scheme == "res":
         fmt = "{}:{}"
         pathname = uri
@@ -896,7 +896,8 @@ def format_diagnostics_for_html(
             diagnostic_html = format_diagnostic_for_html(
                 sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
             diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
-    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>'
+    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
+        diagnostics_html else ''
 
 
 def format_diagnostic_for_html(
@@ -955,7 +956,7 @@ def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     Check if `other_kind` is a sub-kind of `kind`.
 
     The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
-    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `"refactor"`.
     """
     if kind == other_kind:
         return True

@@ -14,9 +14,7 @@ import sys
 PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
-
-with open(os.path.join(PACKAGE_PATH, '.release.json')) as f:
-    CONFIGURATION = json.load(f)
+CONFIGURATION = json.loads(Path(PACKAGE_PATH, '.release.json').read_text(encoding='utf-8'))
 
 # Project configuration
 # The name of the branch to push to the remote on releasing.
@@ -41,7 +39,7 @@ def put_message(fname: str, text: str) -> None:
 def build_messages_json(version_history: list[str]) -> None:
     """Write the version history to the messages.json file."""
     output = os.path.join(PACKAGE_PATH, 'messages.json')
-    with open(output, 'w+', encoding='utf-8') as file:
+    with Path(output).open('w+', encoding='utf-8') as file:
         json.dump(
             obj={v: MESSAGE_DIR + '/' + v + '.txt' for v in version_history},
             fp=file, indent=4, separators=(',', ': '), sort_keys=True)
@@ -66,8 +64,7 @@ def parse_version(version: str) -> tuple[int, int, int]:
     if match:
         _prefix, major, minor, patch = match.groups()
         return int(major), int(minor), int(patch)
-    else:
-        return 0, 0, 0
+    return 0, 0, 0
 
 
 def get_version_with_prefix(version: str) -> str:
@@ -84,7 +81,7 @@ def git(*args: str) -> str | None:
     else:
         startupinfo = None
     proc = subprocess.Popen(
-        args=['git'] + list(args), startupinfo=startupinfo,
+        args=['git', *list(args)], startupinfo=startupinfo,
         stdout=subprocess.PIPE, stdin=subprocess.PIPE, cwd=PACKAGE_PATH)
     stdout, _ = proc.communicate()
     return stdout.decode('utf-8').strip() if stdout else None

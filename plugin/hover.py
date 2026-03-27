@@ -116,7 +116,7 @@ class LspHoverCommand(LspTextCommand):
                 return
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, hover_point)
-                if userprefs().link_highlight_style in ("underline", "none"):
+                if userprefs().link_highlight_style in {"underline", "none"}:
                     self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
@@ -223,9 +223,8 @@ class LspHoverCommand(LspTextCommand):
                 combined_region = combined_region.cover(range_to_region(link["range"], self.view))
             if all(link.get("target") for link in self._document_links):
                 return '<a href="quick-panel:DocumentLink">Follow Link…</a>', combined_region
-            else:
-                return "Follow Link…", combined_region
-        elif len(self._document_links) == 1:
+            return "Follow Link…", combined_region
+        if len(self._document_links) == 1:
             link = self._document_links[0]
             target = link.get("target")
             label = "Follow Link" if link.get("target", "file:").startswith("file:") else "Open in Browser"
@@ -233,8 +232,7 @@ class LspHoverCommand(LspTextCommand):
             tooltip = f' title="{html.escape(title)}"' if title else ""
             region = range_to_region(link["range"], self.view)
             return f'<a href="{html.escape(target)}"{tooltip}>{label}</a>' if target else label, region
-        else:
-            return "", None
+        return "", None
 
     def hover_content(self) -> str:
         contents: list[str] = []
@@ -332,7 +330,7 @@ class LspHoverCommand(LspTextCommand):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif scheme.lower() in ("http", "https") or scheme == '' and href.startswith('www.'):
+        elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
         elif scheme:
             sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))

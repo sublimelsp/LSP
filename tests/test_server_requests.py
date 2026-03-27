@@ -74,9 +74,9 @@ class ServerRequests(TextDocumentTestCase):
         with tempfile.TemporaryDirectory() as dirpath:
             initial_text = ["a b", "c d"]
             file_paths = []
-            for i in range(0, 2):
+            for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                Path(file_paths[-1]).write_text(initial_text[i])
+                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
             yield from verify(
                 self,
                 "workspace/applyEdit",
@@ -112,7 +112,7 @@ class ServerRequests(TextDocumentTestCase):
             )
             # Changes should have been applied
             expected = ["hello there", "general kenobi"]
-            for i in range(0, 2):
+            for i in range(2):
                 view = self.view.window().find_open_file(file_paths[i])
                 self.assertTrue(view)
                 view.set_scratch(True)

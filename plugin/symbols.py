@@ -279,6 +279,7 @@ class DocumentSymbolsKindInputHandler(PreselectedListInputHandler):
     def next_input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
         if (kind := args.get('kind')) is not None:
             return DocumentSymbolsInputHandler(self.view, kind, self.items, self.old_selection)
+        return None
 
 
 class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
@@ -303,7 +304,7 @@ class DocumentSymbolsInputHandler(sublime_plugin.ListInputHandler):
             for index, item in enumerate(items):
                 start = item.value['range']['start']
                 if start['line'] < caret_point.row or \
-                        start['line'] == caret_point.row and start['character'] <= caret_point.col:
+                        (start['line'] == caret_point.row and start['character'] <= caret_point.col):
                     selected_index = index
                 else:
                     break

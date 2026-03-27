@@ -47,7 +47,7 @@ import weakref
 import webbrowser
 
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None, Error]
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
 ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
@@ -204,7 +204,7 @@ class QueryCompletionsTask:
 
     def query_completions_async(self, sessions: list[Session]) -> None:
         promises = [self._create_completion_request_async(session) for session in sessions]
-        Promise.all(promises).then(lambda response: self._resolve_completions_async(response))
+        Promise.all(promises).then(self._resolve_completions_async)
 
     def _create_completion_request_async(self, session: Session) -> Promise[ResolvedCompletions]:
         params = cast(CompletionParams, text_document_position_params(self._view, self._location))

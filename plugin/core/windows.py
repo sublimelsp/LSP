@@ -326,13 +326,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loggers.append(logger_map[logger_type])
         if len(loggers) == 0:
             return RouterLogger()  # logs nothing
-        elif len(loggers) == 1:
+        if len(loggers) == 1:
             return loggers[0](self, config_name)
-        else:
-            router_logger = RouterLogger()
-            for logger in loggers:
-                router_logger.append(logger(self, config_name))
-            return router_logger
+        router_logger = RouterLogger()
+        for logger in loggers:
+            router_logger.append(logger(self, config_name))
+        return router_logger
 
     def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
@@ -396,7 +395,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         'choose Cancel to disable it for this window for the duration of the current session. '
                         'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
-                    msg += f"\n\n--- Error: ---\n{str(exception)}"
+                    msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
@@ -527,7 +526,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         else:
             self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
         if userprefs().show_view_status:
-            statuses = [status.replace('LSP-', '') for (_, status) in self._view_statuses[view_id].items()]
+            statuses = [status.replace('LSP-', '') for status in self._view_statuses[view_id].values()]
             if statuses:
                 statuses.sort()
                 view_status = f"LSP: {' | '.join(statuses)}"

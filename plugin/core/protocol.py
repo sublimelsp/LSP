@@ -416,6 +416,9 @@ class Point:
             return NotImplemented
         return (self.row, self.col) < (other.row, other.col)
 
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
     @classmethod
     def from_lsp(cls, point: Position) -> Point:
         return Point(point['line'], point['character'])

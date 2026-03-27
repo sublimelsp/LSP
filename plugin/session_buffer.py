@@ -771,8 +771,8 @@ class SessionBuffer:
         if selection is None:
             return None
         for trigger in self._on_type_formatting_triggers:
-            if (action == ChangeEventAction.TYPE and text.endswith(trigger) or
-                action == ChangeEventAction.INSERT_NEWLINE and text.rstrip(' ').endswith(trigger)):
+            if ((action == ChangeEventAction.TYPE and text.endswith(trigger)) or
+                (action == ChangeEventAction.INSERT_NEWLINE and text.rstrip(' ').endswith(trigger))):
                 return {
                     **text_document_position_params(view, selection.a),
                     'options': formatting_options(view.settings()),

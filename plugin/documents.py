@@ -638,6 +638,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return action
         if command_name == 'insert' and args and args.get('characters') == '\n':
             return ChangeEventAction.INSERT_NEWLINE
+        return None
 
     @requires_session
     def on_post_text_command(self, command_name: str, args: dict[str, Any] | None) -> None:

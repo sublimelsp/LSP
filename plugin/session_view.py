@@ -103,7 +103,7 @@ class SessionView:
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(False)
+            listener.on_diagnostics_updated_async(self.session_buffer, False)
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -296,7 +296,7 @@ class SessionView:
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(is_view_visible)
+            listener.on_diagnostics_updated_async(self.session_buffer, is_view_visible)
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines

@@ -15,9 +15,7 @@ from ..protocol import SignatureHelp
 from ..protocol import SignatureHelpContext
 from ..protocol import SignatureHelpParams
 from ..protocol import SignatureHelpTriggerKind
-from .code_actions import actions_manager
-from .code_actions import CodeActionsByConfigName
-from .code_actions import filter_code_actions_for_diagnostics
+from .code_actions import filter_quickfix_actions
 from .code_lens import LspToggleCodeLensesCommand
 from .completion import QueryCompletionsTask
 from .core.constants import ChangeEventAction
@@ -53,6 +51,7 @@ from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
 from .core.url import CODE_ACTION_SCHEME
 from .core.url import decode_code_action_uri
+from .core.url import encode_code_action_uri
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import diagnostic_severity
@@ -79,6 +78,7 @@ from typing import Generator
 from typing import Iterable
 from typing import Literal
 from typing import overload
+from typing import Sequence
 from typing import TypeVar
 from typing_extensions import Concatenate
 from typing_extensions import override
@@ -218,7 +218,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._is_documenation_popup_open = False
         self._stored_selection: list[sublime.Region] = []
         self._should_format_on_paste = False
-        self._code_actions_for_selection_needs_refresh = True
         self.hover_provider_count = 0
         self._setup()
 
@@ -240,9 +239,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._update_styles()
         self._stored_selection = []
         self._sighelp: SigHelp | None = None
-        self._lightbulb_line: int | None = None
-        self._diagnostics_for_selection: list[tuple[SessionBufferProtocol, list[Diagnostic]]] = []
-        self._code_actions_for_selection: list[CodeActionsByConfigName] = []
+        self._code_actions_for_selection: dict[str, list[Command | CodeAction]] = {}
         self._registered = False
 
     def _cleanup(self) -> None:
@@ -347,13 +344,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 result.append((sb, intersections))
         return result
 
-    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        self._clear_code_actions_annotation()
-        if userprefs().show_code_actions:
-            if is_view_visible:
-                self._do_code_actions_for_selection_async()
-            else:
-                self._code_actions_for_selection_needs_refresh = True
+    def on_diagnostics_updated_async(self, session_buffer: SessionBufferProtocol, is_view_visible: bool) -> None:
+        if is_view_visible and userprefs().show_code_actions and session_buffer.has_capability('codeActionProvider'):
+            self._do_code_actions_for_selection_async([session_buffer])
         self._update_diagnostic_in_status_bar_async()
         window = self.view.window()
         is_active_view = window and window.active_view() == self.view
@@ -451,8 +444,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     and (session_view := sb.session.session_view_for_view_async(self.view)) \
                     and session_view.get_request_flags() & RequestFlags.INLAY_HINT:
                 sb.do_inlay_hints_async(self.view)
-        if userprefs().show_code_actions and self._code_actions_for_selection_needs_refresh:
-            self._do_code_actions_for_selection_async()
+        if userprefs().show_code_actions:
+            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
 
     @requires_session
     def on_selection_modified_async(self) -> None:
@@ -461,7 +454,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if not self._is_in_higlighted_region(first_region.b):
             self._clear_highlight_regions()
-        self._clear_code_actions_annotation()
+        if userprefs().show_code_actions:
+            self._code_actions_for_selection.clear()
+            self._clear_code_actions_annotation()
         self._when_selection_remains_stable_async(
             self._on_selection_modified_debounced_async, first_region, after_ms=self.debounce_time)
         self._update_diagnostic_in_status_bar_async()
@@ -470,7 +465,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().document_highlight_style:
             self._do_highlights_async()
         if userprefs().show_code_actions:
-            self._do_code_actions_for_selection_async()
+            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
         for sv in self.session_views_async():
             if code_lenses_enabled:
@@ -579,9 +574,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
                 for sb, diagnostics in sb_diagnostics:
                     if sb.has_capability('codeActionProvider'):
-                        config_name = sb.session.config.name
                         promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
+                            .then(partial(filter_quickfix_actions, sb.session.config.name, len(diagnostics) > 1))
                         code_action_promises.append(promise)
                 Promise.all(code_action_promises).then(
                     partial(self._on_code_actions_for_hover_gutter_async, point, sb_diagnostics))
@@ -804,57 +798,56 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
-    def _do_code_actions_for_selection_async(self) -> None:
+    def _do_code_actions_for_selection_async(self, session_buffers: Sequence[SessionBufferProtocol]) -> None:
         if not self._stored_selection:
             return
-        self._code_actions_for_selection_needs_refresh = False
         region = self._stored_selection[0]
-        self._diagnostics_for_selection = self.get_diagnostics_async(region)
-        actions_manager \
-            .request_for_region_async(self.view, region, self._diagnostics_for_selection, manual=False) \
-            .then(self._on_code_actions)
+        diagnostics_by_config = dict(self.get_diagnostics_async(region))
+        kinds = [CodeActionKind.QuickFix]
+        code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
+        for sb in session_buffers:
+            if diagnostics := diagnostics_by_config.get(sb):
+                promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                            .then(partial(filter_quickfix_actions, sb.session.config.name, False))
+                code_action_promises.append(promise)
+        Promise.all(code_action_promises).then(self._on_code_actions)
 
-    def _on_code_actions(self, responses: list[CodeActionsByConfigName]) -> None:
-        self._code_actions_for_selection = responses
-        action_count = 0
-        first_action_title = ''
-        for _, actions in responses:
-            count = len(actions)
-            if count == 0:
-                continue
-            action_count += count
-            if not first_action_title:
-                first_action_title = actions[0]['title']
-        if action_count == 0 or not self._stored_selection:
+    def _on_code_actions(self, code_actions: list[tuple[str, list[Command | CodeAction]]]) -> None:
+        if not self._stored_selection:
             return
+        for session_name, actions in code_actions:
+            self._code_actions_for_selection[session_name] = actions
+        if not any(self._code_actions_for_selection.values()):
+            return
+        key = RegionKey.CODE_ACTION
         region = self._stored_selection[0]
         regions = [sublime.Region(region.b, region.a)]
-        scope = ""
-        icon = ""
         flags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.NO_UNDO
-        annotations = []
-        annotation_color = ""
         if userprefs().show_code_actions == 'bulb':
-            scope = LIGHTBULB_SCOPE
-            icon = 'Packages/LSP/icons/lightbulb.png'
-            self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]
+            self.view.add_regions(key, regions, LIGHTBULB_SCOPE, icon='Packages/LSP/icons/lightbulb.png', flags=flags)
         else:  # 'annotation'
-            title = f'{action_count} code actions' if action_count > 1 else first_action_title
-            code_actions_link = make_link('code-actions:', title)
-            annotations = [f'<div class="actions" style="font-family:system">{code_actions_link}</div>']
-            annotation_color = self._code_action_annotation_color
-        self.view.add_regions(
-            RegionKey.CODE_ACTION, regions, scope, icon, flags, annotations, annotation_color,
-            on_navigate=self._on_code_actions_annotation_click
-        )
-
-    def _on_code_actions_annotation_click(self, href: str) -> None:
-        if href == 'code-actions:' and self._code_actions_for_selection:
-            self.view.run_command('lsp_code_actions', {'code_actions_by_config': self._code_actions_for_selection})
+            actions = (
+                (session_name, action)
+                for session_name, actions in self._code_actions_for_selection.items()
+                for action in actions
+            )
+            annotations = [
+                '<br>'.join(
+                    f'<span style="font-family:system">{make_link(encode_code_action_uri(cfg, a), a["title"])}</span>'
+                    for cfg, a in sorted(actions, key=lambda action: action[1].get('isPreferred', False), reverse=True)
+                )
+            ]
+            self.view.add_regions(
+                key,
+                regions,
+                flags=flags,
+                annotations=annotations,
+                annotation_color=self._code_action_annotation_color,
+                on_navigate=self._on_navigate
+            )
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(RegionKey.CODE_ACTION)
-        self._lightbulb_line = None
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
@@ -1013,11 +1006,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._should_format_on_paste:
             self._should_format_on_paste = False
             sublime.get_clipboard_async(self._format_on_paste_async)
+        if userprefs().show_code_actions:
+            self._code_actions_for_selection.clear()
+            self._clear_code_actions_annotation()
+            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return
-        self._clear_highlight_regions()
         if userprefs().document_highlight_style:
+            self._clear_highlight_regions()
             self._when_selection_remains_stable_async(
                 self._do_highlights_async, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
@@ -1100,6 +1097,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)
+
+    def on_userprefs_changed_async(self) -> None:
+        if userprefs().document_highlight_style:
+            self._do_highlights_async()
+        else:
+            self._clear_highlight_regions()
+        self._code_actions_for_selection.clear()
+        if userprefs().show_code_actions:
+            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
+        else:
+            self._clear_code_actions_annotation()
 
     def _on_settings_object_changed(self) -> None:
         settings = self.view.settings()

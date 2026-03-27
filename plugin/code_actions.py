@@ -64,23 +64,24 @@ def is_quickfix(action: Command | CodeAction) -> bool:
     return kind_contains_other_kind(CodeActionKind.QuickFix, action.get('kind', CodeActionKind.QuickFix))
 
 
-def filter_code_actions_for_diagnostics(
-    config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | Error | None
+def filter_quickfix_actions(
+    config_name: str, only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
 ) -> tuple[str, list[Command | CodeAction]]:
     if isinstance(response, Error) or not response:
         code_actions: list[Command | CodeAction] = []
-    elif diagnostics_count == 1:
-        # If there is only a single diagnostic from this server, all enabled quickfix code actions can be shown.
-        # Strictly speaking, the code actions aren't necessarily associated with the diagnostic, but this heuristic
-        # works quite well in practice.
-        code_actions = [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
-    else:
-        # If there are multiple diagnostics for the hover region, we can only use those code actions which include
-        # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
+    elif only_with_diagnostics:
+        # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
+        # include the "diagnostics" property, because each code action needs to be matched with its corresponding
+        # diagnostics.
         code_actions = [
             action for action in response
             if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
         ]
+    else:
+        # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
+        # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
+        # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
+        code_actions = [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
     return config_name, code_actions
 
 

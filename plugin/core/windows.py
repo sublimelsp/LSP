@@ -587,6 +587,8 @@ class WindowRegistry(LspSettingsChangeListener):
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
                 sublime.set_timeout_async(session.on_userprefs_changed_async)
+            for listener in wm.listeners():
+                sublime.set_timeout_async(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:

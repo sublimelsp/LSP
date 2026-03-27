@@ -845,7 +845,7 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
+    def on_diagnostics_updated_async(self, session_buffer: SessionBufferProtocol, is_view_visible: bool) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -888,6 +888,10 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def get_request_flags(self, session: Session) -> RequestFlags:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_userprefs_changed_async(self) -> None:
         raise NotImplementedError
 
 

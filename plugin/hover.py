@@ -8,7 +8,7 @@ from ..protocol import DocumentLink
 from ..protocol import Hover
 from ..protocol import Position
 from ..protocol import Range
-from .code_actions import filter_code_actions_for_diagnostics
+from .code_actions import filter_quickfix_actions
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
@@ -128,9 +128,8 @@ class LspHoverCommand(LspTextCommand):
                 code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
                 for sb, diagnostics in self._diagnostics_by_config:
                     if sb.has_capability('codeActionProvider'):
-                        config_name = sb.session.config.name
                         promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                                    .then(partial(filter_code_actions_for_diagnostics, config_name, len(diagnostics)))
+                            .then(partial(filter_quickfix_actions, sb.session.config.name, len(diagnostics) > 1))
                         code_action_promises.append(promise)
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 

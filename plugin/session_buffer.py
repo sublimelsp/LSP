@@ -763,7 +763,6 @@ class SessionBuffer:
         self, view: sublime.View, action: ChangeEventAction, text: str
     ) -> DocumentOnTypeFormattingParams | None:
         if not self._on_type_formatting_triggers or \
-                action not in {ChangeEventAction.TYPE, ChangeEventAction.INSERT_NEWLINE} or \
                 not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
         if action == ChangeEventAction.INSERT_NEWLINE and '\n' in self._on_type_formatting_triggers \

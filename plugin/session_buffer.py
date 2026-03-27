@@ -765,13 +765,15 @@ class SessionBuffer:
         if not self._on_type_formatting_triggers or \
                 not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
-        if action == ChangeEventAction.INSERT_NEWLINE and '\n' in self._on_type_formatting_triggers \
-                and text.rstrip(' ').endswith('\n'):
-            return self._create_on_type_formatting_params_async(view, '\n')
+        if action == ChangeEventAction.INSERT_NEWLINE:
+            if '\n' in self._on_type_formatting_triggers and text.rstrip(' ').endswith('\n'):
+                return self._create_on_type_formatting_params_async(view, '\n')
+            return None
         if action == ChangeEventAction.TYPE:
             for trigger in self._on_type_formatting_triggers:
                 if text.endswith(trigger):
                     return self._create_on_type_formatting_params_async(view, trigger)
+            return None
         return None
 
     def _create_on_type_formatting_params_async(

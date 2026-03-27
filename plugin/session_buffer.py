@@ -384,7 +384,6 @@ class SessionBuffer:
         if purge:
             self._cancel_pending_requests_async()
             if userprefs().format_on_type and \
-                    action in {ChangeEventAction.TYPE, ChangeEventAction.INSERT_NEWLINE} and \
                     (params := self._get_on_type_formatting_params_async(view, action, last_change.str)):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
@@ -763,9 +762,9 @@ class SessionBuffer:
     def _get_on_type_formatting_params_async(
         self, view: sublime.View, action: ChangeEventAction, text: str
     ) -> DocumentOnTypeFormattingParams | None:
-        if not self._on_type_formatting_triggers:
-            return None
-        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+        if not self._on_type_formatting_triggers or \
+                action not in {ChangeEventAction.TYPE, ChangeEventAction.INSERT_NEWLINE} or \
+                not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
         selection = first_selection_region(view)
         if selection is None:

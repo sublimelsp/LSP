@@ -3,7 +3,7 @@
 # Features
 
 - add API decorators (#2755) (Rafał Chłodnicki)
-- add setting to disable signature help popup (#2793) (jwortmann)
+- add "show_signature_help" setting (#2793) (jwortmann)
 - add support for `lsp_code_actions_on_format` (#2747) (Martijn Jacobs)
 - allow to ignore certain tokens for semantic highlighting (#2829) (jwortmann)
 - expose unknown settings in ClientConfig and support project overrides (#2765) (Rafał Chłodnicki)

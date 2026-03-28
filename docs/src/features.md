@@ -136,7 +136,7 @@ It is possible to adjust the colors for semantic tokens by applying a foreground
 | enum | `meta.semantic-token.enum` | `variable.other.enum`<br>`entity.name.enum` |
 | interface | `meta.semantic-token.interface` | `entity.other.inherited-class`<br>`entity.name.interface` |
 | struct | `meta.semantic-token.struct` | `storage.type.struct`<br>`entity.name.struct`<br>`support.struct` |
-| typeParameter | `meta.semantic-token.typeparameter` | `variable.parameter.generic` |
+| typeParameter | `meta.semantic-token.typeparameter` | `variable.parameter.type` |
 | parameter | `meta.semantic-token.parameter` | `variable.parameter` |
 | variable | `meta.semantic-token.variable` | `variable.other`<br>`variable.other.constant` |
 | property | `meta.semantic-token.property` | `variable.other.property` |

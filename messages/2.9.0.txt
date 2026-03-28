@@ -5,6 +5,7 @@
 - add API decorators (#2755) (Rafał Chłodnicki)
 - add setting to disable signature help popup (#2793) (jwortmann)
 - add support for `lsp_code_actions_on_format` (#2747) (Martijn Jacobs)
+- allow to ignore certain tokens for semantic highlighting (#2829) (jwortmann)
 - expose unknown settings in ClientConfig and support project overrides (#2765) (Rafał Chłodnicki)
 - implement Document on Type Formatting request (#2776) (Rafal Chlodnicki)
 
@@ -38,7 +39,6 @@
 
 # Refactors
 
-- add caching for mdpopups.tint (#2813) (jwortmann)
 - add generated Requests/Responses/Notifications to protocol (#2781) (Rafał Chłodnicki)
 - deprecate "initializationOptions" in favor of "initialization_options" (#2779) (jwortmann)
 - refactor diagnostic CSS classes (#2809) (Rafał Chłodnicki)

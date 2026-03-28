@@ -810,6 +810,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
                             .then(partial(filter_quickfix_actions, sb.session.config.name, False))
                 code_action_promises.append(promise)
+            else:
+                self._code_actions_for_selection.pop(sb.session.config.name, None)
         Promise.all(code_action_promises).then(self._on_code_actions)
 
     def _on_code_actions(self, code_actions: list[tuple[str, list[Command | CodeAction]]]) -> None:

@@ -1,6 +1,7 @@
 .lsp_annotation {
     margin: 0;
     border-width: 0;
+    font-family: system;
 }
 .lsp_annotation .error {
     color: color(var(--redish) alpha(0.85));
@@ -13,4 +14,7 @@
 }
 .lsp_annotation .hint {
     color: color(var(--bluish) alpha(0.85));
+}
+.color-muted {
+    color: color(var(--foreground) alpha(0.6));
 }

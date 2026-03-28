@@ -35,6 +35,7 @@
 - include view settings in project files schema (#2790) (Rafał Chłodnicki)
 - modernize popup style (#2788) (Rafał Chłodnicki)
 - update capabilities for pull diagnostics (#2804) (jwortmann)
+- update fallback scope for typeParameter token (#2838) (jwortmann)
 - use scheme color for lightbulb icon in popup (#2807) (jwortmann)
 
 # Refactors

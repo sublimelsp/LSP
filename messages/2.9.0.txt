@@ -4,7 +4,7 @@
 
 - add API decorators (#2755) (Rafał Chłodnicki)
 - add "show_signature_help" setting (#2793) (jwortmann)
-- add support for `lsp_code_actions_on_format` (#2747) (Martijn Jacobs)
+- add "lsp_code_actions_on_format" setting (#2747) (Martijn Jacobs)
 - allow to ignore certain tokens for semantic highlighting (#2829) (jwortmann)
 - expose unknown settings in ClientConfig and support project overrides (#2765) (Rafał Chłodnicki)
 - implement Document on Type Formatting request (#2776) (Rafal Chlodnicki)

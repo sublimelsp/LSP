@@ -155,23 +155,25 @@ It is possible to adjust the colors for semantic tokens by applying a foreground
 | decorator | `meta.semantic-token.decorator` | `variable.annotation` |
 | label | `meta.semantic-token.label` | `entity.name.label` |
 
-If you define color scheme rules for the `meta.semantic-token.*` scopes listed above, they take precedence over the fallback scopes used by LSP to determine the default semantic highlighting colors.
+If you define color scheme rules for the `meta.semantic-token.<token-type>` scopes listed above, they take precedence over the fallback scopes used by LSP to determine the default semantic highlighting colors.
 The fallback scopes can depend on additional [token modifiers](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#semanticTokenModifiers).
 
 Language servers can also add their custom token types and modifiers, which are not defined in the protocol.
 The default scopes for such custom tokens are defined in a `"semantic_tokens"` mapping in the server configuration, for example in the settings file of an LSP-\* helper package.
 The keys of this mapping should be the token types and the values are the corresponding scopes.
-Semantic tokens with exactly one token modifier can be targeted by appending the modifier after a dot.
 
 ```jsonc
 {
     "semantic_tokens": {
-        "magicFunction": "support.function.builtin",
-        "selfParameter": "variable.language",
-        "type.defaultLibrary": "storage.type.builtin",
+        "type.defaultLibrary": "storage.type.builtin", // override the fallback scope for `type` with modifier `defaultLibrary`
+        "string": "",                                  // disable semantic highlighting for the `string` token type
+        "magicFunction": "support.function.builtin",   // define fallback scope for a custom token type `magicFunction`
     }
 }
 ```
+
+Semantic tokens with exactly one token modifier can be targeted by appending the modifier after a dot.
+If the value for a standard token type is set to an empty string, the fallback scope is not used and semantic highlighting for that token type is only applied if there is a specific color scheme rule defined for the corresponding `meta.semantic-token.<token-type>` scope.
 
 The color for custom token types can also be controlled from a color scheme rule for the scope `meta.semantic-token.<token-type>`, where `<token-type>` is the name of the custom token type, but with all letters lowercased, similar to the scopes that are listed in the table above.
 To target tokens with one modifier, use the scope `meta.semantic-token.<token-type>.<token-modifier>` (all lowercase).

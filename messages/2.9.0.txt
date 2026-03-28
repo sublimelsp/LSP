@@ -2,7 +2,7 @@
 
 # Features
 
-- add API decorators (#2755) (Rafał Chłodnicki)
+- add "notification_handler" and "request_handler" API decorators in plugin API (#2755) (Rafał Chłodnicki)
 - add "show_signature_help" setting (#2793) (jwortmann)
 - add "lsp_code_actions_on_format" setting (#2747) (Martijn Jacobs)
 - support ignoring specific tokens in the "semantic_tokens" setting by mapping them to an empty string (#2829) (jwortmann)

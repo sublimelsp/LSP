@@ -80,6 +80,7 @@ class RegionKey(StrEnum):
 
 class ChangeEventAction(IntEnum):
     CUT = auto()
+    INSERT_NEWLINE = auto()
     OTHER = auto()
     PASTE = auto()
     REDO = auto()
@@ -336,7 +337,7 @@ SEMANTIC_TOKENS_MAP = {
     "struct.declaration": "entity.name.struct.lsp",
     "struct.defaultLibrary": "support.struct.lsp",
     "struct.definition": "entity.name.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
+    "typeParameter": "variable.parameter.type.lsp",
     "parameter": "variable.parameter.lsp",
     "variable": "variable.other.lsp",
     "variable.readonly": "variable.other.constant.lsp",

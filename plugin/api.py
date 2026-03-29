@@ -31,8 +31,8 @@ if TYPE_CHECKING:
     from .core.collections import DottedDict
     from .core.promise import Promise
     from .core.sessions import Session
-    from plugin.core.sessions import SessionBufferProtocol
-    from plugin.core.sessions import SessionViewProtocol
+    from .core.sessions import SessionBufferProtocol
+    from .core.sessions import SessionViewProtocol
     import weakref
 
 __all__ = [

@@ -192,7 +192,7 @@ def get_semantic_tokens_map(custom_tokens_map: dict[str, str] | None) -> tuple[t
     return tuple(sorted(tokens_scope_map.items()))  # make map hashable
 
 
-@lru_cache(maxsize=128)
+@lru_cache
 def decode_semantic_token(
     types_legend: tuple[str, ...],
     modifiers_legend: tuple[str, ...],
@@ -209,24 +209,19 @@ def decode_semantic_token(
     """
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
-        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == "1"
+        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == '1'
     ]
     scope = None
-    tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
-    if token_type in tokens_scope_map_dict:
-        for token_modifier in token_modifiers:
-            # this approach is limited to consider at most one modifier for the scope lookup
-            key = f"{token_type}.{token_modifier}"
-            if key in tokens_scope_map_dict:
-                scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
-                    token_type.lower(), token_modifier.lower())
-                break  # first match wins (in case of multiple modifiers)
-        else:
-            scope = tokens_scope_map_dict[token_type]
-            if token_modifiers:
-                scope += f" meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
-            else:
-                scope += f" meta.semantic-token.{token_type.lower()}.lsp"
+    tokens_scope_map_dict = dict(tokens_scope_map)  # Convert hashable tokens/scope map back to dict for easy lookup
+    for token_modifier in token_modifiers:
+        # We can only include a single modifier in the scope name. First match for the fallback scope wins.
+        if fallback_scope := tokens_scope_map_dict.get(f'{token_type}.{token_modifier}'):
+            scope = f'{fallback_scope} meta.semantic-token.{token_type.lower()}.{token_modifier.lower()}.lsp'
+            break
+    else:
+        if fallback_scope := tokens_scope_map_dict.get(token_type):
+            modifier = f'.{token_modifiers[0].lower()}' if token_modifiers else ''
+            scope = f'{fallback_scope} meta.semantic-token.{token_type.lower()}{modifier}.lsp'
     return token_type, token_modifiers, scope
 
 

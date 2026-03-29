@@ -25,6 +25,7 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
+from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union

@@ -257,7 +257,12 @@ class LspHoverCommand(LspTextCommand):
         prefs = userprefs()
         if only_diagnostics or prefs.show_diagnostics_in_hover:
             contents += format_diagnostics_for_html(
-                self._diagnostics_by_config, self._actions_by_config, listener.lightbulb_color, self._base_dir)
+                self.view.change_count(),
+                self._diagnostics_by_config,
+                self._actions_by_config,
+                listener.lightbulb_color,
+                self._base_dir
+            )
         hover_content = self.hover_content()
         contents += hover_content
         link_content, link_range = self.link_content_and_range()
@@ -309,8 +314,8 @@ class LspHoverCommand(LspTextCommand):
             if window := self.view.window():
                 open_file_uri(window, href)
         elif scheme == CODE_ACTION_SCHEME:
-            session_name, action = decode_code_action_uri(href)
-            if session := self.session_by_name(session_name):
+            session_name, version, action = decode_code_action_uri(href)
+            if version == self.view.change_count() and (session := self.session_by_name(session_name)):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif href == "quick-panel:DocumentLink":

@@ -588,7 +588,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> None:
         base_dir = self._manager.get_project_path(filename) \
             if self._manager and (filename := self.view.file_name()) else None
-        content = format_diagnostics_for_html(diagnostics, dict(code_actions), self.lightbulb_color, base_dir)
+        content = format_diagnostics_for_html(
+            self.view.change_count(), diagnostics, dict(code_actions), self.lightbulb_color, base_dir)
         show_lsp_popup(
             self.view,
             content,
@@ -598,14 +599,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_navigate(self, href: str) -> None:
         scheme = parse_uri(href)[0]
-        if scheme == 'file':
-            if window := self.view.window():
-                open_file_uri(window, href)
-        elif scheme == CODE_ACTION_SCHEME:
-            session_name, action = decode_code_action_uri(href)
-            if session := self.session_by_name(session_name):
+        if scheme == CODE_ACTION_SCHEME:
+            session_name, version, action = decode_code_action_uri(href)
+            if version == self.view.change_count() and (session := self.session_by_name(session_name)):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
+        elif scheme == 'file':
+            if window := self.view.window():
+                open_file_uri(window, href)
         elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
             open_in_browser(href)
 
@@ -808,6 +809,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions_for_selection_async(self, session_buffers: Sequence[SessionBufferProtocol]) -> None:
         if not self._stored_selection:
             return
+        version = self.view.change_count()
         region = self._stored_selection[0]
         diagnostics_by_config = dict(self.get_diagnostics_async(region))
         kinds = [CodeActionKind.QuickFix]
@@ -819,14 +821,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 code_action_promises.append(promise)
             else:
                 self._code_actions_for_selection.pop(sb.session.config.name, None)
-        Promise.all(code_action_promises).then(self._on_code_actions)
+        Promise.all(code_action_promises).then(partial(self._on_code_actions, version))
 
-    def _on_code_actions(self, code_actions: list[tuple[str, list[Command | CodeAction]]]) -> None:
+    def _on_code_actions(self, version: int, code_actions: list[tuple[str, list[Command | CodeAction]]]) -> None:
         if not self._stored_selection:
             return
         for session_name, actions in code_actions:
             self._code_actions_for_selection[session_name] = actions
         if not any(self._code_actions_for_selection.values()):
+            self._clear_code_actions_annotation()
             return
         key = RegionKey.CODE_ACTION
         region = self._stored_selection[0]
@@ -840,10 +843,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 for session_name, actions in self._code_actions_for_selection.items()
                 for action in actions
             )
+            action_html = '<span style="font-family:system">{}</span>'
             annotations = [
                 '<br>'.join(
-                    f'<span style="font-family:system">{make_link(encode_code_action_uri(cfg, a), a["title"])}</span>'
-                    for cfg, a in sorted(actions, key=lambda action: action[1].get('isPreferred', False), reverse=True)
+                    action_html.format(make_link(encode_code_action_uri(cfg, version, action), action["title"]))
+                    for cfg, action in sorted(actions, key=lambda a: a[1].get('isPreferred', False), reverse=True)
                 )
             ]
             self.view.add_regions(
@@ -1015,10 +1019,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self._should_format_on_paste:
             self._should_format_on_paste = False
             sublime.get_clipboard_async(self._format_on_paste_async)
-        if userprefs().show_code_actions:
-            self._code_actions_for_selection.clear()
-            self._clear_code_actions_annotation()
-            self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         first_region, _ = self._update_stored_selection_async()
         if first_region is None:
             return

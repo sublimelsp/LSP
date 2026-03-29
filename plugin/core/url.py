@@ -102,14 +102,14 @@ def _uppercase_driveletter(match: Any) -> str:
     return f"{match.group(1).upper()}:"
 
 
-def encode_code_action_uri(session_name: str, action: Command | CodeAction) -> URI:
-    return f'{CODE_ACTION_SCHEME}:{session_name}/{urlsafe_b64encode(json.dumps(action).encode()).decode()}'
+def encode_code_action_uri(session_name: str, version: int, action: Command | CodeAction) -> URI:
+    return f'{CODE_ACTION_SCHEME}:{session_name}/{version}/{urlsafe_b64encode(json.dumps(action).encode()).decode()}'
 
 
-def decode_code_action_uri(uri: URI) -> tuple[str, Command | CodeAction]:
+def decode_code_action_uri(uri: URI) -> tuple[str, int, Command | CodeAction]:
     scheme = parse_uri(uri)[0]
     if scheme != CODE_ACTION_SCHEME:
         raise ValueError(f'Unsupported URI scheme: {scheme}')
-    session_name, _, data = uri[len(CODE_ACTION_SCHEME) + 1:].partition('/')
+    session_name, version, data = uri[len(CODE_ACTION_SCHEME) + 1:].split('/')
     action = cast('Command | CodeAction', json.loads(urlsafe_b64decode(data.encode()).decode()))
-    return session_name, action
+    return session_name, int(version), action

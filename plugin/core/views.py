@@ -880,6 +880,7 @@ def lightbulb_html(color: str, star: bool) -> str:
 
 
 def format_diagnostics_for_html(
+    version: int,
     diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
     code_actions_by_config: dict[str, list[Command | CodeAction]],
     lightbulb_color: str,
@@ -894,7 +895,7 @@ def format_diagnostics_for_html(
                 action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
             ]
             diagnostic_html = format_diagnostic_for_html(
-                sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
+                sb.session.config, version, diagnostic, code_actions, lightbulb_color, base_dir)
             diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
     return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
         diagnostics_html else ''
@@ -902,6 +903,7 @@ def format_diagnostics_for_html(
 
 def format_diagnostic_for_html(
     config: ClientConfig,
+    version: int,
     diagnostic: Diagnostic,
     code_actions: list[Command | CodeAction],
     lightbulb_color: str,
@@ -930,7 +932,7 @@ def format_diagnostic_for_html(
         content += '<hr>' + _html_element("div", info, escape=False)
     for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
         icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
-        code_action_uri = encode_code_action_uri(config.name, code_action)
+        code_action_uri = encode_code_action_uri(config.name, version, code_action)
         content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
     return html_wrapper(content, class_name=severity_class)

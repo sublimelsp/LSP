@@ -65,24 +65,22 @@ def is_quickfix(action: Command | CodeAction) -> bool:
 
 
 def filter_quickfix_actions(
-    config_name: str, only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
-) -> tuple[str, list[Command | CodeAction]]:
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+) -> list[Command | CodeAction]:
     if isinstance(response, Error) or not response:
-        code_actions: list[Command | CodeAction] = []
-    elif only_with_diagnostics:
+        return []
+    if only_with_diagnostics:
         # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
         # include the "diagnostics" property, because each code action needs to be matched with its corresponding
         # diagnostics.
-        code_actions = [
+        return [
             action for action in response
             if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
         ]
-    else:
-        # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
-        # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
-        # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
-        code_actions = [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
-    return config_name, code_actions
+    # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
+    # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
+    # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
+    return [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
 
 
 class CodeActionsManager:

@@ -130,7 +130,7 @@ class LspHoverCommand(LspTextCommand):
                     if sb.has_capability('codeActionProvider'):
                         promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
                             .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
-                            .then(lambda result: (sb.session.config.name, result))
+                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
                         code_action_promises.append(promise)
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 

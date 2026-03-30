@@ -576,7 +576,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     if sb.has_capability('codeActionProvider'):
                         promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
                             .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
-                            .then(lambda result: (sb.session.config.name, result))
+                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
                         code_action_promises.append(promise)
                 Promise.all(code_action_promises).then(
                     partial(self._on_code_actions_for_hover_gutter_async, point, sb_diagnostics))
@@ -819,7 +819,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if diagnostics := diagnostics_by_config.get(sb):
                 promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
                             .then(lambda response: filter_quickfix_actions(False, response)) \
-                            .then(lambda result: (sb.session.config.name, result))
+                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
                 code_action_promises.append(promise)
             else:
                 self._code_actions_for_selection.pop(sb.session.config.name, None)

@@ -126,8 +126,8 @@ class LspHoverCommand(LspTextCommand):
                 region = sublime.Region(hover_point, hover_point)
                 kinds = [CodeActionKind.QuickFix]
                 code_action_promises = [
-                    sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
+                    sb.request_code_actions_async(self.view, region, diagnostics, kinds)
+                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1))
                         .then(lambda result, config_name=sb.session.config.name: (config_name, result))
                     for sb, diagnostics in self._diagnostics_by_config
                     if sb.has_capability('codeActionProvider')

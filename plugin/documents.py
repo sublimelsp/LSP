@@ -572,8 +572,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
                 kinds = [CodeActionKind.QuickFix]
                 code_action_promises = [
-                    sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
+                    sb.request_code_actions_async(self.view, region, diagnostics, kinds)
+                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1))
                         .then(lambda result, config_name=sb.session.config.name: (config_name, result))
                     for sb, diagnostics in sb_diagnostics
                     if sb.has_capability('codeActionProvider')

@@ -3,16 +3,16 @@
     border-width: 0;
     font-family: system;
 }
-.lsp_annotation .error {
+.error {
     color: color(var(--redish) alpha(0.85));
 }
-.lsp_annotation .warning {
+.warning {
     color: color(var(--yellowish) alpha(0.85));
 }
-.lsp_annotation .information {
+.information {
     color: color(var(--bluish) alpha(0.85));
 }
-.lsp_annotation .hint {
+.hint {
     color: color(var(--bluish) alpha(0.85));
 }
 .color-muted {

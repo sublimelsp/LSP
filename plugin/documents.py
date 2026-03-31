@@ -571,13 +571,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             region = self.view.line(point)
             if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
                 kinds = [CodeActionKind.QuickFix]
-                code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
-                for sb, diagnostics in sb_diagnostics:
-                    if sb.has_capability('codeActionProvider'):
-                        promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                            .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
-                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
-                        code_action_promises.append(promise)
+                code_action_promises = [
+                    sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
+                        .then(lambda result, config_name=sb.session.config.name: (config_name, result))
+                    for sb, diagnostics in sb_diagnostics
+                    if sb.has_capability('codeActionProvider')
+                ]
                 Promise.all(code_action_promises).then(
                     partial(self._on_code_actions_for_hover_gutter_async, point, sb_diagnostics))
 

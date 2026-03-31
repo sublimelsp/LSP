@@ -125,13 +125,13 @@ class LspHoverCommand(LspTextCommand):
             if userprefs().show_code_actions_in_hover:
                 region = sublime.Region(hover_point, hover_point)
                 kinds = [CodeActionKind.QuickFix]
-                code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
-                for sb, diagnostics in self._diagnostics_by_config:
-                    if sb.has_capability('codeActionProvider'):
-                        promise = sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
-                            .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
-                            .then(lambda result, config_name=sb.session.config.name: (config_name, result))
-                        code_action_promises.append(promise)
+                code_action_promises = [
+                    sb.request_code_actions_async(self.view, region, diagnostics, kinds) \
+                        .then(partial(filter_quickfix_actions, len(diagnostics) > 1)) \
+                        .then(lambda result, config_name=sb.session.config.name: (config_name, result))
+                    for sb, diagnostics in self._diagnostics_by_config
+                    if sb.has_capability('codeActionProvider')
+                ]
                 Promise.all(code_action_promises).then(partial(self._handle_code_actions, listener, hover_point))
 
         sublime.set_timeout_async(run_async)

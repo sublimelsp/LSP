@@ -40,6 +40,7 @@ from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
@@ -707,8 +708,13 @@ class SessionBuffer:
                 data = DiagnosticSeverityData()
                 data_per_severity[key] = data
             if tags := diagnostic.get('tags', []):
+                has_supported_tag = False
                 for tag in tags:
-                    data.regions_with_tag.setdefault(tag, []).append(region)
+                    if tag in SUPPORTED_DIAGNOSTIC_TAGS:
+                        data.regions_with_tag.setdefault(tag, []).append(region)
+                        has_supported_tag = True
+                if not has_supported_tag:
+                    data.regions.append(region)
             else:
                 data.regions.append(region)
             diagnostics.append((diagnostic, region))

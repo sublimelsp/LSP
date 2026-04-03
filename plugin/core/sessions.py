@@ -14,7 +14,6 @@ from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
-from ...protocol import DiagnosticTag
 from ...protocol import DidChangeWatchedFilesRegistrationOptions
 from ...protocol import DidChangeWorkspaceFoldersParams
 from ...protocol import DocumentDiagnosticReportKind
@@ -82,6 +81,7 @@ from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
+from .constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
@@ -134,7 +134,6 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
-from enum import IntEnum
 from enum import IntFlag
 from functools import lru_cache
 from functools import partial
@@ -161,7 +160,6 @@ import weakref
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
-    from .typing import StrEnum
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -295,23 +293,13 @@ class Manager(ABC):
         ...
 
 
-def _int_enum_to_list(e: type[IntEnum]) -> list[int]:
-    return [v.value for v in e]
-
-
-def _str_enum_to_list(e: type[StrEnum]) -> list[str]:
-    return [v.value for v in e]
-
-
-def get_initialize_params(variables: dict[str, str], workspace_folders: list[WorkspaceFolder],
-                          config: ClientConfig) -> InitializeParams:
-    completion_kinds = cast(List[CompletionItemKind], _int_enum_to_list(CompletionItemKind))
-    symbol_kinds = cast(List[SymbolKind], _int_enum_to_list(SymbolKind))
-    diagnostic_tag_value_set = cast(List[DiagnosticTag], _int_enum_to_list(DiagnosticTag))
-    completion_tag_value_set = cast(List[CompletionItemTag], _int_enum_to_list(CompletionItemTag))
-    symbol_tag_value_set = cast(List[SymbolTag], _int_enum_to_list(SymbolTag))
-    semantic_token_types = cast(List[str], _str_enum_to_list(SemanticTokenTypes))
-    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
+def get_initialize_params(
+    variables: dict[str, str], workspace_folders: list[WorkspaceFolder], config: ClientConfig
+) -> InitializeParams:
+    symbol_kinds = list(SymbolKind)
+    symbol_tags = list(SymbolTag)
+    semantic_token_types = [member.value for member in SemanticTokenTypes]
+    semantic_token_modifiers = [member.value for member in SemanticTokenModifiers]
     if config.semantic_tokens is not None:
         for token in config.semantic_tokens.keys():
             token_type, _, token_modifier = token.partition('.')
@@ -319,8 +307,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 semantic_token_types.append(token_type)
             if token_modifier and token_modifier not in semantic_token_modifiers:
                 semantic_token_modifiers.append(token_modifier)
-    supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
-    folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))
+    supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities: GeneralClientCapabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -360,21 +347,21 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "deprecatedSupport": True,
                 "documentationFormat": supported_markup_kinds,
                 "tagSupport": {
-                    "valueSet": completion_tag_value_set
+                    "valueSet": list(CompletionItemTag)
                 },
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
                 },
                 "insertReplaceSupport": True,
                 "insertTextModeSupport": {
-                    "valueSet": cast(List[InsertTextMode], [InsertTextMode.AdjustIndentation.value])
+                    "valueSet": [InsertTextMode.AdjustIndentation]
                 },
                 "labelDetailsSupport": True,
             },
             "completionItemKind": {
-                "valueSet": completion_kinds
+                "valueSet": list(CompletionItemKind)
             },
-            "insertTextMode": cast(InsertTextMode, InsertTextMode.AdjustIndentation.value),
+            "insertTextMode": InsertTextMode.AdjustIndentation,
             "completionList": {
                 "itemDefaults": ["editRange", "insertTextFormat", "data"]
             }
@@ -403,7 +390,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "valueSet": symbol_kinds
             },
             "tagSupport": {
-                "valueSet": symbol_tag_value_set
+                "valueSet": symbol_tags
             }
         },
         "documentLink": {
@@ -437,15 +424,15 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "dynamicRegistration": True,
             "codeActionLiteralSupport": {
                 "codeActionKind": {
-                    "valueSet": cast(List[CodeActionKind], [
-                        CodeActionKind.QuickFix.value,
-                        CodeActionKind.Refactor.value,
-                        CodeActionKind.RefactorExtract.value,
-                        CodeActionKind.RefactorInline.value,
-                        CodeActionKind.RefactorRewrite.value,
-                        CodeActionKind.SourceFixAll.value,
-                        CodeActionKind.SourceOrganizeImports.value,
-                    ])
+                    "valueSet": [
+                        CodeActionKind.QuickFix,
+                        CodeActionKind.Refactor,
+                        CodeActionKind.RefactorExtract,
+                        CodeActionKind.RefactorInline,
+                        CodeActionKind.RefactorRewrite,
+                        CodeActionKind.SourceFixAll,
+                        CodeActionKind.SourceOrganizeImports,
+                    ]
                 }
             },
             "dataSupport": True,
@@ -462,8 +449,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "rename": {
             "dynamicRegistration": True,
             "prepareSupport": True,
-            "prepareSupportDefaultBehavior": cast(
-                PrepareSupportDefaultBehavior, PrepareSupportDefaultBehavior.Identifier.value),
+            "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
         },
         "colorProvider": {
             "dynamicRegistration": True  # exceptional
@@ -471,7 +457,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "publishDiagnostics": {
             "relatedInformation": True,
             "tagSupport": {
-                "valueSet": diagnostic_tag_value_set
+                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
             },
             "versionSupport": True,
             "codeDescriptionSupport": True,
@@ -482,7 +468,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "relatedDocumentSupport": True,
             "relatedInformation": True,
             "tagSupport": {
-                "valueSet": diagnostic_tag_value_set
+                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
             },
             "codeDescriptionSupport": True,
             "dataSupport": True
@@ -493,7 +479,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {
-                "valueSet": folding_range_kind_value_set
+                "valueSet": list(FoldingRangeKind)
             }
         },
         "codeLens": {
@@ -515,9 +501,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             },
             "tokenTypes": semantic_token_types,
             "tokenModifiers": semantic_token_modifiers,
-            "formats": cast(List[TokenFormat], [
-                TokenFormat.Relative.value
-            ]),
+            "formats": [TokenFormat.Relative],
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
@@ -537,7 +521,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "executeCommand": {},
         "workspaceEdit": {
             "documentChanges": True,
-            "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
+            "failureHandling": FailureHandlingKind.Abort,
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
             }
@@ -552,7 +536,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "valueSet": symbol_kinds
             },
             "tagSupport": {
-                "valueSet": symbol_tag_value_set
+                "valueSet": symbol_tags
             }
         },
         "configuration": True,

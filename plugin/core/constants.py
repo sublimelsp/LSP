@@ -247,7 +247,7 @@ DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
     DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
 }
 
-SUPPORTED_DIAGNOSTIC_TAGS = list(DIAGNOSTIC_TAG_SCOPES.keys())
+SUPPORTED_DIAGNOSTIC_TAGS = list(DIAGNOSTIC_TAG_SCOPES)
 
 DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",

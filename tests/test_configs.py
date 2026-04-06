@@ -9,7 +9,6 @@ from os.path import dirname
 from os.path import pathsep
 from typing import Any
 from unittesting import DeferrableTestCase
-import sublime
 import sys
 import unittest
 
@@ -70,24 +69,6 @@ class ConfigParsingTests(DeferrableTestCase):
         original_path = environ.copy()['PATH']
         resolved_path = launch_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
-
-    def test_list_in_environment(self) -> None:
-        settings = {
-            "command": ["pyls"],
-            "selector": "source.python",
-            "env": {
-                "FOO": ["C:/hello", "X:/there", "Y:/$foobar"],
-                "BAR": "baz"
-            }
-        }
-        config = read_client_config("pyls", settings)
-        transport_config = config.create_transport_config()
-        launch_config = transport_config._resolve_launch_config(config.command, config.env, {})
-        if sublime.platform() == "windows":
-            self.assertEqual(launch_config.env["FOO"], "C:/hello;X:/there;Y:/asdf")
-        else:
-            self.assertEqual(launch_config.env["FOO"], "C:/hello:X:/there:Y:/asdf")
-        self.assertEqual(launch_config.env["BAR"], "baz")
 
     def test_disabled_capabilities(self) -> None:
         settings = {

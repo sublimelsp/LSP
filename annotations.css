@@ -3,6 +3,12 @@
     border-width: 0;
     font-family: system;
 }
+p {
+    display: inline;
+}
+code {
+    font-family: monospace;
+}
 .error {
     color: color(var(--redish) alpha(0.85));
 }

@@ -836,12 +836,7 @@ def is_location_href(href: str) -> bool:
 
 
 def _format_diagnostic_message(view: sublime.View, message: str | MarkupContent) -> str:
-    if isinstance(message, dict):
-        html = minihtml(view, message, FORMAT_MARKUP_CONTENT)
-        if html.startswith('<p>') and html.endswith('</p>'):
-            html = html[3:-4]
-        return html
-    return text2html(message)
+    return minihtml(view, message, FORMAT_MARKUP_CONTENT) if isinstance(message, dict) else text2html(message)
 
 
 def _format_diagnostic_related_info(

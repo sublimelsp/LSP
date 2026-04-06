@@ -760,7 +760,7 @@ class ClientConfig:
         enabled: bool = True,
         initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
-        env: dict[str, str | list[str]] | None = None,
+        env: dict[str, str] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
         disabled_capabilities: DottedDict | None = None,
         file_watcher: FileWatcherConfig | None = None,

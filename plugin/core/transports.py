@@ -67,7 +67,7 @@ class TransportConfig(ABC):
     def start(
         self,
         command: list[str] | None,
-        env: dict[str, str | list[str]] | None,
+        env: dict[str, str] | None,
         cwd: str | None,
         variables: dict[str, str],
         callbacks: TransportCallbacks,

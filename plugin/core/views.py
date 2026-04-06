@@ -42,6 +42,7 @@ from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
+from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
@@ -746,8 +747,8 @@ def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diag
         message = _format_diagnostic_message(view, diagnostic['message'])
         source = diagnostic.get('source')
         line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
-        content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
-            lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
+        content = '<body id="lsp-annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
+            ST_PLATFORM, lsp_css().annotations, css_class, line)
         annotations.append(content)
     return annotations
 

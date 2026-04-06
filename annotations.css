@@ -1,4 +1,6 @@
 .lsp_annotation {
+    --mdpopups-font-mono: "sf mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    --font-size-sm: 0.9rem;
     margin: 0;
     border-width: 0;
     font-family: system;
@@ -7,7 +9,9 @@ p {
     display: inline;
 }
 code {
-    font-family: monospace;
+    font-family: var(--mdpopups-font-mono);
+    font-size: var(--font-size-sm);
+    padding: 0.05rem 0.25rem;
 }
 .error {
     color: color(var(--redish) alpha(0.85));

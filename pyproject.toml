@@ -1,16 +1,9 @@
 [tool.pyright]
 pythonVersion = "3.8"
-reportAny = "none"
-reportExplicitAny = "none"
-reportImplicitOverride = "none"
 reportIncompatibleMethodOverride = "none"
 reportMissingModuleSource = "none"
-reportUnannotatedClassAttribute = "none"
-reportUnknownArgumentType = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportUnusedCallResult = "none"
 stubPath = "./stubs"
+typeCheckingMode = "standard"
 
 [tool.tox]
 env_list = ["py3"]

@@ -59,7 +59,7 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
 
 
 def parse_lsp_position(position: Position) -> tuple[int, int]:
-    return position['line'], min(UINT_MAX, position['character'])
+    return min(UINT_MAX, position['line']), min(UINT_MAX, position['character'])
 
 
 def apply_text_edits(

@@ -632,6 +632,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def get_change_event_action(self, command_name: str, args: dict[str, Any] | None) -> ChangeEventAction | None:
         if action := COMMAND_TO_CHANGE_EVENT_ACTION.get(command_name):
             return action
+        if 'swap_line' in command_name:
+            return ChangeEventAction.OTHER
         if command_name == 'insert' and args and args.get('characters') == '\n':
             return ChangeEventAction.INSERT_NEWLINE
         return None

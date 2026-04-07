@@ -78,6 +78,7 @@ from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from .constants import ChangeEventAction
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
@@ -871,6 +872,10 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def on_userprefs_changed_async(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_change_event_action(self, action: ChangeEventAction) -> None:
         raise NotImplementedError
 
 

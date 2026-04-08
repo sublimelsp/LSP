@@ -897,7 +897,7 @@ class ClientConfig:
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
-            # Default to True, because an LSP plugin is enabled if it is enabled as a Sublime package.
+            # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,

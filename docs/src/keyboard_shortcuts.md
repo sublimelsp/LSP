@@ -66,7 +66,7 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | Format Selection | unbound | `lsp_format_document_range`
 | Goto Declaration | unbound | `lsp_symbol_declaration`
 | Goto Definition | unbound<br>suggested: <kbd>F12</kbd> | `lsp_symbol_definition`
-| Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`<br>Supports optional argument `"severity_level"` for the severity level of included diagnostics: 1 (error), 2 (warning), 3 (information), 4 (hint). Uses `"show_diagnostics_severity_level"` if not provided.
+| Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`<br>Supports optional argument `"severity_level"` for the severity level of included diagnostics: 1 (error), 2 (warning), 3 (information), 4 (hint). Uses the `"show_diagnostics_severity_level"` setting if not provided.
 | Goto Implementation | unbound | `lsp_symbol_implementation`
 | Goto Symbol in Project | unbound<br>suggested: <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>R</kbd> | `lsp_workspace_symbols`
 | Goto Symbol | unbound<br>suggested: <kbd>Ctrl</kbd> <kbd>R</kbd> | `lsp_document_symbols`

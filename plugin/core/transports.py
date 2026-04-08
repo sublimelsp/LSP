@@ -14,6 +14,7 @@ from io import BufferedIOBase
 from queue import Queue
 from typing import Any
 from typing import Callable
+from typing import final
 from typing import IO
 from typing_extensions import override
 import contextlib
@@ -244,7 +245,7 @@ class TransportCallbacks:
     def on_stderr_message(self, message: str) -> None: ...
 
 
-class Transport:
+class Transport(ABC):
     def __init__(
         self,
         encoder: Callable[[JSONRPCMessage], bytes],
@@ -253,12 +254,15 @@ class Transport:
         self._encoder = encoder
         self._decoder = decoder
 
+    @abstractmethod
     def read(self) -> JSONRPCMessage | None:
         raise NotImplementedError
 
+    @abstractmethod
     def write(self, payload: JSONRPCMessage) -> None:
         raise NotImplementedError
 
+    @abstractmethod
     def close(self) -> None:
         raise NotImplementedError
 
@@ -275,6 +279,7 @@ class FileObjectTransport(Transport):
         self._reader = reader
         self._writer = writer
 
+    @override
     def read(self) -> JSONRPCMessage:
         headers: http.client.HTTPMessage | None = None
         try:
@@ -294,11 +299,13 @@ class FileObjectTransport(Transport):
         except Exception as ex:
             raise Exception(f"JSON decode error: {ex}") from ex
 
+    @override
     def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
         self._writer.flush()
 
+    @override
     def close(self) -> None:
         self._writer.close()
         self._reader.close()
@@ -315,6 +322,7 @@ class SocketTransport(FileObjectTransport):
         super().__init__(encoder, decoder, reader_writer_pair, reader_writer_pair)
         self._socket = sock
 
+    @override
     def close(self) -> None:
         super().close()
         self._socket.close()
@@ -323,6 +331,7 @@ class SocketTransport(FileObjectTransport):
 # --- TransportWrapper -------------------------------------------------------------------------------------------------
 
 
+@final
 class TransportWrapper:
     """
     Double dispatch-like class that takes a (subclass of) Transport, and provides to a (subclass of) TransportCallbacks

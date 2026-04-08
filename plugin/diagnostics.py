@@ -142,7 +142,7 @@ class DiagnosticsAnnotationsView:
                     matching_diagnostics[0].append(diagnostic)
                     matching_diagnostics[1].append(region)
                 css_class = DIAGNOSTIC_STYLES[severity].css_class
-                annotations = format_diagnostics_for_annotation(matching_diagnostics[0], css_class)
+                annotations = format_diagnostics_for_annotation(self._view, matching_diagnostics[0], css_class)
                 color = self._severity_colors[severity]
                 self._view.add_regions(
                     self._annotation_region_key(severity), matching_diagnostics[1], flags=flags,

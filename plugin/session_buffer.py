@@ -567,9 +567,8 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
-        # None-check guards against spec violation from vue server - https://github.com/volarjs/volar.js/issues/301.
-        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison]
+    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation] | None) -> None:
+        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:

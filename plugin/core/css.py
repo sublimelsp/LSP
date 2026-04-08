@@ -13,7 +13,6 @@ class CSS:
         self.sheets_classname = "lsp_sheet"
         self.inlay_hints = sublime.load_resource("Packages/LSP/inlay_hints.css")
         self.annotations = sublime.load_resource("Packages/LSP/annotations.css")
-        self.annotations_classname = "lsp_annotation"
 
 
 g_css: CSS | None = None

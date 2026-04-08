@@ -42,6 +42,7 @@ from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
+from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
@@ -740,14 +741,14 @@ def diagnostic_icon(severity: DiagnosticSeverity) -> str:
     return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
-def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:
+def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diagnostic], css_class: str) -> list[str]:
     annotations = []
     for diagnostic in diagnostics:
-        message = text2html(diagnostic.get('message') or '')
+        message = _format_diagnostic_message(view, diagnostic['message'])
         source = diagnostic.get('source')
         line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
-        content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
-            lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
+        content = '<body id="lsp-annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
+            ST_PLATFORM, lsp_css().annotations, css_class, line)
         annotations.append(content)
     return annotations
 
@@ -763,7 +764,8 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
                 using the information given.
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)
-    lines = diagnostic["message"].splitlines() or [""]
+    message = diagnostic['message']
+    lines = (message['value'] if isinstance(message, dict) else message).splitlines() or [""]
     result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
@@ -834,6 +836,10 @@ def is_location_href(href: str) -> bool:
     return href.startswith("location:")
 
 
+def _format_diagnostic_message(view: sublime.View, message: str | MarkupContent) -> str:
+    return minihtml(view, message, FORMAT_MARKUP_CONTENT) if isinstance(message, dict) else text2html(message)
+
+
 def _format_diagnostic_related_info(
     config: ClientConfig,
     info: DiagnosticRelatedInformation,
@@ -880,7 +886,7 @@ def lightbulb_html(color: str, star: bool) -> str:
 
 
 def format_diagnostics_for_html(
-    version: int,
+    view: sublime.View,
     diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
     code_actions_by_config: dict[str, list[Command | CodeAction]],
     lightbulb_color: str,
@@ -895,21 +901,23 @@ def format_diagnostics_for_html(
                 action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
             ]
             diagnostic_html = format_diagnostic_for_html(
-                sb.session.config, version, diagnostic, code_actions, lightbulb_color, base_dir)
+                view, sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
             diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
     return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
         diagnostics_html else ''
 
 
 def format_diagnostic_for_html(
+    view: sublime.View,
     config: ClientConfig,
-    version: int,
     diagnostic: Diagnostic,
     code_actions: list[Command | CodeAction],
     lightbulb_color: str,
     base_dir: str | None = None
 ) -> str:
-    content = _html_element('span', diagnostic["message"])
+    message = diagnostic['message']
+    raw_message = message['value'] if isinstance(message, dict) else message
+    content = _format_diagnostic_message(view, message)
     code = diagnostic.get("code")
     source = diagnostic.get("source")
     if source or code is not None:
@@ -923,17 +931,19 @@ def format_diagnostic_for_html(
             else:
                 meta_info += f'({text2html(str(code))})'
         content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip().replace(' ', ' ')
+    copy_text = f"{raw_message} {f'({source})' if source else ''}".strip().replace(' ', ' ')
     content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
         'lsp_copy_text', {'text': copy_text}
     )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
         content += '<hr>' + _html_element("div", info, escape=False)
-    for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
-        icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
-        code_action_uri = encode_code_action_uri(config.name, version, code_action)
-        content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
+    if code_actions:
+        version = view.change_count()
+        for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
+            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
+            code_action_uri = encode_code_action_uri(config.name, version, code_action)
+            content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
     return html_wrapper(content, class_name=severity_class)
 

@@ -258,7 +258,7 @@ class LspHoverCommand(LspTextCommand):
         prefs = userprefs()
         if only_diagnostics or prefs.show_diagnostics_in_hover:
             contents += format_diagnostics_for_html(
-                self.view.change_count(),
+                self.view,
                 self._diagnostics_by_config,
                 self._actions_by_config,
                 listener.lightbulb_color,

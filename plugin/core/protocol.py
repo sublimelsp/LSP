@@ -915,7 +915,7 @@ class CodeLensResolveResponse(TypedDict):
 
 class ColorPresentationResponse(TypedDict):
     method: Literal['textDocument/colorPresentation']
-    result: List['ColorPresentation']
+    result: Union[List['ColorPresentation'], None]
 
 
 class CompletionResponse(TypedDict):
@@ -950,7 +950,7 @@ class DiagnosticRefreshResponse(TypedDict):
 
 class DocumentColorResponse(TypedDict):
     method: Literal['textDocument/documentColor']
-    result: List['ColorInformation']
+    result: Union[List['ColorInformation'], None]
 
 
 class DocumentDiagnosticResponse(TypedDict):

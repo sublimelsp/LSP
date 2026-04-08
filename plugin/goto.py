@@ -301,9 +301,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         caret_pos = region.b if self._preview and (region := first_selection_region(self._preview)) is not None else 0
         for index, diagnostic_data in enumerate(self.diagnostics):
             diagnostic = diagnostic_data['diagnostic']
-            message = diagnostic['message'] or '…'
+            message = diagnostic['message']
+            raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
-            text = f"{'_EWIH'[severity]}: {message.splitlines()[0]}"
+            text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
             value = cast(dict, diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]

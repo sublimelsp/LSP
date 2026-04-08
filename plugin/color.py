@@ -29,7 +29,7 @@ class LspColorPresentationCommand(LspTextCommand):
     def want_event(self) -> bool:
         return False
 
-    def _handle_response_async(self, response: list[ColorPresentation]) -> None:
+    def _handle_response_async(self, response: list[ColorPresentation] | None) -> None:
         if not response:
             return
         window = self.view.window()

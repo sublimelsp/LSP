@@ -66,6 +66,8 @@ class LspExecuteCommand(LspTextCommand):
         view = self.view
         region = first_selection_region(view)
         for i, arg in enumerate(command_args):
+            if not isinstance(arg, str) or not arg.startswith('$'):
+                continue
             if arg in {"$document_id", "${document_id}"}:
                 command_args[i] = text_document_identifier(view)
             elif arg in {"$versioned_document_id", "${versioned_document_id}"}:

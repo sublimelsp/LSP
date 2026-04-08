@@ -1,7 +1,17 @@
-.lsp_annotation {
+body {
     margin: 0;
     border-width: 0;
     font-family: system;
+}
+p {
+    display: inline;
+}
+code {
+    font-family: monospace;
+    padding: 0.05rem 0.25rem;
+}
+.osx code {
+    font-size: 0.9rem;
 }
 .error {
     color: color(var(--redish) alpha(0.85));

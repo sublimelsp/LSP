@@ -434,7 +434,8 @@ class LspPlugin(APIHandler):
 
         :param context:     The plugin context.
         :param transport:   The live transport connected to the language server process.
-                            Use ``transport.send()`` to write raw payloads.
+                            Use ``transport.send()`` to write `JSONRPCMessage` messages or ``transport.send_bytes()``
+                            to write byte data.
         """
         pass
 

@@ -47,8 +47,8 @@ class StopLoopError(Exception):
 class TransportConfig(ABC):
     """The object that does the actual RPC communication."""
 
-    def _resolve_launch_config(
-        self,
+    @staticmethod
+    def resolve_launch_config(
         command: list[str],
         env: dict[str, str] | None,
         variables: dict[str, str],
@@ -96,7 +96,7 @@ class StdioTransportConfig(TransportConfig):
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
-        process = self._resolve_launch_config(command, env, variables).start(
+        process = TransportConfig.resolve_launch_config(command, env, variables).start(
             cwd,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
@@ -141,7 +141,7 @@ class TcpClientTransportConfig(TransportConfig):
     ) -> TransportWrapper:
         port = _add_and_resolve_port_variable(variables, self._port)
         if command:
-            process = self._resolve_launch_config(command, env, variables).start(
+            process = TransportConfig.resolve_launch_config(command, env, variables).start(
                 cwd,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.DEVNULL,
@@ -183,8 +183,10 @@ class TcpServerTransportConfig(TransportConfig):
 
     __slots__ = ("_port",)
 
-    def __init__(self, port: int | None = None) -> None:
+    def __init__(self, port: int | None) -> None:
         self._port = port
+        if isinstance(self._port, int) and self._port <= 0:
+            raise RuntimeError("invalid port number")
 
     @override
     def start(
@@ -198,11 +200,11 @@ class TcpServerTransportConfig(TransportConfig):
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
         port = _add_and_resolve_port_variable(variables, self._port)
-        launch = self._resolve_launch_config(command, env, variables)
+        launch = TransportConfig.resolve_launch_config(command, env, variables)
         listener_socket = socket.socket()
-        listener_socket.bind(("", port))
+        listener_socket.bind(('localhost', port))
         listener_socket.settimeout(TCP_CONNECT_TIMEOUT)
-        listener_socket.listen(TCP_CONNECT_TIMEOUT)
+        listener_socket.listen(1)
         process_task: PackagedTask[subprocess.Popen[bytes] | None] = Promise.packaged_task()
         process_promise, resolve_process = process_task
 
@@ -212,7 +214,7 @@ class TcpServerTransportConfig(TransportConfig):
             # subprocess. This is hacky, and will get better when we can use asyncio.
             time.sleep(1)
             resolve_process(launch.start(
-                cwd, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, stderr=subprocess.STDOUT))
+                cwd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE))
 
         thread = threading.Thread(target=start_in_background)
         thread.start()
@@ -223,9 +225,9 @@ class TcpServerTransportConfig(TransportConfig):
         process = process_promise.value
         if not process:
             raise Exception('Failed to create transport config from separate thread.')
-        if not process.stdout:
-            raise Exception('Failed to create transport config due to not being able to pipe stdout')
-        error_reader = ErrorReader(callbacks, process.stdout)
+        if not process.stderr:
+            raise Exception('Failed to create transport config due to not being able to pipe stderr')
+        error_reader = ErrorReader(callbacks, process.stderr)
         return TransportWrapper(
             callback_object=callbacks,
             transport=SocketTransport(encode_json, decode_json, sock),
@@ -454,12 +456,12 @@ class LaunchConfig:
     def start(
         self,
         cwd: str | None,
-        stdout: int,
         stdin: int,
+        stdout: int,
         stderr: int,
     ) -> subprocess.Popen[bytes]:
         startupinfo = _fixup_startup_args(self.command)
-        return _start_subprocess(self.command, stdout, stdin, stderr, startupinfo, self.env, cwd)
+        return _start_subprocess(self.command, stdin, stdout, stderr, startupinfo, self.env, cwd)
 
 
 # --- Utils -------------------------------------------------------------------------------------------------------

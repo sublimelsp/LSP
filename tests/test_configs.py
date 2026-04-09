@@ -7,6 +7,7 @@ from LSP.plugin.core.views import to_encoded_filename
 from os import environ
 from os.path import dirname
 from os.path import pathsep
+from plugin.core.transports import TransportConfig
 from typing import Any
 from unittesting import DeferrableTestCase
 import sys
@@ -64,8 +65,7 @@ class ConfigParsingTests(DeferrableTestCase):
             }
         }
         config = read_client_config("pyls", settings)
-        transport_config = config.create_transport_config()
-        launch_config = transport_config._resolve_launch_config(config.command, config.env, {})
+        launch_config = TransportConfig.resolve_launch_config(config.command, config.env, {})
         original_path = environ.copy()['PATH']
         resolved_path = launch_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')

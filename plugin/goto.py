@@ -160,7 +160,9 @@ class DiagnosticData(TypedDict):
 
 class LspGotoDiagnosticCommand(LspWindowCommand):
 
-    def run(self, uri: DocumentUri | None, diagnostic: DiagnosticData | None) -> None:
+    def run(
+        self, uri: DocumentUri | None, diagnostic: DiagnosticData | None, severity_level: int | None = None
+    ) -> None:
         pass
 
     def is_enabled(self, **kwargs: dict[str, Any]) -> bool:

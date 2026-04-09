@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..protocol import TextEdit
 from ..protocol import WorkspaceEdit
+from .core.constants import ChangeEventAction
 from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
@@ -117,6 +118,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         if required_view_version is not None and required_view_version != view_version:
             print('LSP: ignoring edit due to non-matching document version')
             return
+        if listener := windows.listener_for_view(self.view):
+            listener.set_change_event_action(ChangeEventAction.OTHER)
         edits = [_parse_text_edit(change) for change in changes or []]
         with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
             last_row, _ = self.view.rowcol_utf16(self.view.size())

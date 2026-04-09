@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.transports import TransportConfig
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
@@ -9,7 +10,6 @@ from os.path import dirname
 from os.path import pathsep
 from typing import Any
 from unittesting import DeferrableTestCase
-import sublime
 import sys
 import unittest
 
@@ -65,27 +65,10 @@ class ConfigParsingTests(DeferrableTestCase):
             }
         }
         config = read_client_config("pyls", settings)
-        transport_config = config.resolve_transport_config({})
+        launch_config = TransportConfig.resolve_launch_config(config.command, config.env, {})
         original_path = environ.copy()['PATH']
-        resolved_path = transport_config.env['PATH']
+        resolved_path = launch_config.env['PATH']
         self.assertEqual(resolved_path, f'/a/b/{pathsep}{original_path}')
-
-    def test_list_in_environment(self) -> None:
-        settings = {
-            "command": ["pyls"],
-            "selector": "source.python",
-            "env": {
-                "FOO": ["C:/hello", "X:/there", "Y:/$foobar"],
-                "BAR": "baz"
-            }
-        }
-        config = read_client_config("pyls", settings)
-        resolved = config.resolve_transport_config({"foobar": "asdf"})
-        if sublime.platform() == "windows":
-            self.assertEqual(resolved.env["FOO"], "C:/hello;X:/there;Y:/asdf")
-        else:
-            self.assertEqual(resolved.env["FOO"], "C:/hello:X:/there:Y:/asdf")
-        self.assertEqual(resolved.env["BAR"], "baz")
 
     def test_disabled_capabilities(self) -> None:
         settings = {

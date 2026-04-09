@@ -626,14 +626,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
-        if edit_action := self.get_change_event_action(command_name, args):
-            if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
-                text_change_listener.set_last_edit_action(edit_action)
+        if action := self.get_change_event_action(command_name, args):
+            self.set_change_event_action(action)
         return None
 
     def get_change_event_action(self, command_name: str, args: dict[str, Any] | None) -> ChangeEventAction | None:
         if action := COMMAND_TO_CHANGE_EVENT_ACTION.get(command_name):
             return action
+        if 'swap_line' in command_name:
+            return ChangeEventAction.OTHER
         if command_name == 'insert' and args and args.get('characters') == '\n':
             return ChangeEventAction.INSERT_NEWLINE
         return None
@@ -1121,6 +1122,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         else:
             self._clear_code_actions_annotation()
+
+    def set_change_event_action(self, action: ChangeEventAction) -> None:
+        if text_change_listener := TextChangeListener.ids_to_listeners.get(self.view.buffer().buffer_id):
+            text_change_listener.set_last_edit_action(action)
 
     def _on_settings_object_changed(self) -> None:
         settings = self.view.settings()

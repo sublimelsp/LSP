@@ -13,6 +13,10 @@ from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug
 from .logging import set_debug_logging
+from .transports import StdioTransportConfig
+from .transports import TcpClientTransportConfig
+from .transports import TcpServerTransportConfig
+from .transports import TransportConfig
 from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
@@ -40,12 +44,10 @@ import contextlib
 import fnmatch
 import os
 import posixpath
-import socket
 import sublime
 import time
 import weakref
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
@@ -723,26 +725,6 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-class TransportConfig:
-    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
-
-    def __init__(
-        self,
-        name: str,
-        command: list[str],
-        tcp_port: int | None,
-        env: dict[str, str],
-        listener_socket: socket.socket | None
-    ) -> None:
-        if not command and not tcp_port:
-            raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
-        self.name = name
-        self.command = command
-        self.tcp_port = tcp_port
-        self.env = env
-        self.listener_socket = listener_socket
-
-
 class DefaultViewStatusHandler(ViewStatusHandler):
 
     @override
@@ -778,7 +760,7 @@ class ClientConfig:
         enabled: bool = True,
         initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
-        env: dict[str, str | list[str]] | None = None,
+        env: dict[str, str] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
         disabled_capabilities: DottedDict | None = None,
         file_watcher: FileWatcherConfig | None = None,
@@ -1010,7 +992,7 @@ class ClientConfig:
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
-    def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
+    def create_transport_config(self) -> TransportConfig:
         """
         Build a :class:`TransportConfig` ready for starting the language server.
 
@@ -1020,35 +1002,11 @@ class ClientConfig:
         :param variables: Sublime Text variable substitution dict (e.g. from `window.extract_variables()`). A `"port"`
             key is added automatically when a TCP port is in use.
         """
-        tcp_port: int | None = None
-        listener_socket: socket.socket | None = None
         if self.tcp_port is not None:
-            # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
-                # -1 means pick any free port
-                if self.tcp_port < -1:
-                    tcp_port = -self.tcp_port
-                # Create a listener socket for incoming connections
-                listener_socket = _start_tcp_listener(tcp_port)
-                tcp_port = int(listener_socket.getsockname()[1])
-            else:
-                tcp_port = _find_free_port() if self.tcp_port == 0 else self.tcp_port
-        if tcp_port is not None:
-            variables["port"] = str(tcp_port)
-        command = sublime.expand_variables(self.command, variables)
-        command = [os.path.expanduser(arg) for arg in command]
-        if tcp_port is not None:
-            # DEPRECATED -- replace {port} with $port or ${port} in your client config
-            command = [a.replace('{port}', str(tcp_port)) for a in command]
-        env = os.environ.copy()
-        for key, value in self.env.items():
-            if isinstance(value, list):
-                value = os.path.pathsep.join(value)
-            if key == 'PATH':
-                env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
-            else:
-                env[key] = sublime.expand_variables(value, variables)
-        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
+                return TcpServerTransportConfig(None if self.tcp_port == -1 else -self.tcp_port)
+            return TcpClientTransportConfig(None if self.tcp_port == 0 else self.tcp_port)
+        return StdioTransportConfig()
 
     def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
         self._view_status_handler = handler
@@ -1185,18 +1143,3 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(selector, str):
         return selector
     return ""
-
-
-def _find_free_port() -> int:
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-def _start_tcp_listener(tcp_port: int | None) -> socket.socket:
-    sock = socket.socket()
-    sock.bind(('localhost', tcp_port or 0))
-    sock.settimeout(TCP_CONNECT_TIMEOUT)
-    sock.listen(1)
-    return sock

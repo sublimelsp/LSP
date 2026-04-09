@@ -31,6 +31,7 @@ from typing import Callable
 from typing import Final
 from typing import TYPE_CHECKING
 from typing import TypeVar
+from typing_extensions import deprecated
 import inspect
 import sublime
 
@@ -548,6 +549,7 @@ class LspPlugin(APIHandler):
         pass
 
 
+@deprecated('Use LspPlugin instead')
 class AbstractPlugin(APIHandler, ABC):
 
     @classmethod

@@ -1318,10 +1318,11 @@ class Session(APIHandler, TransportCallbacks):
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
         if self._plugin_data:
-            if issubclass(self._plugin_data[0], LspPlugin):
-                if extra_vars := self._plugin_data[0].additional_variables(self._plugin_data[1]):
+            plugin_class, plugin_context = self._plugin_data
+            if issubclass(plugin_class, LspPlugin):
+                if extra_vars := plugin_class.additional_variables(plugin_context):
                     variables.update(extra_vars)
-            elif extra_vars := self._plugin_data[0].additional_variables():
+            elif extra_vars := plugin_class.additional_variables():
                 variables.update(extra_vars)
         return variables
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from .plugin.api import AbstractPlugin
 from .plugin.api import g_plugins
 from .plugin.api import LspPlugin
-from .plugin.api import register_plugin
+from .plugin.api import register_plugin_impl
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspRefactorCommand
 from .plugin.code_actions import LspSourceActionCommand
@@ -190,7 +190,7 @@ def _register_all_plugins() -> None:
                 continue
         except NotImplementedError:
             continue
-        register_plugin(plugin_class, notify_listener=False)
+        register_plugin_impl(plugin_class, notify_listener=False)
 
 
 def _unregister_all_plugins() -> None:

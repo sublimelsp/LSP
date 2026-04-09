@@ -74,7 +74,8 @@ class PluginStartError(Exception):
         super().__init__(message)
 
 
-def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
+@deprecated('Use LspPlugin.register() instead')
+def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) -> None:
     """
     Register an LSP plugin in LSP.
 
@@ -105,6 +106,10 @@ def register_plugin(plugin: type[AbstractPlugin | LspPlugin], notify_listener: b
     If you need to install supplementary files (e.g. javascript source code that implements the actual server), do so
     in `AbstractPlugin.install_or_update` in a blocking manner, without the use of Python's `threading` module.
     """
+    register_plugin_impl(plugin, notify_listener)
+
+
+def register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool = True) -> None:
     if notify_listener:
         # There is a bug in Sublime Text's `plugin_loaded` callback. When the package is in the list of
         # `"ignored_packages"` in Packages/User/Preferences.sublime-settings, and then removed from that list, the
@@ -132,7 +137,8 @@ def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_liste
         exception_log(f'Failed to register plugin "{name}"', ex)
 
 
-def unregister_plugin(plugin: type[AbstractPlugin | LspPlugin]) -> None:
+@deprecated('Use LspPlugin.unregister() instead')
+def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
     """
     Unregister an LSP plugin in LSP.
 
@@ -140,6 +146,10 @@ def unregister_plugin(plugin: type[AbstractPlugin | LspPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
+    unregister_plugin_impl(plugin)
+
+
+def unregister_plugin_impl(plugin: type[AbstractPlugin | LspPlugin]) -> None:
     if issubclass(plugin, AbstractPlugin):
         name = plugin.name()
     else:
@@ -311,7 +321,7 @@ class LspPlugin(APIHandler):
             LspFooPlugin.register()
         ```
         """
-        register_plugin(cls)
+        register_plugin_impl(cls)
 
     @classmethod
     def unregister(cls) -> None:
@@ -326,7 +336,7 @@ class LspPlugin(APIHandler):
             LspFooPlugin.unregister()
         ```
         """
-        unregister_plugin(cls)
+        unregister_plugin_impl(cls)
 
     @classmethod
     def is_applicable(cls, context: PluginContext) -> bool:

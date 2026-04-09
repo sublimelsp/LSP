@@ -24,6 +24,7 @@
 | `on_pre_server_command(command, done_callback)` | `on_execute_command(command)` - return a `Promise` instead of invoking a callback |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
+| `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
 
 All other instance methods (`on_settings_changed`, `on_workspace_configuration`,
 `on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`,
@@ -52,15 +53,21 @@ class LspFoo(LspPlugin):
     ...
 ```
 
-`LspPlugin` also exposes `register()` and `unregister()` convenience classmethods, so you can call them directly on the class instead of importing the standalone functions:
+`LspPlugin` provides `register()` and `unregister()` classmethods, so `register_plugin` and
+`unregister_plugin` **no longer need to be imported or called directly**. Replace them with calls
+on your plugin class:
 
 ```python
 # Before
-from LSP.plugin import register_plugin, unregister_plugin
+from LSP.plugin import AbstractPlugin
+from LSP.plugin import register_plugin
+from LSP.plugin import unregister_plugin
+
+class LspFoo(AbstractPlugin):
+    ...
 
 def plugin_loaded() -> None:
     register_plugin(LspFoo)
-
 
 def plugin_unloaded() -> None:
     unregister_plugin(LspFoo)
@@ -68,9 +75,13 @@ def plugin_unloaded() -> None:
 
 ```python
 # After
+from LSP.plugin import LspPlugin
+
+class LspFoo(LspPlugin):
+    ...
+
 def plugin_loaded() -> None:
     LspFoo.register()
-
 
 def plugin_unloaded() -> None:
     LspFoo.unregister()

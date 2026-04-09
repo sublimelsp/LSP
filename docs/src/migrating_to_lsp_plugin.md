@@ -26,7 +26,7 @@
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
 
-All other instance methods (`on_settings_changed`, `on_workspace_configuration`,
+All other instance methods (`on_workspace_configuration`,
 `on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`,
 `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`)
 are available in `LspPlugin` with the same name and the same signature.
@@ -214,23 +214,28 @@ def __init__(self, weaksession, context: PluginContext) -> None:
 
 ---
 
-### 7. Replace `on_settings_changed` with `__init__`
+### 7. Remove `on_settings_changed`
 
-`on_settings_changed` ran right after the `initialize` response. In `LspPlugin`, `__init__` is also called after a successful `initialize` response. The `context` argument gives you access to the `settings`:
+`LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because the same result can be achieved by reading `context.configuration` in `__init__` (called after a successful `initialize` response) for one-time setup, or by using `on_workspace_configuration` to adjust per-request configuration values dynamically.
+
+Remove any `on_settings_changed` override without a replacement:
 
 ```python
-# Before
-@classmethod
+# Before — remove this entirely
 def on_settings_changed(self, settings: DottedDict) -> None:
     settings.set('foo', 'bar')
 ```
 
+If you were using `on_settings_changed` to apply a fixed setting at startup, move that logic to `__init__`:
+
 ```python
-# After
+# After — one-time setup
 def __init__(self, weaksession, context: PluginContext) -> None:
     super().__init__(weaksession, context)
     context.configuration.settings.set('foo', 'bar')
 ```
+
+If you were using it to adjust configuration returned for `workspace/configuration` requests, use `on_workspace_configuration` instead.
 
 ---
 

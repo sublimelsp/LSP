@@ -83,8 +83,6 @@ class StdioTransportConfig(TransportConfig):
     ClientConfig.
     """
 
-    __slots__ = ()
-
     @override
     def start(
         self,
@@ -121,11 +119,8 @@ class TcpClientTransportConfig(TransportConfig):
     part of some larger application, like Godot Editor.
     """
 
-    __slots__ = ("_hostname", "_port")
-
-    def __init__(self, hostname: str | None, port: int | None) -> None:
+    def __init__(self, port: int | None) -> None:
         super().__init__()
-        self._hostname = hostname
         self._port = port
         if isinstance(self._port, int) and self._port <= 0:
             raise RuntimeError("invalid port number")
@@ -162,14 +157,11 @@ class TcpClientTransportConfig(TransportConfig):
 
     def _connect(self, port: int) -> socket.socket:
         start_time = time.time()
-        last_exception: Exception | None = None
         while time.time() - start_time < TCP_CONNECT_TIMEOUT:
             try:
-                return socket.create_connection((self._hostname or "", port))
-            except Exception as ex:
-                last_exception = ex
-        if last_exception:
-            raise last_exception
+                return socket.create_connection(('localhost', port))
+            except ConnectionRefusedError:
+                pass
         raise RuntimeError("failed to connect")
 
 
@@ -180,8 +172,6 @@ class TcpServerTransportConfig(TransportConfig):
     as the TCP server, we'll assume it's the language server we just launched. As such, this tranport requires a
     "command" for starting the language server subprocess.
     """
-
-    __slots__ = ("_port",)
 
     def __init__(self, port: int | None) -> None:
         self._port = port

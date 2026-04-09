@@ -1005,7 +1005,7 @@ class ClientConfig:
         if self.tcp_port is not None:
             if self.tcp_port < 0:
                 return TcpServerTransportConfig(None if self.tcp_port == -1 else -self.tcp_port)
-            return TcpClientTransportConfig(self.hostname, None if self.tcp_port == 0 else self.tcp_port)
+            return TcpClientTransportConfig(None if self.tcp_port == 0 else self.tcp_port)
         return StdioTransportConfig()
 
     def set_view_status_handler(self, handler: ViewStatusHandler) -> None:

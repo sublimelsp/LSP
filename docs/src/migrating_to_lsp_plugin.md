@@ -216,15 +216,7 @@ def __init__(self, weaksession, context: PluginContext) -> None:
 
 ### 7. Remove `on_settings_changed`
 
-`LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because the same result can be achieved by reading `context.configuration` in `__init__` (called after a successful `initialize` response) for one-time setup, or by using `on_workspace_configuration` to adjust per-request configuration values dynamically.
-
-Remove any `on_settings_changed` override without a replacement:
-
-```python
-# Before — remove this entirely
-def on_settings_changed(self, settings: DottedDict) -> None:
-    settings.set('foo', 'bar')
-```
+`LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because it was only called once right after sending the `initialize` request and the same result can be achieved by running the logic from `__init__` (called after a successful `initialize` response) for one-time setup, or by using `on_workspace_configuration` to adjust per-request configuration values dynamically.
 
 If you were using `on_settings_changed` to apply a fixed setting at startup, move that logic to `__init__`:
 

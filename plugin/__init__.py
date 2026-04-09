@@ -16,6 +16,7 @@ from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherEventType
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
+from .core.promise import PackagedTask
 from .core.promise import Promise
 from .core.protocol import ClientNotification
 from .core.protocol import ClientRequest
@@ -61,6 +62,7 @@ __all__ = [
     'LspWindowCommand',
     'MarkdownLangMap',
     'Notification',
+    'PackagedTask',
     'PluginContext',
     'PluginStartError',
     'Promise',

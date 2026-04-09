@@ -5,7 +5,6 @@ from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
-from typing import Any
 import os
 import sublime
 
@@ -40,7 +39,7 @@ class WorkspaceFolder:
     def __str__(self) -> str:
         return self.path
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False

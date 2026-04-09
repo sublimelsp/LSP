@@ -281,19 +281,8 @@
               "type": "object",
               "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
               "additionalProperties": {
-                "oneOf": [
-                  {
-                    "type": "string",
-                    "markdownDescription": "The value for this environment variable."
-                  },
-                  {
-                    "type": "array",
-                    "markdownDescription": "A list of values. The list will be joined into a string with your native file system's path separator. For example, `[\"a\", \"b\"]` will turn into `\"a;b\"` on Windows.",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                ]
+                "type": "string",
+                "markdownDescription": "The value for this environment variable."
               }
             },
             "ClientSelector": {
@@ -349,9 +338,8 @@
                 },
                 "tcp_port": {
                   "type": "integer",
-                  "minimum": 0,
                   "default": 0,
-                  "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
+                  "markdownDescription": "When set to a positive number bigger than 0, specifies the TCP port to use to connect to the language server process listening on the given port. When set to zero, a free TCP port is chosen. Chosen TCP port number can be accessed through a template variable, i.e. as `${port}` in the `\"command\"`.\n\nSet to a negative number to make the LSP client act as TCP server awaiting connection from the LSP server. Using `-1` opens a random port. To use a fixed port number, use `-X` as the value for `tcp_port`, where `X` is the desired (positive) port number.\n\nIf not specified, STDIO is used as the transport"
                 },
                 "auto_complete_selector": {
                   "$ref": "#/definitions/ClientAutoCompleteSelector"

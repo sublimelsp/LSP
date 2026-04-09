@@ -9,19 +9,11 @@ from LSP.plugin import Request
 from LSP.plugin.core.protocol import UINT_MAX
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
+from typing import Generator
+from typing import Iterable
 from unittest import skip
 import os
 import sublime
-
-try:
-    from typing import Generator
-    from typing import Iterable
-    from typing import List
-    from typing import Optional
-    from typing import Tuple
-    assert Generator and Optional and Iterable and Tuple and List
-except ImportError:
-    pass
 
 SELFDIR = os.path.dirname(__file__)
 TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')
@@ -125,7 +117,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.run_command('insert', {"characters": "Hello Wrld"})
         self.assertFalse(self.view.is_popup_visible())
         self.view.run_command('lsp_hover', {'point': 3})
-        yield lambda: self.view.is_popup_visible()
+        yield self.view.is_popup_visible
 
     def test_remove_line_and_then_insert_at_that_line_at_end(self) -> Generator:
         original = (

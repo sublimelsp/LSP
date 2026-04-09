@@ -97,7 +97,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool,
         group: int,
         position: int,
-        response: None | Location | list[Location] | list[LocationLink]
+        response: Location | list[Location] | list[LocationLink] | None
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
@@ -176,7 +176,7 @@ class LspGotoDiagnosticCommand(LspWindowCommand):
         sessions = list(self.sessions())
         if (uri := args.get('uri')) and uri != "$view_uri":  # for backwards compatibility with previous command args
             return DiagnosticUriInputHandler(self.window, view, sessions, uri)
-        elif (uri := view.settings().get('lsp_uri')) and self._has_diagnostics(uri):
+        if (uri := view.settings().get('lsp_uri')) and self._has_diagnostics(uri):
             return DiagnosticUriInputHandler(self.window, view, sessions, uri)
         return DiagnosticUriInputHandler(self.window, view, sessions)
 
@@ -301,9 +301,10 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         caret_pos = region.b if self._preview and (region := first_selection_region(self._preview)) is not None else 0
         for index, diagnostic_data in enumerate(self.diagnostics):
             diagnostic = diagnostic_data['diagnostic']
-            message = diagnostic['message'] or '…'
+            message = diagnostic['message']
+            raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
-            text = f"{'_EWIH'[severity]}: {message.splitlines()[0]}"
+            text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
             value = cast(dict, diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]

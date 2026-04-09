@@ -1,6 +1,6 @@
 # ruff: noqa: E501, UP006, UP007
 # Code generated. DO NOT EDIT.
-# LSP v3.17.0
+# LSP v3.18.0
 
 from __future__ import annotations
 
@@ -3706,16 +3706,16 @@ class DocumentOnTypeFormattingRegistrationOptions(TypedDict):
 class RenameParams(TypedDict):
     """The parameters of a {@link RenameRequest}."""
 
-    textDocument: 'TextDocumentIdentifier'
-    """The document to rename."""
-    position: 'Position'
-    """The position at which this request was sent."""
     newName: str
     """
     The new name of the symbol. If the given name is not valid the
     request must return a {@link ResponseError} with an
     appropriate message set.
     """
+    textDocument: 'TextDocumentIdentifier'
+    """The text document."""
+    position: 'Position'
+    """The position inside the text document."""
     workDoneToken: NotRequired['ProgressToken']
     """An optional token that a server can use to report work done progress."""
 
@@ -5024,8 +5024,12 @@ class Diagnostic(TypedDict):
     diagnostic, e.g. 'typescript' or 'super lint'. It usually
     appears in the user interface.
     """
-    message: str
-    """The diagnostic's message. It usually appears in the user interface"""
+    message: Union[str, 'MarkupContent']
+    """
+    The diagnostic's message. It usually appears in the user interface.
+
+    @since 3.18.0 - support for `MarkupContent`. This is guarded by the client capability `textDocument.diagnostic.markupMessageSupport`.
+    """
     tags: NotRequired[List['DiagnosticTag']]
     """
     Additional metadata about the diagnostic.
@@ -7553,6 +7557,13 @@ class DiagnosticClientCapabilities(TypedDict):
     Client supports a codeDescription property
 
     @since 3.16.0
+    """
+    markupMessageSupport: NotRequired[bool]
+    """
+    Whether the client supports `MarkupContent` in diagnostic messages.
+
+    @since 3.18.0
+    @proposed
     """
     dataSupport: NotRequired[bool]
     """

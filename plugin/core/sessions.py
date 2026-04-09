@@ -14,7 +14,6 @@ from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
-from ...protocol import DiagnosticTag
 from ...protocol import DidChangeWatchedFilesRegistrationOptions
 from ...protocol import DidChangeWorkspaceFoldersParams
 from ...protocol import DocumentDiagnosticReportKind
@@ -80,9 +79,11 @@ from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from .constants import ChangeEventAction
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
+from .constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
@@ -115,8 +116,8 @@ from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
-from .transports import Transport
 from .transports import TransportCallbacks
+from .transports import TransportWrapper
 from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
@@ -139,7 +140,6 @@ from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
-from enum import IntEnum
 from enum import IntFlag
 from functools import lru_cache
 from functools import partial
@@ -166,7 +166,6 @@ import weakref
 if TYPE_CHECKING:
     from ..api import PluginContext
     from .active_request import ActiveRequest
-    from .typing import StrEnum
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]
@@ -197,7 +196,7 @@ def get_semantic_tokens_map(custom_tokens_map: dict[str, str] | None) -> tuple[t
     return tuple(sorted(tokens_scope_map.items()))  # make map hashable
 
 
-@lru_cache(maxsize=128)
+@lru_cache
 def decode_semantic_token(
     types_legend: tuple[str, ...],
     modifiers_legend: tuple[str, ...],
@@ -214,24 +213,19 @@ def decode_semantic_token(
     """
     token_type = types_legend[token_type_encoded]
     token_modifiers = [
-        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == "1"
+        modifiers_legend[idx] for idx, val in enumerate(reversed(f'{token_modifiers_encoded:b}')) if val == '1'
     ]
     scope = None
-    tokens_scope_map_dict = dict(tokens_scope_map)  # convert hashable tokens/scope map back to dict for easy lookup
-    if token_type in tokens_scope_map_dict:
-        for token_modifier in token_modifiers:
-            # this approach is limited to consider at most one modifier for the scope lookup
-            key = f"{token_type}.{token_modifier}"
-            if key in tokens_scope_map_dict:
-                scope = tokens_scope_map_dict[key] + " meta.semantic-token.{}.{}.lsp".format(
-                    token_type.lower(), token_modifier.lower())
-                break  # first match wins (in case of multiple modifiers)
-        else:
-            scope = tokens_scope_map_dict[token_type]
-            if token_modifiers:
-                scope += f" meta.semantic-token.{token_type.lower()}.{token_modifiers[0].lower()}.lsp"
-            else:
-                scope += f" meta.semantic-token.{token_type.lower()}.lsp"
+    tokens_scope_map_dict = dict(tokens_scope_map)  # Convert hashable tokens/scope map back to dict for easy lookup
+    for token_modifier in token_modifiers:
+        # We can only include a single modifier in the scope name. First match for the fallback scope wins.
+        if fallback_scope := tokens_scope_map_dict.get(f'{token_type}.{token_modifier}'):
+            scope = f'{fallback_scope} meta.semantic-token.{token_type.lower()}.{token_modifier.lower()}.lsp'
+            break
+    else:
+        if fallback_scope := tokens_scope_map_dict.get(token_type):
+            modifier = f'.{token_modifiers[0].lower()}' if token_modifiers else ''
+            scope = f'{fallback_scope} meta.semantic-token.{token_type.lower()}{modifier}.lsp'
     return token_type, token_modifiers, scope
 
 
@@ -244,17 +238,17 @@ class Manager(ABC):
     @abstractmethod
     def window(self) -> sublime.Window:
         """Get the window associated with this manager."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_session(self, config_name: str, file_path: str) -> Session | None:
         """Gets the session by name and file path."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_project_path(self, file_path: str) -> str | None:
         """Get the project path for the given file."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def should_ignore_diagnostics(self, uri: DocumentUri, configuration: ClientConfig) -> str | None:
@@ -271,18 +265,18 @@ class Manager(ABC):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_diagnostics_updated(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     # Event callbacks
 
     @abstractmethod
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         """The given Session has stopped with the given exit code."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def handle_message_request(
@@ -305,23 +299,13 @@ class Manager(ABC):
         ...
 
 
-def _int_enum_to_list(e: type[IntEnum]) -> list[int]:
-    return [v.value for v in e]
-
-
-def _str_enum_to_list(e: type[StrEnum]) -> list[str]:
-    return [v.value for v in e]
-
-
-def get_initialize_params(variables: dict[str, str], workspace_folders: list[WorkspaceFolder],
-                          config: ClientConfig) -> InitializeParams:
-    completion_kinds = cast(List[CompletionItemKind], _int_enum_to_list(CompletionItemKind))
-    symbol_kinds = cast(List[SymbolKind], _int_enum_to_list(SymbolKind))
-    diagnostic_tag_value_set = cast(List[DiagnosticTag], _int_enum_to_list(DiagnosticTag))
-    completion_tag_value_set = cast(List[CompletionItemTag], _int_enum_to_list(CompletionItemTag))
-    symbol_tag_value_set = cast(List[SymbolTag], _int_enum_to_list(SymbolTag))
-    semantic_token_types = cast(List[str], _str_enum_to_list(SemanticTokenTypes))
-    semantic_token_modifiers = cast(List[str], _str_enum_to_list(SemanticTokenModifiers))
+def get_initialize_params(
+    variables: dict[str, str], workspace_folders: list[WorkspaceFolder], config: ClientConfig
+) -> InitializeParams:
+    symbol_kinds = list(SymbolKind)
+    symbol_tags = list(SymbolTag)
+    semantic_token_types = [member.value for member in SemanticTokenTypes]
+    semantic_token_modifiers = [member.value for member in SemanticTokenModifiers]
     if config.semantic_tokens is not None:
         for token in config.semantic_tokens.keys():
             token_type, _, token_modifier = token.partition('.')
@@ -329,8 +313,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 semantic_token_types.append(token_type)
             if token_modifier and token_modifier not in semantic_token_modifiers:
                 semantic_token_modifiers.append(token_modifier)
-    supported_markup_kinds = cast(List[MarkupKind], [MarkupKind.Markdown.value, MarkupKind.PlainText.value])
-    folding_range_kind_value_set = cast(List[FoldingRangeKind], _str_enum_to_list(FoldingRangeKind))
+    supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
     first_folder = workspace_folders[0] if workspace_folders else None
     general_capabilities: GeneralClientCapabilities = {
         # https://microsoft.github.io/language-server-protocol/specification#regExp
@@ -370,21 +353,21 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "deprecatedSupport": True,
                 "documentationFormat": supported_markup_kinds,
                 "tagSupport": {
-                    "valueSet": completion_tag_value_set
+                    "valueSet": list(CompletionItemTag)
                 },
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
                 },
                 "insertReplaceSupport": True,
                 "insertTextModeSupport": {
-                    "valueSet": cast(List[InsertTextMode], [InsertTextMode.AdjustIndentation.value])
+                    "valueSet": [InsertTextMode.AdjustIndentation]
                 },
                 "labelDetailsSupport": True,
             },
             "completionItemKind": {
-                "valueSet": completion_kinds
+                "valueSet": list(CompletionItemKind)
             },
-            "insertTextMode": cast(InsertTextMode, InsertTextMode.AdjustIndentation.value),
+            "insertTextMode": InsertTextMode.AdjustIndentation,
             "completionList": {
                 "itemDefaults": ["editRange", "insertTextFormat", "data"]
             }
@@ -413,7 +396,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "valueSet": symbol_kinds
             },
             "tagSupport": {
-                "valueSet": symbol_tag_value_set
+                "valueSet": symbol_tags
             }
         },
         "documentLink": {
@@ -447,15 +430,15 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "dynamicRegistration": True,
             "codeActionLiteralSupport": {
                 "codeActionKind": {
-                    "valueSet": cast(List[CodeActionKind], [
-                        CodeActionKind.QuickFix.value,
-                        CodeActionKind.Refactor.value,
-                        CodeActionKind.RefactorExtract.value,
-                        CodeActionKind.RefactorInline.value,
-                        CodeActionKind.RefactorRewrite.value,
-                        CodeActionKind.SourceFixAll.value,
-                        CodeActionKind.SourceOrganizeImports.value,
-                    ])
+                    "valueSet": [
+                        CodeActionKind.QuickFix,
+                        CodeActionKind.Refactor,
+                        CodeActionKind.RefactorExtract,
+                        CodeActionKind.RefactorInline,
+                        CodeActionKind.RefactorRewrite,
+                        CodeActionKind.SourceFixAll,
+                        CodeActionKind.SourceOrganizeImports,
+                    ]
                 }
             },
             "dataSupport": True,
@@ -472,8 +455,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "rename": {
             "dynamicRegistration": True,
             "prepareSupport": True,
-            "prepareSupportDefaultBehavior": cast(
-                PrepareSupportDefaultBehavior, PrepareSupportDefaultBehavior.Identifier.value),
+            "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
         },
         "colorProvider": {
             "dynamicRegistration": True  # exceptional
@@ -481,7 +463,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "publishDiagnostics": {
             "relatedInformation": True,
             "tagSupport": {
-                "valueSet": diagnostic_tag_value_set
+                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
             },
             "versionSupport": True,
             "codeDescriptionSupport": True,
@@ -492,9 +474,10 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             "relatedDocumentSupport": True,
             "relatedInformation": True,
             "tagSupport": {
-                "valueSet": diagnostic_tag_value_set
+                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
             },
             "codeDescriptionSupport": True,
+            "markupMessageSupport": True,
             "dataSupport": True
         },
         "selectionRange": {
@@ -503,7 +486,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {
-                "valueSet": folding_range_kind_value_set
+                "valueSet": list(FoldingRangeKind)
             }
         },
         "codeLens": {
@@ -525,9 +508,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
             },
             "tokenTypes": semantic_token_types,
             "tokenModifiers": semantic_token_modifiers,
-            "formats": cast(List[TokenFormat], [
-                TokenFormat.Relative.value
-            ]),
+            "formats": [TokenFormat.Relative],
             "overlappingTokenSupport": False,
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
@@ -547,7 +528,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
         "executeCommand": {},
         "workspaceEdit": {
             "documentChanges": True,
-            "failureHandling": cast(FailureHandlingKind, FailureHandlingKind.Abort.value),
+            "failureHandling": FailureHandlingKind.Abort,
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
             }
@@ -562,7 +543,7 @@ def get_initialize_params(variables: dict[str, str], workspace_folders: list[Wor
                 "valueSet": symbol_kinds
             },
             "tagSupport": {
-                "valueSet": symbol_tag_value_set
+                "valueSet": symbol_tags
             }
         },
         "configuration": True,
@@ -793,7 +774,7 @@ class SessionBufferProtocol(Protocol):
         diagnostics: list[Diagnostic],
         kinds: list[CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> Promise[list[Command | CodeAction] | None | Error]:
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
 
     def do_code_lenses_async(self, view: sublime.View) -> None:
@@ -813,53 +794,53 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def session_async(self, capability: str, point: int | None = None) -> Session | None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def sessions_async(self, capability: str | None = None) -> list[Session]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def session_views_async(self) -> list[SessionViewProtocol]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def purge_changes_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def trigger_on_pre_save_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_session_shutdown_async(self, session: Session) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_diagnostics_async(
         self, location: sublime.Region | int, max_diagnostic_severity_level: int = DiagnosticSeverity.Hint
     ) -> list[tuple[SessionBufferProtocol, list[Diagnostic]]]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
-    def on_diagnostics_updated_async(self, is_view_visible: bool) -> None:
-        raise NotImplementedError()
+    def on_diagnostics_updated_async(self, session_buffer: SessionBufferProtocol, is_view_visible: bool) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def get_language_id(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_uri(self) -> DocumentUri:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @overload
     def do_signature_help_async(
@@ -877,23 +858,31 @@ class AbstractViewListener(ABC):
 
     @abstractmethod
     def do_signature_help_async(self, trigger_kind: SignatureHelpTriggerKind, trigger_char: str | None = None) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def navigate_signature_help(self, forward: bool) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_documentation_popup_toggle(self, *, opened: bool) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def on_post_move_window_async(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_request_flags(self, session: Session) -> RequestFlags:
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_userprefs_changed_async(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_change_event_action(self, action: ChangeEventAction) -> None:
+        raise NotImplementedError
 
 
 class Logger(ABC):
@@ -974,16 +963,16 @@ _WORK_DONE_PROGRESS_PREFIX = "$ublime-work-done-progress-"
 _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 
 
-class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
+class Session(APIHandler, TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
                  config: ClientConfig, plugin_data: tuple[type[AbstractPlugin | LspPlugin], PluginContext] | None,
     ) -> None:
-        self.transport: Transport | None = None
+        self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers: dict[int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
+        self._response_handlers: dict[str | int, tuple[Request[Any, Any], Callable[[Any], None], Callable[[ResponseError], None]]] = {}  # noqa: E501
         self.config = config
         self.config_status_message = ''
         self.manager = weakref.ref(manager)
@@ -1135,7 +1124,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
             if not file_name:
                 # We're closing down
                 return False
-            elif not self.handles_path(file_name, inside_workspace):
+            if not self.handles_path(file_name, inside_workspace):
                 return False
         if self.config.match_view(view, scheme, self.window, self._workspace_folders):
             # If there's no capability requirement then this session can handle the view
@@ -1143,8 +1132,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return True
             if sv := self.session_view_for_view_async(view):
                 return sv.has_capability_async(capability)
-            else:
-                return self.has_capability(capability)
+            return self.has_capability(capability)
         return False
 
     def has_capability(self, capability: str, *, check_views: bool = False) -> bool:
@@ -1241,7 +1229,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
         self,
         variables: dict[str, str],
         working_directory: str | None,
-        transport: Transport,
+        transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
         self.transport = transport
@@ -1351,8 +1339,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return promise
-                else:
-                    resolve(None)
+                resolve(None)
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
@@ -2012,7 +1999,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
     def on_window_show_document(self, params: ShowDocumentParams) -> Promise[ShowDocumentResult]:
         uri = params.get("uri")
 
-        def success(b: None | bool | sublime.View) -> ShowDocumentResult:
+        def success(b: bool | sublime.View | None) -> ShowDocumentResult:
             if isinstance(b, bool):
                 pass
             elif isinstance(b, sublime.View):
@@ -2074,7 +2061,8 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 #    call window/workDoneProgress/create before hand. In that case, we check the 'kind' field of the
                 #    progress data. If the 'kind' field is 'begin', we set up a progress reporter anyway.
                 try:
-                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])  # type: ignore
+                    token = str(token)
+                    request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
                     self._invoke_views(request, "on_request_progress", request_id, params)
                     return
@@ -2233,21 +2221,20 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
 
     def exit(self) -> None:
         self.send_notification(Notification.exit())
-        try:
-            self.transport.close()  # type: ignore
-        except AttributeError:
-            pass
+        if self.transport:
+            self.transport.close()
+            self.transport = None
 
     def send_payload(self, payload: JSONRPCMessage) -> None:
         try:
-            self.transport.send(payload)  # type: ignore
+            self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
         except AttributeError:
             pass
 
     def deduce_payload(
         self,
-        payload: dict[str, Any]
-    ) -> tuple[Callable | None, Any, int | None, str | None, str | None]:
+        payload: JSONRPCMessage
+    ) -> tuple[Callable | None, Any, str | int | None, str | None, str | None]:
         if "method" in payload:
             method = payload["method"]
             handler = self._get_handler(method)
@@ -2270,7 +2257,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 return res
         elif "id" in payload:
             response_id = payload["id"]
-            if response_id is None:
+            if response_id is None:  # pyright: ignore[reportUnnecessaryComparison]
                 self._logger.incoming_response('<missing>', payload.get("error"), True)
                 return (None, None, None, None, None)
             handler, method, result, is_error = self.response_handler(response_id, payload)
@@ -2285,10 +2272,10 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                     response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
-            debug("Unknown payload type: ", payload)
+            debug("Unknown payload type: ", payload)  # pyright: ignore[reportUnreachable]
         return (None, None, None, None, None)
 
-    def on_payload(self, payload: dict[str, Any]) -> None:
+    def on_payload(self, payload: JSONRPCMessage) -> None:
         handler, result, req_id, typestr, _method = self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
@@ -2313,7 +2300,7 @@ class Session(APIHandler, TransportCallbacks['dict[str, Any]']):
                 result_promise.then(self.send_response)
 
     def response_handler(
-        self, response_id: int, response: dict[str, Any]
+        self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
         matching_handler = self._response_handlers.pop(response_id)
         if not matching_handler:

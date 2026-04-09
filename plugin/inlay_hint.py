@@ -113,7 +113,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
-    html = f"""
+    return f"""
     <body id="lsp-inlay-hint">
         <style>
             .inlay-hint {{
@@ -126,7 +126,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
         </div>
     </body>
     """
-    return html
 
 
 def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
@@ -156,7 +155,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 }
             })
             result += f'<a href="{inlay_hint_click_command}">'
-        truncated = len(label) > truncate_limit and truncate_limit > 0
+        truncated = len(label) > truncate_limit > 0
         truncated_label = label[:truncate_limit - 1] + '…' if truncated else label
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncation_tooltip = f'\n{html.escape(label)}' if truncated else ""
@@ -167,7 +166,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         return result
     remaining_truncate_limit = truncate_limit
     full_label = "".join(label_part['value'] for label_part in label)
-    full_label_truncated = len(full_label) > truncate_limit and truncate_limit > 0
+    full_label_truncated = len(full_label) > truncate_limit > 0
     for label_part in label:
         if remaining_truncate_limit < 0 and truncate_limit > 0:
             break

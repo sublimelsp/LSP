@@ -81,6 +81,7 @@ class RegionKey(StrEnum):
 
 class ChangeEventAction(IntEnum):
     CUT = auto()
+    INSERT_NEWLINE = auto()
     OTHER = auto()
     PASTE = auto()
     REDO = auto()
@@ -247,6 +248,8 @@ DIAGNOSTIC_TAG_SCOPES: dict[DiagnosticTag, str] = {
     DiagnosticTag.Deprecated: 'markup.deprecated.lsp'
 }
 
+SUPPORTED_DIAGNOSTIC_TAGS = list(DIAGNOSTIC_TAG_SCOPES)
+
 DOCUMENT_HIGHLIGHT_KIND_SCOPES: dict[DocumentHighlightKind, str] = {
     DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
     DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
@@ -337,7 +340,7 @@ SEMANTIC_TOKENS_MAP = {
     "struct.declaration": "entity.name.struct.lsp",
     "struct.defaultLibrary": "support.struct.lsp",
     "struct.definition": "entity.name.struct.lsp",
-    "typeParameter": "variable.parameter.generic.lsp",
+    "typeParameter": "variable.parameter.type.lsp",
     "parameter": "variable.parameter.lsp",
     "variable": "variable.other.lsp",
     "variable.readonly": "variable.other.constant.lsp",

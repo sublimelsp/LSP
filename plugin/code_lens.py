@@ -154,7 +154,7 @@ class LspCodeLensCommand(LspTextCommand):
                 commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:
             return
-        elif len(commands) == 1:
+        if len(commands) == 1:
             self.on_select(commands, 0)
         elif window := self.view.window():
             window.show_quick_panel(

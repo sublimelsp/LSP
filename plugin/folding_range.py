@@ -119,8 +119,8 @@ class LspFoldCommand(LspTextCommand):
             pt = selection[0].b
         for folding_range in sorted_folding_ranges(self.folding_ranges):
             region = range_to_region(folding_range_to_range(folding_range), self.view)
-            if (strict and region.contains(pt) or
-                    not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt)) and \
+            if ((strict and region.contains(pt)) or
+                    (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(pt))) and \
                     not self.view.is_folded(region):
                 # Store the relevant folding region, so that we don't need to do the same computation again in
                 # self.is_visible and self.run
@@ -128,10 +128,9 @@ class LspFoldCommand(LspTextCommand):
                 kind = folding_range.get('kind')
                 if kind == FoldingRangeKind.Imports:
                     return "LSP: Fold Imports"
-                elif kind:
+                if kind:
                     return f"LSP: Fold this {kind.title()}"
-                else:
-                    return "LSP: Fold"
+                return "LSP: Fold"
         return "LSP <debug>"  # is_visible will return False
 
     def run(
@@ -166,8 +165,8 @@ class LspFoldCommand(LspTextCommand):
         if response:
             for folding_range in sorted_folding_ranges(response):
                 region = range_to_region(folding_range_to_range(folding_range), self.view)
-                if (strict and region.contains(point) or
-                        not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point)) and \
+                if ((strict and region.contains(point)) or
+                        (not strict and sublime.Region(self.view.line(region.a).a, region.b).contains(point))) and \
                         not self.view.is_folded(region):
                     self.view.fold(region)
                     return

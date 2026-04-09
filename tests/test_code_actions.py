@@ -75,14 +75,13 @@ def create_test_code_action2(command_name: str, command_args: list[Any] | None =
 
 
 def create_disabled_code_action(view: sublime.View, version: int, edits: list[tuple[str, Range]]) -> dict[str, Any]:
-    action = {
+    return {
         "title": "Fix errors",
         "edit": create_code_action_edit(view, version, edits),
         "disabled": {
             "reason": "Do not use"
         },
     }
-    return action
 
 
 def create_test_diagnostics(diagnostics: list[tuple[str, Range]]) -> dict:
@@ -467,10 +466,15 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         initial_content = 'a\n'
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
+        range_a = range_from_points(Point(0, 0), Point(0, 1))
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([('issue a', range_a)])
+        )
         code_action = create_disabled_code_action(
             self.view,
             self.view.change_count(),
-            [(';', range_from_points(Point(0, 0), Point(0, 1)))]
+            [(';', range_a)]
         )
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 1)]})  # Select a

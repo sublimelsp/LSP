@@ -55,24 +55,32 @@ def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[C
     return bool(action.get('diagnostics'))
 
 
-def filter_code_actions_for_diagnostics(
-    config_name: str, diagnostics_count: int, response: list[Command | CodeAction] | None | Error
-) -> tuple[str, list[Command | CodeAction]]:
+def is_quickfix(action: Command | CodeAction) -> bool:
+    # We consider code actions without `kind` property also to be a "quickfix".
+    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction
+    # > In version 1.0 of the protocol, there weren't any source or refactoring code actions. Code actions were solely
+    # > used to (quick) fix code, not to write / rewrite code. So if a client asks for code actions without any kind,
+    # > the standard quick fix code actions should be returned.
+    return kind_contains_other_kind(CodeActionKind.QuickFix, action.get('kind', CodeActionKind.QuickFix))
+
+
+def filter_quickfix_actions(
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+) -> list[Command | CodeAction]:
     if isinstance(response, Error) or not response:
-        code_actions: list[Command | CodeAction] = []
-    elif diagnostics_count == 1:
-        # If there is only a single diagnostic from this server, all enabled code actions can be shown, because only
-        # "Quickfix" actions were requested. Strictly speaking, the code actions aren't necessarily associated with the
-        # diagnostic, but this heuristic works quite well in practice.
-        code_actions = [action for action in response if not action.get('disabled', False)]
-    else:
-        # If there are multiple diagnostics for the hover region, we can only use those code actions which include
-        # the "diagnostics" property, because we need to match each code action to its corresponding diagnostics.
-        code_actions = [
+        return []
+    if only_with_diagnostics:
+        # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
+        # include the "diagnostics" property, because each code action needs to be matched with its corresponding
+        # diagnostics.
+        return [
             action for action in response
-            if is_code_action_with_diagnostics(action) and not action.get('disabled', False)
+            if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
         ]
-    return config_name, code_actions
+    # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
+    # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
+    # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
+    return [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
 
 
 class CodeActionsManager:
@@ -108,8 +116,7 @@ class CodeActionsManager:
                 cache_key, task = self._response_cache
                 if location_cache_key == cache_key:
                     return task
-                else:
-                    self._response_cache = None
+                self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
             self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
             self.refactor_actions_cache.clear()
@@ -430,7 +437,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
@@ -475,6 +482,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def description(self, index: int, event: dict | None = None) -> str | None:
         if -1 < index < len(self.actions_cache):
             return self.actions_cache[index][1]['title']
+        return None
 
     def want_event(self) -> bool:
         return True
@@ -491,7 +499,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view

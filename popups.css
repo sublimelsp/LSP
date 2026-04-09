@@ -73,6 +73,18 @@
 .lsp_popup .m-0 {
     margin: 0;
 }
+.diagnostics p {
+    display: inline;
+}
+.diagnostics code,
+.diagnostics code.highlight {
+    background-color: color(white alpha(0.1));
+    border-color: transparent;
+}
+html.light .diagnostics code,
+html.light .diagnostics code.highlight {
+    background-color: color(black alpha(0.1));
+}
 .color-muted {
     color: color(var(--foreground) alpha(0.6));
 }

@@ -103,7 +103,7 @@ class SessionView:
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(False)
+            listener.on_diagnostics_updated_async(self.session_buffer, False)
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -147,11 +147,11 @@ class SessionView:
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
         keys = [f"lsp_semantic_{session_name}_{key}" for key in range(1, 100)]
-        if document_highlight_style in ("background", "fill"):
+        if document_highlight_style in {"background", "fill"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if hover_highlight_style in ("background", "fill"):
+        if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
@@ -161,11 +161,11 @@ class SessionView:
             keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
             keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
-        if document_highlight_style in ("underline", "stippled"):
+        if document_highlight_style in {"underline", "stippled"}:
             for kind in DocumentHighlightKind:
                 keys.extend((document_highlight_key(kind, multiline=True),
                              document_highlight_key(kind, multiline=False)))
-        if hover_highlight_style in ("underline", "stippled"):
+        if hover_highlight_style in {"underline", "stippled"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)
@@ -296,7 +296,7 @@ class SessionView:
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(is_view_visible)
+            listener.on_diagnostics_updated_async(self.session_buffer, is_view_visible)
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines

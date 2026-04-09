@@ -120,7 +120,7 @@ class LspRenamePathCommand(LspWindowCommand):
 
     def create_will_rename_requests_async(
         self, file_rename: FileRename
-    ) -> Generator[Promise[tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]]]:
+    ) -> Generator[Promise[tuple[WorkspaceEdit | Error | None, weakref.ref[Session]]]]:
         for session in self.sessions():
             filters = session.get_capability('workspace.fileOperations.willRename.filters') or []
             if match_file_operation_filters(filters, file_rename['oldUri']):
@@ -128,11 +128,11 @@ class LspRenamePathCommand(LspWindowCommand):
                     .then(partial(self.return_response_with_session, weakref.ref(session)))
 
     def return_response_with_session(
-        self, weak_session: weakref.ref[Session], response: WorkspaceEdit | None | Error
-    ) -> tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]:
+        self, weak_session: weakref.ref[Session], response: WorkspaceEdit | Error | None
+    ) -> tuple[WorkspaceEdit | Error | None, weakref.ref[Session]]:
         return (response, weak_session)
 
-    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | None | Error, weakref.ref[Session]]],
+    def handle_rename_async(self, responses: list[tuple[WorkspaceEdit | Error | None, weakref.ref[Session]]],
                             label: str, rename_command_args: dict[str, Any]) -> None:
         for response, weak_session in responses:
             if (session := weak_session()) and response:

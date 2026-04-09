@@ -7,11 +7,10 @@ from abc import abstractmethod
 from typing import Literal
 from typing import Protocol
 from typing import Tuple
-from typing import Union
 
 DEFAULT_WATCH_KIND = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 
-FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
+FileWatcherEventType = Literal['create', 'change', 'delete']
 FilePath = str
 FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 

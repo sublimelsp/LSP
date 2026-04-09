@@ -14,7 +14,7 @@ from .core.protocol import Response
 from .core.protocol import ServerNotification
 from .core.protocol import ServerResponse
 from .core.settings import client_configs
-from .core.transports import Transport
+from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.types import method2attr
 from .core.url import parse_uri
@@ -53,8 +53,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     'APIHandler',
-    'notification_handler',
     'PluginStartError',
+    'notification_handler',
     'request_handler',
 ]
 
@@ -419,7 +419,7 @@ class LspPlugin(APIHandler):
         return context.workspace_folders[0].path if context.workspace_folders else None
 
     @classmethod
-    def on_before_initialize(cls, context: PluginContext, transport: Transport[str]) -> None:
+    def on_before_initialize(cls, context: PluginContext, transport: TransportWrapper) -> None:
         """
         Called after the transport is established but before the LSP ``initialize`` request is sent.
 
@@ -558,7 +558,7 @@ class AbstractPlugin(APIHandler, ABC):
         have your settings file called "LSP-foobar.sublime-settings", then you don't even need to re-implement the
         configuration method (see below).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:

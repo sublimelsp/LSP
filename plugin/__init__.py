@@ -31,7 +31,7 @@ from .core.registry import LspWindowCommand
 from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import SessionViewProtocol
-from .core.transports import Transport
+from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.types import DebouncerNonThreadSafe
 from .core.types import matches_pattern
@@ -45,17 +45,13 @@ from .core.workspace import WorkspaceFolder
 
 # This is the public API for LSP-* packages
 __all__ = [
-    '__version__',
     'AbstractPlugin',
-    'apply_text_edits',
     'ClientConfig',
     'ClientNotification',
     'ClientRequest',
     'ClientResponse',
-    'css',
     'DebouncerNonThreadSafe',
     'DottedDict',
-    'filename_to_uri',
     'FileWatcher',
     'FileWatcherEvent',
     'FileWatcherEventType',
@@ -64,17 +60,11 @@ __all__ = [
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',
-    'matches_pattern',
     'Notification',
-    'notification_handler',
-    'parse_uri',
     'PluginContext',
     'PluginStartError',
     'Promise',
-    'register_file_watcher_implementation',
-    'register_plugin',
     'Request',
-    'request_handler',
     'Response',
     'ServerNotification',
     'ServerRequest',
@@ -82,9 +72,19 @@ __all__ = [
     'Session',
     'SessionBufferProtocol',
     'SessionViewProtocol',
-    'Transport',
+    'TransportWrapper',
+    'WorkspaceFolder',
+    '__version__',
+    'apply_text_edits',
+    'css',
+    'filename_to_uri',
+    'matches_pattern',
+    'notification_handler',
+    'parse_uri',
+    'register_file_watcher_implementation',
+    'register_plugin',
+    'request_handler',
     'unregister_plugin',
     'uri_from_view',
     'uri_to_filename',  # deprecated
-    'WorkspaceFolder',
 ]

@@ -416,6 +416,9 @@ class Point:
             return NotImplemented
         return (self.row, self.col) < (other.row, other.col)
 
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
     @classmethod
     def from_lsp(cls, point: Position) -> Point:
         return Point(point['line'], point['character'])
@@ -912,7 +915,7 @@ class CodeLensResolveResponse(TypedDict):
 
 class ColorPresentationResponse(TypedDict):
     method: Literal['textDocument/colorPresentation']
-    result: List['ColorPresentation']
+    result: Union[List['ColorPresentation'], None]
 
 
 class CompletionResponse(TypedDict):
@@ -947,7 +950,7 @@ class DiagnosticRefreshResponse(TypedDict):
 
 class DocumentColorResponse(TypedDict):
     method: Literal['textDocument/documentColor']
-    result: List['ColorInformation']
+    result: Union[List['ColorInformation'], None]
 
 
 class DocumentDiagnosticResponse(TypedDict):

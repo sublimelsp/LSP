@@ -56,8 +56,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
         # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
         # setting).
-        if output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel or \
-                output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel:
+        if (output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel) or \
+                (output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel):
             return False
         if self.applies_to_context_menu(event):
             return self.is_enabled(

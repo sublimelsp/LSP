@@ -92,6 +92,7 @@ class LspShowScopeNameCommand(LspTextCommand):
                             token_modifiers = ', '.join(token.modifiers) if token.modifiers else '-'
                             return (token.type, token_modifiers, session.config.name)
                     break
+        return None
 
     def _render_with_plain_string_stackframes(
         self,

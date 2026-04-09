@@ -106,7 +106,7 @@ class TreeDataProvider(ABC):
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:
         """Implement this to return the children for the given element or root (if no element is passed)."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_tree_item(self, element: T) -> TreeItem:
@@ -114,7 +114,7 @@ class TreeDataProvider(ABC):
         Implement this to return the UI representation (TreeItem) of the element that gets displayed in the
         TreeViewSheet.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class TreeViewSheet(sublime.HtmlSheet):
@@ -171,10 +171,9 @@ class TreeViewSheet(sublime.HtmlSheet):
         if node.is_resolved:
             self._update_contents()
             return
-        else:
-            self.data_provider.get_children(node.element) \
-                .then(partial(self._add_children, node_id)) \
-                .then(lambda _: self._update_contents())
+        self.data_provider.get_children(node.element) \
+            .then(partial(self._add_children, node_id)) \
+            .then(lambda _: self._update_contents())
 
     def collapse_item(self, node_id: str) -> None:
         assert node_id in self.nodes

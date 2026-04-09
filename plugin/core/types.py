@@ -13,6 +13,10 @@ from .constants import LANGUAGE_IDENTIFIERS
 from .file_watcher import FileWatcherEventType
 from .logging import debug
 from .logging import set_debug_logging
+from .transports import StdioTransportConfig
+from .transports import TcpClientTransportConfig
+from .transports import TcpServerTransportConfig
+from .transports import TransportConfig
 from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
@@ -25,6 +29,7 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
+from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
@@ -40,7 +45,6 @@ import contextlib
 import fnmatch
 import os
 import posixpath
-import socket
 import sublime
 import time
 import weakref
@@ -48,7 +52,6 @@ import weakref
 if TYPE_CHECKING:
     from .workspace import WorkspaceFolder
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
@@ -180,8 +183,8 @@ class SettingsRegistration:
         weak_self = weakref.ref(self)
 
         def on_change_handler() -> None:
-            if _self := weak_self():
-                on_change(_self)
+            if self_ := weak_self():
+                on_change(self_)
 
         self.settings.add_on_change("LSP", on_change_handler)
 
@@ -380,7 +383,7 @@ class Settings:
 
     def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
         default = sublime.RegionFlags.NO_UNDO
-        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
+        if style_str in {"background", "fill"}:  # Backwards-compatible with "fill"
             style = default | sublime.RegionFlags.DRAW_NO_OUTLINE
             return style, style
         if style_str == "outline":
@@ -394,7 +397,7 @@ class Settings:
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
         default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
         # This method could be a dict or lru_cache
-        if style_str == "":
+        if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE
         if style_str == "box":
             return default
@@ -412,7 +415,7 @@ class Settings:
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
-        elif isinstance(self.diagnostics_highlight_style, dict):
+        if isinstance(self.diagnostics_highlight_style, dict):
             flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
@@ -421,9 +424,8 @@ class Settings:
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
-        else:
-            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
-            return [None] * 4  # default styling
+        # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
+        return [None] * 4  # default styling
 
 
 @dataclass
@@ -518,7 +520,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
             flags |= IGNORECASE
         return globmatch(file_name, pattern['glob'], flags=flags)
 
-    return any(matches(_filter) for _filter in filters)
+    return any(matches(filter_) for filter_ in filters)
 
 
 # method -> (capability dotted path, optional registration dotted path)
@@ -635,15 +637,14 @@ class Capabilities(DottedDict):
         if not isinstance(stored_registration_id, str):
             debug("stored registration ID at", registration_path, "is not a string")
             return None
-        elif stored_registration_id != registration_id:
+        if stored_registration_id != registration_id:
             msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
             debug(msg.format(stored_registration_id, registration_id))
             return None
-        else:
-            discarded = self.get(capability_path)
-            self.remove(capability_path)
-            self.remove(registration_path)
-            return discarded
+        discarded = self.get(capability_path)
+        self.remove(capability_path)
+        self.remove(registration_path)
+        return discarded
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
@@ -668,10 +669,9 @@ class Capabilities(DottedDict):
         save = self.get("textDocumentSync.save")
         if isinstance(save, bool):
             return save, False
-        elif isinstance(save, dict):
+        if isinstance(save, dict):
             return True, bool(save.get("includeText"))
-        else:
-            return False, False
+        return False, False
 
     def should_notify_did_close(self) -> bool:
         return "textDocumentSync.didClose" in self
@@ -681,7 +681,7 @@ def _translate_path(path: str, source: str, destination: str) -> tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
+    if path.startswith(source) and len(path) > len(source) and path[len(source)] in {"/", "\\"}:
         return path.replace(source, destination, 1), True
     return path, False
 
@@ -714,36 +714,19 @@ class PathMap:
             result.append(PathMap(local, remote))
         return result
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathMap):
             return False
         return self._local == other._local and self._remote == other._remote
+
+    def __hash__(self) -> int:
+        return hash(self.__slots__)
 
     def map_from_local_to_remote(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._local, self._remote)
 
     def map_from_remote_to_local(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._remote, self._local)
-
-
-class TransportConfig:
-    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
-
-    def __init__(
-        self,
-        name: str,
-        command: list[str],
-        tcp_port: int | None,
-        env: dict[str, str],
-        listener_socket: socket.socket | None
-    ) -> None:
-        if not command and not tcp_port:
-            raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
-        self.name = name
-        self.command = command
-        self.tcp_port = tcp_port
-        self.env = env
-        self.listener_socket = listener_socket
 
 
 class DefaultViewStatusHandler(ViewStatusHandler):
@@ -781,7 +764,7 @@ class ClientConfig:
         enabled: bool = True,
         initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
-        env: dict[str, str | list[str]] | None = None,
+        env: dict[str, str] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
         disabled_capabilities: DottedDict | None = None,
         file_watcher: FileWatcherConfig | None = None,
@@ -1013,7 +996,7 @@ class ClientConfig:
             all_settings={**src_config._all_settings, **override}  # shallow merge
         )
 
-    def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
+    def create_transport_config(self) -> TransportConfig:
         """
         Build a :class:`TransportConfig` ready for starting the language server.
 
@@ -1023,35 +1006,11 @@ class ClientConfig:
         :param variables: Sublime Text variable substitution dict (e.g. from `window.extract_variables()`). A `"port"`
             key is added automatically when a TCP port is in use.
         """
-        tcp_port: int | None = None
-        listener_socket: socket.socket | None = None
         if self.tcp_port is not None:
-            # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
-                # -1 means pick any free port
-                if self.tcp_port < -1:
-                    tcp_port = -self.tcp_port
-                # Create a listener socket for incoming connections
-                listener_socket = _start_tcp_listener(tcp_port)
-                tcp_port = int(listener_socket.getsockname()[1])
-            else:
-                tcp_port = _find_free_port() if self.tcp_port == 0 else self.tcp_port
-        if tcp_port is not None:
-            variables["port"] = str(tcp_port)
-        command = sublime.expand_variables(self.command, variables)
-        command = [os.path.expanduser(arg) for arg in command]
-        if tcp_port is not None:
-            # DEPRECATED -- replace {port} with $port or ${port} in your client config
-            command = [a.replace('{port}', str(tcp_port)) for a in command]
-        env = os.environ.copy()
-        for key, value in self.env.items():
-            if isinstance(value, list):
-                value = os.path.pathsep.join(value)
-            if key == 'PATH':
-                env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
-            else:
-                env[key] = sublime.expand_variables(value, variables)
-        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
+                return TcpServerTransportConfig(None if self.tcp_port == -1 else -self.tcp_port)
+            return TcpClientTransportConfig(None if self.tcp_port == 0 else self.tcp_port)
+        return StdioTransportConfig()
 
     def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
         self._view_status_handler = handler
@@ -1094,9 +1053,8 @@ class ClientConfig:
         if plugin := get_plugin(self.name):
             if issubclass(plugin, AbstractPlugin):
                 return plugin.is_applicable(view, self)
-            else:
-                plugin_context = PluginContext(self, view, window, workspace_folders)
-                return plugin.is_applicable(plugin_context)
+            plugin_context = PluginContext(self, view, window, workspace_folders)
+            return plugin.is_applicable(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False
@@ -1130,7 +1088,7 @@ class ClientConfig:
         :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
         """
         scheme, path = parse_uri(uri)
-        if scheme not in ("file", "res"):
+        if scheme not in {"file", "res"}:
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
         if self.path_maps:
             for path_map in self.path_maps:
@@ -1152,13 +1110,12 @@ class ClientConfig:
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 if value:
                     # If it's not empty we'll continue the walk
                     continue
-                else:
-                    # This might be a leaf node
-                    return True
+                # This might be a leaf node
+                return True
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:
@@ -1170,16 +1127,19 @@ class ClientConfig:
         items: list[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
-                items.append(f"{k}={repr(v)}")
+                items.append(f"{k}={v!r}")
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
         for k, v in self.__dict__.items():
             if not k.startswith("_") and v != getattr(other, k):
                 return False
         return True
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
 
 
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
@@ -1194,18 +1154,3 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(selector, str):
         return selector
     return ""
-
-
-def _find_free_port() -> int:
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-def _start_tcp_listener(tcp_port: int | None) -> socket.socket:
-    sock = socket.socket()
-    sock.bind(('localhost', tcp_port or 0))
-    sock.settimeout(TCP_CONNECT_TIMEOUT)
-    sock.listen(1)
-    return sock

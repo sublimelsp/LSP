@@ -37,7 +37,6 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import LspSettingsChangeListener
 from .settings import userprefs
-from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
@@ -291,8 +290,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             config.set_view_status(initiating_view, "starting...")
             plugin_data = (plugin_class, plugin_context) if plugin_class else None
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_data)
-            transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, cwd, session)
+            transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
             if plugin_class:
                 if issubclass(plugin_class, AbstractPlugin):
                     plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
@@ -308,7 +306,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             self._new_session = session
         except PluginStartError as ex:
             config.erase_view_status(initiating_view)
-            message = f"cannot start {config.name}: {str(ex)}"
+            message = f"cannot start {config.name}: {ex!s}"
             self._config_manager.disable_config(config.name, only_for_session=True)
             # Continue with handling pending listeners
             self._new_session = None
@@ -318,7 +316,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                         'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
                        f'Palette.\n\n--- Error: ---\n{e}')
-            exception_log(f"Unable to start subprocess for {config.name}", e)
+            exception_log(f"Unable to initialize language server for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
@@ -351,13 +349,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loggers.append(logger_map[logger_type])
         if len(loggers) == 0:
             return RouterLogger()  # logs nothing
-        elif len(loggers) == 1:
+        if len(loggers) == 1:
             return loggers[0](self, config_name)
-        else:
-            router_logger = RouterLogger()
-            for logger in loggers:
-                router_logger.append(logger(self, config_name))
-            return router_logger
+        router_logger = RouterLogger()
+        for logger in loggers:
+            router_logger.append(logger(self, config_name))
+        return router_logger
 
     def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
@@ -421,7 +418,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         'choose Cancel to disable it for this window for the duration of the current session. '
                         'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
-                    msg += f"\n\n--- Error: ---\n{str(exception)}"
+                    msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
@@ -552,7 +549,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         else:
             self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
         if userprefs().show_view_status:
-            statuses = [status.replace('LSP-', '') for (_, status) in self._view_statuses[view_id].items()]
+            statuses = [status.replace('LSP-', '') for status in self._view_statuses[view_id].values()]
             if statuses:
                 statuses.sort()
                 view_status = f"LSP: {' | '.join(statuses)}"
@@ -613,6 +610,8 @@ class WindowRegistry(LspSettingsChangeListener):
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
                 sublime.set_timeout_async(session.on_userprefs_changed_async)
+            for listener in wm.listeners():
+                sublime.set_timeout_async(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:

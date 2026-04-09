@@ -20,7 +20,7 @@ import sublime_plugin
 import subprocess
 import webbrowser
 
-opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
+g_opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')
 
 
@@ -75,8 +75,8 @@ def _return_existing_view(flags: int, existing_view_group: int, active_group: in
 
 def _find_open_file(window: sublime.Window, fname: str, group: int = -1) -> sublime.View | None:
     """A replacement for Window.find_open_file that prefers the active view instead of the leftmost one."""
-    _group = window.active_group() if group == -1 else group
-    view = window.active_view_in_group(_group)
+    group_ = window.active_group() if group == -1 else group
+    view = window.active_view_in_group(group_)
     if view and fname == view.file_name():
         return view
     return window.find_open_file(fname, group) if ST_VERSION >= 4136 else window.find_open_file(fname)
@@ -108,21 +108,20 @@ def open_file(
         return Promise.resolve(view)
 
     # Is the view opening right now? Then return the associated unresolved promise
-    for fn, value in opening_files.items():
+    for fn, value in g_opening_files.items():
         if fn == file or os.path.samefile(fn, file):
             # Return the unresolved promise. A future on_load event will resolve the promise.
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
     def fullfill(resolve: ResolveFunc[sublime.View | None]) -> None:
-        global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
-        opening_files[file] = (None, resolve)  # type: ignore
+        g_opening_files[file] = (None, resolve)  # type: ignore
 
     promise = Promise(fullfill)
-    tup = opening_files[file]
+    tup = g_opening_files[file]
     # Save the promise in the first element of the tuple so that the for-loop above can return it
-    opening_files[file] = (promise, tup[1])
+    g_opening_files[file] = (promise, tup[1])
     return promise
 
 

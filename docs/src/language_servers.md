@@ -472,6 +472,25 @@ An LSP server for Markdown that provides completion, go to definition, find refe
 
 Follow installation instructions on [LSP-marksman](https://github.com/sublimelsp/LSP-marksman).
 
+### rumdl
+
+[rumdl](https://rumdl.dev) provides an LSP server for Markdown.
+
+1. [Install rumdl](https://rumdl.dev/getting-started/installation/).
+1. Configure rumdl as an [LSP server](https://rumdl.dev/lsp/):
+
+   ```jsonc
+   {
+       "clients": {
+           "rumdl": {
+               "enabled": true,
+               "command": ["rumdl", "server"],
+               "selector": "text.html.markdown"
+           }
+       }
+   }
+   ```
+
 ## MediaWiki
 
 1. Install the [Mediawiker](https://packagecontrol.io/packages/Mediawiker) package from Package Control for syntax highlighting.

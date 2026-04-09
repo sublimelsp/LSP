@@ -90,6 +90,8 @@ def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) 
 
     ```python
     from LSP.plugin import register_plugin
+    from LSP.plugin import unregister_plugin
+    from LSP.plugin import AbstractPlugin
 
 
     class MyPlugin(AbstractPlugin):
@@ -97,10 +99,10 @@ def register_plugin(plugin: type[AbstractPlugin], notify_listener: bool = True) 
 
 
     def plugin_loaded():
-        MyPlugin.register_plugin()
+        register_plugin(MyPlugin)
 
     def plugin_unloaded():
-        MyPlugin.unregister_plugin()
+        unregister_plugin(MyPlugin)
     ```
 
     If you need to install supplementary files (e.g. javascript source code that implements the actual server), do so

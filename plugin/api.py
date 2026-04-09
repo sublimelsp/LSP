@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     from .core.views import MarkdownLangMap
     from .core.workspace import WorkspaceFolder
     from weakref import ref
-    import weakref
 
 __all__ = [
     'APIHandler',
@@ -736,7 +735,7 @@ class AbstractPlugin(APIHandler, ABC):
         """
         return None
 
-    def __init__(self, weaksession: weakref.ref[Session]) -> None:
+    def __init__(self, weaksession: ref[Session]) -> None:
         """
         Constructs a new instance. Your instance is constructed after a response to the initialize request.
 

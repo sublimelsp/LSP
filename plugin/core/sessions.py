@@ -1248,11 +1248,11 @@ class Session(APIHandler, TransportCallbacks):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
         if self._plugin_data:
-            plugin_class, plugin_context = self._plugin_data
+            plugin_class, _ = self._plugin_data
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             if issubclass(plugin_class, LspPlugin):
-                self._plugin = plugin_class(weakref.ref(self), plugin_context)
+                self._plugin = plugin_class(weakref.ref(self))
                 server_response: ServerResponse = {'method': 'initialize', 'result': result}
                 self._plugin.on_server_response_async(server_response)
             else:

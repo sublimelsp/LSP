@@ -463,7 +463,7 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    def __init__(self, weaksession: ref[Session], context: PluginContext) -> None:
+    def __init__(self, weaksession: ref[Session]) -> None:
         """
         Constructs a new instance. Your instance is constructed after a response to the initialize request.
 
@@ -472,7 +472,6 @@ class LspPlugin(APIHandler):
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession
-        self.context: PluginContext = context
 
     def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """

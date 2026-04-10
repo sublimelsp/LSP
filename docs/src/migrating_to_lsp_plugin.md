@@ -207,9 +207,10 @@ def on_post_start(cls, window, initiating_view, workspace_folders, configuration
 
 ```python
 # After
-def __init__(self, weaksession, context: PluginContext) -> None:
-    super().__init__(weaksession, context)
-    log_start(context.window, context.configuration)
+def __init__(self, weaksession) -> None:
+    super().__init__(weaksession)
+    if session := weaksession():
+        log_start(session.window, session.config)
 ```
 
 ---

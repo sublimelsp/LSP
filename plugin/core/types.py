@@ -26,7 +26,6 @@ from typing import Callable
 from typing import cast
 from typing import Generator
 from typing import Iterable
-from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar

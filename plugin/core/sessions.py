@@ -1122,7 +1122,7 @@ class Session(APIHandler, TransportCallbacks):
     # --- capability observers -----------------------------------------------------------------------------------------
 
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
-        if not self.state == ClientStates.READY:
+        if self.state != ClientStates.READY:
             return False
         if self._plugin and self._plugin.should_ignore(view):  # TODO: remove after next release
             debug(view, "ignored by plugin", self._plugin.__class__.__name__)
@@ -1700,7 +1700,7 @@ class Session(APIHandler, TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
-        if not self.config.diagnostics_mode == 'workspace':
+        if self.config.diagnostics_mode != 'workspace':
             return
         if not self.get_workspace_folders():
             return

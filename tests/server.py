@@ -41,11 +41,6 @@ __package__ = "server"
 __version__ = "1.0.0"
 
 
-if sys.version_info[:2] < (3, 6):
-    print("only works for python3.6 and higher")
-    sys.exit(1)
-
-
 StringDict = Dict[str, Any]
 PayloadLike = Union[List[StringDict], StringDict, None]
 

@@ -167,7 +167,6 @@ ignore = [
     "UP013",  # https://docs.astral.sh/ruff/rules/convert-typed-dict-functional-to-class/
     "UP031",  # https://docs.astral.sh/ruff/rules/printf-string-formatting/
     "UP032",  # https://docs.astral.sh/ruff/rules/f-string/`
-    "UP036",  # https://docs.astral.sh/ruff/rules/outdated-version-block/
 ]
 
 [tool.mypy]

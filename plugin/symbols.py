@@ -65,19 +65,18 @@ SYMBOL_KIND_NAMES: dict[SymbolKind, str] = {
 }
 
 
-DocumentSymbolValue = TypedDict('DocumentSymbolValue', {
-    'deprecated': bool,
-    'kind': int,
-    'range': Range
-})
+class DocumentSymbolValue(TypedDict):
+    deprecated: bool
+    kind: int
+    range: Range
 
-WorkspaceSymbolValue = TypedDict('WorkspaceSymbolValue', {
-    'deprecated': bool,
-    'kind': int,
-    'location': NotRequired[Location],
-    'session': str,
-    'workspaceSymbol': NotRequired[WorkspaceSymbol]
-})
+
+class WorkspaceSymbolValue(TypedDict):
+    deprecated: bool
+    kind: int
+    location: NotRequired[Location]
+    session: str
+    workspaceSymbol: NotRequired[WorkspaceSymbol]
 
 
 def is_document_symbol_value(val: Any) -> TypeGuard[DocumentSymbolValue]:

@@ -131,7 +131,7 @@ def register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listen
 
 
 def _register_plugin_impl(plugin: type[AbstractPlugin | LspPlugin], notify_listener: bool) -> None:
-    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.session_name
+    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.name
     if name in g_plugins:
         return
     try:
@@ -297,7 +297,7 @@ class LspPlugin(APIHandler):
     server-to-client notifications and requests respectively.
     """
 
-    session_name: Final[str] = ''
+    name: Final[str] = ''
     """
     The name of the plugin.
 
@@ -313,8 +313,8 @@ class LspPlugin(APIHandler):
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        cls.session_name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
-        cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.session_name)  # pyright: ignore[reportAttributeAccessIssue]
+        cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
+        cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
     @classmethod
     def register(cls) -> None:

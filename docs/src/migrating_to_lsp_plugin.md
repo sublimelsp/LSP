@@ -11,7 +11,7 @@
 
 | AbstractPlugin | LspPlugin |
 |---|---|
-| `name()` | Removed - derived automatically from the package name |
+| `name()` | Removed - derived automatically from the package name and exposed as a `name` property |
 | `configuration()` | Removed - settings file located automatically |
 | `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
 | `needs_update_or_installation()` + `install_or_update()` | `install_async(context)` |

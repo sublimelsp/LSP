@@ -232,7 +232,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO remove after next release
+                    if plugin.should_ignore(view):  # TODO: remove after next release
                         debug(view, "ignored by plugin", plugin.__name__)
                     elif plugin.is_applicable(view, config):
                         return config

@@ -155,7 +155,6 @@ ignore = [
     "TC006",  # https://docs.astral.sh/ruff/rules/runtime-cast-value/
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/
     "TD003",  # https://docs.astral.sh/ruff/rules/missing-todo-link/
-    "TD004",  # https://docs.astral.sh/ruff/rules/missing-todo-colon/
     "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/
     "TRY002",  # https://docs.astral.sh/ruff/rules/raise-vanilla-class/
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/

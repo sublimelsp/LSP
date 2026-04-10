@@ -1035,7 +1035,7 @@ class SessionBuffer:
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
         code_lenses = self._code_lenses.code_lenses_with_command()
         if self.session.uses_plugin():
-            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # TODO: should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
             return code_lenses
         supported_code_lenses: list[ResolvedCodeLens] = []

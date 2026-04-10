@@ -253,7 +253,7 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
-        # TODO clean up this method, it is a total mess currently with all that conditional logic
+        # TODO: clean up this method, it is a total mess currently with all that conditional logic
         contents = ''
         prefs = userprefs()
         if only_diagnostics or prefs.show_diagnostics_in_hover:

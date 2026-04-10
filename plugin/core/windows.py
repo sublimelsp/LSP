@@ -288,8 +288,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 elif plugin_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
                     cwd = plugin_cwd
             config.set_view_status(initiating_view, "starting...")
-            plugin_data = (plugin_class, plugin_context) if plugin_class else None
-            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_data)
+            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
             if plugin_class:
                 if issubclass(plugin_class, AbstractPlugin):

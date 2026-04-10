@@ -163,7 +163,6 @@ import sublime
 import weakref
 
 if TYPE_CHECKING:
-    from ..api import PluginContext
     from .active_request import ActiveRequest
 
 
@@ -965,7 +964,7 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_data: tuple[type[AbstractPlugin | LspPlugin], PluginContext] | None,
+                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
     ) -> None:
         self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
@@ -994,7 +993,7 @@ class Session(APIHandler, TransportCallbacks):
         self._watcher_impl = get_file_watcher_implementation()
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
-        self._plugin_data = plugin_data
+        self._plugin_class = plugin_class
         self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
@@ -1248,16 +1247,15 @@ class Session(APIHandler, TransportCallbacks):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        if self._plugin_data:
-            plugin_class, _ = self._plugin_data
+        if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            if issubclass(plugin_class, LspPlugin):
-                self._plugin = plugin_class(weakref.ref(self))
+            if issubclass(self._plugin_class, LspPlugin):
+                self._plugin = self._plugin_class(weakref.ref(self))
                 server_response: ServerResponse = {'method': 'initialize', 'result': result}
                 self._plugin.on_server_response_async(server_response)
             else:
-                self._plugin = plugin_class(weakref.ref(self))
+                self._plugin = self._plugin_class(weakref.ref(self))
                 self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
         self._maybe_send_did_change_configuration()

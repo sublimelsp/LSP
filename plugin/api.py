@@ -69,6 +69,12 @@ g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
 
 
 class PluginStartError(Exception):
+    """
+    Abort startup with a user-visible message.
+
+    Raise it from `install_async` or other LspPlugin's `@classmethod` to prevent plugin from starting.
+    First argument is the text that will be shown in the status field.
+    """
 
     def __init__(self, message: str) -> None:
         super().__init__(message)

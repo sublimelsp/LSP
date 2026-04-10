@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from ...protocol import DocumentUri
-from ...protocol import Range
 from .constants import ST_PACKAGES_PATH
 from .constants import ST_PLATFORM
 from .constants import ST_VERSION
@@ -11,6 +9,7 @@ from .promise import ResolveFunc
 from .protocol import UINT_MAX
 from .url import parse_uri
 from .views import range_to_region
+from typing import TYPE_CHECKING
 from urllib.parse import unquote
 from urllib.parse import urlparse
 import os
@@ -19,6 +18,10 @@ import sublime
 import sublime_plugin
 import subprocess
 import webbrowser
+
+if TYPE_CHECKING:
+    from ...protocol import DocumentUri
+    from ...protocol import Range
 
 g_opening_files: dict[str, tuple[Promise[sublime.View | None], ResolveFunc[sublime.View | None]]] = {}
 FRAGMENT_PATTERN = re.compile(r'^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?')

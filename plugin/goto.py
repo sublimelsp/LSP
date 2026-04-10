@@ -13,7 +13,6 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import method_to_capability
 from .core.url import parse_uri
@@ -33,9 +32,13 @@ from os.path import basename
 from pathlib import Path
 from typing import Any
 from typing import cast
+from typing import TYPE_CHECKING
 from typing import TypedDict
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 
 class LspGotoCommand(LspTextCommand):

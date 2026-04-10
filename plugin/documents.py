@@ -65,9 +65,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
-from .core.windows import WindowManager
 from .folding_range import folding_range_to_range
-from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
 from functools import wraps
@@ -79,6 +77,7 @@ from typing import Iterable
 from typing import Literal
 from typing import overload
 from typing import Sequence
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing_extensions import Concatenate
 from typing_extensions import override
@@ -90,6 +89,10 @@ import sublime
 import sublime_plugin
 import weakref
 import webbrowser
+
+if TYPE_CHECKING:
+    from .core.windows import WindowManager
+    from .session_buffer import SessionBuffer
 
 P = ParamSpec('P')
 R = TypeVar('R')

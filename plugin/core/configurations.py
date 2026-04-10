@@ -13,8 +13,11 @@ from collections import deque
 from datetime import datetime
 from datetime import timedelta
 from typing import Generator
+from typing import TYPE_CHECKING
 from weakref import WeakSet
-import sublime
+
+if TYPE_CHECKING:
+    import sublime
 
 RETRY_MAX_COUNT = 5
 RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)

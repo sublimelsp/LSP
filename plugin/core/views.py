@@ -51,7 +51,6 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Request
 from .settings import userprefs
-from .types import ClientConfig
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
@@ -79,6 +78,7 @@ import tempfile
 
 if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
+    from .types import ClientConfig
 
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]

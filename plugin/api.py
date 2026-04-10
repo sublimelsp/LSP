@@ -15,7 +15,6 @@ from .core.types import method2attr
 from .core.url import parse_uri
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
-from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from functools import wraps
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
     from .core.sessions import SessionViewProtocol
+    from .core.workspace import WorkspaceFolder
     import weakref
 
 __all__ = [

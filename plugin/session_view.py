@@ -13,10 +13,6 @@ from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.protocol import Request
-from .core.protocol import ResolvedCodeLens
-from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
@@ -26,11 +22,18 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
+from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
 import html
 import itertools
 import sublime
+
+if TYPE_CHECKING:
+    from .core.protocol import Request
+    from .core.protocol import ResolvedCodeLens
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import Session
 
 
 class TagData:

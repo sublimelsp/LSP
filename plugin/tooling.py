@@ -6,20 +6,18 @@ from .core.logging import debug
 from .core.registry import windows
 from .core.transports import TransportCallbacks
 from .core.transports import TransportWrapper
-from .core.types import Capabilities
-from .core.types import ClientConfig
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
 from .core.workspace import ProjectFolders
 from .core.workspace import sorted_workspace_folders
-from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import TYPE_CHECKING
 import json
 import mdpopups
 import os
@@ -28,6 +26,11 @@ import sublime_plugin
 import textwrap
 import urllib.parse
 import urllib.request
+
+if TYPE_CHECKING:
+    from .core.types import Capabilities
+    from .core.types import ClientConfig
+    from .session_buffer import SessionBuffer
 
 
 def _translate_description(translations: dict[str, str] | None, descr: str) -> tuple[str, bool]:

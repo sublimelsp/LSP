@@ -8,12 +8,15 @@ from typing import Callable
 from typing import Generic
 from typing import List
 from typing import Literal
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing_extensions import NotRequired
 from typing_extensions import TypeAlias
-import sublime
+
+if TYPE_CHECKING:
+    import sublime
 
 INT_MAX = 2**31 - 1
 UINT_MAX = INT_MAX

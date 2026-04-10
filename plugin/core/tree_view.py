@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .constants import SublimeKind
 from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
@@ -9,11 +8,15 @@ from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
+from typing import TYPE_CHECKING
 from typing import TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
 import uuid
+
+if TYPE_CHECKING:
+    from .constants import SublimeKind
 
 # pyright: reportInvalidTypeVarUse=false
 T = TypeVar('T')

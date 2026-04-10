@@ -21,7 +21,6 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
@@ -37,6 +36,7 @@ from typing import cast
 from typing import Generator
 from typing import List
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
@@ -45,6 +45,9 @@ import html
 import sublime
 import weakref
 import webbrowser
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 SessionName: TypeAlias = str
 CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]

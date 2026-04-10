@@ -3,11 +3,14 @@ from __future__ import annotations
 from .progress import ProgressReporter
 from .progress import ViewProgressReporter
 from .progress import WindowProgressReporter
-from .protocol import Request
-from .sessions import SessionViewProtocol
 from typing import Any
+from typing import TYPE_CHECKING
 from weakref import ref
 import sublime
+
+if TYPE_CHECKING:
+    from .protocol import Request
+    from .sessions import SessionViewProtocol
 
 
 class ActiveRequest:

@@ -10,7 +10,6 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
-from .file_watcher import FileWatcherEventType
 from .logging import debug
 from .logging import set_debug_logging
 from .transports import StdioTransportConfig
@@ -28,6 +27,7 @@ from typing import cast
 from typing import Generator
 from typing import Iterable
 from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing_extensions import deprecated
@@ -44,6 +44,9 @@ import posixpath
 import sublime
 import time
 import weakref
+
+if TYPE_CHECKING:
+    from .file_watcher import FileWatcherEventType
 
 FEATURES_TIMEOUT = 300  # milliseconds
 

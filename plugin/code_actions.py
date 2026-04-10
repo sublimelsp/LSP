@@ -11,8 +11,6 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
@@ -34,6 +32,8 @@ from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import SessionBufferProtocol
     from collections.abc import Callable
     from collections.abc import Generator
     from collections.abc import Iterator

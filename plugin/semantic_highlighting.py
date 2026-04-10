@@ -139,8 +139,8 @@ class LspShowScopeNameCommand(LspTextCommand):
                 resource_path = '${packages}/' + resource_path[9:]
                 display_path = display_path[9:]
             if frame.source_location[0] > 0:
-                href = '%s:%d:%d' % (resource_path, frame.source_location[0], frame.source_location[1])
-                location = '%s:%d:%d' % (display_path, frame.source_location[0], frame.source_location[1])
+                href = f'{resource_path}:{frame.source_location[0]}:{frame.source_location[1]}'
+                location = f'{display_path}:{frame.source_location[0]}:{frame.source_location[1]}'
             else:
                 href = resource_path
                 location = display_path

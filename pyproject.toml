@@ -165,7 +165,6 @@ ignore = [
     "TRY300",  # https://docs.astral.sh/ruff/rules/try-consider-else/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
     "UP013",  # https://docs.astral.sh/ruff/rules/convert-typed-dict-functional-to-class/
-    "UP031",  # https://docs.astral.sh/ruff/rules/printf-string-formatting/
 ]
 
 [tool.mypy]

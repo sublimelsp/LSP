@@ -737,16 +737,16 @@ class RemoteLogger(Logger):
 
     def _on_new_client(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client connecting (after handshake)."""
-        debug("New client connected and was given id %d" % client['id'])
+        debug(f"New client connected and was given id {client['id']}")
         # server.send_message_to_all("Hey all, a new client has joined us")
 
     def _on_client_left(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client disconnecting."""
-        debug("Client(%d) disconnected" % client['id'])
+        debug(f"Client({client['id']}) disconnected")
 
     def _on_message_received(self, client: dict, server: WebsocketServer, message: str) -> None:
         """Called when a client sends a message."""
-        debug("Client(%d) said: %s" % (client['id'], message))
+        debug(f"Client({client['id']}) said: {message}")
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({

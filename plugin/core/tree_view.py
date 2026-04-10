@@ -131,7 +131,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
     def __repr__(self) -> str:
-        return 'TreeViewSheet(%r)' % self.sheet_id
+        return f'TreeViewSheet({self.sheet_id!r})'
 
     def set_provider(self, data_provider: TreeDataProvider, header: str = "") -> None:
         """

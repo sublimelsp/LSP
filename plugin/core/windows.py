@@ -718,7 +718,7 @@ class RemoteLogger(Logger):
                     debug('WebsocketServer not started - address already in use')
                     RemoteLogger._ws_server = None
                 else:
-                    raise ex
+                    raise
 
     def _start_server(self) -> None:
         def start_async() -> None:

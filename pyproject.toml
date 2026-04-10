@@ -160,7 +160,6 @@ ignore = [
     "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/
     "TRY002",  # https://docs.astral.sh/ruff/rules/raise-vanilla-class/
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
-    "TRY201",  # https://docs.astral.sh/ruff/rules/verbose-raise/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
 

@@ -25,7 +25,6 @@ from .core.views import text_document_identifier
 from functools import partial
 from typing import Any
 from typing import cast
-from typing import List
 from typing import TypedDict
 from typing_extensions import NotRequired
 from typing_extensions import TypeGuard
@@ -96,7 +95,7 @@ def symbol_to_list_input_item(
     value = {'kind': kind, 'deprecated': deprecated}
     details_separator = " • "
     if selection_range := item.get('selectionRange'):  # Response from textDocument/documentSymbol request
-        item = cast(DocumentSymbol, item)
+        item = cast('DocumentSymbol', item)
         detail = item.get('detail')
         if detail:
             details.append(detail)
@@ -104,12 +103,12 @@ def symbol_to_list_input_item(
             details.append(hierarchy + " > " + name)
         value['range'] = selection_range
     elif session_name is None:  # Response from textDocument/documentSymbol request
-        item = cast(SymbolInformation, item)
+        item = cast('SymbolInformation', item)
         if container_name := item.get('containerName'):
             details.append(container_name)
         value['range'] = item['location']['range']
     else:  # Response from workspace/symbol request
-        item = cast(WorkspaceSymbol, item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
+        item = cast('WorkspaceSymbol', item)  # Either WorkspaceSymbol or SymbolInformation, but possibly undecidable
         details_separator = " > "
         location = item['location']
         details.append(os.path.basename(location['uri']))
@@ -178,7 +177,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             if not self.has_matching_symbols:
                 self.has_matching_symbols = True
                 if window := self.view.window():
-                    kind_name = SYMBOL_KIND_NAMES.get(cast(SymbolKind, self.kind))
+                    kind_name = SYMBOL_KIND_NAMES.get(cast('SymbolKind', self.kind))
                     window.status_message(f'No symbols of kind "{kind_name}" in this file')
                 return
             self.kind = kind
@@ -198,7 +197,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             window = self.view.window()
             if not window:
                 return None
-            symbol_kind = cast(SymbolKind, self.kind)
+            symbol_kind = cast('SymbolKind', self.kind)
             initial_value = sublime.ListInputItem(
                 SYMBOL_KIND_NAMES.get(symbol_kind, 'All Kinds'),
                 self.kind,
@@ -211,11 +210,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.items.clear()
         if response and self.view.is_valid():
             if 'selectionRange' in response[0]:
-                items = cast(List[DocumentSymbol], response)
+                items = cast('list[DocumentSymbol]', response)
                 for item in items:
                     self.items.extend(self.process_document_symbol_recursive(item))
             else:
-                items = cast(List[SymbolInformation], response)
+                items = cast('list[SymbolInformation]', response)
                 for item in items:
                     self.items.append(symbol_to_list_input_item(item))
             self.items.sort(key=lambda item: Point.from_lsp(item.value['range']['start']))
@@ -345,7 +344,7 @@ class LspWorkspaceSymbolsCommand(LspWindowCommand):
 
     def _on_resolved_symbol_async(self, session_name: str, response: WorkspaceSymbol) -> None:
         if session := self.session_by_name(session_name):
-            location = cast(Location, response['location'])
+            location = cast('Location', response['location'])
             session.open_location_async(location, sublime.NewFileFlags.ENCODED_POSITION)
 
 
@@ -366,7 +365,7 @@ class WorkspaceSymbolsInputHandler(DynamicListInputHandler):
         if not self.input_view:
             return
         change_count = self.input_view.change_count()
-        self.command = cast(LspWindowCommand, self.command)
+        self.command = cast('LspWindowCommand', self.command)
         promises: list[Promise[list[sublime.ListInputItem]]] = [
             session.send_request_task(Request.workspaceSymbol({"query": text}))
             .then(partial(self._handle_response_async, session.config.name))

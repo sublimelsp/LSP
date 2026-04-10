@@ -313,7 +313,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
             text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
-            value = cast(dict, diagnostic_data)
+            value = cast('dict', diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
             items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))

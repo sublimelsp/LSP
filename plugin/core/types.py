@@ -25,14 +25,11 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Generator
 from typing import Iterable
-from typing import List
 from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
 from typing import TypedDict
 from typing import TypeVar
-from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
@@ -242,50 +239,50 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 
 class Settings:
 
-    completion_insert_mode = cast(str, None)
-    diagnostics_additional_delay_auto_complete_ms = cast(int, None)
-    diagnostics_delay_ms = cast(int, None)
-    diagnostics_gutter_marker = cast(str, None)
-    diagnostics_highlight_style = cast(Union[str, Dict[str, str]], None)
-    diagnostics_panel_include_severity_level = cast(int, None)
-    disabled_capabilities = cast(List[str], None)
-    document_highlight_style = cast(str, None)
-    format_on_type = cast(bool, None)
-    hover_highlight_style = cast(str, None)
-    inhibit_snippet_completions = cast(bool, None)
-    inhibit_word_completions = cast(bool, None)
-    initially_folded = cast(List[str], None)
-    inlay_hints_max_length = cast(int, None)
-    link_highlight_style = cast(str, None)
-    log_debug = cast(bool, None)
-    log_max_size = cast(int, None)
-    log_server = cast(List[str], None)
-    lsp_code_actions_on_format = cast(Dict[str, bool], None)
-    lsp_code_actions_on_save = cast(Dict[str, bool], None)
-    lsp_format_on_paste = cast(bool, None)
-    lsp_format_on_save = cast(bool, None)
-    on_save_task_timeout_ms = cast(int, None)
-    only_show_lsp_completions = cast(bool, None)
-    popup_max_characters_height = cast(int, None)
-    popup_max_characters_width = cast(int, None)
-    refactoring_auto_save = cast(str, None)
-    semantic_highlighting = cast(bool, None)
-    show_code_actions = cast(str, None)
-    show_code_actions_in_hover = cast(bool, None)
-    show_code_lens = cast(str, None)
-    show_diagnostics_annotations_severity_level = cast(int, None)
-    show_diagnostics_count_in_view_status = cast(bool, None)
-    show_diagnostics_in_hover = cast(bool, None)
-    show_diagnostics_in_view_status = cast(bool, None)
-    show_diagnostics_panel_on_save = cast(int, None)
-    show_diagnostics_severity_level = cast(int, None)
-    show_inlay_hints = cast(bool, None)
-    show_multiline_diagnostics_highlights = cast(bool, None)
-    show_multiline_document_highlights = cast(bool, None)
-    show_references_in_quick_panel = cast(bool, None)
-    show_signature_help = cast(bool, None)
-    show_symbol_action_links = cast(bool, None)
-    show_view_status = cast(bool, None)
+    completion_insert_mode = cast("str", None)
+    diagnostics_additional_delay_auto_complete_ms = cast("int", None)
+    diagnostics_delay_ms = cast("int", None)
+    diagnostics_gutter_marker = cast("str", None)
+    diagnostics_highlight_style = cast("str | dict[str, str]", None)
+    diagnostics_panel_include_severity_level = cast("int", None)
+    disabled_capabilities = cast("list[str]", None)
+    document_highlight_style = cast("str", None)
+    format_on_type = cast("bool", None)
+    hover_highlight_style = cast("str", None)
+    inhibit_snippet_completions = cast("bool", None)
+    inhibit_word_completions = cast("bool", None)
+    initially_folded = cast("list[str]", None)
+    inlay_hints_max_length = cast("int", None)
+    link_highlight_style = cast("str", None)
+    log_debug = cast("bool", None)
+    log_max_size = cast("int", None)
+    log_server = cast("list[str]", None)
+    lsp_code_actions_on_format = cast("dict[str, bool]", None)
+    lsp_code_actions_on_save = cast("dict[str, bool]", None)
+    lsp_format_on_paste = cast("bool", None)
+    lsp_format_on_save = cast("bool", None)
+    on_save_task_timeout_ms = cast("int", None)
+    only_show_lsp_completions = cast("bool", None)
+    popup_max_characters_height = cast("int", None)
+    popup_max_characters_width = cast("int", None)
+    refactoring_auto_save = cast("str", None)
+    semantic_highlighting = cast("bool", None)
+    show_code_actions = cast("str", None)
+    show_code_actions_in_hover = cast("bool", None)
+    show_code_lens = cast("str", None)
+    show_diagnostics_annotations_severity_level = cast("int", None)
+    show_diagnostics_count_in_view_status = cast("bool", None)
+    show_diagnostics_in_hover = cast("bool", None)
+    show_diagnostics_in_view_status = cast("bool", None)
+    show_diagnostics_panel_on_save = cast("int", None)
+    show_diagnostics_severity_level = cast("int", None)
+    show_inlay_hints = cast("bool", None)
+    show_multiline_diagnostics_highlights = cast("bool", None)
+    show_multiline_document_highlights = cast("bool", None)
+    show_references_in_quick_panel = cast("bool", None)
+    show_signature_help = cast("bool", None)
+    show_symbol_action_links = cast("bool", None)
+    show_view_status = cast("bool", None)
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
@@ -488,7 +485,7 @@ class DocumentSelectorMatcher:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilterMatcher(**cast(dict, document_filter)) for document_filter in document_selector]
+        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -644,7 +641,7 @@ class Capabilities(DottedDict):
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(cast(dict, d))
+        super().assign(cast("dict", d))
         if textsync:
             self.update(textsync)
 
@@ -883,7 +880,7 @@ class ClientConfig:
         if resolved_new_init_opts != base_new_init_opts:
             initialization_options.update(resolved_new_init_opts)
         disabled_capabilities = s.get("disabled_capabilities")
-        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
+        file_watcher = cast("FileWatcherConfig", read_dict_setting(s, "file_watcher", {}))
         semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)

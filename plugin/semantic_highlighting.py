@@ -4,7 +4,6 @@ from .core.registry import LspTextCommand
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import List
 from typing import Tuple
 import os
 import sublime
@@ -72,14 +71,14 @@ class LspShowScopeNameCommand(LspTextCommand):
             self._render_with_fancy_stackframes(
                 scope,
                 scope_list,
-                cast(List[sublime.ContextStackFrame], stack),
+                cast('list[sublime.ContextStackFrame]', stack),
                 semantic_info,
             )
         else:
             self._render_with_plain_string_stackframes(
                 scope,
                 scope_list,
-                cast(List[str], stack),
+                cast('list[str]', stack),
                 semantic_info
             )
 

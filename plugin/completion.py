@@ -127,12 +127,12 @@ def format_completion(
 
 def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
-        text_edit = cast(InsertReplaceEdit, text_edit)
+        text_edit = cast('InsertReplaceEdit', text_edit)
         insert_mode = userprefs().completion_insert_mode
         if LspCommitCompletionWithOppositeInsertMode.active:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
-    text_edit = cast(TextEdit, text_edit)
+    text_edit = cast('TextEdit', text_edit)
     return text_edit['range']
 
 
@@ -206,7 +206,7 @@ class QueryCompletionsTask:
         Promise.all(promises).then(self._resolve_completions_async)
 
     def _create_completion_request_async(self, session: Session) -> Promise[ResolvedCompletions]:
-        params = cast(CompletionParams, text_document_position_params(self._view, self._location))
+        params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         promise, request_id = session.send_request_task_2(request)
         weak_session = weakref.ref(session)

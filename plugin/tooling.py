@@ -472,7 +472,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
             p("## Global capabilities\n")
             p(print_capabilities(sv.session.capabilities) + "\n")
             p("## View-specific capabilities\n")
-            p(print_capabilities(cast(SessionBuffer, sv.session_buffer).capabilities) + "\n")
+            p(print_capabilities(cast("SessionBuffer", sv.session_buffer).capabilities) + "\n")
 
 
 class ServerTestRunner(TransportCallbacks):

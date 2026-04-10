@@ -104,7 +104,7 @@ class CodeLensCache:
                 code_lenses.append(code_lens)
             elif cached_command := cached_code_lens.cached_command:
                 code_lens['command'] = cached_command
-                code_lens = cast(ResolvedCodeLens, code_lens)
+                code_lens = cast('ResolvedCodeLens', code_lens)
                 code_lens['uses_cached_command'] = True
                 code_lenses.append(code_lens)
         return code_lenses

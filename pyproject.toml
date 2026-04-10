@@ -152,7 +152,6 @@ ignore = [
     "TC001",  # https://docs.astral.sh/ruff/rules/typing-only-first-party-import/
     "TC002",  # https://docs.astral.sh/ruff/rules/typing-only-third-party-import/
     "TC003",  # https://docs.astral.sh/ruff/rules/typing-only-standard-library-import/
-    "TC006",  # https://docs.astral.sh/ruff/rules/runtime-cast-value/
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/
     "TD003",  # https://docs.astral.sh/ruff/rules/missing-todo-link/
     "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/

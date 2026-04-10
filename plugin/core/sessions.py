@@ -142,7 +142,6 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Generator
-from typing import List
 from typing import Literal
 from typing import overload
 from typing import Protocol
@@ -578,7 +577,7 @@ def get_initialize_params(
         "window": window_capabilities,
     }
     if config.experimental_capabilities is not None:
-        capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
+        capabilities['experimental'] = cast('LSPObject', config.experimental_capabilities)
     if get_file_watcher_implementation():
         workspace_capabilites["didChangeWatchedFiles"] = {
             "dynamicRegistration": True,
@@ -595,7 +594,7 @@ def get_initialize_params(
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": cast(LSPAny, config.initialization_options.get_resolved(variables))
+        "initializationOptions": cast('LSPAny', config.initialization_options.get_resolved(variables))
     }
 
 
@@ -783,7 +782,7 @@ class AbstractViewListener(ABC):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
-    view = cast(sublime.View, None)
+    view = cast('sublime.View', None)
     hover_provider_count = 0
     lightbulb_color: str = ''
 
@@ -1290,12 +1289,12 @@ class Session(APIHandler, TransportCallbacks):
         self.end_async()
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
-        folder_exclude_patterns = cast(List[str], globalprefs().get('folder_exclude_patterns'))
+        folder_exclude_patterns = cast('list[str]', globalprefs().get('folder_exclude_patterns'))
         folder_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
             for pattern in folder_exclude_patterns
         ]
-        file_exclude_patterns = cast(List[str], globalprefs().get('file_exclude_patterns'))
+        file_exclude_patterns = cast('list[str]', globalprefs().get('file_exclude_patterns'))
         file_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=False, root_path=root_path)
             for pattern in file_exclude_patterns
@@ -1374,7 +1373,7 @@ class Session(APIHandler, TransportCallbacks):
     ) -> Promise[None]:
         command = code_action.get("command")
         if isinstance(command, str):
-            code_action = cast(Command, code_action)
+            code_action = cast('Command', code_action)
             # This is actually a command.
             command_params: ExecuteCommandParams = {'command': command}
             arguments = code_action.get('arguments', None)
@@ -1386,7 +1385,7 @@ class Session(APIHandler, TransportCallbacks):
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
-        code_action = cast(CodeAction, code_action)
+        code_action = cast('CodeAction', code_action)
         return self._maybe_resolve_code_action(code_action, view) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
@@ -1894,7 +1893,7 @@ class Session(APIHandler, TransportCallbacks):
             registration_id = registration["id"]
             if capability_path == 'diagnosticProvider':
                 new_diagnostics_provider = True
-                options = cast(DiagnosticOptions, options)
+                options = cast('DiagnosticOptions', options)
                 self.diagnostics.register_provider(registration_id, options)
                 if options['workspaceDiagnostics']:
                     new_workspace_diagnostics_provider = True
@@ -2055,21 +2054,21 @@ class Session(APIHandler, TransportCallbacks):
                     # dealing with possibility (2).
                     if kind == 'begin':
                         # We are dealing with possibility (2), so create the progress reporter now.
-                        value = cast(WorkDoneProgressBegin, value)
+                        value = cast('WorkDoneProgressBegin', value)
                         self._create_window_progress_reporter(token, value)
                     else:
                         debug(f'unknown $/progress token: {token}')
                 return
             if kind == 'begin':
-                value = cast(WorkDoneProgressBegin, value)
+                value = cast('WorkDoneProgressBegin', value)
                 self._create_window_progress_reporter(token, value)
             elif kind == 'report':
-                value = cast(WorkDoneProgressReport, value)
+                value = cast('WorkDoneProgressReport', value)
                 progress = self._progress[token]
                 assert isinstance(progress, WindowProgressReporter)
                 progress(value.get("message"), value.get("percentage"))
             elif kind == 'end':
-                value = cast(WorkDoneProgressEnd, value)
+                value = cast('WorkDoneProgressEnd', value)
                 progress = self._progress.pop(token)
                 assert isinstance(progress, WindowProgressReporter)
                 title = progress.title

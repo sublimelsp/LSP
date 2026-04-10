@@ -220,11 +220,11 @@ def to_encoded_filename(path: str, position: Position) -> str:
 
 def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         r = location["targetSelectionRange"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         r = location["range"]
     return uri, r
@@ -232,11 +232,11 @@ def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[
 
 def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         position = location["targetSelectionRange"]["start"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         position = location["range"]["start"]
     return uri, position
@@ -298,7 +298,7 @@ def entire_content_range(view: sublime.View) -> Range:
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
-    language_id = cast(LanguageKind, language_id)
+    language_id = cast('LanguageKind', language_id)
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -459,7 +459,7 @@ def text_document_code_action_params(
     trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
+        "triggerKind": cast('CodeActionTriggerKind', trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds
@@ -955,7 +955,7 @@ def format_code_actions_for_quick_panel(
     selected_index = -1
     for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")
-        first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
+        first_kind_component = cast('CodeActionKind', str(lsp_kind).split(".")[0])
         kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
         items.append(sublime.QuickPanelItem(code_action["title"], annotation=config_name, kind=kind))
         if code_action.get('isPreferred', False):

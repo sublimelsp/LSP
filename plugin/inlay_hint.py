@@ -150,7 +150,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid
                 }
             })
@@ -178,9 +178,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid,
-                    'label_part': cast(dict, label_part)
+                    'label_part': cast('dict', label_part)
                 }
             })
             value += f'<a href="{inlay_hint_click_command}">'

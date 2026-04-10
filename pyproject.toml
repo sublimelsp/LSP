@@ -169,7 +169,6 @@ ignore = [
     "UP032",  # https://docs.astral.sh/ruff/rules/f-string/`
     "UP036",  # https://docs.astral.sh/ruff/rules/outdated-version-block/
     "UP037",  # https://docs.astral.sh/ruff/rules/quoted-annotation/
-    "UP045",  # https://docs.astral.sh/ruff/rules/non-pep604-annotation-optional/
 ]
 
 [tool.mypy]

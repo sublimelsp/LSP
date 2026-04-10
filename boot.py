@@ -255,7 +255,7 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in g_opening_files.keys():
+        for fn in g_opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
                 # Remove it from the pending opening files, and resolve the promise.
                 g_opening_files.pop(fn)[1](view)
@@ -265,7 +265,7 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in g_opening_files.keys():
+        for fn in g_opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
                 tup = g_opening_files.pop(fn, None)
                 if tup:

@@ -907,7 +907,7 @@ class SessionBuffer:
             return
         session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys.copy():
-            if region_key not in scope_regions.keys():
+            if region_key not in scope_regions:
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
                     sv.view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")

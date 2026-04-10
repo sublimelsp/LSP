@@ -122,7 +122,7 @@ class DiagnosticsAnnotationsView:
 
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
@@ -133,7 +133,7 @@ class DiagnosticsAnnotationsView:
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             if severity <= max_severity_level:
                 matching_diagnostics: tuple[list[Diagnostic], list[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:

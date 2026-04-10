@@ -301,7 +301,7 @@ def get_initialize_params(
     semantic_token_types = [member.value for member in SemanticTokenTypes]
     semantic_token_modifiers = [member.value for member in SemanticTokenModifiers]
     if config.semantic_tokens is not None:
-        for token in config.semantic_tokens.keys():
+        for token in config.semantic_tokens:
             token_type, _, token_modifier = token.partition('.')
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
@@ -2101,7 +2101,7 @@ class Session(APIHandler, TransportCallbacks):
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def shutdown_session_view_async(self, session_view: SessionViewProtocol) -> None:
-        for status_key in self._status_messages.keys():
+        for status_key in self._status_messages:
             session_view.view.erase_status(status_key)
         session_view.shutdown_async()
 

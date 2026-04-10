@@ -134,6 +134,6 @@ class WindowConfigManager:
     def _reenable_disabled_for_session(self, config_name: str) -> bool:
         try:
             self._disabled_for_session.remove(config_name)
-            return True
         except KeyError:
             return False
+        return True

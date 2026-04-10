@@ -168,7 +168,7 @@ def open_externally(uri: str) -> bool:
             subprocess.check_call(("/usr/bin/open", uri))
         else:  # linux
             subprocess.check_call(("xdg-open", uri))  # noqa: S607
-        return True
     except Exception as ex:
         exception_log(f"Failed to open {uri}", ex)
         return False
+    return True

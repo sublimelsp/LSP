@@ -2050,7 +2050,6 @@ class Session(APIHandler, TransportCallbacks):
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
                     self._invoke_views(request, "on_request_progress", request_id, params)
-                    return
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
@@ -2058,8 +2057,8 @@ class Session(APIHandler, TransportCallbacks):
                         # We are dealing with possibility (2), so create the progress reporter now.
                         value = cast(WorkDoneProgressBegin, value)
                         self._create_window_progress_reporter(token, value)
-                        return
-                debug(f'unknown $/progress token: {token}')
+                    else:
+                        debug(f'unknown $/progress token: {token}')
                 return
             if kind == 'begin':
                 value = cast(WorkDoneProgressBegin, value)

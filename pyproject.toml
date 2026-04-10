@@ -162,7 +162,6 @@ ignore = [
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
     "TRY201",  # https://docs.astral.sh/ruff/rules/verbose-raise/
     "TRY203",  # https://docs.astral.sh/ruff/rules/useless-try-except/
-    "TRY300",  # https://docs.astral.sh/ruff/rules/try-consider-else/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
 

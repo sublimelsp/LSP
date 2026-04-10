@@ -281,5 +281,5 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(sb.get_uri(), "some-scheme://whatever")
 
     def test_get_session_buffer_for_uri_with_files(self) -> None:
-        # todo: write windows-only test
+        # TODO: write windows-only test
         pass

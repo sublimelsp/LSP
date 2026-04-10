@@ -382,7 +382,7 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # todo: this should all run from the worker thread
+        # TODO: this should all run from the worker thread
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         additional_text_edits = item.get('additionalTextEdits')
         if session and not additional_text_edits:

@@ -132,7 +132,6 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
-from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
@@ -987,6 +986,7 @@ class Session(APIHandler, TransportCallbacks):
         self._init_callback: InitCallback | None = None
         self._initialize_error: tuple[int, Exception | None] | None = None
         self._views_opened = 0
+        self._variables: dict[str, str] = {}
         self._workspace_folders = workspace_folders
         self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
         self._session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
@@ -1234,7 +1234,8 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         self.transport = transport
         self.working_directory = working_directory
-        params = get_initialize_params(variables, self._workspace_folders, self.config)
+        self._variables = variables
+        params = get_initialize_params(self._variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
@@ -1311,20 +1312,8 @@ class Session(APIHandler, TransportCallbacks):
         if self.config.settings:
             if isinstance(self._plugin, AbstractPlugin):
                 self._plugin.on_settings_changed(self.config.settings)
-            variables = self._template_variables()
-            resolved = self.config.settings.get_resolved(variables)
+            resolved = self.config.settings.get_resolved(self._variables)
             self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved}))
-
-    def _template_variables(self) -> dict[str, str]:
-        variables = extract_variables(self.window)
-        if self._plugin_data:
-            plugin_class, plugin_context = self._plugin_data
-            if issubclass(plugin_class, LspPlugin):
-                if extra_vars := plugin_class.additional_variables(plugin_context):
-                    variables.update(extra_vars)
-            elif extra_vars := plugin_class.additional_variables():
-                variables.update(extra_vars)
-        return variables
 
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
@@ -1810,7 +1799,7 @@ class Session(APIHandler, TransportCallbacks):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
-        return Promise.resolve(sublime.expand_variables(items, self._template_variables()))
+        return Promise.resolve(sublime.expand_variables(items, self._variables))
 
     @request_handler('workspace/applyEdit')
     def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> Promise[ApplyWorkspaceEditResult]:

@@ -74,19 +74,20 @@ class TreeItem:
         kind_class_name = KIND_CLASS_NAMES.get(self.kind[0], 'kind kind_ambiguous')
         icon_html = '<span class="{}" title="{}">{}</span>'.format(
             kind_class_name, self.kind[2], self.kind[1] or '&nbsp;')
+        escaped_tooltip = html.escape(self.tooltip)
+        escaped_label = html.escape(self.label)
         if self.command_url and self.tooltip:
-            label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
-                self.command_url, html.escape(self.tooltip), html.escape(self.label))
+            label_html = f'<a class="label" href="{self.command_url}" title="{escaped_tooltip}">{escaped_label}</a>'
         elif self.command_url:
-            label_html = f'<a class="label" href="{self.command_url}">{html.escape(self.label)}</a>'
+            label_html = f'<a class="label" href="{self.command_url}">{escaped_label}</a>'
         elif self.tooltip:
-            label_html = f'<span class="label" title="{html.escape(self.tooltip)}">{html.escape(self.label)}</span>'
+            label_html = f'<span class="label" title="{escaped_tooltip}">{escaped_label}</span>'
         else:
-            label_html = f'<span class="label">{html.escape(self.label)}</span>'
+            label_html = f'<span class="label">{escaped_label}</span>'
         description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
-        return '<div class="tree-view-row">{}</div>'.format(
-            indent_html + disclosure_button_html + icon_html + label_html + description_html)
+        content = indent_html + disclosure_button_html + icon_html + label_html + description_html
+        return f'<div class="tree-view-row">{content}</div>'
 
 
 class Node:

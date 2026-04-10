@@ -266,10 +266,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
 
 
 def text_document_identifier(view_or_uri: DocumentUri | sublime.View) -> TextDocumentIdentifier:
-    if isinstance(view_or_uri, DocumentUri):
-        uri = view_or_uri
-    else:
-        uri = uri_from_view(view_or_uri)
+    uri = view_or_uri if isinstance(view_or_uri, DocumentUri) else uri_from_view(view_or_uri)
     return {"uri": uri}
 
 

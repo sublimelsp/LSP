@@ -151,7 +151,6 @@ ignore = [
     "T20",  # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TC001",  # https://docs.astral.sh/ruff/rules/typing-only-first-party-import/
     "TC002",  # https://docs.astral.sh/ruff/rules/typing-only-third-party-import/
-    "TC003",  # https://docs.astral.sh/ruff/rules/typing-only-standard-library-import/
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/
     "TD003",  # https://docs.astral.sh/ruff/rules/missing-todo-link/
     "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/

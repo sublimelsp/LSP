@@ -267,7 +267,7 @@ class Listener(sublime_plugin.EventListener):
             return
         for fn in g_opening_files:
             if fn == file_name or os.path.samefile(fn, file_name):
-                tup = g_opening_files.pop(fn, None)
+                tup = g_opening_files.pop(fn, None)  # noqa: B909
                 if tup:
                     # The view got closed before it finished loading. This can happen.
                     tup[1](None)

@@ -143,7 +143,6 @@ ignore = [
     "SIM105",  # https://docs.astral.sh/ruff/rules/suppressible-exception/
     "SIM108",  # https://docs.astral.sh/ruff/rules/if-else-block-instead-of-if-exp/
     "SIM110",  # https://docs.astral.sh/ruff/rules/reimplemented-builtin/
-    "SIM114",  # https://docs.astral.sh/ruff/rules/if-with-same-arms/
     "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
     "T20",  # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/

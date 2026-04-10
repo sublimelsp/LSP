@@ -146,7 +146,6 @@ ignore = [
     "SIM114",  # https://docs.astral.sh/ruff/rules/if-with-same-arms/
     "SIM118",  # https://docs.astral.sh/ruff/rules/in-dict-keys/
     "SIM201",  # https://docs.astral.sh/ruff/rules/negate-equal-op/
-    "SIM910",  # https://docs.astral.sh/ruff/rules/dict-get-with-none-default/
     "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
     "T20",  # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/

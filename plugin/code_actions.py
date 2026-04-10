@@ -247,7 +247,7 @@ def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeAc
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = code_actions.get(current_part, None)
+            user_value = code_actions.get(current_part)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:

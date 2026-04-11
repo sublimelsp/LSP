@@ -21,6 +21,7 @@ from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
@@ -869,47 +870,44 @@ class ClientConfig:
         s = settings_registration.settings
         file = settings_registration.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
-        settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
-        settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
+        settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
+        settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
         # "initialization_options" with backwards compatibility for "initializationOptions"
-        base_old_init_opts = base.get("initializationOptions", {})
-        base_new_init_opts = base.get("initialization_options", {})
-        resolved_old_init_opts = read_dict_setting(s, "initializationOptions", {})
-        resolved_new_init_opts = read_dict_setting(s, "initialization_options", {})
+        base_old_init_opts = deepcopy(base.get("initializationOptions", {}))
+        base_new_init_opts = deepcopy(base.get("initialization_options", {}))
+        resolved_old_init_opts = deepcopy(read_dict_setting(s, "initializationOptions", {}))
+        resolved_new_init_opts = deepcopy(read_dict_setting(s, "initialization_options", {}))
         initialization_options = DottedDict(base_new_init_opts or base_old_init_opts)
         if resolved_old_init_opts != base_old_init_opts:
             debug(f'"initializationOptions" in config {name} is deprecated! Use "initialization_options" instead.')
             initialization_options.update(resolved_old_init_opts)
         if resolved_new_init_opts != base_new_init_opts:
             initialization_options.update(resolved_new_init_opts)
-        disabled_capabilities = s.get("disabled_capabilities")
-        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
-        semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
+        file_watcher = cast(FileWatcherConfig, deepcopy(read_dict_setting(s, "file_watcher", {})))
+        semantic_tokens = deepcopy(read_dict_setting(s, "semantic_tokens", {}))
+        disabled_capabilities = deepcopy(s.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
         return ClientConfig(
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
-            schemes=s.get("schemes"),
-            command=read_list_setting(s, "command", []),
-            tcp_port=s.get("tcp_port"),
-            auto_complete_selector=s.get("auto_complete_selector"),
+            schemes=deepcopy(s.get("schemes")),
+            command=deepcopy(read_list_setting(s, "command", [])),
+            tcp_port=deepcopy(s.get("tcp_port")),
+            auto_complete_selector=deepcopy(s.get("auto_complete_selector")),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,
-            env=read_dict_setting(s, "env", {}),
-            experimental_capabilities=s.get("experimental_capabilities"),
+            env=deepcopy(read_dict_setting(s, "env", {})),
+            experimental_capabilities=deepcopy(s.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
-            all_settings=s.to_dict()
+            all_settings=deepcopy(s.to_dict())
         )
 
     @classmethod
@@ -920,33 +918,31 @@ class ClientConfig:
         :param name: Unique server name.
         :param d: Dictionary of configuration values.
         """
-        disabled_capabilities = d.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
-        schemes = d.get("schemes")
+        disabled_capabilities = deepcopy(d.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
+        schemes = deepcopy(d.get("schemes"))
         if not isinstance(schemes, list):
             schemes = ["file"]
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
-            schemes=schemes,
-            command=d.get("command", []),
-            tcp_port=d.get("tcp_port"),
-            auto_complete_selector=d.get("auto_complete_selector"),
-            enabled=d.get("enabled", False),
-            initialization_options=DottedDict(d.get("initialization_options", d.get("initializationOptions"))),
-            settings=DottedDict(d.get("settings")),
-            env=d.get("env", {}),
-            experimental_capabilities=d.get("experimental_capabilities"),
+            schemes=deepcopy(schemes),
+            command=deepcopy(d.get("command", [])),
+            tcp_port=deepcopy(d.get("tcp_port")),
+            auto_complete_selector=deepcopy(d.get("auto_complete_selector")),
+            enabled=deepcopy(d.get("enabled", False)),
+            initialization_options=DottedDict(
+                deepcopy(d.get("initialization_options"), d.get("initializationOptions"))),
+            settings=DottedDict(deepcopy(d.get("settings"))),
+            env=deepcopy(d.get("env", {})),
+            experimental_capabilities=deepcopy(d.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=d.get("file_watcher", {}),
-            semantic_tokens=d.get("semantic_tokens", {}),
-            diagnostics_mode=d.get("diagnostics_mode", "open_files"),
+            file_watcher=deepcopy(d.get("file_watcher", {})),
+            semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
+            diagnostics_mode=deepcopy(d.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(d.get("path_maps")),
-            all_settings=d
+            all_settings=deepcopy(d)
         )
 
     @classmethod
@@ -961,35 +957,31 @@ class ClientConfig:
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
         """
-        path_map_override = PathMap.parse(override.get("path_maps"))
-        disabled_capabilities = override.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = src_config.disabled_capabilities
+        disabled_capabilities = deepcopy(override.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
-            schemes=override.get("schemes", src_config.schemes),
-            command=override.get("command", src_config.command),
-            tcp_port=override.get("tcp_port", src_config.tcp_port),
-            auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
-            enabled=override.get("enabled", src_config.enabled),
+            schemes=deepcopy(override.get("schemes", src_config.schemes)),
+            command=deepcopy(override.get("command", src_config.command)),
+            tcp_port=deepcopy(override.get("tcp_port", src_config.tcp_port)),
+            auto_complete_selector=deepcopy(override.get("auto_complete_selector", src_config.auto_complete_selector)),
+            enabled=deepcopy(override.get("enabled", src_config.enabled)),
             initialization_options=DottedDict.from_base_and_override(
                 src_config.initialization_options,
                 override.get("initialization_options", override.get("initializationOptions"))),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
-            env=override.get("env", src_config.env),
-            experimental_capabilities=override.get(
-                "experimental_capabilities", src_config.experimental_capabilities),
+            env=deepcopy(override.get("env", src_config.env)),
+            experimental_capabilities=deepcopy(
+                override.get("experimental_capabilities", src_config.experimental_capabilities)),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=override.get("file_watcher", src_config.file_watcher),
-            semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
-            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override or src_config.path_maps,
-            settings_registration=src_config._settings_registration,
-            all_settings={**src_config._all_settings, **override}  # shallow merge
+            file_watcher=deepcopy(override.get("file_watcher", src_config.file_watcher)),
+            semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
+            diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
+            path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
+            settings_registration=deepcopy(src_config._settings_registration),
+            all_settings=deepcopy({**src_config._all_settings, **override})
         )
 
     def create_transport_config(self) -> TransportConfig:

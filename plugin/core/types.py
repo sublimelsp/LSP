@@ -523,6 +523,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
 _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
@@ -654,6 +655,9 @@ class Capabilities(DottedDict):
     def text_sync_kind(self) -> TextDocumentSyncKind:
         value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKind.None_
+
+    def should_notify_did_change_configuration(self) -> bool:
+        return 'workspace.didChangeConfiguration' in self
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
@@ -1123,8 +1127,10 @@ class ClientConfig:
         if not isinstance(other, ClientConfig):
             return False
         for k, v in self.__dict__.items():
-            if not k.startswith("_") and v != getattr(other, k):
+            if not k.startswith("_") and k != 'settings' and v != getattr(other, k):
                 return False
+        if self.enabled != other.enabled:
+            return False
         return True
 
     def __hash__(self) -> int:

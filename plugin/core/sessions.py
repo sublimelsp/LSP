@@ -236,8 +236,8 @@ class Manager(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_session(self, config_name: str, file_path: str) -> Session | None:
-        """Gets the session by name and file path."""
+    def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
+        """Gets the session by name and optional file path."""
         raise NotImplementedError
 
     @abstractmethod
@@ -1168,6 +1168,9 @@ class Session(APIHandler, TransportCallbacks):
     def text_sync_kind(self) -> TextDocumentSyncKind:
         return self.capabilities.text_sync_kind()
 
+    def should_notify_did_change_configuration(self) -> bool:
+        return self.capabilities.should_notify_did_change_configuration()
+
     def should_notify_did_change_workspace_folders(self) -> bool:
         return self.capabilities.should_notify_did_change_workspace_folders()
 
@@ -1761,6 +1764,13 @@ class Session(APIHandler, TransportCallbacks):
                 )
                 return
         self.workspace_diagnostics_pending_responses[identifier] = None
+
+    # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
+
+    def on_server_settings_changed(self) -> None:
+        if self.should_notify_did_change_configuration():
+            # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
+            self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': None}))
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

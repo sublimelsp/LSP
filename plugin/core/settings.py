@@ -15,10 +15,17 @@ import json
 import sublime
 
 
+SERVER_CONFIGS_FILENAME = 'LanguageServers.sublime-settings'
+
+
 class LspSettingsChangeListener(ABC):
 
     @abstractmethod
     def on_client_config_updated(self, config_name: str | None = None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_server_settings_changed(self, config_name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -88,8 +95,13 @@ class ClientConfigs:
             # handle this
             return
         self.external[name] = config
-        self.all[name] = config
-        self._notify_clients_listener(name)
+        if stored_config := self.all.get(name):
+            if stored_config != config:
+                self.update_config(name, config)
+            elif stored_config.settings != config.settings:
+                self.on_server_settings_changed(name, config.settings)
+        else:
+            self.update_config(name, config)
 
     def update_configs(self) -> None:
         if _settings_registration is None:
@@ -101,8 +113,8 @@ class ClientConfigs:
             self._notify_userprefs_listener()
             return
         self._clients_hash = clients_hash
-        clients = DottedDict(read_dict_setting(settings_obj, "default_clients", {}))
-        clients.update(clients_dict)
+        clients = DottedDict(clients_dict)
+        clients.update(sublime.load_settings(SERVER_CONFIGS_FILENAME).to_dict())
         self.all.clear()
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)
@@ -110,12 +122,29 @@ class ClientConfigs:
         debug("disabled configs:", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
         self._notify_clients_listener()
 
+    def update_config(self, name: str, config: ClientConfig) -> None:
+        self.all[name] = config
+        self._notify_clients_listener(name)
+
+    def on_server_settings_changed(self, name: str, settings: DottedDict) -> None:
+        self.all[name].settings = settings
+        if self._listener:
+            self._listener.on_server_settings_changed(name)
+
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from ..api import get_plugin
         if get_plugin(config_name):
             config = self.external[config_name]
             config.enabled = is_enabled
             return
+        settings = sublime.load_settings(SERVER_CONFIGS_FILENAME)
+        config = settings.get(config_name)
+        if isinstance(config, dict):
+            config['enabled'] = is_enabled
+            settings.set(config_name, config)
+            sublime.save_settings(SERVER_CONFIGS_FILENAME)
+            return
+        # For backwards compatibility with "clients" in LSP.sublime-settings
         settings = sublime.load_settings("LSP.sublime-settings")
         clients = settings.get("clients")
         if isinstance(clients, dict):
@@ -136,6 +165,7 @@ class ClientConfigs:
 
 _settings: Settings | None = None
 _settings_registration: SettingsRegistration | None = None
+_configs_registration: SettingsRegistration | None = None
 _global_settings: sublime.Settings | None = None
 client_configs = ClientConfigs()
 
@@ -147,8 +177,24 @@ def _on_sublime_settings_changed(settings_registration: SettingsRegistration) ->
     client_configs.update_configs()
 
 
+def _on_server_configs_changed(settings_registration: SettingsRegistration) -> None:
+    if _configs_registration is None:
+        return
+    for name, config in settings_registration.settings.to_dict().items():
+        if not isinstance(config, dict):
+            continue
+        if stored_config := client_configs.all.get(name):
+            _config = ClientConfig.from_dict(name, config)
+            if stored_config != _config:
+                client_configs.update_config(name, _config)
+            elif stored_config.settings != _config.settings:
+                client_configs.on_server_settings_changed(name, _config.settings)
+        else:
+            client_configs.update_config(name, ClientConfig.from_dict(name, config))
+
+
 def load_settings() -> None:
-    global _global_settings, _settings, _settings_registration
+    global _global_settings, _settings, _settings_registration, _configs_registration
     if _global_settings is None:
         _global_settings = sublime.load_settings("Preferences.sublime-settings")
     if _settings_registration is None:
@@ -156,13 +202,18 @@ def load_settings() -> None:
         settings_obj = sublime.load_settings(settings_filename)
         _settings = Settings(settings_obj)
         _settings_registration = SettingsRegistration(settings_obj, settings_filename, _on_sublime_settings_changed)
+    if _configs_registration is None:
+        settings_obj = sublime.load_settings(SERVER_CONFIGS_FILENAME)
+        _configs_registration = SettingsRegistration(settings_obj, SERVER_CONFIGS_FILENAME, _on_server_configs_changed)
 
 
 def unload_settings() -> None:
-    global _settings, _settings_registration
+    global _settings, _settings_registration, _configs_registration
     if _settings_registration:
         _settings_registration = None
         _settings = Settings(sublime.load_settings(""))
+    if _configs_registration:
+        _configs_registration = None
 
 
 def userprefs() -> Settings:

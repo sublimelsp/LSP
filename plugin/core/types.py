@@ -958,7 +958,10 @@ class ClientConfig:
         :param override: Dictionary of values to override.
         """
         disabled_capabilities = deepcopy(override.get("disabled_capabilities"))
-        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
+        disabled_capabilities = DottedDict(
+            disabled_capabilities
+            if isinstance(disabled_capabilities, dict)
+            else src_config.disabled_capabilities.copy())
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,

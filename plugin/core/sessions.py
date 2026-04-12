@@ -78,6 +78,7 @@ from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from .collections import DottedDict
 from .constants import ChangeEventAction
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
@@ -1766,7 +1767,8 @@ class Session(APIHandler, TransportCallbacks):
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
 
-    def on_server_settings_changed(self) -> None:
+    def on_server_settings_changed(self, settings: DottedDict) -> None:
+        self.config.settings = settings
         if self.should_notify_did_change_configuration():
             # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
             self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': None}))

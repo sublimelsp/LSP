@@ -24,7 +24,7 @@ class LspSettingsChangeListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_server_settings_changed(self, config_name: str) -> None:
+    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -128,7 +128,7 @@ class ClientConfigs:
     def on_server_settings_changed(self, name: str, settings: DottedDict) -> None:
         self.all[name].settings = settings
         if self._listener:
-            self._listener.on_server_settings_changed(name)
+            self._listener.on_server_settings_changed(name, settings)
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         from ..api import get_plugin

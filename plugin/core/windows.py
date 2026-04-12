@@ -9,6 +9,7 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import get_plugin
+from .collections import DottedDict
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -586,10 +587,10 @@ class WindowRegistry(LspSettingsChangeListener):
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
 
-    def on_server_settings_changed(self, config_name: str) -> None:
+    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
         for wm in self._windows.values():
             if session := wm.get_session(config_name):
-                session.on_server_settings_changed()
+                session.on_server_settings_changed(settings)
 
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():

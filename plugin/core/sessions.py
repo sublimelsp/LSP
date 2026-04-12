@@ -1772,6 +1772,8 @@ class Session(APIHandler, TransportCallbacks):
         if self.should_notify_did_change_configuration():
             # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
             self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': None}))
+        else:
+            self.window.status_message('Server restart may be required to apply changed settings')
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Final
+from typing import final
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing_extensions import deprecated
@@ -317,6 +318,7 @@ class LspPlugin(APIHandler):
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
     @classmethod
+    @final
     def register(cls) -> None:
         """
         Register this plugin with LSP.
@@ -332,6 +334,7 @@ class LspPlugin(APIHandler):
         register_plugin_impl(cls)
 
     @classmethod
+    @final
     def unregister(cls) -> None:
         """
         Unregister this plugin from LSP.

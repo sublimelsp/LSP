@@ -78,7 +78,6 @@ from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-from .collections import DottedDict
 from .constants import ChangeEventAction
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
@@ -161,6 +160,7 @@ import weakref
 
 if TYPE_CHECKING:
     from .active_request import ActiveRequest
+    from .collections import DottedDict
 
 
 InitCallback: TypeAlias = Callable[['Session', bool], None]

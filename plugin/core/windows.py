@@ -9,7 +9,6 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import get_plugin
-from .collections import DottedDict
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -60,6 +59,7 @@ import sublime
 import threading
 
 if TYPE_CHECKING:
+    from .collections import DottedDict
     from .tree_view import TreeViewSheet
 
 

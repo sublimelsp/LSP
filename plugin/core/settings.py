@@ -113,7 +113,8 @@ class ClientConfigs:
             return
         self._clients_hash = clients_hash
         clients = DottedDict(clients_dict)
-        clients.update(sublime.load_settings(SERVER_CONFIGS_FILENAME).to_dict())
+        if _configs_registration:
+            clients.update(_configs_registration.settings.to_dict())
         self.all.clear()
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)

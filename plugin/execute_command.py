@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import ExecuteCommandParams
 from .core.logging import debug
 from .core.protocol import Error
 from .core.registry import LspTextCommand
@@ -12,7 +11,11 @@ from .core.views import text_document_position_params
 from .core.views import uri_from_view
 from .core.views import versioned_text_document_identifier
 from typing import Any
+from typing import TYPE_CHECKING
 import sublime
+
+if TYPE_CHECKING:
+    from ..protocol import ExecuteCommandParams
 
 
 class LspExecuteCommand(LspTextCommand):

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from ..protocol import DocumentLink
-from ..protocol import URI
 from .core.logging import debug
 from .core.open import open_file_uri
 from .core.open import open_in_browser
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-import sublime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..protocol import DocumentLink
+    from ..protocol import URI
+    import sublime
 
 
 class LspOpenLinkCommand(LspTextCommand):

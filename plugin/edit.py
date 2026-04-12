@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import TextEdit
-from ..protocol import WorkspaceEdit
 from .core.constants import ChangeEventAction
 from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
@@ -13,7 +11,6 @@ from .core.registry import LspWindowCommand
 from .core.registry import windows
 from .core.url import parse_uri
 from .core.views import get_line
-from .core.windows import WindowManager
 from contextlib import contextmanager
 from typing import Any
 from typing import Callable
@@ -28,7 +25,10 @@ import sublime
 import sublime_plugin
 
 if TYPE_CHECKING:
+    from ..protocol import TextEdit
+    from ..protocol import WorkspaceEdit
     from .core.sessions import Session
+    from .core.windows import WindowManager
 
 TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str]
 

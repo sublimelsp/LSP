@@ -21,8 +21,6 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.url import CODE_ACTION_SCHEME
 from .core.url import decode_code_action_uri
@@ -42,12 +40,17 @@ from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from functools import partial
 from typing import Sequence
+from typing import TYPE_CHECKING
 from typing import Union
 from urllib.parse import urlparse
 import html
 import mdpopups
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import SessionBufferProtocol
 
 SessionName = str
 ResolvedHover = Union[Hover, Error]
@@ -253,7 +256,7 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
-        # TODO clean up this method, it is a total mess currently with all that conditional logic
+        # TODO: clean up this method, it is a total mess currently with all that conditional logic
         contents = ''
         prefs = userprefs()
         if only_diagnostics or prefs.show_diagnostics_in_hover:

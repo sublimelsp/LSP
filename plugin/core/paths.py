@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from ...protocol import DocumentUri
-from .sessions import Session
 from .views import parse_uri
 from pathlib import Path
 from typing import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...protocol import DocumentUri
+    from .sessions import Session
 
 
 def simple_path(session: Session | None, uri: DocumentUri) -> str:

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from .test_mocks import basic_responses
-from collections.abc import Generator
-from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -14,8 +12,13 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from typing import Any
+from typing import TYPE_CHECKING
 from unittesting import DeferrableTestCase
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from LSP.plugin.core.promise import Promise
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 

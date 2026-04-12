@@ -13,7 +13,6 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import method_to_capability
 from .core.url import parse_uri
@@ -33,9 +32,13 @@ from os.path import basename
 from pathlib import Path
 from typing import Any
 from typing import cast
+from typing import TYPE_CHECKING
 from typing import TypedDict
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 
 class LspGotoCommand(LspTextCommand):
@@ -313,7 +316,7 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
             raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
             text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
-            value = cast(dict, diagnostic_data)
+            value = cast('dict', diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
             items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))

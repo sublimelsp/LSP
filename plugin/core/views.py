@@ -51,7 +51,6 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Request
 from .settings import userprefs
-from .types import ClientConfig
 from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
@@ -79,6 +78,7 @@ import tempfile
 
 if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
+    from .types import ClientConfig
 
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
@@ -220,11 +220,11 @@ def to_encoded_filename(path: str, position: Position) -> str:
 
 def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         r = location["targetSelectionRange"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         r = location["range"]
     return uri, r
@@ -232,11 +232,11 @@ def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[
 
 def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         position = location["targetSelectionRange"]["start"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         position = location["range"]["start"]
     return uri, position
@@ -266,10 +266,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
 
 
 def text_document_identifier(view_or_uri: DocumentUri | sublime.View) -> TextDocumentIdentifier:
-    if isinstance(view_or_uri, DocumentUri):
-        uri = view_or_uri
-    else:
-        uri = uri_from_view(view_or_uri)
+    uri = view_or_uri if isinstance(view_or_uri, DocumentUri) else uri_from_view(view_or_uri)
     return {"uri": uri}
 
 
@@ -298,7 +295,7 @@ def entire_content_range(view: sublime.View) -> Range:
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
-    language_id = cast(LanguageKind, language_id)
+    language_id = cast('LanguageKind', language_id)
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -459,7 +456,7 @@ def text_document_code_action_params(
     trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
+        "triggerKind": cast('CodeActionTriggerKind', trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds
@@ -747,8 +744,8 @@ def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diag
         message = _format_diagnostic_message(view, diagnostic['message'])
         source = diagnostic.get('source')
         line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
-        content = '<body id="lsp-annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
-            ST_PLATFORM, lsp_css().annotations, css_class, line)
+        content = (f'<body id="lsp-annotation" class="{ST_PLATFORM}"><style>{lsp_css().annotations}</style>'
+                   f'<div class="{css_class}">{line}</div></body>')
         annotations.append(content)
     return annotations
 
@@ -955,7 +952,7 @@ def format_code_actions_for_quick_panel(
     selected_index = -1
     for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")
-        first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
+        first_kind_component = cast('CodeActionKind', str(lsp_kind).split(".")[0])
         kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
         items.append(sublime.QuickPanelItem(code_action["title"], annotation=config_name, kind=kind))
         if code_action.get('isPreferred', False):

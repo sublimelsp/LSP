@@ -14,7 +14,6 @@ from os.path import basename
 import json
 import sublime
 
-
 SERVER_CONFIGS_FILENAME = 'LanguageServers.sublime-settings'
 
 
@@ -180,17 +179,17 @@ def _on_sublime_settings_changed(settings_registration: SettingsRegistration) ->
 def _on_server_configs_changed(settings_registration: SettingsRegistration) -> None:
     if _configs_registration is None:
         return
-    for name, config in settings_registration.settings.to_dict().items():
-        if not isinstance(config, dict):
+    for name, config_dict in settings_registration.settings.to_dict().items():
+        if not isinstance(config_dict, dict):
             continue
         if stored_config := client_configs.all.get(name):
-            _config = ClientConfig.from_dict(name, config)
-            if stored_config != _config:
-                client_configs.update_config(name, _config)
-            elif stored_config.settings != _config.settings:
-                client_configs.on_server_settings_changed(name, _config.settings)
+            config = ClientConfig.from_dict(name, config_dict)
+            if stored_config != config:
+                client_configs.update_config(name, config)
+            elif stored_config.settings != config.settings:
+                client_configs.on_server_settings_changed(name, config.settings)
         else:
-            client_configs.update_config(name, ClientConfig.from_dict(name, config))
+            client_configs.update_config(name, ClientConfig.from_dict(name, config_dict))
 
 
 def load_settings() -> None:

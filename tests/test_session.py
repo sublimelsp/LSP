@@ -3,7 +3,6 @@ from __future__ import annotations
 from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.promise import Promise
-from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.sessions import get_initialize_params
 from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager
@@ -19,9 +18,13 @@ from LSP.protocol import ShowMessageRequestParams
 from LSP.protocol import TextDocumentSyncKind
 from typing import Any
 from typing import Generator
+from typing import TYPE_CHECKING
 import sublime
 import unittest
 import weakref
+
+if TYPE_CHECKING:
+    from LSP.plugin.core.protocol import Error
 
 
 class MockManager(Manager):
@@ -281,5 +284,5 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(sb.get_uri(), "some-scheme://whatever")
 
     def test_get_session_buffer_for_uri_with_files(self) -> None:
-        # todo: write windows-only test
+        # TODO: write windows-only test
         pass

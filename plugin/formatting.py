@@ -9,7 +9,6 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
@@ -25,9 +24,13 @@ from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import List
+from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
 import sublime
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 FormatResponse = Union[List[TextEdit], None, Error]
 

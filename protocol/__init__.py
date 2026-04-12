@@ -1,4 +1,4 @@
-# ruff: noqa: E501, UP006, UP007
+# ruff: noqa: E501, UP006, UP007, UP037
 # Code generated. DO NOT EDIT.
 # LSP v3.18.0
 

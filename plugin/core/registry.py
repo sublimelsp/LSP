@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from ...protocol import Diagnostic
-from ...protocol import Location
-from ...protocol import LocationLink
 from .logging import debug
-from .sessions import AbstractViewListener
-from .sessions import Session
 from .url import parse_uri
 from .views import first_selection_region
 from .views import get_uri_and_position_from_location
@@ -17,9 +12,17 @@ from .windows import WindowRegistry
 from functools import partial
 from typing import Generator
 from typing import Iterable
+from typing import TYPE_CHECKING
 import operator
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from ...protocol import Diagnostic
+    from ...protocol import Location
+    from ...protocol import LocationLink
+    from .sessions import AbstractViewListener
+    from .sessions import Session
 
 windows = WindowRegistry()
 

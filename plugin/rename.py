@@ -1,24 +1,27 @@
 from __future__ import annotations
 
-from ..protocol import PrepareRenameParams
-from ..protocol import PrepareRenameResult
-from ..protocol import Range
-from ..protocol import RenameParams
-from ..protocol import WorkspaceEdit
 from .core.edit import show_summary_message
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .edit import prompt_for_workspace_edits
 from functools import partial
 from typing import Any
+from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
 import sublime
 import sublime_plugin
 import weakref
+
+if TYPE_CHECKING:
+    from ..protocol import PrepareRenameParams
+    from ..protocol import PrepareRenameResult
+    from ..protocol import Range
+    from ..protocol import RenameParams
+    from ..protocol import WorkspaceEdit
+    from .core.sessions import Session
 
 PREPARE_RENAME_CAPABILITY = "renameProvider.prepareProvider"
 

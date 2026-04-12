@@ -14,11 +14,14 @@ from LSP.plugin.core.views import entire_content
 from LSP.plugin.core.views import kind_contains_other_kind
 from LSP.plugin.core.views import versioned_text_document_identifier
 from LSP.plugin.documents import DocumentSyncListener
-from LSP.protocol import Range
 from typing import Any
 from typing import Generator
-import sublime
+from typing import TYPE_CHECKING
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import Range
+    import sublime
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 

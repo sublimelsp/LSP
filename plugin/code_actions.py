@@ -11,8 +11,6 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
@@ -34,6 +32,8 @@ from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import SessionBufferProtocol
     from collections.abc import Callable
     from collections.abc import Generator
     from collections.abc import Iterator
@@ -247,7 +247,7 @@ def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeAc
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = code_actions.get(current_part, None)
+            user_value = code_actions.get(current_part)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:

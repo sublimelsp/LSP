@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from ...protocol import CodeAction
-from ...protocol import Command
-from ...protocol import DocumentUri
-from ...protocol import URI
 from .constants import ST_INSTALLED_PACKAGES_PATH
 from .constants import ST_PACKAGES_PATH
 from base64 import urlsafe_b64decode
 from base64 import urlsafe_b64encode
 from typing import Any
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import deprecated
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -18,7 +15,13 @@ from urllib.request import url2pathname
 import json
 import os
 import re
-import sublime
+
+if TYPE_CHECKING:
+    from ...protocol import CodeAction
+    from ...protocol import Command
+    from ...protocol import DocumentUri
+    from ...protocol import URI
+    import sublime
 
 CODE_ACTION_SCHEME = 'code-action'
 

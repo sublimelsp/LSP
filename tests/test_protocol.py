@@ -5,9 +5,12 @@ from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.transports import decode_json
 from LSP.plugin.core.transports import encode_json
-from LSP.protocol import Position
-from LSP.protocol import Range
+from typing import TYPE_CHECKING
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import Position
+    from LSP.protocol import Range
 
 LSP_START_POSITION: Position = {'line': 10, 'character': 4}
 LSP_END_POSITION: Position = {'line': 11, 'character': 3}

@@ -146,7 +146,6 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Generator
-from typing import List
 from typing import Literal
 from typing import overload
 from typing import Protocol
@@ -305,7 +304,7 @@ def get_initialize_params(
     semantic_token_types = [member.value for member in SemanticTokenTypes]
     semantic_token_modifiers = [member.value for member in SemanticTokenModifiers]
     if config.semantic_tokens is not None:
-        for token in config.semantic_tokens.keys():
+        for token in config.semantic_tokens:
             token_type, _, token_modifier = token.partition('.')
             if token_type not in semantic_token_types:
                 semantic_token_types.append(token_type)
@@ -581,7 +580,7 @@ def get_initialize_params(
         "window": window_capabilities,
     }
     if config.experimental_capabilities is not None:
-        capabilities['experimental'] = cast(LSPObject, config.experimental_capabilities)
+        capabilities['experimental'] = cast('LSPObject', config.experimental_capabilities)
     if get_file_watcher_implementation():
         workspace_capabilites["didChangeWatchedFiles"] = {
             "dynamicRegistration": True,
@@ -598,7 +597,7 @@ def get_initialize_params(
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": cast(LSPAny, config.initialization_options.get_resolved(variables))
+        "initializationOptions": cast('LSPAny', config.initialization_options.get_resolved(variables))
     }
 
 
@@ -786,7 +785,7 @@ class AbstractViewListener(ABC):
 
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
 
-    view = cast(sublime.View, None)
+    view = cast('sublime.View', None)
     hover_provider_count = 0
     lightbulb_color: str = ''
 
@@ -1116,7 +1115,7 @@ class Session(APIHandler, TransportCallbacks):
     # --- capability observers -----------------------------------------------------------------------------------------
 
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
-        if not self.state == ClientStates.READY:
+        if self.state != ClientStates.READY:
             return False
         if scheme == "file":
             file_name = view.file_name()
@@ -1286,12 +1285,12 @@ class Session(APIHandler, TransportCallbacks):
         self.end_async()
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
-        folder_exclude_patterns = cast(List[str], globalprefs().get('folder_exclude_patterns'))
+        folder_exclude_patterns = cast('list[str]', globalprefs().get('folder_exclude_patterns'))
         folder_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=root_path)
             for pattern in folder_exclude_patterns
         ]
-        file_exclude_patterns = cast(List[str], globalprefs().get('file_exclude_patterns'))
+        file_exclude_patterns = cast('list[str]', globalprefs().get('file_exclude_patterns'))
         file_excludes = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=False, root_path=root_path)
             for pattern in file_exclude_patterns
@@ -1367,7 +1366,7 @@ class Session(APIHandler, TransportCallbacks):
     ) -> Promise[None]:
         command = code_action.get("command")
         if isinstance(command, str):
-            code_action = cast(Command, code_action)
+            code_action = cast('Command', code_action)
             # This is actually a command.
             command_params: ExecuteCommandParams = {'command': command}
             arguments = code_action.get('arguments', None)
@@ -1379,7 +1378,7 @@ class Session(APIHandler, TransportCallbacks):
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
-        code_action = cast(CodeAction, code_action)
+        code_action = cast('CodeAction', code_action)
         return self._maybe_resolve_code_action(code_action, view) \
             .then(lambda code_action: self._apply_code_action_async(code_action, view))
 
@@ -1704,7 +1703,7 @@ class Session(APIHandler, TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
-        if not self.config.diagnostics_mode == 'workspace':
+        if self.config.diagnostics_mode != 'workspace':
             return
         if not self.get_workspace_folders():
             return
@@ -1897,7 +1896,7 @@ class Session(APIHandler, TransportCallbacks):
             registration_id = registration["id"]
             if capability_path == 'diagnosticProvider':
                 new_diagnostics_provider = True
-                options = cast(DiagnosticOptions, options)
+                options = cast('DiagnosticOptions', options)
                 self.diagnostics.register_provider(registration_id, options)
                 if options['workspaceDiagnostics']:
                     new_workspace_diagnostics_provider = True
@@ -2053,27 +2052,26 @@ class Session(APIHandler, TransportCallbacks):
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
                     self._invoke_views(request, "on_request_progress", request_id, params)
-                    return
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
                     if kind == 'begin':
                         # We are dealing with possibility (2), so create the progress reporter now.
-                        value = cast(WorkDoneProgressBegin, value)
+                        value = cast('WorkDoneProgressBegin', value)
                         self._create_window_progress_reporter(token, value)
-                        return
-                debug(f'unknown $/progress token: {token}')
+                    else:
+                        debug(f'unknown $/progress token: {token}')
                 return
             if kind == 'begin':
-                value = cast(WorkDoneProgressBegin, value)
+                value = cast('WorkDoneProgressBegin', value)
                 self._create_window_progress_reporter(token, value)
             elif kind == 'report':
-                value = cast(WorkDoneProgressReport, value)
+                value = cast('WorkDoneProgressReport', value)
                 progress = self._progress[token]
                 assert isinstance(progress, WindowProgressReporter)
                 progress(value.get("message"), value.get("percentage"))
             elif kind == 'end':
-                value = cast(WorkDoneProgressEnd, value)
+                value = cast('WorkDoneProgressEnd', value)
                 progress = self._progress.pop(token)
                 assert isinstance(progress, WindowProgressReporter)
                 title = progress.title
@@ -2106,7 +2104,7 @@ class Session(APIHandler, TransportCallbacks):
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def shutdown_session_view_async(self, session_view: SessionViewProtocol) -> None:
-        for status_key in self._status_messages.keys():
+        for status_key in self._status_messages:
             session_view.view.erase_status(status_key)
         session_view.shutdown_async()
 
@@ -2152,9 +2150,9 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, request)
         elif self._plugin:
-            client_request = cast(ClientRequest, cast(object, {'method': request.method, 'params': request.params}))
+            client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
             self._plugin.on_pre_send_request_async(client_request, request.view)
-            request.params = cast(P, client_request['params'])
+            request.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
         return request_id
@@ -2192,10 +2190,10 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
         elif self._plugin:
-            client_notification = cast(ClientNotification,
-                                       cast(object, {'method': notification.method, 'params': notification.params}))
+            client_notification = cast('ClientNotification',
+                                       cast('object', {'method': notification.method, 'params': notification.params}))
             self._plugin.on_pre_send_notification_async(client_notification)
-            notification.params = cast(P, client_notification['params'])
+            notification.params = cast('P', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
@@ -2240,7 +2238,8 @@ class Session(APIHandler, TransportCallbacks):
                 if self._plugin and isinstance(self._plugin, AbstractPlugin):
                     self._plugin.on_server_notification_async(Notification(method, result))
                 elif self._plugin:
-                    server_notification = cast(ServerNotification, cast(object, {'method': method, 'result': result}))
+                    server_notification = cast('ServerNotification',
+                                               cast('object', {'method': method, 'result': result}))
                     self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:
@@ -2253,9 +2252,10 @@ class Session(APIHandler, TransportCallbacks):
             response = Response(response_id, result)
             if not is_error and self._plugin:
                 if isinstance(self._plugin, AbstractPlugin):
-                    self._plugin.on_server_response_async(cast(str, method), response)
+                    self._plugin.on_server_response_async(cast('str', method), response)
                 else:
-                    server_response = cast(ServerResponse, cast(object, {'method': method, 'result': response.result}))
+                    server_response = cast('ServerResponse',
+                                           cast('object', {'method': method, 'result': response.result}))
                     self._plugin.on_server_response_async(server_response)
                     response.result = server_response['result']
             return handler, response.result, None, None, None

@@ -5,17 +5,16 @@ from .logging import debug
 from .logging import exception_log
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import JSONRPCMessage
 from abc import ABC
 from abc import abstractmethod
 from contextlib import closing
 from functools import partial
-from io import BufferedIOBase
 from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import final
 from typing import IO
+from typing import TYPE_CHECKING
 from typing_extensions import override
 import contextlib
 import http.client
@@ -28,6 +27,10 @@ import subprocess
 import threading
 import time
 import weakref
+
+if TYPE_CHECKING:
+    from .protocol import JSONRPCMessage
+    from io import BufferedIOBase
 
 try:
     import orjson

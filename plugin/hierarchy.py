@@ -16,7 +16,6 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
@@ -27,10 +26,14 @@ from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import Callable
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
 import sublime
 import weakref
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 

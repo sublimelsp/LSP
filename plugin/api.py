@@ -14,13 +14,11 @@ from .core.protocol import Response
 from .core.protocol import ServerNotification
 from .core.protocol import ServerResponse
 from .core.settings import client_configs
-from .core.transports import TransportWrapper
 from .core.types import ClientConfig
 from .core.types import method2attr
 from .core.url import parse_uri
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
-from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -47,6 +45,7 @@ if TYPE_CHECKING:
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
     from .core.sessions import SessionViewProtocol
+    from .core.transports import TransportWrapper
     from .core.types import ClientConfig
     from .core.views import MarkdownLangMap
     from .core.workspace import WorkspaceFolder
@@ -159,10 +158,7 @@ def unregister_plugin(plugin: type[AbstractPlugin]) -> None:
 
 
 def unregister_plugin_impl(plugin: type[AbstractPlugin | LspPlugin]) -> None:
-    if issubclass(plugin, AbstractPlugin):
-        name = plugin.name()
-    else:
-        name = plugin.__module__.split('.')[0]
+    name = plugin.name() if issubclass(plugin, AbstractPlugin) else plugin.__module__.split('.')[0]
     try:
         g_plugins.pop(name, None)
         client_configs.remove_external_config(name)

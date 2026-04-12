@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .setup import TextDocumentTestCase
-from LSP.plugin.core.sessions import SessionBufferProtocol
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
@@ -9,9 +8,13 @@ from LSP.protocol import TextDocumentSyncKind
 from pathlib import Path
 from typing import Any
 from typing import Generator
+from typing import TYPE_CHECKING
 import os
 import sublime
 import tempfile
+
+if TYPE_CHECKING:
+    from LSP.plugin.core.sessions import SessionBufferProtocol
 
 
 def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]] | None:

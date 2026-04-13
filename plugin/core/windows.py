@@ -9,11 +9,11 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
+from ..api import BeforeStartContext
 from ..api import get_plugin
+from ..api import IsApplicableContext
 from ..api import LspPlugin
-from ..api import PluginContext
 from ..api import PluginStartError
-from .collections import DottedDict
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -242,11 +242,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    plugin_context = PluginContext(config, view, self._window, self._workspace.get_workspace_folders())
-                    if issubclass(plugin, AbstractPlugin):
-                        if plugin.is_applicable(view, config):
+                    if issubclass(plugin, LspPlugin):
+                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
+                        if plugin.is_applicable(context):
                             return config
-                    elif plugin.is_applicable(plugin_context):
+                    elif plugin.is_applicable(view, config):
                         return config
                 else:
                     return config
@@ -263,30 +263,25 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd = workspace_folders[0].path if workspace_folders else None
-            plugin_context = PluginContext(config, initiating_view, self._window, workspace_folders)
+            working_directory = workspace_folders[0].path if workspace_folders else None
+            context = BeforeStartContext(config, variables, initiating_view, working_directory, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
-                    plugin_class.install_async(plugin_context)
-                    additional_variables = plugin_class.additional_variables(plugin_context)
+                    plugin_class.on_before_start_async(context)
                 else:
                     if plugin_class.needs_update_or_installation():
                         config.set_view_status(initiating_view, "installing...")
                         plugin_class.install_or_update()
                     additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                if issubclass(plugin_class, AbstractPlugin):
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
                     cannot_start_reason = plugin_class.can_start(
                         self._window, initiating_view, workspace_folders, config)
                     if cannot_start_reason:
                         raise PluginStartError(cannot_start_reason)
-                if issubclass(plugin_class, LspPlugin):
-                    config.command = plugin_class.command(plugin_context)
-                    config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
-                    cwd = plugin_class.working_directory(plugin_context)
-                elif plugin_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
-                    cwd = plugin_cwd
+                    if new_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
@@ -294,7 +289,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if issubclass(plugin_class, AbstractPlugin):
                     plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
                 else:
-                    plugin_class.on_before_initialize(plugin_context, transport)
+                    plugin_class.on_before_initialize_async(context, transport)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
                 variables=variables,

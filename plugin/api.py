@@ -244,15 +244,28 @@ def request_handler(
 
 
 @dataclass
-class PluginContext:
+class IsApplicableContext:
     """Plugin context information passed to various `LspPlugin` classmethods."""
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
+    """Template variables to be substituted in `command`, `env`, and `initialization_options`."""
+    workspace_folders: list[WorkspaceFolder]
+    """The workspace folders active for this session."""
+
+
+@dataclass
+class BeforeStartContext:
+    """Plugin context information passed to various `LspPlugin` classmethods."""
+
+    configuration: ClientConfig
+    """The resolved `ClientConfig` for this session."""
+    variables: dict[str, str]
+    """Template variables to be substituted in `command`, `env`, and `initialization_options`."""
+    view: sublime.View
     """The view relevant to the method being called."""
-    window: sublime.Window
-    """The window in which the session is running."""
+    working_directory: str | None
     workspace_folders: list[WorkspaceFolder]
     """The workspace folders active for this session."""
 
@@ -346,7 +359,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable(cls, context: PluginContext) -> bool:
+    def is_applicable(cls, context: IsApplicableContext) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 
@@ -367,21 +380,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def additional_variables(cls, context: PluginContext) -> dict[str, str]:
-        """
-        Return extra template variables to be substituted in ``command``, ``env``, and ``initialization_options``.
-
-        By default includes variables like ``$storage_path``, ``$cache_path``, ``$temp_dir``, ``$home`` and also
-        all variables extracted from the window (the ``window.extract_variables()`` API). Override this method
-        to inject additional variables specific to your plugin.
-
-        :param      context:    The plugin context.
-        :returns:   A dictionary of variable name → value pairs.
-        """
-        return {}
-
-    @classmethod
-    def install_async(cls, context: PluginContext) -> None:
+    def on_before_start_async(cls, context: BeforeStartContext) -> None:
         """
         Update or install the server binary if this plugin manages one. Called before the server is started.
 
@@ -393,50 +392,7 @@ class LspPlugin(APIHandler):
         pass
 
     @classmethod
-    def command(cls, context: PluginContext) -> list[str]:
-        """
-        Return the command used to start the language server subprocess.
-
-        The default implementation returns the ``command`` from the settings file after
-        template variable substitution. Override this method to build the command
-        programmatically (e.g. to resolve a binary path at runtime).
-
-        :param      context:    The plugin context.
-        :returns:   A non-empty list where the first element is the executable and the
-                    remaining elements are its arguments.
-        """
-        return context.configuration.command
-
-    @classmethod
-    def initialization_options(cls, context: PluginContext) -> dict[str, Any]:
-        """
-        Return the ``initializationOptions`` sent to the server in the ``initialize`` request.
-
-        The default implementation returns the ``initialization_options`` from the settings
-        file after template variable substitution. Override this method to compute the options
-        dynamically or to merge in runtime values.
-
-        :param      context:    The plugin context.
-        :returns:   A dictionary of initialization options.
-        """
-        return context.configuration.initialization_options.get()
-
-    @classmethod
-    def working_directory(cls, context: PluginContext) -> str | None:
-        """
-        Return the working directory for the language server subprocess.
-
-        The default implementation returns the path of the first workspace folder, or
-        ``None`` when there are no workspace folders. Override this method if the server
-        requires a specific working directory.
-
-        :param      context:    The plugin context.
-        :returns:   An absolute path to use as the working directory, or ``None`` to let the OS choose a default.
-        """
-        return context.workspace_folders[0].path if context.workspace_folders else None
-
-    @classmethod
-    def on_before_initialize(cls, context: PluginContext, transport: TransportWrapper) -> None:
+    def on_before_initialize_async(cls, context: BeforeStartContext, transport: TransportWrapper) -> None:
         """
         Called after the transport is established but before the LSP ``initialize`` request is sent.
 
@@ -489,7 +445,7 @@ class LspPlugin(APIHandler):
         """
         return configuration
 
-    def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | None:
+    def on_execute_command_async(self, command: ExecuteCommandParams) -> Promise[None] | None:
         """
         Intercept a command that is about to be sent to the language server.
 

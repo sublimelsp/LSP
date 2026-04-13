@@ -1,8 +1,7 @@
 """
 A simple test server for integration tests.
 
-Only understands stdio.
-Uses the asyncio module and mypy types, so you'll need a modern Python.
+Can do JSON-RPC with stdio or TCP sockets as the transport.
 
 To make this server reply to requests, send the $test/setResponse notification.
 
@@ -18,7 +17,6 @@ with expected notification method in params['method'] and params in params['para
 Tests can await this request to make sure that they receive notification before code
 resumes (since response to request will arrive after requested notification).
 
-TODO: Untested on Windows.
 """
 from __future__ import annotations
 
@@ -38,7 +36,7 @@ import sys
 import uuid
 
 __package__ = "server"
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 
 StringDict = Dict[str, Any]
@@ -479,24 +477,36 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main(tcp_port: int | None = None) -> bool:
+async def main(tcp_port: int | None = None, mode: str | None = None) -> bool:
     if tcp_port is not None:
 
-        class ClientConnectedCallback:
+        if mode is None or mode == "server":
+            print("running in TCP server mode", file=sys.stderr)
 
-            def __init__(self) -> None:
-                self.received_shutdown = False
+            class ClientConnectedCallback:
 
-            async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-                session = Session(reader, writer)
-                self.received_shutdown = await session.run_forever()
+                def __init__(self) -> None:
+                    self.received_shutdown = False
 
-        callback = ClientConnectedCallback()
-        server = await asyncio.start_server(callback, port=tcp_port)
-        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received.
-        # But, it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
-        await server.serve_forever()
-        return callback.received_shutdown
+                async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                    session = Session(reader, writer)
+                    self.received_shutdown = await session.run_forever()
+
+            callback = ClientConnectedCallback()
+            server = await asyncio.start_server(callback, port=tcp_port)
+            # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
+            # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
+            await server.serve_forever()
+            return callback.received_shutdown
+
+        if mode is not None and mode == "client":
+            print("running in TCP client mode", file=sys.stderr)
+            reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
+            session = Session(reader, writer)
+            return await session.run_forever()
+
+        return False
+
     reader, writer = await stdio()
     session = Session(reader, writer)
     return await session.run_forever()
@@ -506,6 +516,7 @@ if __name__ == '__main__':
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
+    parser.add_argument("--mode", help="one of 'client' or 'server'", default="server")
     args = parser.parse_args()
     if args.version:
         print(__package__, __version__)
@@ -514,7 +525,7 @@ if __name__ == '__main__':
     asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main(args.tcp_port))
+        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode))
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())

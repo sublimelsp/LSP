@@ -44,23 +44,42 @@ class YieldPromise:
         return self.__result
 
 
-def make_stdio_test_config() -> ClientConfig:
-    return ClientConfig(
-        name="TEST",
+def make_stdio_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+    """Start the fake language server in STDIO mode."""
+    config = ClientConfig(
+        name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
         enabled=True,
     )
+    config.initialization_options.assign(init_options)
+    return config
 
 
-def make_tcp_test_config() -> ClientConfig:
-    return ClientConfig(
-        name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+def make_tcp_server_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+    """Start the fake server in TCP mode, and make it act as the TCP server, awaiting a single client connection."""
+    config = ClientConfig(
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=server"],
         selector="text.plain",
         tcp_port=0,  # select a free one for me
         enabled=True,
     )
+    config.initialization_options.assign(init_options)
+    return config
+
+
+def make_tcp_client_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+    """Start the fake server in TCP mode, and make it act as the TCP client, where it connects to the LSP plugin."""
+    config = ClientConfig(
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=client"],
+        selector="text.plain",
+        tcp_port=-1,  # select a free one for me
+        enabled=True,
+    )
+    config.initialization_options.assign(init_options)
+    return config
 
 
 def add_config(config: ClientConfig) -> None:
@@ -85,7 +104,7 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
-        return make_stdio_test_config()
+        return make_stdio_test_config("TEST", {})
 
     @classmethod
     def setUpClass(cls) -> Generator:

@@ -4,6 +4,8 @@ from .setup import add_config
 from .setup import close_test_view
 from .setup import expand
 from .setup import make_stdio_test_config
+from .setup import make_tcp_client_test_config
+from .setup import make_tcp_server_test_config
 from .setup import remove_config
 from .setup import TIMEOUT_TIME
 from .setup import YieldPromise
@@ -50,16 +52,17 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.assertTrue(self.window)
         self.session1 = None
         self.session2 = None
-        self.config1 = make_stdio_test_config()
-        self.config1.initialization_options.assign(initialization_options)
-        self.config2 = make_stdio_test_config()
-        self.config2.initialization_options.assign(initialization_options)
-        self.config2.name = "TEST-2"
+        self.session3 = None
+        self.config1 = make_stdio_test_config("TEST-1", initialization_options)
+        self.config2 = make_tcp_client_test_config("TEST-2", initialization_options)
+        self.config3 = make_tcp_server_test_config("TEST-3", initialization_options)
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
+        add_config(self.config3)
         self.wm.get_config_manager().all[self.config1.name] = self.config1
         self.wm.get_config_manager().all[self.config2.name] = self.config2
+        self.wm.get_config_manager().all[self.config3.name] = self.config3
 
     def test_sends_did_open_to_multiple_sessions(self) -> Generator:
         filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
@@ -76,14 +79,21 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield {
             "condition": lambda: self.wm.get_session(self.config2.name, self.view.file_name()) is not None,
             "timeout": TIMEOUT_TIME}
+        yield {
+            "condition": lambda: self.wm.get_session(self.config3.name, self.view.file_name()) is not None,
+            "timeout": TIMEOUT_TIME}
         self.session1 = self.wm.get_session(self.config1.name, self.view.file_name())
         self.session2 = self.wm.get_session(self.config2.name, self.view.file_name())
+        self.session3 = self.wm.get_session(self.config3.name, self.view.file_name())
         self.assertIsNotNone(self.session1)
         self.assertIsNotNone(self.session2)
+        self.assertIsNotNone(self.session3)
         self.assertEqual(self.session1.config.name, self.config1.name)
         self.assertEqual(self.session2.config.name, self.config2.name)
+        self.assertEqual(self.session3.config.name, self.config3.name)
         yield {"condition": lambda: self.session1.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield {"condition": lambda: self.session2.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
+        yield {"condition": lambda: self.session3.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from self.await_message("initialize")
         yield from self.await_message("initialized")
         yield from self.await_message("textDocument/didOpen")
@@ -103,6 +113,13 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         if self.session2:
             sublime.set_timeout_async(self.session2.end_async)
             yield lambda: self.session2.state == ClientStates.STOPPING
+        if self.session3:
+            sublime.set_timeout_async(self.session3.end_async)
+            yield lambda: self.session3.state == ClientStates.STOPPING
+        try:
+            remove_config(self.config3)
+        except ValueError:
+            pass
         try:
             remove_config(self.config2)
         except ValueError:
@@ -111,6 +128,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             remove_config(self.config1)
         except ValueError:
             pass
+        self.wm.get_config_manager().all.pop(self.config3.name, None)
         self.wm.get_config_manager().all.pop(self.config2.name, None)
         self.wm.get_config_manager().all.pop(self.config1.name, None)
         yield from super().doCleanups()
@@ -118,6 +136,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
     def await_message(self, method: str) -> Generator:
         promise1 = YieldPromise()
         promise2 = YieldPromise()
+        promise3 = YieldPromise()
 
         def handler1(params: Any) -> None:
             promise1.fulfill(params)
@@ -125,10 +144,15 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         def handler2(params: Any) -> None:
             promise2.fulfill(params)
 
+        def handler3(params: Any) -> None:
+            promise3.fulfill(params)
+
         def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)
         self.session2.send_request(Request("$test/getReceived", {"method": method}), handler2, error_handler)
+        self.session3.send_request(Request("$test/getReceived", {"method": method}), handler3, error_handler)
         yield {"condition": promise1, "timeout": TIMEOUT_TIME}
         yield {"condition": promise2, "timeout": TIMEOUT_TIME}
+        yield {"condition": promise3, "timeout": TIMEOUT_TIME}

@@ -263,12 +263,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd = workspace_folders[0].path if workspace_folders else None
-            working_directory = workspace_folders[0].path if workspace_folders else None
-            context = BeforeStartContext(config, variables, initiating_view, working_directory, workspace_folders)
+            context = BeforeStartContext(config, variables, initiating_view, cwd, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.on_before_start_async(context)
+                    cwd = context.working_directory
                 else:
                     if plugin_class.needs_update_or_installation():
                         config.set_view_status(initiating_view, "installing...")

@@ -831,7 +831,13 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
-        self._all_settings = all_settings or {}
+        if isinstance(all_settings, dict):
+            self._all_settings = all_settings
+            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
+            if 'settings' in self._all_settings:
+                del self._all_settings['settings']
+        else:
+            self._all_settings = {}
         self._view_status_handler = default_status_view_handler
 
     @property
@@ -1120,12 +1126,7 @@ class ClientConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
-        for k, v in self.__dict__.items():
-            if not k.startswith("_") and k != 'settings' and v != getattr(other, k):
-                return False
-        if self.enabled != other.enabled:
-            return False
-        return True
+        return self.name == other.name and self._all_settings == other._all_settings
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

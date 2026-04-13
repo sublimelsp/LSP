@@ -433,6 +433,10 @@ class LspPlugin(APIHandler):
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession
+        self.execute_commands: dict[str, Callable[[ExecuteCommandParams], None]]
+
+    def on_start_async(self) -> None:
+        pass
 
     def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
         """
@@ -445,7 +449,7 @@ class LspPlugin(APIHandler):
         """
         return configuration
 
-    def on_execute_command_async(self, command: ExecuteCommandParams) -> Promise[None] | None:
+    def register_command(self, command: str, handler: Callable[[ExecuteCommandParams], None]) -> None:
         """
         Intercept a command that is about to be sent to the language server.
 
@@ -453,7 +457,7 @@ class LspPlugin(APIHandler):
 
         :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
         """
-        pass
+        self.execute_commands[command] = handler
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         """

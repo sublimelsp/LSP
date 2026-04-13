@@ -1251,6 +1251,7 @@ class Session(APIHandler, TransportCallbacks):
             # Handle it now and use fake request ID since it shouldn't matter.
             if issubclass(self._plugin_class, LspPlugin):
                 self._plugin = self._plugin_class(weakref.ref(self))
+                self._plugin.on_start_async()
                 server_response: ServerResponse = {'method': 'initialize', 'result': result}
                 self._plugin.on_server_response_async(server_response)
             else:
@@ -1319,8 +1320,10 @@ class Session(APIHandler, TransportCallbacks):
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                if promise := self._plugin.on_execute_command_async(command):
-                    return promise.then(lambda _: None)
+                command_name = command['command']
+                if handler := self._plugin.execute_commands.get(command_name):
+                    handler(command)
+                    return Promise.resolve(None)
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task

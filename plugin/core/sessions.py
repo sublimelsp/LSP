@@ -1318,9 +1318,10 @@ class Session(APIHandler, TransportCallbacks):
         is_refactoring: bool = False,
     ) -> Promise[R | Error | None]:  # pyright: ignore[reportInvalidTypeVarUse]
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
+        command_name = command['command']
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                if handler := self._plugin.execute_commands.get(command['command']):
+                if handler := self._plugin.execute_commands.get(command_name):
                     return handler(command)
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
@@ -1328,7 +1329,6 @@ class Session(APIHandler, TransportCallbacks):
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return promise
                 resolve(None)
-        command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.

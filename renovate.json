@@ -1,6 +1,40 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>sublimelsp/renovate-preset"
+    "github>sublimelsp/renovate-preset",
+    "schedule:officeHours"
+  ],
+  "packageRules": [
+    {
+      "description": "Delay newly released updates for 3 days",
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Automerge zensical dependency",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "matchPackageNames": "zensical",
+      "automerge": true
+    },
+    {
+      "description": "Automerge GitHub Actions updates — very rarely breaking",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    },
+    {
+      "description": "Never automerge major updates — these require human review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
   ]
 }

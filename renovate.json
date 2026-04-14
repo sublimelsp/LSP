@@ -8,6 +8,9 @@
   "packageRules": [
     {
       "description": "Delay newly released updates for 3 days",
+      "matchCategories": [
+        "python"
+      ],
       "minimumReleaseAge": "3 days"
     },
     {

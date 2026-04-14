@@ -1,1 +1,1 @@
-zensical==0.0.32
+zensical==0.0.33

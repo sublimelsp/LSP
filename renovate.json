@@ -11,17 +11,11 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Automerge GitHub Actions updates — very rarely breaking",
+      "description": "Group GitHub Actions updates",
       "matchManagers": [
         "github-actions"
       ],
-      "groupName": "GitHub Actions",
-      "automerge": true
-    },
-    {
-      "description": "Never automerge major updates — these require human review",
-      "matchUpdateTypes": ["major"],
-      "automerge": false
+      "groupName": "GitHub Actions"
     }
   ]
 }

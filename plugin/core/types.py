@@ -982,7 +982,7 @@ class ClientConfig:
             semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
             diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
-            settings_registration=deepcopy(src_config._settings_registration),
+            settings_registration=src_config._settings_registration,
             all_settings=deepcopy({**src_config._all_settings, **override})
         )
 

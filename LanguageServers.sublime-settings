@@ -1,5 +1,8 @@
 {
-  // Each new server configuration must have the following structure.
+  // // Each new server configuration must have the following structure.
+  // // A list with example server configurations is available at
+  // // https://lsp.sublimetext.io/language_servers/
+  //
   // "SERVER_NAME": // some human-friendly name
   // {
   //   // ----------- The following three settings are **required** -----------

@@ -1,8 +1,8 @@
 {
-  // // Each new server configuration must have the following structure.
+  // Each new server configuration must have the following structure.
   // "SERVER_NAME": // some human-friendly name
   // {
-  //   # ----------- The following three settings are **required** -----------
+  //   // ----------- The following three settings are **required** -----------
   //
   //   // Enable or disable this client configuration.
   //   "enabled": true,
@@ -17,7 +17,7 @@
   //   // in the popup is the base scope.
   //   "selector": "source.python",
   //
-  //   # ------ From this point onward, each key-value is **optional** -------
+  //   // ------ From this point onward, each key-value is **optional** -------
   //
   //   // An optional list of URI schemes which this client configuration
   //   // should attach to. A well-known URI scheme is the `file` scheme. The

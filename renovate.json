@@ -7,9 +7,6 @@
   "packageRules": [
     {
       "description": "Delay newly released updates for 3 days",
-      "matchManagers": [
-        "pip_requirements"
-      ],
       "minimumReleaseAge": "3 days"
     },
     {

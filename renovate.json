@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "github>sublimelsp/renovate-preset",
-    "automergeMinor",
+    ":automergeMinor",
     "schedule:officeHours"
   ],
   "packageRules": [

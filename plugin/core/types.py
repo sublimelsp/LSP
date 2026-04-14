@@ -185,6 +185,9 @@ class SettingsRegistration:
         self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
+        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
+        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
+        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
         self.settings.clear_on_change("LSP")
 
 

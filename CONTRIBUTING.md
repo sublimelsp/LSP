@@ -24,6 +24,28 @@ Consider using [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyrigh
 To reload the plugin, save the file `boot.py`.
 Saving any other file does not reload the plugin.
 
+## Pre-commit hooks
+
+The repository ships a [pre-commit](https://pre-commit.com) configuration that runs linting and type-checking before every commit, matching the checks that run in CI via `tox`.
+
+The hook delegates to `tox`, which manages the exact tool versions itself. pre-commit installs `tox` into its own isolated environment, so the checks work regardless of your shell environment or Git client.
+
+**One-time setup:**
+
+```sh
+# Install pre-commit (uv, pipx, or pip)
+uv tool install pre-commit
+
+# Install the git hook
+pre-commit install
+```
+
+To run the checks manually:
+
+```sh
+pre-commit run --all-files
+```
+
 ## Testing
 
 Please consider testing your work with other language servers, even if you do not use them.

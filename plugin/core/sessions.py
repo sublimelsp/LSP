@@ -1320,10 +1320,8 @@ class Session(APIHandler, TransportCallbacks):
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                command_name = command['command']
-                if handler := self._plugin.execute_commands.get(command_name):
-                    handler(command)
-                    return Promise.resolve(None)
+                if handler := self._plugin.execute_commands.get(command['command']):
+                    return handler(command)
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task

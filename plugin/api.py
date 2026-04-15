@@ -433,7 +433,7 @@ class LspPlugin(APIHandler):
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession
-        self.execute_commands: dict[str, Callable[[ExecuteCommandParams], None]]
+        self.execute_commands: dict[str, Callable[[ExecuteCommandParams], Promise[Any]]]
 
     def on_start_async(self) -> None:
         pass
@@ -449,7 +449,7 @@ class LspPlugin(APIHandler):
         """
         return configuration
 
-    def register_command(self, command: str, handler: Callable[[ExecuteCommandParams], None]) -> None:
+    def register_command(self, command: str, handler: Callable[[ExecuteCommandParams], Promise[Any]]) -> None:
         """
         Intercept a command that is about to be sent to the language server.
 

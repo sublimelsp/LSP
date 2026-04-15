@@ -148,22 +148,3 @@ ignore = [
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
-
-[tool.mypy]
-python_version = "3.9"
-
-# ignore_missing_imports = True
-# check_untyped_defs = True
-disallow_untyped_defs = true
-strict_optional = true
-mypy_path = ["stubs"]
-
-[[tool.mypy.overrides]]
-module = 'tests.*'
-check_untyped_defs = true
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = 'third_party.*'
-ignore_errors = true
-ignore_missing_imports = true

@@ -14,6 +14,7 @@ from ...protocol import Diagnostic
 from ...protocol import DiagnosticOptions
 from ...protocol import DiagnosticServerCancellationData
 from ...protocol import DiagnosticSeverity
+from ...protocol import DidChangeConfigurationParams
 from ...protocol import DidChangeWatchedFilesRegistrationOptions
 from ...protocol import DidChangeWorkspaceFoldersParams
 from ...protocol import DocumentDiagnosticReportKind
@@ -1774,8 +1775,10 @@ class Session(APIHandler, TransportCallbacks):
     def on_server_settings_changed(self, settings: DottedDict) -> None:
         self.config.settings = settings
         # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
-        value = None if self.should_notify_did_change_configuration() else self._get_resolved_settings()
-        self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': value}))
+        params: DidChangeConfigurationParams = {
+            'settings': None if self.should_notify_did_change_configuration() else self._get_resolved_settings()
+        }
+        self.send_notification(Notification('workspace/didChangeConfiguration', params))
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

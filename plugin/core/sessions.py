@@ -1315,11 +1315,15 @@ class Session(APIHandler, TransportCallbacks):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            if self._plugin:
-                self._plugin.on_settings_changed(self.config.settings)
-            variables = self._template_variables()
-            resolved = self.config.settings.get_resolved(variables)
-            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved}))
+            self.send_notification(Notification("workspace/didChangeConfiguration", {
+                "settings": self._get_resolved_settings()
+            }))
+
+    def _get_resolved_settings(self) -> dict[str, Any]:
+        if self._plugin:
+            self._plugin.on_settings_changed(self.config.settings)
+        variables = self._template_variables()
+        return self.config.settings.get_resolved(variables)
 
     def _template_variables(self) -> dict[str, str]:
         variables = extract_variables(self.window)
@@ -1769,11 +1773,9 @@ class Session(APIHandler, TransportCallbacks):
 
     def on_server_settings_changed(self, settings: DottedDict) -> None:
         self.config.settings = settings
-        if self.should_notify_did_change_configuration():
-            # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
-            self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': None}))
-        else:
-            self.window.status_message('Server restart may be required to apply changed settings')
+        # https://github.com/microsoft/language-server-protocol/issues/676#issuecomment-486694408
+        value = None if self.should_notify_did_change_configuration() else self._get_resolved_settings()
+        self.send_notification(Notification('workspace/didChangeConfiguration', {'settings': value}))
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

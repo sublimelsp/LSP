@@ -245,8 +245,6 @@ def request_handler(
 
 @dataclass
 class IsApplicableContext:
-    """Plugin context information passed to various `LspPlugin` classmethods."""
-
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
@@ -256,9 +254,7 @@ class IsApplicableContext:
 
 
 @dataclass
-class BeforeStartContext:
-    """Plugin context information passed to various `LspPlugin` classmethods."""
-
+class OnBeforeStartContext:
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     variables: dict[str, str]
@@ -268,6 +264,11 @@ class BeforeStartContext:
     working_directory: str | None
     workspace_folders: list[WorkspaceFolder]
     """The workspace folders active for this session."""
+
+
+@dataclass
+class OnStartContext:
+    transport: TransportWrapper
 
 
 class LspPlugin(APIHandler):
@@ -380,7 +381,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def on_before_start_async(cls, context: BeforeStartContext) -> None:
+    def on_before_start_async(cls, context: OnBeforeStartContext) -> None:
         """
         Update or install the server binary if this plugin manages one. Called before the server is started.
 
@@ -388,27 +389,6 @@ class LspPlugin(APIHandler):
         running ``npm install``) directly here without spawning additional threads.
 
         :param      context:    The plugin context.
-        """
-        pass
-
-    @classmethod
-    def on_before_initialize_async(cls, context: BeforeStartContext, transport: TransportWrapper) -> None:
-        """
-        Called after the transport is established but before the LSP ``initialize`` request is sent.
-
-        Override this method when your server requires out-of-band communication that must happen
-        before LSP negotiation begins — for example, sending a proprietary handshake or
-        authentication token over the raw transport.
-
-        Warning:
-            Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
-            hook for pre-initialization messages that your server explicitly expects before the
-            ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
-
-        :param context:     The plugin context.
-        :param transport:   The live transport connected to the language server process.
-                            Use ``transport.send()`` to write `JSONRPCMessage` messages or ``transport.send_bytes()``
-                            to write byte data.
         """
         pass
 
@@ -436,7 +416,24 @@ class LspPlugin(APIHandler):
         self.execute_commands: dict[str, Callable[[ExecuteCommandParams], Promise[Any]]]
         self.workspace_configuration_handler: Callable[[ConfigurationItem, Any], Any]
 
-    def on_start_async(self) -> None:
+    def on_start_async(self, context: OnStartContext) -> None:
+        """
+        Called after the transport is established but before the LSP ``initialize`` request is sent.
+
+        Override this method when your server requires out-of-band communication that must happen
+        before LSP negotiation begins — for example, sending a proprietary handshake or
+        authentication token over the raw transport.
+
+        Warning:
+            Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
+            hook for pre-initialization messages that your server explicitly expects before the
+            ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
+
+        :param context:     The plugin context.
+        """
+        pass
+
+    def on_after_initialize_async(self) -> None:
         pass
 
     def on_workspace_configuration(self, handler: Callable[[ConfigurationItem, Any], Any]) -> None:

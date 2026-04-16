@@ -9,10 +9,10 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
-from ..api import BeforeStartContext
 from ..api import get_plugin
 from ..api import IsApplicableContext
 from ..api import LspPlugin
+from ..api import OnBeforeStartContext
 from ..api import PluginStartError
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -263,7 +263,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd = workspace_folders[0].path if workspace_folders else None
-            context = BeforeStartContext(config, variables, initiating_view, cwd, workspace_folders)
+            context = OnBeforeStartContext(config, variables, initiating_view, cwd, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
@@ -285,11 +285,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
-            if plugin_class:
-                if issubclass(plugin_class, AbstractPlugin):
-                    plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
-                else:
-                    plugin_class.on_before_initialize_async(context, transport)
+            if plugin_class and issubclass(plugin_class, AbstractPlugin):
+                plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
                 variables=variables,

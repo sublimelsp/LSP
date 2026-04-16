@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
-from .api import BeforeStartContext
 from .api import IsApplicableContext
 from .api import LspPlugin
 from .api import notification_handler
+from .api import OnBeforeStartContext
+from .api import OnStartContext
 from .api import PluginStartError
 from .api import register_plugin
 from .api import request_handler
@@ -48,7 +49,6 @@ from .core.workspace import WorkspaceFolder
 # This is the public API for LSP-* packages
 __all__ = [
     'AbstractPlugin',
-    'BeforeStartContext',
     'ClientConfig',
     'ClientNotification',
     'ClientRequest',
@@ -65,6 +65,8 @@ __all__ = [
     'LspWindowCommand',
     'MarkdownLangMap',
     'Notification',
+    'OnBeforeStartContext',
+    'OnStartContext',
     'PackagedTask',
     'PluginStartError',
     'Promise',

@@ -75,6 +75,7 @@ from ..api import AbstractPlugin
 from ..api import APIHandler
 from ..api import LspPlugin
 from ..api import notification_handler
+from ..api import OnStartContext
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
@@ -1230,6 +1231,9 @@ class Session(APIHandler, TransportCallbacks):
         transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            self._plugin = self._plugin_class(weakref.ref(self))
+            self._plugin.on_start_async(OnStartContext(transport))
         self.transport = transport
         self.working_directory = working_directory
         self._variables = variables
@@ -1249,15 +1253,12 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            if issubclass(self._plugin_class, LspPlugin):
-                self._plugin = self._plugin_class(weakref.ref(self))
-                self._plugin.on_start_async()
-                server_response: ServerResponse = {'method': 'initialize', 'result': result}
-                self._plugin.on_server_response_async(server_response)
-            else:
+            if issubclass(self._plugin_class, AbstractPlugin):
                 self._plugin = self._plugin_class(weakref.ref(self))
                 self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
+        if self._plugin and isinstance(self._plugin, LspPlugin):
+            self._plugin.on_after_initialize_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")

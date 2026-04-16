@@ -21,7 +21,7 @@ Sublime Text bundles Python 3.8, please be sure to set up your environment to ma
 LSP uses [Pyright](https://microsoft.github.io/pyright) and [Ruff](https://docs.astral.sh/ruff/) to provide some code quality assurances.
 Run `tox` to check your work.
 Consider using [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and/or [LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) as a language server.
-Enable `"basedpyright.dev_environment": "sublime_text_38"` in `LPS-pyright` settings to make all types correct.
+Enable `"pyright.dev_environment": "sublime_text_38"` in `LSP-pyright` settings to ensure that types for Sublime Text modules are known.
 Changes in the code only apply after restarting Sublime Text.
 
 ## Pre-commit hooks

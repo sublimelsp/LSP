@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
+from .api import command_handler
 from .api import IsApplicableContext
 from .api import LspPlugin
 from .api import notification_handler
@@ -82,6 +83,7 @@ __all__ = [
     'WorkspaceFolder',
     '__version__',
     'apply_text_edits',
+    'command_handler',
     'css',
     'filename_to_uri',
     'matches_pattern',

@@ -6,6 +6,7 @@ from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
+from .core.promise import Promise
 from .core.protocol import ClientNotification
 from .core.protocol import ClientRequest
 from .core.protocol import ClientResponse
@@ -38,9 +39,7 @@ import sublime
 if TYPE_CHECKING:
     from ..protocol import ConfigurationItem
     from ..protocol import DocumentUri
-    from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
-    from .core.promise import Promise
     from .core.protocol import Notification
     from .core.protocol import Request
     from .core.sessions import Session
@@ -60,10 +59,12 @@ __all__ = [
 ]
 
 HANDLER_MARKER = '__HANDLER_MARKER'
+COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'
 
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
+CommandHandler = Callable[[Any, ExecuteCommandParams], Promise[None]]
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -178,11 +179,14 @@ class APIHandler:
         super().__init__()
         # Map m_* attr names → method names (strings only, no bound methods) to avoid
         # the reference cycle self → bound_method.__self__ → self that prevents GC.
-        handler_attr_map: dict[str, str] = {}
+        self.handler_attr_map: dict[str, str] = {}
+        self.command_handler_map: dict[str, str] = {}
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if hasattr(value, HANDLER_MARKER):
-                handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
-        self.handler_attr_map = handler_attr_map
+                self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
+            elif hasattr(value, COMMAND_HANDLER_MARKER):
+                self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
+        print(f'self.command_handler_map: {self.command_handler_map}')
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
@@ -240,6 +244,31 @@ def request_handler(
 
         setattr(wrapper, HANDLER_MARKER, method)
         return wrapper
+
+    return decorator
+
+
+def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHandler]:
+    """
+    Decorator to mark a method as a handler for a specific server command.
+
+    When the language server sends a `workspace/executeCommand` request with the given
+    command name, the decorated method is called with the full command payload.
+
+    Usage:
+        ```py
+        @command_handler('editor.action.triggerSuggest')
+        def on_trigger_suggest(self, params: ExecuteCommandParams) -> Promise[None]:
+            ...
+        ```
+
+    :param      command_name:   The command name as advertised by the server (e.g., 'editor.action.triggerSuggest').
+    :returns:   A decorator that registers the function as a command handler.
+    """
+
+    def decorator(func: CommandHandler) -> CommandHandler:
+        setattr(func, COMMAND_HANDLER_MARKER, command_name)
+        return func
 
     return decorator
 
@@ -414,7 +443,6 @@ class LspPlugin(APIHandler):
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession
-        self.execute_commands: dict[str, Callable[[ExecuteCommandParams], Promise[Any]]]
 
     def on_start_async(self, context: OnStartContext) -> None:
         """
@@ -435,16 +463,6 @@ class LspPlugin(APIHandler):
 
     def on_after_initialize_async(self) -> None:
         pass
-
-    def register_command(self, command: str, handler: Callable[[ExecuteCommandParams], Promise[Any]]) -> None:
-        """
-        Intercept a command that is about to be sent to the language server.
-
-        :param    command:        The payload containing a "command" and optionally "arguments".
-
-        :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
-        """
-        self.execute_commands[command] = handler
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:
         """

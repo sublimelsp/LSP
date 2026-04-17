@@ -2295,7 +2295,7 @@ class Session(APIHandler, TransportCallbacks):
     def _handle_plugin_on_pre_send_response_async(
         self, method: str | None, params: Any, response: Response[Any]
     ) -> Response[Any]:
-        if method and self._plugin:
+        if method and isinstance(self._plugin, LspPlugin):
             obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
             self._plugin.on_pre_send_response_async(obj)
         return response

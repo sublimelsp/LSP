@@ -186,7 +186,6 @@ class APIHandler:
                 self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
             elif hasattr(value, COMMAND_HANDLER_MARKER):
                 self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
-        print(f'self.command_handler_map: {self.command_handler_map}')
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:

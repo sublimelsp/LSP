@@ -1359,7 +1359,7 @@ class Session(APIHandler, TransportCallbacks):
             if (arguments := command.get('arguments')) and len(arguments) == 3:
                 if references := cast('list[Location]', arguments[2]):
                     if len(references) == 1:
-                        sublime.set_timeout_async(lambda: self.open_location_async(references[0]))
+                        self.open_location_async(references[0])
                     else:
                         LocationPicker(view, self, references, side_by_side=False)
             return Promise.resolve(None)

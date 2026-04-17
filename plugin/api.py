@@ -412,12 +412,21 @@ class LspPlugin(APIHandler):
     @classmethod
     def on_before_start_async(cls, context: OnBeforeStartContext) -> None:
         """
-        Update or install the server binary if this plugin manages one. Called before the server is started.
+        Called just before the language server process is started.
 
-        This method runs on a worker thread. Perform any blocking I/O (e.g. downloading a binary,
-        running ``npm install``) directly here without spawning additional threads.
+        Override to perform any preparation needed before startup - for example installing or updating server binaries,
+        resolving the working directory, or injecting extra template variables into `context.variables`.
 
-        :param      context:    The plugin context.
+        This method runs on a worker thread so perform any blocking I/O (e.g. downloading a binary, running
+        `npm install`) directly here without spawning additional threads.
+
+        Mutations to `context.working_directory` and `context.variables` are picked up and used when launching the
+        server process.
+
+        Raise `PluginStartError` with a message to abort startup and display a user-visible status message.
+
+        :param      context:    The startup context. `context.configuration`, `context.variables` and
+                                `context.working_directory` can be mutated to influence how the server is launched.
         """
         pass
 

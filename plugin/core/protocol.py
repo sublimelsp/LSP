@@ -873,6 +873,7 @@ ServerRequest: TypeAlias = Union[
 
 class ApplyWorkspaceEditResponse(TypedDict):
     method: Literal['workspace/applyEdit']
+    params: ApplyWorkspaceEditParams
     result: ApplyWorkspaceEditResult
 
 
@@ -903,6 +904,7 @@ class CodeActionResolveResponse(TypedDict):
 
 class CodeLensRefreshResponse(TypedDict):
     method: Literal['workspace/codeLens/refresh']
+    params: None
     result: None
 
 
@@ -933,6 +935,7 @@ class CompletionResolveResponse(TypedDict):
 
 class ConfigurationResponse(TypedDict):
     method: Literal['workspace/configuration']
+    params: ConfigurationParams
     result: List[LSPAny]
 
 
@@ -948,6 +951,7 @@ class DefinitionResponse(TypedDict):
 
 class DiagnosticRefreshResponse(TypedDict):
     method: Literal['workspace/diagnostic/refresh']
+    params: None
     result: None
 
 
@@ -1008,6 +1012,7 @@ class ExecuteCommandResponse(TypedDict):
 
 class FoldingRangeRefreshResponse(TypedDict):
     method: Literal['workspace/foldingRange/refresh']
+    params: None
     result: None
 
 
@@ -1033,6 +1038,7 @@ class InitializeResponse(TypedDict):
 
 class InlayHintRefreshResponse(TypedDict):
     method: Literal['workspace/inlayHint/refresh']
+    params: None
     result: None
 
 
@@ -1053,6 +1059,7 @@ class InlineCompletionResponse(TypedDict):
 
 class InlineValueRefreshResponse(TypedDict):
     method: Literal['workspace/inlineValue/refresh']
+    params: None
     result: None
 
 
@@ -1083,6 +1090,7 @@ class ReferencesResponse(TypedDict):
 
 class RegistrationResponse(TypedDict):
     method: Literal['client/registerCapability']
+    params: RegistrationParams
     result: None
 
 
@@ -1108,6 +1116,7 @@ class SemanticTokensRangeResponse(TypedDict):
 
 class SemanticTokensRefreshResponse(TypedDict):
     method: Literal['workspace/semanticTokens/refresh']
+    params: None
     result: None
 
 
@@ -1118,11 +1127,13 @@ class SemanticTokensResponse(TypedDict):
 
 class ShowDocumentResponse(TypedDict):
     method: Literal['window/showDocument']
+    params: ShowDocumentParams
     result: ShowDocumentResult
 
 
 class ShowMessageResponse(TypedDict):
     method: Literal['window/showMessageRequest']
+    params: ShowMessageRequestParams
     result: Union[MessageActionItem, None]
 
 
@@ -1138,6 +1149,7 @@ class SignatureHelpResponse(TypedDict):
 
 class TextDocumentContentRefreshResponse(TypedDict):
     method: Literal['workspace/textDocumentContent/refresh']
+    params: TextDocumentContentRefreshParams
     result: None
 
 
@@ -1168,6 +1180,7 @@ class TypeHierarchySupertypesResponse(TypedDict):
 
 class UnregistrationResponse(TypedDict):
     method: Literal['client/unregisterCapability']
+    params: UnregistrationParams
     result: None
 
 
@@ -1193,6 +1206,7 @@ class WillSaveTextDocumentWaitUntilResponse(TypedDict):
 
 class WorkDoneProgressCreateResponse(TypedDict):
     method: Literal['window/workDoneProgress/create']
+    params: WorkDoneProgressCreateParams
     result: None
 
 
@@ -1203,6 +1217,7 @@ class WorkspaceDiagnosticResponse(TypedDict):
 
 class WorkspaceFoldersResponse(TypedDict):
     method: Literal['workspace/workspaceFolders']
+    params: None
     result: Union[List[WorkspaceFolder], None]
 
 

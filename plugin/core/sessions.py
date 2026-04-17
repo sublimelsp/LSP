@@ -106,6 +106,7 @@ from .promise import PackagedTask
 from .promise import Promise
 from .protocol import ClientNotification
 from .protocol import ClientRequest
+from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
@@ -2268,7 +2269,7 @@ class Session(APIHandler, TransportCallbacks):
         return (None, None, None, None, None)
 
     def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = self.deduce_payload(payload)
+        handler, result, req_id, typestr, method = self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
             try:
@@ -2289,7 +2290,18 @@ class Session(APIHandler, TransportCallbacks):
                 exception_log(f"Error handling {typestr}", err)
                 return
             if isinstance(result_promise, Promise):
-                result_promise.then(self.send_response)
+                result_promise \
+                    .then(lambda r: self._handle_plugin_on_pre_send_response_async(method, result, r)) \
+                    .then(self.send_response)
+
+    def _handle_plugin_on_pre_send_response_async(
+        self, method: str | None, params: Any, response: Response[Any]
+    ) -> Response[Any]:
+        if method and self._plugin:
+            obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
+            self._plugin.on_pre_send_response_async(obj)
+        return response
+
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage

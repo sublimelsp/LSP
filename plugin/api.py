@@ -8,6 +8,7 @@ from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
 from .core.protocol import ClientNotification
 from .core.protocol import ClientRequest
+from .core.protocol import ClientResponse
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -463,6 +464,17 @@ class LspPlugin(APIHandler):
 
         :param    request:     The request object. The request['params'] can be modified by the plugin.
         :param    view:        The corresponding View if applicable.
+        """
+        pass
+
+    def on_pre_send_response_async(self, response: ClientResponse) -> None:
+        """
+        Notifies about a response that is about to be sent to the language server.
+
+        Called after the LSP client has resolved the response but before it is transmitted
+        to the language server. The response['result'] can be modified by the plugin.
+
+        :param    response:    The response object containing 'method', 'params', and 'result'.
         """
         pass
 

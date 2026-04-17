@@ -549,7 +549,7 @@ class SessionBuffer:
                 self._supported_custom_tokens.add(token_type)
 
     def _update_supported_commands(self) -> None:
-        self._supported_commands = {'editor.action.showReferences'}
+        self._supported_commands = {'editor.action.showReferences'}  # Handled on client side in Session.execute_command
         if commands := self.session.get_capability('executeCommandProvider.commands'):
             self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))

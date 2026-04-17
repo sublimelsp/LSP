@@ -78,6 +78,7 @@ from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+from ..locationpicker import LocationPicker
 from .constants import ChangeEventAction
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
@@ -1352,6 +1353,15 @@ class Session(APIHandler, TransportCallbacks):
                 listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
 
             sublime.set_timeout_async(run_async)
+            return Promise.resolve(None)
+        # Handle VSCode-specific command which is often used for "References" code lenses
+        if command_name == "editor.action.showReferences" and view:
+            if (arguments := command.get('arguments')) and len(arguments) == 3:
+                if references := cast('list[Location]', arguments[2]):
+                    if len(references) == 1:
+                        sublime.set_timeout_async(lambda: self.open_location_async(references[0]))
+                    else:
+                        LocationPicker(view, self, references, side_by_side=False)
             return Promise.resolve(None)
         request = Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress)
         execute_command_promise = self.send_request_task(request)

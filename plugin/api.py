@@ -415,7 +415,6 @@ class LspPlugin(APIHandler):
         super().__init__()
         self.weaksession: ref[Session] = weaksession
         self.execute_commands: dict[str, Callable[[ExecuteCommandParams], Promise[Any]]]
-        self.workspace_configuration_handler: Callable[[ConfigurationItem, Any], Any]
 
     def on_start_async(self, context: OnStartContext) -> None:
         """
@@ -436,17 +435,6 @@ class LspPlugin(APIHandler):
 
     def on_after_initialize_async(self) -> None:
         pass
-
-    def on_workspace_configuration(self, handler: Callable[[ConfigurationItem, Any], Any]) -> None:
-        """
-        Override to augment configuration returned for the workspace/configuration request.
-
-        :param      params:         A ConfigurationItem for which configuration is requested.
-        :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
-
-        :returns: The resolved configuration for given params.
-        """
-        self.workspace_configuration_handler = handler
 
     def register_command(self, command: str, handler: Callable[[ExecuteCommandParams], Promise[Any]]) -> None:
         """

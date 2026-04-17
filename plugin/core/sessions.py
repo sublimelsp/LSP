@@ -1795,9 +1795,7 @@ class Session(APIHandler, TransportCallbacks):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
-            if isinstance(self._plugin, LspPlugin) and self._plugin.workspace_configuration_handler:
-                self._plugin.workspace_configuration_handler(requested_item, configuration)
-            elif isinstance(self._plugin, AbstractPlugin):
+            if isinstance(self._plugin, AbstractPlugin):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)

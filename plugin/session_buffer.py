@@ -1038,7 +1038,7 @@ class SessionBuffer:
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
         supported_code_lenses: list[ResolvedCodeLens] = []
-        # Filter out CodeLenses with commands that are not handled directly by the language server
+        # Filter out CodeLenses with commands that are not handled by the language server or plugin
         for code_lens in self._code_lenses.code_lenses_with_command():
             command_name = code_lens['command']['command']
             if command_name in self._supported_commands:

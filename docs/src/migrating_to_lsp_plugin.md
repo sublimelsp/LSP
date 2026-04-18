@@ -14,22 +14,20 @@
 | `name()` | Removed - derived automatically from the package name and exposed as a `name` property |
 | `configuration()` | Removed - settings file located automatically |
 | `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
-| `needs_update_or_installation()` + `install_or_update()` | `install_async(context)` |
-| `can_start(window, view, folders, config)` | Raise `PluginStartError` from `install_async` (or other `@classmethod`) |
-| `on_pre_start(window, view, folders, config)` | `command(context)`, `working_directory(context)`, `initialization_options(context)` |
-| `on_post_start(window, view, folders, config)` | `__init__(weaksession, context)` |
-| `on_settings_changed(settings: DottedDict)` | `__init__(weaksession, context)` |
-| `is_applicable(view, config)` | `is_applicable(context)` |
-| `additional_variables()` | `additional_variables(context)` |
-| `on_pre_server_command(command, done_callback)` | `on_execute_command(command)` - return a `Promise` instead of invoking a callback |
+| `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_before_start_async(context)` |
+| `on_post_start(window, view, folders, config)` | `on_start_async(context)` |
+| `on_settings_changed(settings: DottedDict)` | `on_after_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
+| `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
+| `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
+| *(not present)* | `on_before_start_async(context)` — classmethod, replaces several AbstractPlugin hooks |
+| *(not present)* | `on_start_async(context)` — replaces `on_before_initialize` |
+| *(not present)* | `on_after_initialize_async()` |
+| *(not present)* | `on_pre_send_response_async(response)` |
 
-All other instance methods (`on_workspace_configuration`,
-`on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`,
-`on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`)
-are available in `LspPlugin` with the same name and the same signature.
+All other instance methods (`on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`, `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`) are available in `LspPlugin` with the same name and the same signature.
 
 ---
 
@@ -53,9 +51,7 @@ class LspFoo(LspPlugin):
     ...
 ```
 
-`LspPlugin` provides `register()` and `unregister()` classmethods, so `register_plugin` and
-`unregister_plugin` **no longer need to be imported or called directly**. Replace them with calls
-on your plugin class:
+`LspPlugin` provides `register()` and `unregister()` classmethods, so `register_plugin` and `unregister_plugin` **no longer need to be imported or called directly**. Replace them with calls on your plugin class:
 
 ```python
 # Before
@@ -123,9 +119,11 @@ server_dir = cls.plugin_storage_path / "server"
 
 ---
 
-### 4. Merge `needs_update_or_installation` and `install_or_update` into `install_async`
+### 4. Consolidate server setup into `on_before_start_async`
 
-`install_async` is always called before the server starts and runs on a worker thread. Combine your install check and install logic there. To abort startup with a user-visible message, raise `PluginStartError` (this replaces returning a string from `can_start`):
+`on_before_start_async` is the single hook called just before the server process starts. It runs on a worker thread and replaces `needs_update_or_installation`, `install_or_update`, `can_start`, `on_pre_start`, and `additional_variables` from `AbstractPlugin`.
+
+Mutate `context.configuration`, `context.variables`, and `context.working_directory` to influence how the server is launched. To abort startup with a user-visible message, raise `PluginStartError` with a chosen message:
 
 ```python
 # Before
@@ -142,61 +140,38 @@ def can_start(cls, window, initiating_view, workspace_folders, configuration) ->
     if not server_binary().exists():
         return "Server binary missing"
     return None
-```
 
-```python
-# After
-from LSP.plugin import PluginStartError
-
-@classmethod
-def install_async(cls, context: PluginContext) -> None:
-    if not server_binary().exists():
-        download_server(server_binary())
-    if not server_binary().exists():
-        raise PluginStartError("Server binary missing after installation attempt")
-```
-
----
-
-### 5. Migrate `on_pre_start` overrides
-
-`on_pre_start` was used to customise the command, working directory, and initialization options, often by mutating the passed-in `configuration`. `LspPlugin` provides dedicated override points for each concern:
-
-```python
-# Before
 @classmethod
 def on_pre_start(cls, window, initiating_view, workspace_folders, configuration) -> str | None:
     configuration.command = [str(server_binary()), "--stdio"]
     return str(workspace_folders[0].path) if workspace_folders else None
+
+@classmethod
+def additional_variables(cls) -> dict[str, str] | None:
+    return {"server_version": SERVER_VERSION}
 ```
 
 ```python
 # After
-@classmethod
-def command(cls, context: PluginContext) -> list[str]:
-    return [str(cls.plugin_storage_path / "server"), "--stdio"]
+from LSP.plugin import ContextOnBeforeStart
+from LSP.plugin import PluginStartError
 
 @classmethod
-def working_directory(cls, context: PluginContext) -> str | None:
-    return context.workspace_folders[0].path if context.workspace_folders else None
-```
-
-For initialization options, override `initialization_options` instead of mutating `configuration.initialization_options` in `on_pre_start`:
-
-```python
-# After
-@classmethod
-def initialization_options(cls, context: PluginContext) -> dict[str, Any]:
-    options = context.configuration.initialization_options.get()
-    options["myCustomKey"] = "value"
-    return options
+def on_before_start_async(cls, context: ContextOnBeforeStart) -> None:
+    if not server_binary().exists():
+        download_server(server_binary())
+    if not server_binary().exists():
+        raise PluginStartError("Server binary missing after installation attempt")
+    context.configuration.command = [str(server_binary()), "--stdio"]
+    context.working_directory = context.workspace_folders[0].path if context.workspace_folders else None
+    context.variables["server_version"] = SERVER_VERSION
 ```
 
 ---
 
-### 6. Replace `on_post_start` with `__init__`
+### 5. Replace `on_post_start` with `on_start_async`
 
-`on_post_start` ran after the subprocess started but before the `initialize` handshake. In `LspPlugin`, `__init__` is called after a successful `initialize` response, which is the more useful point to run post-start logic. The `context` argument gives you access to the same information that was previously passed to `on_post_start`:
+`on_post_start` ran after the subprocess started but before the `initialize` handshake. `on_start_async` covers the same window — it is called after the transport is established and before the `initialize` request is sent. Use `context.transport` to send any pre-initialization messages your server requires:
 
 ```python
 # Before
@@ -207,62 +182,65 @@ def on_post_start(cls, window, initiating_view, workspace_folders, configuration
 
 ```python
 # After
-def __init__(self, weaksession) -> None:
-    super().__init__(weaksession)
-    if session := weaksession():
+from LSP.plugin import ContextOnStart
+
+def on_start_async(self, context: ContextOnStart) -> None:
+    if session := self.weaksession():
         log_start(session.window, session.config)
 ```
 
 ---
 
-### 7. Remove `on_settings_changed`
+### 6. Remove `on_settings_changed`
 
-`LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because it was only called once right after sending the `initialize` request and the same result can be achieved by running the logic from `__init__` (called after a successful `initialize` response) for one-time setup, or by using `on_workspace_configuration` to adjust per-request configuration values dynamically.
+`LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because it was only called once right after sending the `initialize` request. Depending on what you were doing in it, one of these replacements applies:
 
-If you were using `on_settings_changed` to apply a fixed setting at startup, move that logic to `__init__`:
+**One-time setup at startup** — move the logic to `on_after_initialize_async`, which is called after a successful `initialize` response:
 
 ```python
 # After — one-time setup
-def __init__(self, weaksession, context: PluginContext) -> None:
-    super().__init__(weaksession, context)
-    context.configuration.settings.set('foo', 'bar')
+def on_after_initialize_async(self) -> None:
+    if session := self.weaksession():
+        session.config.settings.set('foo', 'bar')
 ```
 
-If you were using it to adjust configuration returned for `workspace/configuration` requests, use `on_workspace_configuration` instead.
+**Adjusting `workspace/configuration` responses dynamically** — override `on_pre_send_response_async` and filter on the method name. The `response['result']` can be mutated before the value is sent back to the server:
+
+```python
+# After — dynamic configuration
+def on_pre_send_response_async(self, response: ClientResponse) -> None:
+    if response['method'] == 'workspace/configuration':
+        for item in response['result']:
+            item['myKey'] = 'myValue'
+```
 
 ---
 
-### 8. Update `is_applicable` and `additional_variables`
+### 7. Update `is_applicable`
 
-Both methods now receive a single `PluginContext` argument instead of individual parameters. `context.view` and `context.configuration` replace the former `view` and `config` arguments. `additional_variables` now always expects a dict value (default implementation returns empty dict):
+`is_applicable` now receives a `ContextIsApplicable` argument instead of separate `view` and `config` parameters:
 
 ```python
 # Before
 @classmethod
 def is_applicable(cls, view: sublime.View, config: ClientConfig) -> bool:
     return super().is_applicable(view, config) and my_condition(view)
-
-@classmethod
-def additional_variables(cls) -> dict[str, str] | None:
-    return {"server_version": SERVER_VERSION}
 ```
 
 ```python
 # After
-@classmethod
-def is_applicable(cls, context: PluginContext) -> bool:
-    return super().is_applicable(context) and my_condition(context.view)
+from LSP.plugin import ContextIsApplicable
 
 @classmethod
-def additional_variables(cls, context: PluginContext) -> dict[str, str]:
-    return {"server_version": SERVER_VERSION}
+def is_applicable(cls, context: ContextIsApplicable) -> bool:
+    return super().is_applicable(context) and my_condition(context.view)
 ```
 
 ---
 
-### 9. Replace `on_pre_server_command` with `on_execute_command`
+### 8. Replace `on_pre_server_command` with `@command_handler`
 
-The callback-based approach is replaced by returning a `Promise`:
+The callback-based `on_pre_server_command` is replaced by the `@command_handler` decorator. Each decorated method handles one specific command by name and receives the command's `arguments` list (or `None`):
 
 ```python
 # Before
@@ -276,17 +254,17 @@ def on_pre_server_command(self, command: ExecuteCommandParams, done_callback: Ca
 
 ```python
 # After
-from LSP.plugin import Promise
+from LSP.plugin import command_handler
+from LSP.plugin import LSPAny
 
-def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | None:
-    if command["command"] == "foo/bar":
-        return Promise.resolve(handle_command(command))
-    return None
+@command_handler('foo/bar')
+def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[None]:
+    return Promise.resolve(handle_command(arguments))
 ```
 
 ---
 
-### 10. Update `on_pre_send_request_async` and `on_server_response_async`
+### 9. Update `on_pre_send_request_async` and `on_server_response_async`
 
 Both methods have had their signatures simplified.
 
@@ -321,7 +299,7 @@ def on_server_response_async(self, response: ServerResponse) -> None:
 
 ---
 
-### 11. Use `@notification_handler` and `@request_handler` for custom messages
+### 10. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 
@@ -347,72 +325,4 @@ from LSP.plugin import request_handler
 @request_handler('eslint/openDoc')
 def on_eslint_open_doc(self, params: TextDocumentIdentifier) -> Promise[bool]:
     ...
-```
-
----
-
-## Complete before/after example
-
-```python
-# Before - AbstractPlugin
-from LSP.plugin import AbstractPlugin
-from LSP.plugin import register_plugin
-from LSP.plugin import unregister_plugin
-
-
-class LspFoo(AbstractPlugin):
-
-    @classmethod
-    def name(cls) -> str:
-        return "foo"
-
-    @classmethod
-    def needs_update_or_installation(cls) -> bool:
-        return not (cls.storage_path() / "foo" / "server").exists()
-
-    @classmethod
-    def install_or_update(cls) -> None:
-        download_server()
-
-    @classmethod
-    def on_pre_start(cls, window, initiating_view, workspace_folders, configuration) -> str | None:
-        configuration.command = [str(cls.storage_path() / "foo" / "server"), "--stdio"]
-        return None
-
-
-def plugin_loaded() -> None:
-    register_plugin(LspFoo)
-
-
-def plugin_unloaded() -> None:
-    unregister_plugin(LspFoo)
-```
-
-```python
-# After - LspPlugin
-from LSP.plugin import LspPlugin
-from LSP.plugin import PluginContext
-from LSP.plugin import PluginStartError
-
-
-class LspFoo(LspPlugin):
-
-    @classmethod
-    def install_async(cls, context: PluginContext) -> None:
-        if not (cls.plugin_storage_path / "server").exists():
-            download_server()
-        if not (cls.plugin_storage_path / "server").exists():
-            raise PluginStartError("Failed to install foo language server")
-
-    @classmethod
-    def command(cls, context: PluginContext) -> list[str]:
-        return [str(cls.plugin_storage_path / "server"), "--stdio"]
-
-
-def plugin_loaded() -> None:
-    LspFoo.register()
-
-
-def plugin_unloaded() -> None:
-    LspFoo.unregister()
 ```

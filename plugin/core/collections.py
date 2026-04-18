@@ -37,7 +37,7 @@ class DottedDict:
     def from_base_and_override(cls, base: DottedDict, override: dict[str, Any] | None) -> DottedDict:
         result = DottedDict(base.copy())
         if override:
-            result.update(override)
+            result.update(deepcopy(override))
         return result
 
     def get(self, path: str | None = None) -> Any:

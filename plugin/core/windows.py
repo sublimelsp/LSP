@@ -65,6 +65,7 @@ import sublime
 import threading
 
 if TYPE_CHECKING:
+    from .collections import DottedDict
     from .tree_view import TreeViewSheet
 
 
@@ -216,8 +217,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
 
-    def get_session(self, config_name: str, file_path: str) -> Session | None:
-        return self._find_session(config_name, file_path)
+    def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
+        if file_path:
+            return self._find_session(config_name, file_path)
+        for session in self._sessions:
+            if session.config.name == config_name:
+                return session
+        return None
 
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
@@ -595,6 +601,11 @@ class WindowRegistry(LspSettingsChangeListener):
     def on_client_config_updated(self, config_name: str | None = None) -> None:
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
+
+    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
+        for wm in self._windows.values():
+            if session := wm.get_session(config_name):
+                session.on_server_settings_changed(settings)
 
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():

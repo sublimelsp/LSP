@@ -1,0 +1,14 @@
+=> 2.10.0
+
+# Breaking changes
+
+- The place for manual language server configurations was moved from `LSP.sublime-settings`
+  to a new settings file `LanguageServers.sublime-settings`, which can be opened from the
+  command palette and from the main menu. This makes it possible to dynamically change the
+  "settings" of a language server while it is running. For now the configurations under
+  "clients" in `LSP.sublime-settings` still work, but that place is deprecated.
+
+- The shipped server configurations from "default_clients" were removed. If you used
+  one of those, please add the configuration to your user configurations file under
+  `Packages/User/LanguageServers.sublime-settings`. Examples can be found on the
+  documentation website at https://lsp.sublimetext.io/language_servers/.

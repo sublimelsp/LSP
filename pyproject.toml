@@ -141,6 +141,7 @@ ignore = [
     "SIM110",  # https://docs.astral.sh/ruff/rules/reimplemented-builtin/
     "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
     "T20",  # https://docs.astral.sh/ruff/rules/#flake8-print-t20
+    "TD001",  # https://docs.astral.sh/ruff/rules/invalid-todo-tag/
     "TD002",  # https://docs.astral.sh/ruff/rules/missing-todo-author/
     "TD003",  # https://docs.astral.sh/ruff/rules/missing-todo-link/
     "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/

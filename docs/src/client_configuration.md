@@ -1,34 +1,25 @@
 # Client Configuration
 
-## Custom client configuration
+## Custom server configuration
 
 !!! Note
-    The external LSP-* helper packages already come with their setting file and a client configuration and you don't need to add anything to the global LSP settings. This section is only relevant if you want to add a new client configuration for a server that doesn't have a corresponding helper package.
+    The external LSP-* helper packages already come with their setting file and a configuration and you don't need to add anything to the custom server configurations file.
+    This section is only relevant if you want to add a new configuration for a server that doesn't have a corresponding helper package.
 
-After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
-LSP ships with configurations for a few language servers, but these need to be enabled before they will start.
-To globally enable a server, open the Command Palette and choose "LSP: Enable Language Server Globally".
-This will add `"enabled": true` to the corresponding language server setting under the `"clients"` key in your user-settings file for LSP.
-Your user-settings file is stored at `Packages/User/LSP.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Settings" from the menu or with the `Preferences: LSP Settings` command from the Command Palette.
-If your language server is missing or not configured correctly, you need to add/override further settings which are explained below.
+After you have installed a language server, LSP needs to be configured to enable communication between LSP and that server for suitable filetypes.
+Your server configurations file is stored at `Packages/User/LanguageServers.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Server Configurations" from the menu or with the `Preferences: LSP Server Configurations` entry from the Command Palette.
 
-Below is an example of the `LSP.sublime-settings` file with configurations for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
+Below is an example configuration for the [Phpactor](https://phpactor.readthedocs.io/en/master/usage/language-server.html#language-server) server.
 
-```jsonc title="Packages/User/LSP.sublime-settings"
+```jsonc title="Packages/User/LanguageServers.sublime-settings"
 {
-  // General settings
-  "show_diagnostics_panel_on_save": 0,
-
-  // Language server configurations
-  "clients": {
-    "phpactor": {
-      // enable this configuration
-      "enabled": true,
-      // the startup command -- what you would type in a terminal
-      "command": ["PATH/TO/phpactor", "language-server"],
-      // the selector that selects which type of buffers this language server attaches to
-      "selector": "source.php"
-    }
+  "phpactor": {
+    // enable this configuration
+    "enabled": true,
+    // the startup command -- what you would type in a terminal
+    "command": ["PATH/TO/phpactor", "language-server"],
+    // the selector that selects which type of buffers this language server attaches to
+    "selector": "source.php"
   }
 }
 ```
@@ -37,10 +28,10 @@ Below is an example of the `LSP.sublime-settings` file with configurations for t
 | ------- | ----------- |
 | enabled | enables a language server (default is disabled) |
 | command | must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured) |
-| env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
-| settings | per-project settings (equivalent to VS Code's Workspace Settings) |
-| initialization_options | options to send to the server at startup |
 | selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. For more information, see https://www.sublimetext.com/docs/3/selectors.html |
+| env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
+| settings | server-specific settings |
+| initialization_options | options to send to the server at startup |
 | priority_selector | Used to prioritize a certain language server when choosing which one to query on views with multiple servers active. Certain LSP actions have to pick which server to query and this setting can be used to decide which one to pick based on the current scopes at the cursor location. For example when having both HTML and PHP servers running on a PHP file, this can be used to give priority to the HTML one in HTML blocks and to PHP one otherwise. That would be done by setting "priority_selector" to `text.html` for HTML server and `source.php` to PHP server.
 | diagnostics_mode | Set to `"workspace"` (default is `"open_files"`) to ignore diagnostics for files that are not within the project (window) folders. If project has no folders then this option has no effect and diagnostics are shown for all files. If the server supports _pull diagnostics_ (`diagnosticProvider`), this setting also controls whether diagnostics are requested only for open files (`"open_files"`), or for all files in the project folders (`"workspace"`). |
 | tcp_port | see instructions below |

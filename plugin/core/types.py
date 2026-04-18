@@ -186,6 +186,9 @@ class SettingsRegistration:
         self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
+        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
+        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
+        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
         self.settings.clear_on_change("LSP")
 
 
@@ -524,6 +527,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
 _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
@@ -655,6 +659,9 @@ class Capabilities(DottedDict):
     def text_sync_kind(self) -> TextDocumentSyncKind:
         value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKind.None_
+
+    def should_notify_did_change_configuration(self) -> bool:
+        return 'workspace.didChangeConfiguration' in self
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
@@ -828,7 +835,13 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
-        self._all_settings = all_settings or {}
+        if isinstance(all_settings, dict):
+            self._all_settings = all_settings
+            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
+            if 'settings' in self._all_settings:
+                del self._all_settings['settings']
+        else:
+            self._all_settings = {}
         self._view_status_handler = default_status_view_handler
 
     @property
@@ -1124,10 +1137,7 @@ class ClientConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
-        for k, v in self.__dict__.items():
-            if not k.startswith("_") and v != getattr(other, k):
-                return False
-        return True
+        return self.name == other.name and self._all_settings == other._all_settings
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

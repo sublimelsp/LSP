@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .test_mocks import basic_responses
 from collections.abc import Generator
+from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
@@ -42,41 +43,44 @@ class YieldPromise:
 
 
 def make_stdio_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
-    """Start the fake language server in STDIO mode."""
-    config = ClientConfig(
+    """Create a config for starting the fake language server in STDIO mode."""
+    return ClientConfig(
         name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         enabled=True,
     )
-    config.initialization_options.assign(init_options)
-    return config
 
 
 def make_tcp_server_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
-    """Start the fake server in TCP mode, and make it act as the TCP server, awaiting a single client connection."""
-    config = ClientConfig(
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP server, awaiting a single
+    client connection.
+    """
+    return ClientConfig(
         name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=server"],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         tcp_port=0,  # select a free one for me
         enabled=True,
     )
-    config.initialization_options.assign(init_options)
-    return config
 
 
 def make_tcp_client_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
-    """Start the fake server in TCP mode, and make it act as the TCP client, where it connects to the LSP plugin."""
-    config = ClientConfig(
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP client, where it connects to
+    the LSP plugin.
+    """
+    return ClientConfig(
         name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=client"],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         tcp_port=-1,  # select a free one for me
         enabled=True,
     )
-    config.initialization_options.assign(init_options)
-    return config
 
 
 def add_config(config: ClientConfig) -> None:

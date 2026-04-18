@@ -21,13 +21,16 @@ resumes (since response to request will arrive after requested notification).
 from __future__ import annotations
 
 from argparse import ArgumentParser
+import argparse
 from enum import IntEnum
+import enum
 from typing import Any
 from typing import Awaitable
 from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Literal
 from typing import Union
 import asyncio
 import json
@@ -482,47 +485,57 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main(tcp_port: int | None = None, mode: str | None = None) -> bool:
-    if tcp_port is not None:
+class Mode(enum.Enum):
+    server = "server"
+    client = "client"
 
-        if mode is None or mode == "server":
-            print("running in TCP server mode", file=sys.stderr)
+    def __str__(self) -> str:
+        return self.value
 
-            class ClientConnectedCallback:
 
-                def __init__(self) -> None:
-                    self.received_shutdown = False
+async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
+    if tcp_port is None:
+        reader, writer = await stdio()
+        session = Session(reader, writer)
+        return await session.run_forever()
 
-                async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-                    session = Session(reader, writer)
-                    self.received_shutdown = await session.run_forever()
+    if mode == Mode.server:
+        print("running in TCP server mode", file=sys.stderr)
 
-            callback = ClientConnectedCallback()
-            server = await asyncio.start_server(callback, port=tcp_port)
-            # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
-            # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
-            await server.serve_forever()
-            return callback.received_shutdown
+        class ClientConnectedCallback:
 
-        if mode is not None and mode == "client":
-            print("running in TCP client mode", file=sys.stderr)
-            reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
-            session = Session(reader, writer)
-            return await session.run_forever()
+            def __init__(self) -> None:
+                self.received_shutdown = False
 
-        return False
+            async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                session = Session(reader, writer)
+                self.received_shutdown = await session.run_forever()
 
-    reader, writer = await stdio()
+        callback = ClientConnectedCallback()
+        server = await asyncio.start_server(callback, port=tcp_port)
+        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
+        # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
+        await server.serve_forever()
+        return callback.received_shutdown
+
+    print("running in TCP client mode", file=sys.stderr)
+    reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
     session = Session(reader, writer)
     return await session.run_forever()
 
 
 if __name__ == '__main__':
+
+    class CmdLineArgs(argparse.Namespace):
+        version: bool = False
+        tcp_port: int | None = None
+        mode: Mode = Mode.server
+
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
-    parser.add_argument("--mode", help="one of 'client' or 'server'", default="server")
-    args = parser.parse_args()
+    parser.add_argument("--mode", type=Mode, default=Mode.server)
+    args: CmdLineArgs = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
         sys.exit(0)

@@ -268,6 +268,8 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
 
 @dataclass
 class ContextIsApplicable:
+    """Context passed to `LspPlugin.is_applicable_async`."""
+
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
@@ -278,20 +280,28 @@ class ContextIsApplicable:
 
 @dataclass
 class ContextOnBeforeStart:
+    """Context passed to `LspPlugin.on_before_start_async`."""
+
     configuration: ClientConfig
-    """The resolved `ClientConfig` for this session."""
+    """The resolved `ClientConfig` for this session. Can be mutated to adjust server settings before startup."""
     variables: dict[str, str]
-    """Template variables to be substituted in `command`, `env`, and `initialization_options`."""
+    """Template variables to be substituted in `command`, `env`, and `initialization_options`.
+    Can be mutated to inject or override variables."""
     view: sublime.View
     """The view relevant to the method being called."""
     working_directory: str | None
+    """The working directory for the server process. Can be mutated to override the default (first workspace folder)."""
     workspace_folders: list[WorkspaceFolder]
     """The workspace folders active for this session."""
 
 
 @dataclass
 class ContextOnStart:
+    """Context passed to `LspPlugin.on_start_async`."""
+
     transport: TransportWrapper
+    """The raw transport to the language server process.
+    Use ``send()`` for JSON-RPC messages or ``send_bytes()`` for raw bytes."""
 
 
 class LspPlugin(APIHandler):
@@ -455,15 +465,22 @@ class LspPlugin(APIHandler):
         authentication token over the raw transport.
 
         Warning:
-            Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
-            hook for pre-initialization messages that your server explicitly expects before the
-            ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
+            Anything sent via ``context.transport.send()`` or ``context.transport.send_bytes()`` bypasses the LSP
+            message queue. Only use this hook for pre-initialization messages that your server explicitly expects
+            before the ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
 
-        :param context:     The plugin context.
+        :param context:     The startup context. ``context.transport`` exposes ``send(payload)`` for JSON-RPC messages
+                            and ``send_bytes(payload)`` for raw bytes, both of which write directly to the transport.
         """
         pass
 
     def on_after_initialize_async(self) -> None:
+        """
+        Called after the `initialize` response has been received from the language server.
+
+        Override to perform any post-initialization work, such as sending custom notifications or requests
+        that depend on the server's capabilities reported in the `initialize` response.
+        """
         pass
 
     def on_pre_send_request_async(self, request: ClientRequest, view: sublime.View | None) -> None:

@@ -921,8 +921,8 @@ def format_diagnostic_for_html(
     if source or code is not None:
         meta_info = ""
         if source:
-            copy_text += f' ({source})'
             meta_info += text2html(source)
+            copy_text += f' ({source})'
         if code is not None:
             if code_description := diagnostic.get("codeDescription"):
                 href = code_description["href"]

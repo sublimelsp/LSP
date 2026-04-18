@@ -11,14 +11,11 @@ skipsdist = true
 
 [tool.tox.env_run_base]
 deps = [
-    "mypy==1.18.2",
     "pyright==1.1.408",
     "ruff==0.15.10",
     "orjson==3.11.4",
 ]
 commands = [
-    # mypy disabled for main code as it doesn't currently support cyclic definitions - https://github.com/python/mypy/issues/731
-    ["mypy", "stubs"],
     ["pyright", "plugin", "stubs"],
     ["ruff", "check"],
 ]
@@ -151,22 +148,3 @@ ignore = [
     "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
     "TRY301",  # https://docs.astral.sh/ruff/rules/raise-within-try/
 ]
-
-[tool.mypy]
-python_version = "3.9"
-
-# ignore_missing_imports = True
-# check_untyped_defs = True
-disallow_untyped_defs = true
-strict_optional = true
-mypy_path = ["stubs"]
-
-[[tool.mypy.overrides]]
-module = 'tests.*'
-check_untyped_defs = true
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = 'third_party.*'
-ignore_errors = true
-ignore_missing_imports = true

@@ -1,6 +1,24 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>sublimelsp/renovate-preset"
+    "github>sublimelsp/renovate-preset",
+    ":automergeMinor",
+    "schedule:officeHours"
+  ],
+  "packageRules": [
+    {
+      "description": "Delay newly released updates for 3 days",
+      "matchCategories": [
+        "python"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions"
+    }
   ]
 }

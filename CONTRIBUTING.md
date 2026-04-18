@@ -18,11 +18,33 @@ The issues also allow you to gather some feedback and help from other contributo
 ## Coding
 
 Sublime Text bundles Python 3.8, please be sure to set up your environment to match.
-LSP uses [Pyright](https://microsoft.github.io/pyright), [Ruff](https://docs.astral.sh/ruff/) and [mypy](https://mypy-lang.org/) to provide some code quality assurances.
+LSP uses [Pyright](https://microsoft.github.io/pyright) and [Ruff](https://docs.astral.sh/ruff/) to provide some code quality assurances.
 Run `tox` to check your work.
 Consider using [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and/or [LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) as a language server.
-To reload the plugin, save the file `boot.py`.
-Saving any other file does not reload the plugin.
+Enable `"pyright.dev_environment": "sublime_text_38"` in `LSP-pyright` settings to ensure that types for Sublime Text modules are known.
+Changes in the code only apply after restarting Sublime Text.
+
+## Pre-commit hooks
+
+The repository ships a [pre-commit](https://pre-commit.com) configuration that runs linting and type-checking before every commit, matching the checks that run in CI via `tox`.
+
+The hook delegates to `tox`, which manages the exact tool versions itself. pre-commit installs `tox` into its own isolated environment, so the checks work regardless of your shell environment or Git client.
+
+**One-time setup:**
+
+```sh
+# Install pre-commit (uv, pipx, or pip)
+uv tool install pre-commit
+
+# Install the git hook
+pre-commit install
+```
+
+To run the checks manually:
+
+```sh
+pre-commit run --all-files
+```
 
 ## Testing
 

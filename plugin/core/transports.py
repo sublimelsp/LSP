@@ -8,6 +8,7 @@ from .promise import Promise
 from .protocol import JSONRPCMessage
 from abc import ABC
 from abc import abstractmethod
+from asyncio.subprocess import Process
 from contextlib import closing
 from functools import partial
 from io import BufferedIOBase
@@ -17,6 +18,7 @@ from typing import Callable
 from typing import final
 from typing import IO
 from typing_extensions import override
+import asyncio
 import contextlib
 import http.client
 import json
@@ -24,6 +26,7 @@ import os
 import shutil
 import socket
 import sublime
+import sublime_aio
 import subprocess
 import threading
 import time
@@ -45,7 +48,7 @@ class StopLoopError(Exception):
 
 
 class TransportConfig(ABC):
-    """The object that does the actual RPC communication."""
+    """Config object that can start the transport."""
 
     @staticmethod
     def resolve_launch_config(
@@ -53,6 +56,10 @@ class TransportConfig(ABC):
         env: dict[str, str] | None,
         variables: dict[str, str],
     ) -> LaunchConfig:
+        """
+        Given the state of this transport configuration, and the provided command/env/vars, create a small object
+        that has resolved all variables to a concrete command to run.
+        """
         command = sublime.expand_variables(command, variables)
         command = [os.path.expanduser(arg) for arg in command]
         resolved_env = os.environ.copy()
@@ -65,7 +72,7 @@ class TransportConfig(ABC):
         return LaunchConfig(command, resolved_env)
 
     @abstractmethod
-    def start(
+    async def start(
         self,
         command: list[str] | None,
         env: dict[str, str] | None,
@@ -73,6 +80,7 @@ class TransportConfig(ABC):
         variables: dict[str, str],
         callbacks: TransportCallbacks,
     ) -> TransportWrapper:
+        """Start a communication channel with the language server."""
         raise NotImplementedError
 
 
@@ -84,7 +92,7 @@ class StdioTransportConfig(TransportConfig):
     """
 
     @override
-    def start(
+    async def start(
         self,
         command: list[str] | None,
         env: dict[str, str] | None,
@@ -94,7 +102,7 @@ class StdioTransportConfig(TransportConfig):
     ) -> TransportWrapper:
         if not command:
             raise RuntimeError('missing "command" to start a child process for running the language server')
-        process = TransportConfig.resolve_launch_config(command, env, variables).start(
+        process = await TransportConfig.resolve_launch_config(command, env, variables).start(
             cwd,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
@@ -104,7 +112,7 @@ class StdioTransportConfig(TransportConfig):
             raise Exception('Failed to create transport config due to not being able to pipe stdio')
         return TransportWrapper(
             callback_object=callbacks,
-            transport=FileObjectTransport(encode_json, decode_json, process.stdout, process.stdin),
+            transport=StreamTransport(encode_json, decode_json, process.stdout, process.stdin),
             process=process,
             error_reader=ErrorReader(callbacks, process.stderr),
         )
@@ -126,7 +134,7 @@ class TcpClientTransportConfig(TransportConfig):
             raise RuntimeError("invalid port number")
 
     @override
-    def start(
+    async def start(
         self,
         command: list[str] | None,
         env: dict[str, str] | None,
@@ -136,11 +144,11 @@ class TcpClientTransportConfig(TransportConfig):
     ) -> TransportWrapper:
         port = _add_and_resolve_port_variable(variables, self._port)
         if command:
-            process = TransportConfig.resolve_launch_config(command, env, variables).start(
+            process = await TransportConfig.resolve_launch_config(command, env, variables).start(
                 cwd,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT,
+                stdout=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.STDOUT,
             )
             if not process.stdout:
                 raise Exception('Failed to create transport config due to not being able to pipe stdout')
@@ -148,27 +156,19 @@ class TcpClientTransportConfig(TransportConfig):
         else:
             process = None
             error_reader = None
+        reader, writer = await asyncio.wait_for(asyncio.open_connection('localhost', port), timeout=TCP_CONNECT_TIMEOUT)
         return TransportWrapper(
             callback_object=callbacks,
-            transport=SocketTransport(encode_json, decode_json, self._connect(port)),
+            transport=StreamTransport(encode_json, decode_json, reader, writer),
             process=process,
             error_reader=error_reader,
         )
-
-    def _connect(self, port: int) -> socket.socket:
-        start_time = time.time()
-        while time.time() - start_time < TCP_CONNECT_TIMEOUT:
-            try:
-                return socket.create_connection(('localhost', port))
-            except ConnectionRefusedError:
-                pass
-        raise RuntimeError("failed to connect")
 
 
 class TcpServerTransportConfig(TransportConfig):
     """
     Transport for communicating to a language server over TCP. The difference, however, is that this transport will
-    start a TCP listener socket accepting new TCP cliet connections. Once a client connects to this text editor acting
+    start a TCP listener socket accepting new TCP client connections. Once a client connects to this text editor acting
     as the TCP server, we'll assume it's the language server we just launched. As such, this tranport requires a
     "command" for starting the language server subprocess.
     """
@@ -179,7 +179,7 @@ class TcpServerTransportConfig(TransportConfig):
             raise RuntimeError("invalid port number")
 
     @override
-    def start(
+    async def start(
         self,
         command: list[str] | None,
         env: dict[str, str] | None,
@@ -191,39 +191,46 @@ class TcpServerTransportConfig(TransportConfig):
             raise RuntimeError('missing "command" to start a child process for running the language server')
         port = _add_and_resolve_port_variable(variables, self._port)
         launch = TransportConfig.resolve_launch_config(command, env, variables)
-        listener_socket = socket.socket()
-        listener_socket.bind(('localhost', port))
-        listener_socket.settimeout(TCP_CONNECT_TIMEOUT)
-        listener_socket.listen(1)
-        process_task: PackagedTask[subprocess.Popen[bytes] | None] = Promise.packaged_task()
-        process_promise, resolve_process = process_task
 
-        # We need to be able to start the process while also awaiting a client connection.
-        def start_in_background() -> None:
-            # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
-            # subprocess. This is hacky, and will get better when we can use asyncio.
-            time.sleep(1)
-            resolve_process(launch.start(
-                cwd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE))
+        class ClientConnectedCallback:
 
-        thread = threading.Thread(target=start_in_background)
-        thread.start()
-        with closing(listener_socket):
-            # Await one client connection (blocking!)
-            sock, _ = listener_socket.accept()
-        thread.join()
-        process = process_promise.value
-        if not process:
-            raise Exception('Failed to create transport config from separate thread.')
-        if not process.stderr:
-            raise Exception('Failed to create transport config due to not being able to pipe stderr')
-        error_reader = ErrorReader(callbacks, process.stderr)
-        return TransportWrapper(
-            callback_object=callbacks,
-            transport=SocketTransport(encode_json, decode_json, sock),
-            process=process,
-            error_reader=error_reader,
-        )
+            def __init__(self) -> None:
+                self.cv = asyncio.Condition()
+                self.wrapper: TransportWrapper | None = None
+                self.process: asyncio.subprocess.Process | None = None
+                self.error_reader: ErrorReader | None = None
+
+            async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                async with self.cv:
+                    transport = StreamTransport(encode_json, decode_json, reader, writer)
+                    self.wrapper = TransportWrapper(callbacks, transport, self.process, self.error_reader)
+                    self.cv.notify()
+
+        callback = ClientConnectedCallback()
+        async with callback.cv:
+            server = await asyncio.start_server(callback, port=port)
+            try:
+                await server.start_serving()
+                process = await launch.start(
+                    cwd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.STDOUT,
+                )
+                assert process.stdout
+                callback.process = process
+                callback.error_reader = ErrorReader(callbacks, process.stdout)
+                try:
+                    await asyncio.wait_for(callback.cv.wait(), timeout=TCP_CONNECT_TIMEOUT)
+                except Exception:
+                    process.kill()
+                    await process.wait()
+                    raise
+            finally:
+                server.close()
+                await server.wait_closed()
+        assert callback.wrapper
+        return callback.wrapper
 
 
 # --- Transports -------------------------------------------------------------------------------------------------------
@@ -247,39 +254,57 @@ class Transport(ABC):
         self._decoder = decoder
 
     @abstractmethod
-    def read(self) -> JSONRPCMessage | None:
+    async def read(self) -> JSONRPCMessage | None:
         raise NotImplementedError
 
     @abstractmethod
-    def write(self, payload: JSONRPCMessage) -> None:
+    async def write(self, payload: JSONRPCMessage) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def close(self) -> None:
+    async def close(self) -> None:
         raise NotImplementedError
 
 
-class FileObjectTransport(Transport):
+async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str] | None:
+    headers: dict[str, str] = {}
+    while True:
+        line = await reader.readline()
+        if not line:
+            # stream closed
+            return None
+        line = line.decode("ascii").strip()
+        if not line:
+            # end of headers
+            break
+        key, value = line.split(":", 1)
+        headers[key.strip().lower()] = value.strip()
+    return headers
+
+
+class StreamTransport(Transport):
     def __init__(
         self,
         encoder: Callable[[JSONRPCMessage], bytes],
         decoder: Callable[[bytes], JSONRPCMessage],
-        reader: IO[bytes] | BufferedIOBase,
-        writer: IO[bytes] | BufferedIOBase,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
     ) -> None:
         super().__init__(encoder, decoder)
         self._reader = reader
         self._writer = writer
 
     @override
-    def read(self) -> JSONRPCMessage:
-        headers: http.client.HTTPMessage | None = None
+    async def read(self) -> JSONRPCMessage:
+        headers: dict[str, str] | None = None
         try:
-            headers = http.client.parse_headers(self._reader)
-            content_length = headers.get("Content-Length")
+            headers = await parse_headers(self._reader)
+            if headers is None:
+                raise StopLoopError
+            content_length = headers.get("content-length")
             if not isinstance(content_length, str):
                 raise TypeError("Missing Content-Length header")
-            body = self._reader.read(int(content_length))
+            body = await self._reader.read(int(content_length))
         except TypeError as ex:
             if str(headers) == "\n":
                 # Expected on process stopping. Gracefully stop the transport.
@@ -292,32 +317,15 @@ class FileObjectTransport(Transport):
             raise Exception(f"JSON decode error: {ex}") from ex
 
     @override
-    def write(self, payload: JSONRPCMessage) -> None:
+    async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
-        self._writer.flush()
+        await self._writer.drain()
 
     @override
-    def close(self) -> None:
+    async def close(self) -> None:
         self._writer.close()
-        self._reader.close()
-
-
-class SocketTransport(FileObjectTransport):
-    def __init__(
-        self,
-        encoder: Callable[[JSONRPCMessage], bytes],
-        decoder: Callable[[bytes], JSONRPCMessage],
-        sock: socket.socket
-    ) -> None:
-        reader_writer_pair = sock.makefile("rwb")
-        super().__init__(encoder, decoder, reader_writer_pair, reader_writer_pair)
-        self._socket = sock
-
-    @override
-    def close(self) -> None:
-        super().close()
-        self._socket.close()
+        await self._writer.wait_closed()
 
 
 # --- TransportWrapper -------------------------------------------------------------------------------------------------
@@ -336,49 +344,41 @@ class TransportWrapper:
         self,
         callback_object: TransportCallbacks,
         transport: Transport,
-        process: subprocess.Popen[bytes] | None,
+        process: asyncio.subprocess.Process | None,
         error_reader: ErrorReader | None,
     ) -> None:
-        self._closed = False
         self._callback_object = weakref.ref(callback_object)
-        self._transport = transport
+        self._transport: Transport | None = transport
         self._process = process
-        self._error_reader = error_reader
-        self._reader_thread = threading.Thread(target=self._read_loop)
-        self._writer_thread = threading.Thread(target=self._write_loop)
-        self._send_queue: Queue[JSONRPCMessage | None] = Queue(0)
-        self._reader_thread.start()
-        self._writer_thread.start()
+        self._error_reader: ErrorReader | None = error_reader
+        self._future = sublime_aio.run_coroutine(self._read_loop())
 
     @property
     def process_args(self) -> Any:
         return self._process.args if self._process else None
 
-    def send(self, payload: JSONRPCMessage) -> None:
-        self._send_queue.put_nowait(payload)
+    async def send(self, payload: JSONRPCMessage) -> None:
+        if self._transport:
+            await self._transport.write(payload)
 
-    def close(self) -> None:
-        if not self._closed:
-            self._closed = True
-            self._send_queue.put_nowait(None)
-            _join_thread(self._writer_thread)
-            _join_thread(self._reader_thread)
+    async def close(self) -> None:
+        if self._transport is not None:
             if self._error_reader:
                 self._error_reader.on_transport_close()
                 self._error_reader = None
             if self._transport:
-                self._transport.close()
+                await self._transport.close()
                 self._transport = None
 
-    def _read_loop(self) -> None:
+    async def _read_loop(self) -> None:
         exception = None
         try:
             while self._transport:
-                if (payload := self._transport.read()) is None:
+                if (payload := await self._transport.read()) is None:
                     continue
 
                 def invoke(p: JSONRPCMessage) -> None:
-                    if self._closed:
+                    if not self._transport:
                         return
                     if callback_object := self._callback_object():
                         callback_object.on_payload(p)
@@ -389,26 +389,24 @@ class TransportWrapper:
         except Exception as ex:
             exception = ex
         if exception:
-            self._end(exception)
-        else:
-            self._send_queue.put_nowait(None)
+            await self._end(exception)
 
-    def _end(self, exception: Exception | None) -> None:
-        exit_code = 0
+    async def _end(self, exception: Exception | None) -> None:
+        exit_code: int | None = None
         if self._process:
             if not exception:
                 try:
                     # Allow the process to stop itself.
-                    exit_code = self._process.wait(1)
-                except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
+                    exit_code = await asyncio.wait_for(self._process.wait(), timeout=1)
+                except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
                     pass
-            if self._process.poll() is None:
+            if exit_code is None:
                 try:
                     # The process didn't stop itself. Terminate!
                     self._process.kill()
                     # still wait for the process to die, or zombie processes might be the result
                     # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
-                    self._process.wait()
+                    await self._process.wait()
                 except (AttributeError, ProcessLookupError):
                     pass
                 except Exception as ex:
@@ -417,41 +415,31 @@ class TransportWrapper:
         def invoke() -> None:
             callback_object = self._callback_object()
             if callback_object:
-                callback_object.on_transport_close(exit_code, exception)
+                callback_object.on_transport_close(exit_code or 0, exception)
 
         sublime.set_timeout_async(invoke)
-        self.close()
-
-    def _write_loop(self) -> None:
-        exception: Exception | None = None
-        try:
-            while self._transport:
-                if (d := self._send_queue.get()) is None:
-                    break
-                self._transport.write(d)
-        except (BrokenPipeError, AttributeError):
-            pass
-        except Exception as ex:
-            exception = ex
-        self._end(exception)
+        await self.close()
 
 
 class LaunchConfig:
+    """Small object that can start a process."""
+
     __slots__ = ("command", "env")
 
     def __init__(self, command: list[str], env: dict[str, str] | None = None) -> None:
         self.command: list[str] = command
         self.env: dict[str, str] = env or {}
 
-    def start(
+    async def start(
         self,
         cwd: str | None,
         stdin: int,
         stdout: int,
         stderr: int,
-    ) -> subprocess.Popen[bytes]:
+    ) -> asyncio.subprocess.Process:
+        """Start a process."""
         startupinfo = _fixup_startup_args(self.command)
-        return _start_subprocess(self.command, stdin, stdout, stderr, startupinfo, self.env, cwd)
+        return await _start_subprocess(self.command, stdin, stdout, stderr, startupinfo, self.env, cwd)
 
 
 # --- Utils -------------------------------------------------------------------------------------------------------
@@ -465,20 +453,19 @@ class ErrorReader:
     via a socket, while it listens for log messages on the stdout/stderr streams of a spawned child process.
     """
 
-    def __init__(self, callback_object: TransportCallbacks, reader: IO[bytes]) -> None:
+    def __init__(self, callback_object: TransportCallbacks, reader: asyncio.StreamReader) -> None:
         self._callback_object = weakref.ref(callback_object)
         self._reader = reader
-        self._thread = threading.Thread(target=self._loop)
-        self._thread.start()
+        self._future = sublime_aio.run_coroutine(self._loop())
 
     def on_transport_close(self) -> None:
         self._reader = None
-        _join_thread(self._thread)
+        self._future.cancel()
 
-    def _loop(self) -> None:
+    async def _loop(self) -> None:
         try:
             while self._reader:
-                message = self._reader.readline().decode("utf-8", "replace")
+                message = (await self._reader.readline()).decode("utf-8", "replace")
                 if not message:
                     continue
                 callback_object = self._callback_object()
@@ -486,7 +473,7 @@ class ErrorReader:
                     callback_object.on_stderr_message(message.rstrip())
                 else:
                     break
-        except (BrokenPipeError, AttributeError):
+        except (BrokenPipeError, AttributeError, asyncio.CancelledError):
             pass
         except Exception as ex:
             exception_log("unexpected exception type in error reader", ex)
@@ -513,21 +500,17 @@ def decode_json(message: bytes) -> JSONRPCMessage:
 # --- Internal ---------------------------------------------------------------------------------------------------------
 
 
-g_subprocesses: weakref.WeakSet[subprocess.Popen[bytes]] = weakref.WeakSet()
+g_subprocesses: weakref.WeakSet[asyncio.subprocess.Process] = weakref.WeakSet()
 
 
-def kill_all_subprocesses() -> None:
+async def kill_all_subprocesses() -> None:
     subprocesses = list(g_subprocesses)
     for p in subprocesses:
         try:
             p.kill()
         except Exception:
             pass
-    for p in subprocesses:
-        try:
-            p.wait()
-        except Exception:
-            pass
+    await asyncio.gather(*[p.wait() for p in subprocesses])
 
 
 def _fixup_startup_args(args: list[str]) -> Any:
@@ -550,7 +533,7 @@ def _fixup_startup_args(args: list[str]) -> Any:
     return startupinfo
 
 
-def _start_subprocess(
+async def _start_subprocess(
     args: list[str],
     stdin: int,
     stdout: int,
@@ -558,10 +541,11 @@ def _start_subprocess(
     startupinfo: Any,
     env: dict[str, str],
     cwd: str | None,
-) -> subprocess.Popen[bytes]:
+) -> asyncio.subprocess.Process:
     debug(f"starting {args} in {cwd or os.getcwd()}")
-    process = subprocess.Popen(
-        args=args,
+    process = await asyncio.create_subprocess_exec(
+        args[0],
+        *args,
         stdin=stdin,
         stdout=stdout,
         stderr=stderr,
@@ -585,12 +569,3 @@ def _add_and_resolve_port_variable(variables: dict[str, str], port: int | None) 
         port = _find_free_port()
     variables["port"] = str(port)
     return port
-
-
-def _join_thread(t: threading.Thread) -> None:
-    if t.ident == threading.current_thread().ident:
-        return
-    try:
-        t.join(2)
-    except TimeoutError as ex:
-        exception_log(f"failed to join {t.name} thread", ex)

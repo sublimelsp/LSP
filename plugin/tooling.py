@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .api import OnBeforeStartContext
 from .api import get_plugin
 from .api import LspPlugin
+from .api import OnBeforeStartContext
 from .api import PluginStartError
 from .core.css import css
 from .core.logging import debug

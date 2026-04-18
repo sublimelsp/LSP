@@ -2300,7 +2300,6 @@ class Session(APIHandler, TransportCallbacks):
             self._plugin.on_pre_send_response_async(obj)
         return response
 
-
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:

@@ -1324,7 +1324,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 if handler_name := self._plugin.command_handler_map.get(command_name):
-                    return getattr(self._plugin, handler_name)(command)
+                    return getattr(self._plugin, handler_name)(command.get('arguments'))
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task

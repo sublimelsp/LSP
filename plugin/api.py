@@ -1,25 +1,12 @@
 from __future__ import annotations
 
-from ..protocol import ConfigurationItem
-from ..protocol import DocumentUri
-from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
-from .core.promise import Promise
-from .core.protocol import ClientNotification
-from .core.protocol import ClientRequest
-from .core.protocol import ClientResponse
-from .core.protocol import Notification
-from .core.protocol import Request
 from .core.protocol import Response
-from .core.protocol import ServerNotification
-from .core.protocol import ServerResponse
 from .core.settings import client_configs
-from .core.types import ClientConfig
 from .core.types import method2attr
 from .core.url import parse_uri
-from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from abc import ABC
 from abc import abstractmethod
@@ -39,9 +26,16 @@ import sublime
 if TYPE_CHECKING:
     from ..protocol import ConfigurationItem
     from ..protocol import DocumentUri
+    from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
+    from .core.promise import Promise
+    from .core.protocol import ClientNotification
+    from .core.protocol import ClientRequest
+    from .core.protocol import ClientResponse
     from .core.protocol import Notification
     from .core.protocol import Request
+    from .core.protocol import ServerNotification
+    from .core.protocol import ServerResponse
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
     from .core.sessions import SessionViewProtocol
@@ -64,7 +58,7 @@ COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
-CommandHandler = Callable[[Any, ExecuteCommandParams], Promise[None]]
+CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -252,16 +246,16 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
     Decorator to mark a method as a handler for a specific server command.
 
     When the language server sends a `workspace/executeCommand` request with the given
-    command name, the decorated method is called with the full command payload.
+    command name, the decorated method is called with the command's `arguments` list (or `None` if absent).
 
     Usage:
         ```py
-        @command_handler('editor.action.triggerSuggest')
-        def on_trigger_suggest(self, params: ExecuteCommandParams) -> Promise[None]:
+        @command_handler('editor.action.showReferences')
+        def on_show_references(self, arguments: list[LSPAny] | None) -> Promise[None]:
             ...
         ```
 
-    :param      command_name:   The command name as advertised by the server (e.g., 'editor.action.triggerSuggest').
+    :param      command_name:   The command name as advertised by the server (e.g., 'editor.action.showReferences').
     :returns:   A decorator that registers the function as a command handler.
     """
 

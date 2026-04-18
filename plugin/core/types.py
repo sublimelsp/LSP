@@ -1039,12 +1039,12 @@ class ClientConfig:
         :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
         """
         from ..api import AbstractPlugin
+        from ..api import ContextIsApplicable
         from ..api import get_plugin
-        from ..api import PluginContext
         if plugin := get_plugin(self.name):
             if issubclass(plugin, AbstractPlugin):
                 return plugin.is_applicable(view, self)
-            plugin_context = PluginContext(self, view, window, workspace_folders)
+            plugin_context = ContextIsApplicable(self, view, workspace_folders)
             return plugin.is_applicable(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0

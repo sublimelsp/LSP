@@ -1,23 +1,12 @@
 from __future__ import annotations
 
-from ..protocol import ConfigurationItem
-from ..protocol import DocumentUri
-from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
-from .core.protocol import ClientNotification
-from .core.protocol import ClientRequest
-from .core.protocol import Notification
-from .core.protocol import Request
 from .core.protocol import Response
-from .core.protocol import ServerNotification
-from .core.protocol import ServerResponse
 from .core.settings import client_configs
-from .core.types import ClientConfig
 from .core.types import method2attr
 from .core.url import parse_uri
-from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from abc import ABC
 from abc import abstractmethod
@@ -40,8 +29,13 @@ if TYPE_CHECKING:
     from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
     from .core.promise import Promise
+    from .core.protocol import ClientNotification
+    from .core.protocol import ClientRequest
+    from .core.protocol import ClientResponse
     from .core.protocol import Notification
     from .core.protocol import Request
+    from .core.protocol import ServerNotification
+    from .core.protocol import ServerResponse
     from .core.sessions import Session
     from .core.sessions import SessionBufferProtocol
     from .core.sessions import SessionViewProtocol
@@ -59,10 +53,12 @@ __all__ = [
 ]
 
 HANDLER_MARKER = '__HANDLER_MARKER'
+COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'
 
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
+CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -177,11 +173,13 @@ class APIHandler:
         super().__init__()
         # Map m_* attr names → method names (strings only, no bound methods) to avoid
         # the reference cycle self → bound_method.__self__ → self that prevents GC.
-        handler_attr_map: dict[str, str] = {}
+        self.handler_attr_map: dict[str, str] = {}
+        self.command_handler_map: dict[str, str] = {}
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if hasattr(value, HANDLER_MARKER):
-                handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
-        self.handler_attr_map = handler_attr_map
+                self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
+            elif hasattr(value, COMMAND_HANDLER_MARKER):
+                self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
@@ -243,18 +241,67 @@ def request_handler(
     return decorator
 
 
+def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHandler]:
+    """
+    Decorator to mark a method as a handler for a specific server command.
+
+    When the language server sends a `workspace/executeCommand` request with the given
+    command name, the decorated method is called with the command's `arguments` list (or `None` if absent).
+
+    Usage:
+        ```py
+        @command_handler('editor.action.showReferences')
+        def on_show_references(self, arguments: list[LSPAny] | None) -> Promise[None]:
+            ...
+        ```
+
+    :param      command_name:   The command name as advertised by the server (e.g., 'editor.action.showReferences').
+    :returns:   A decorator that registers the function as a command handler.
+    """
+
+    def decorator(func: CommandHandler) -> CommandHandler:
+        setattr(func, COMMAND_HANDLER_MARKER, command_name)
+        return func
+
+    return decorator
+
+
 @dataclass
-class PluginContext:
-    """Plugin context information passed to various `LspPlugin` classmethods."""
+class ContextIsApplicable:
+    """Context passed to `LspPlugin.is_applicable_async`."""
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
-    """The view relevant to the method being called."""
-    window: sublime.Window
-    """The window in which the session is running."""
+    """Template variables to be substituted in `command`, `env`, and `initialization_options`."""
     workspace_folders: list[WorkspaceFolder]
     """The workspace folders active for this session."""
+
+
+@dataclass
+class ContextOnBeforeStart:
+    """Context passed to `LspPlugin.on_before_start_async`."""
+
+    configuration: ClientConfig
+    """The resolved `ClientConfig` for this session. Can be mutated to adjust server settings before startup."""
+    variables: dict[str, str]
+    """Template variables to be substituted in `command`, `env`, and `initialization_options`.
+    Can be mutated to inject or override variables."""
+    view: sublime.View
+    """The view relevant to the method being called."""
+    working_directory: str | None
+    """The working directory for the server process. Can be mutated to override the default (first workspace folder)."""
+    workspace_folders: list[WorkspaceFolder]
+    """The workspace folders active for this session."""
+
+
+@dataclass
+class ContextOnStart:
+    """Context passed to `LspPlugin.on_start_async`."""
+
+    transport: TransportWrapper
+    """The raw transport to the language server process.
+    Use ``send()`` for JSON-RPC messages or ``send_bytes()`` for raw bytes."""
 
 
 class LspPlugin(APIHandler):
@@ -346,7 +393,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable(cls, context: PluginContext) -> bool:
+    def is_applicable(cls, context: ContextIsApplicable) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 
@@ -367,92 +414,23 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def additional_variables(cls, context: PluginContext) -> dict[str, str]:
+    def on_before_start_async(cls, context: ContextOnBeforeStart) -> None:
         """
-        Return extra template variables to be substituted in ``command``, ``env``, and ``initialization_options``.
+        Called just before the language server process is started.
 
-        By default includes variables like ``$storage_path``, ``$cache_path``, ``$temp_dir``, ``$home`` and also
-        all variables extracted from the window (the ``window.extract_variables()`` API). Override this method
-        to inject additional variables specific to your plugin.
+        Override to perform any preparation needed before startup - for example installing or updating server binaries,
+        resolving the working directory, or injecting extra template variables into `context.variables`.
 
-        :param      context:    The plugin context.
-        :returns:   A dictionary of variable name → value pairs.
-        """
-        return {}
+        This method runs on a worker thread so perform any blocking I/O (e.g. downloading a binary, running
+        `npm install`) directly here without spawning additional threads.
 
-    @classmethod
-    def install_async(cls, context: PluginContext) -> None:
-        """
-        Update or install the server binary if this plugin manages one. Called before the server is started.
+        Mutations to `context.working_directory` and `context.variables` are picked up and used when launching the
+        server process.
 
-        This method runs on a worker thread. Perform any blocking I/O (e.g. downloading a binary,
-        running ``npm install``) directly here without spawning additional threads.
+        Raise `PluginStartError` with a message to abort startup and display a user-visible status message.
 
-        :param      context:    The plugin context.
-        """
-        pass
-
-    @classmethod
-    def command(cls, context: PluginContext) -> list[str]:
-        """
-        Return the command used to start the language server subprocess.
-
-        The default implementation returns the ``command`` from the settings file after
-        template variable substitution. Override this method to build the command
-        programmatically (e.g. to resolve a binary path at runtime).
-
-        :param      context:    The plugin context.
-        :returns:   A non-empty list where the first element is the executable and the
-                    remaining elements are its arguments.
-        """
-        return context.configuration.command
-
-    @classmethod
-    def initialization_options(cls, context: PluginContext) -> dict[str, Any]:
-        """
-        Return the ``initializationOptions`` sent to the server in the ``initialize`` request.
-
-        The default implementation returns the ``initialization_options`` from the settings
-        file after template variable substitution. Override this method to compute the options
-        dynamically or to merge in runtime values.
-
-        :param      context:    The plugin context.
-        :returns:   A dictionary of initialization options.
-        """
-        return context.configuration.initialization_options.get()
-
-    @classmethod
-    def working_directory(cls, context: PluginContext) -> str | None:
-        """
-        Return the working directory for the language server subprocess.
-
-        The default implementation returns the path of the first workspace folder, or
-        ``None`` when there are no workspace folders. Override this method if the server
-        requires a specific working directory.
-
-        :param      context:    The plugin context.
-        :returns:   An absolute path to use as the working directory, or ``None`` to let the OS choose a default.
-        """
-        return context.workspace_folders[0].path if context.workspace_folders else None
-
-    @classmethod
-    def on_before_initialize(cls, context: PluginContext, transport: TransportWrapper) -> None:
-        """
-        Called after the transport is established but before the LSP ``initialize`` request is sent.
-
-        Override this method when your server requires out-of-band communication that must happen
-        before LSP negotiation begins — for example, sending a proprietary handshake or
-        authentication token over the raw transport.
-
-        Warning:
-            Anything sent via ``transport.send()`` bypasses the LSP message queue. Only use this
-            hook for pre-initialization messages that your server explicitly expects before the
-            ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
-
-        :param context:     The plugin context.
-        :param transport:   The live transport connected to the language server process.
-                            Use ``transport.send()`` to write `JSONRPCMessage` messages or ``transport.send_bytes()``
-                            to write byte data.
+        :param      context:    The startup context. `context.configuration`, `context.variables` and
+                                `context.working_directory` can be mutated to influence how the server is launched.
         """
         pass
 
@@ -478,24 +456,30 @@ class LspPlugin(APIHandler):
         super().__init__()
         self.weaksession: ref[Session] = weaksession
 
-    def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
+    def on_start_async(self, context: ContextOnStart) -> None:
         """
-        Override to augment configuration returned for the workspace/configuration request.
+        Called after the transport is established but before the LSP ``initialize`` request is sent.
 
-        :param      params:         A ConfigurationItem for which configuration is requested.
-        :param      configuration:  The pre-resolved configuration for given params using the settings object or None.
+        Override this method when your server requires out-of-band communication that must happen
+        before LSP negotiation begins — for example, sending a proprietary handshake or
+        authentication token over the raw transport.
 
-        :returns: The resolved configuration for given params.
+        Warning:
+            Anything sent via ``context.transport.send()`` or ``context.transport.send_bytes()`` bypasses the LSP
+            message queue. Only use this hook for pre-initialization messages that your server explicitly expects
+            before the ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
+
+        :param context:     The startup context. ``context.transport`` exposes ``send(payload)`` for JSON-RPC messages
+                            and ``send_bytes(payload)`` for raw bytes, both of which write directly to the transport.
         """
-        return configuration
+        pass
 
-    def on_execute_command(self, command: ExecuteCommandParams) -> Promise[None] | None:
+    def on_after_initialize_async(self) -> None:
         """
-        Intercept a command that is about to be sent to the language server.
+        Called after the `initialize` response has been received from the language server.
 
-        :param    command:        The payload containing a "command" and optionally "arguments".
-
-        :returns: Promise if *YOU* will handle this command plugin-side, None otherwise.
+        Override to perform any post-initialization work, such as sending custom notifications or requests
+        that depend on the server's capabilities reported in the `initialize` response.
         """
         pass
 
@@ -505,6 +489,17 @@ class LspPlugin(APIHandler):
 
         :param    request:     The request object. The request['params'] can be modified by the plugin.
         :param    view:        The corresponding View if applicable.
+        """
+        pass
+
+    def on_pre_send_response_async(self, response: ClientResponse) -> None:
+        """
+        Notifies about a response that is about to be sent to the language server.
+
+        Called after the LSP client has resolved the response but before it is transmitted
+        to the language server. The response['result'] can be modified by the plugin.
+
+        :param    response:    The response object containing 'method', 'params', and 'result'.
         """
         pass
 

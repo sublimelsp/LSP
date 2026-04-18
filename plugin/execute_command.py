@@ -49,9 +49,7 @@ class LspExecuteCommand(LspTextCommand):
         :param result: The result returned from the server.
         :param command_name: The name of the command that was executed.
         """
-        msg = f"command {command_name} completed"
-        if window := self.view.window():
-            window.status_message(msg)
+        pass
 
     def handle_error_async(self, error: Error, command_name: str) -> None:
         """

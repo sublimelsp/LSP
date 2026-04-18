@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from .api import AbstractPlugin
+from .api import command_handler
+from .api import ContextIsApplicable
+from .api import ContextOnBeforeStart
+from .api import ContextOnStart
 from .api import LspPlugin
 from .api import notification_handler
-from .api import PluginContext
 from .api import PluginStartError
 from .api import register_plugin
 from .api import request_handler
@@ -51,6 +54,9 @@ __all__ = [
     'ClientNotification',
     'ClientRequest',
     'ClientResponse',
+    'ContextIsApplicable',
+    'ContextOnBeforeStart',
+    'ContextOnStart',
     'DebouncerNonThreadSafe',
     'DottedDict',
     'FileWatcher',
@@ -63,7 +69,6 @@ __all__ = [
     'MarkdownLangMap',
     'Notification',
     'PackagedTask',
-    'PluginContext',
     'PluginStartError',
     'Promise',
     'Request',
@@ -78,6 +83,7 @@ __all__ = [
     'WorkspaceFolder',
     '__version__',
     'apply_text_edits',
+    'command_handler',
     'css',
     'filename_to_uri',
     'matches_pattern',

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from .api import AbstractPlugin
+from .api import ContextOnBeforeStart
 from .api import get_plugin
-from .api import PluginContext
+from .api import LspPlugin
 from .api import PluginStartError
-from .core.collections import DottedDict
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -509,28 +508,22 @@ class ServerTestRunner(TransportCallbacks):
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
             cwd = None
             if plugin_class:
-                plugin_context = PluginContext(config, initiating_view, window, workspace_folders)
-                if issubclass(plugin_class, AbstractPlugin):
+                # TODO: We should share this common code with WindowManager.start_async
+                cwd = workspace_folders[0].path if workspace_folders else None
+                plugin_context = ContextOnBeforeStart(config, variables, initiating_view, cwd, workspace_folders)
+                if issubclass(plugin_class, LspPlugin):
+                    plugin_class.on_before_start_async(plugin_context)
+                else:
                     if plugin_class.needs_update_or_installation():
                         plugin_class.install_or_update()
                     additional_variables = plugin_class.additional_variables()
-                else:
-                    plugin_class.install_async(plugin_context)
-                    additional_variables = plugin_class.additional_variables(plugin_context)
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                if issubclass(plugin_class, AbstractPlugin):
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
                     reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
                     if reason:
                         raise PluginStartError(f'Plugin.can_start() prevented the start due to: {reason}')
-                if issubclass(plugin_class, AbstractPlugin):
-                    cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
-                else:
-                    config.command = plugin_class.command(plugin_context)
-                    config.initialization_options = DottedDict(plugin_class.initialization_options(plugin_context))
-                    cwd = plugin_class.working_directory(plugin_context)
-            if not cwd and workspace_folders:
-                cwd = workspace_folders[0].path
+                    if new_cwd := plugin_class.on_pre_start(window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
             transport_config = config.create_transport_config()
             self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
             self._resolved_command = self._transport.process_args

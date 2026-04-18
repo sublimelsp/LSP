@@ -73,6 +73,7 @@ from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..api import AbstractPlugin
 from ..api import APIHandler
+from ..api import ContextOnStart
 from ..api import LspPlugin
 from ..api import notification_handler
 from ..api import request_handler
@@ -106,6 +107,7 @@ from .promise import PackagedTask
 from .promise import Promise
 from .protocol import ClientNotification
 from .protocol import ClientRequest
+from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
@@ -1009,7 +1011,7 @@ class Session(APIHandler, TransportCallbacks):
                 if handler_name := self._plugin.handler_attr_map.get(name):
                     return getattr(self._plugin, handler_name)
                 # Handler added through 'm_*' method.
-                if plugin_handler := getattr(self._plugin, name, None):
+                if isinstance(self._plugin, AbstractPlugin) and (plugin_handler := getattr(self._plugin, name, None)):
                     return plugin_handler
             if handler_name := self.handler_attr_map.get(name):
                 return getattr(self, handler_name)
@@ -1018,9 +1020,6 @@ class Session(APIHandler, TransportCallbacks):
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
-
-    def uses_plugin(self) -> bool:
-        return self._plugin is not None
 
     @property
     def plugin(self) -> AbstractPlugin | LspPlugin | None:
@@ -1231,6 +1230,9 @@ class Session(APIHandler, TransportCallbacks):
         transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            self._plugin = self._plugin_class(weakref.ref(self))
+            self._plugin.on_start_async(ContextOnStart(transport))
         self.transport = transport
         self.working_directory = working_directory
         self._variables = variables
@@ -1250,14 +1252,12 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            if issubclass(self._plugin_class, LspPlugin):
-                self._plugin = self._plugin_class(weakref.ref(self))
-                server_response: ServerResponse = {'method': 'initialize', 'result': result}
-                self._plugin.on_server_response_async(server_response)
-            else:
+            if issubclass(self._plugin_class, AbstractPlugin):
                 self._plugin = self._plugin_class(weakref.ref(self))
                 self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
+        if self._plugin and isinstance(self._plugin, LspPlugin):
+            self._plugin.on_after_initialize_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
@@ -1318,17 +1318,17 @@ class Session(APIHandler, TransportCallbacks):
         is_refactoring: bool = False,
     ) -> Promise[R | Error | None]:  # pyright: ignore[reportInvalidTypeVarUse]
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
+        command_name = command['command']
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                if promise := self._plugin.on_execute_command(command):
-                    return promise.then(lambda _: None)
+                if handler_name := self._plugin.command_handler_map.get(command_name):
+                    return getattr(self._plugin, handler_name)(command.get('arguments'))
             else:
                 task: PackagedTask[R | Error | None] = Promise.packaged_task()
                 promise, resolve = task
                 if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                     return promise
                 resolve(None)
-        command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
@@ -1802,7 +1802,7 @@ class Session(APIHandler, TransportCallbacks):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
-            if self._plugin:
+            if isinstance(self._plugin, AbstractPlugin):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
@@ -2274,7 +2274,7 @@ class Session(APIHandler, TransportCallbacks):
         return (None, None, None, None, None)
 
     def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = self.deduce_payload(payload)
+        handler, result, req_id, typestr, method = self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
             try:
@@ -2295,7 +2295,17 @@ class Session(APIHandler, TransportCallbacks):
                 exception_log(f"Error handling {typestr}", err)
                 return
             if isinstance(result_promise, Promise):
-                result_promise.then(self.send_response)
+                result_promise \
+                    .then(lambda r: self._handle_plugin_on_pre_send_response_async(method, result, r)) \
+                    .then(self.send_response)
+
+    def _handle_plugin_on_pre_send_response_async(
+        self, method: str | None, params: Any, response: Response[Any]
+    ) -> Response[Any]:
+        if method and isinstance(self._plugin, LspPlugin):
+            obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
+            self._plugin.on_pre_send_response_async(obj)
+        return response
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage

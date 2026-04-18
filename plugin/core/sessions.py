@@ -1021,9 +1021,6 @@ class Session(APIHandler, TransportCallbacks):
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
 
-    def uses_plugin(self) -> bool:
-        return self._plugin is not None
-
     @property
     def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin

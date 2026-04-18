@@ -21,18 +21,16 @@ resumes (since response to request will arrive after requested notification).
 from __future__ import annotations
 
 from argparse import ArgumentParser
-import argparse
-from enum import IntEnum
-import enum
 from typing import Any
 from typing import Awaitable
 from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
-from typing import Literal
 from typing import Union
+import argparse
 import asyncio
+import enum
 import json
 import os
 import sys
@@ -48,7 +46,7 @@ PayloadLike = Union[List[StringDict], StringDict, None]
 ENCODING = "utf-8"
 
 
-class ErrorCode(IntEnum):
+class ErrorCode(enum.IntEnum):
     # Defined by JSON RPC
     ParseError = -32700
     InvalidRequest = -32600
@@ -480,12 +478,9 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-class Mode(enum.Enum):
+class Mode(enum.StrEnum):
     server = "server"
     client = "client"
-
-    def __str__(self) -> str:
-        return self.value
 
 
 async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
@@ -530,7 +525,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
     parser.add_argument("--mode", type=Mode, default=Mode.server)
-    args: CmdLineArgs = parser.parse_args(namespace=CmdLineArgs())
+    args = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
         sys.exit(0)

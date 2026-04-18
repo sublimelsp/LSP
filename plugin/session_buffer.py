@@ -1037,10 +1037,9 @@ class SessionBuffer:
         Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
-        code_lenses = self._code_lenses.code_lenses_with_command()
         supported_code_lenses: list[ResolvedCodeLens] = []
         # Filter out CodeLenses with commands that are not handled directly by the language server
-        for code_lens in code_lenses:
+        for code_lens in self._code_lenses.code_lenses_with_command():
             command_name = code_lens['command']['command']
             if command_name in self._supported_commands:
                 supported_code_lenses.append(code_lens)

@@ -42,7 +42,7 @@ class YieldPromise:
         return self.__result
 
 
-def make_stdio_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
     """Create a config for starting the fake language server in STDIO mode."""
     return ClientConfig(
         name=name,
@@ -53,7 +53,7 @@ def make_stdio_test_config(name: str, init_options: dict[str, Any]) -> ClientCon
     )
 
 
-def make_tcp_server_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+def make_tcp_server_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
     """
     Create a config for starting the fake server in TCP mode, and make it act as the TCP server, awaiting a single
     client connection.
@@ -68,7 +68,7 @@ def make_tcp_server_test_config(name: str, init_options: dict[str, Any]) -> Clie
     )
 
 
-def make_tcp_client_test_config(name: str, init_options: dict[str, Any]) -> ClientConfig:
+def make_tcp_client_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
     """
     Create a config for starting the fake server in TCP mode, and make it act as the TCP client, where it connects to
     the LSP plugin.
@@ -105,7 +105,7 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
-        return make_stdio_test_config("TEST", {})
+        return make_stdio_test_config("TEST")
 
     @classmethod
     def setUpClass(cls) -> Generator:

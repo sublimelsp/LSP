@@ -917,18 +917,21 @@ def format_diagnostic_for_html(
     content = _format_diagnostic_message(view, message)
     code = diagnostic.get("code")
     source = diagnostic.get("source")
+    copy_text = raw_message.replace(' ', ' ')
     if source or code is not None:
         meta_info = ""
         if source:
+            copy_text += f' ({source})'
             meta_info += text2html(source)
         if code is not None:
             if code_description := diagnostic.get("codeDescription"):
                 href = code_description["href"]
                 meta_info += f'({make_link(href, str(code), tooltip=html.escape(href))})'
+                copy_text += f' [{code} - {href}]'
             else:
                 meta_info += f'({text2html(str(code))})'
+                copy_text += f' [{code}]'
         content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    copy_text = f"{raw_message} {f'({source})' if source else ''}".strip().replace(' ', ' ')
     content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
         'lsp_copy_text', {'text': copy_text}
     )}'>⧉</a>"""

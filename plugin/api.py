@@ -267,7 +267,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
 
 
 @dataclass
-class IsApplicableContext:
+class ContextIsApplicable:
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
@@ -277,7 +277,7 @@ class IsApplicableContext:
 
 
 @dataclass
-class OnBeforeStartContext:
+class ContextOnBeforeStart:
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     variables: dict[str, str]
@@ -290,7 +290,7 @@ class OnBeforeStartContext:
 
 
 @dataclass
-class OnStartContext:
+class ContextOnStart:
     transport: TransportWrapper
 
 
@@ -383,7 +383,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable(cls, context: IsApplicableContext) -> bool:
+    def is_applicable(cls, context: ContextIsApplicable) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 
@@ -404,7 +404,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def on_before_start_async(cls, context: OnBeforeStartContext) -> None:
+    def on_before_start_async(cls, context: ContextOnBeforeStart) -> None:
         """
         Called just before the language server process is started.
 
@@ -446,7 +446,7 @@ class LspPlugin(APIHandler):
         super().__init__()
         self.weaksession: ref[Session] = weaksession
 
-    def on_start_async(self, context: OnStartContext) -> None:
+    def on_start_async(self, context: ContextOnStart) -> None:
         """
         Called after the transport is established but before the LSP ``initialize`` request is sent.
 

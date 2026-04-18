@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from .api import ContextOnBeforeStart
 from .api import get_plugin
 from .api import LspPlugin
-from .api import OnBeforeStartContext
 from .api import PluginStartError
 from .core.css import css
 from .core.logging import debug
@@ -510,8 +510,7 @@ class ServerTestRunner(TransportCallbacks):
             if plugin_class:
                 # TODO: We should share this common code with WindowManager.start_async
                 cwd = workspace_folders[0].path if workspace_folders else None
-                plugin_context = OnBeforeStartContext(
-                    config, variables, initiating_view, cwd, workspace_folders)
+                plugin_context = ContextOnBeforeStart(config, variables, initiating_view, cwd, workspace_folders)
                 if issubclass(plugin_class, LspPlugin):
                     plugin_class.on_before_start_async(plugin_context)
                 else:

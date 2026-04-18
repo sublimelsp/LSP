@@ -73,9 +73,9 @@ from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..api import AbstractPlugin
 from ..api import APIHandler
+from ..api import ContextOnStart
 from ..api import LspPlugin
 from ..api import notification_handler
-from ..api import OnStartContext
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
 from ..diagnostics import DiagnosticsStorage
@@ -1234,7 +1234,7 @@ class Session(APIHandler, TransportCallbacks):
     ) -> None:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             self._plugin = self._plugin_class(weakref.ref(self))
-            self._plugin.on_start_async(OnStartContext(transport))
+            self._plugin.on_start_async(ContextOnStart(transport))
         self.transport = transport
         self.working_directory = working_directory
         self._variables = variables

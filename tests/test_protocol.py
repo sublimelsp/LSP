@@ -3,10 +3,14 @@ from __future__ import annotations
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.protocol import Request
-from LSP.plugin.core.transports import JsonRpcProcessor
-from LSP.protocol import Position
-from LSP.protocol import Range
+from LSP.plugin.core.transports import decode_json
+from LSP.plugin.core.transports import encode_json
+from typing import TYPE_CHECKING
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import Position
+    from LSP.protocol import Range
 
 LSP_START_POSITION: Position = {'line': 10, 'character': 4}
 LSP_END_POSITION: Position = {'line': 11, 'character': 3}
@@ -26,9 +30,9 @@ class PointTests(unittest.TestCase):
 
 class EncodingTests(unittest.TestCase):
     def test_encode(self) -> None:
-        encoded = JsonRpcProcessor._encode({"text": "😃"})
+        encoded = encode_json({"text": "😃"})
         self.assertEqual(encoded, b'{"text":"\xF0\x9F\x98\x83"}')
-        decoded = JsonRpcProcessor._decode(encoded)
+        decoded = decode_json(encoded)
         self.assertEqual(decoded, {"text": "😃"})
 
 

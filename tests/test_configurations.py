@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from .test_mocks import DISABLED_CONFIG
+from .test_mocks import TEST_CONFIG
 from LSP.plugin.core.configurations import WindowConfigManager
-from test_mocks import DISABLED_CONFIG
-from test_mocks import TEST_CONFIG
 from unittest import TestCase
 from unittest.mock import MagicMock
 from unittesting import ViewTestCase
@@ -24,7 +24,7 @@ class GlobalConfigManagerTests(TestCase):
         win = sublime.active_window()
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
         window_mgr = WindowConfigManager(win, {TEST_CONFIG.name: TEST_CONFIG})
-        self.assertFalse(list(window_mgr.all.values())[0].enabled)
+        self.assertFalse(next(iter(window_mgr.all.values())).enabled)
 
 
 class WindowConfigManagerTests(ViewTestCase):

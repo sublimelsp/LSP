@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Generator
 import argparse
 import json
@@ -13,9 +14,7 @@ import sys
 PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
-
-with open(os.path.join(PACKAGE_PATH, '.release.json')) as f:
-    CONFIGURATION = json.load(f)
+CONFIGURATION = json.loads(Path(PACKAGE_PATH, '.release.json').read_text(encoding='utf-8'))
 
 # Project configuration
 # The name of the branch to push to the remote on releasing.
@@ -30,20 +29,17 @@ PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
 
 
 def get_message(fname: str) -> str:
-    with open(fname, encoding='utf-8') as file:
-        message = file.read()
-    return message
+    return Path(fname).read_text(encoding='utf-8')
 
 
 def put_message(fname: str, text: str) -> None:
-    with open(fname, 'w', encoding='utf-8') as file:
-        file.write(text)
+    Path(fname).write_text(text, encoding='utf-8')
 
 
 def build_messages_json(version_history: list[str]) -> None:
     """Write the version history to the messages.json file."""
     output = os.path.join(PACKAGE_PATH, 'messages.json')
-    with open(output, 'w+', encoding='utf-8') as file:
+    with Path(output).open('w+', encoding='utf-8') as file:
         json.dump(
             obj={v: MESSAGE_DIR + '/' + v + '.txt' for v in version_history},
             fp=file, indent=4, separators=(',', ': '), sort_keys=True)
@@ -68,8 +64,7 @@ def parse_version(version: str) -> tuple[int, int, int]:
     if match:
         _prefix, major, minor, patch = match.groups()
         return int(major), int(minor), int(patch)
-    else:
-        return 0, 0, 0
+    return 0, 0, 0
 
 
 def get_version_with_prefix(version: str) -> str:
@@ -86,7 +81,7 @@ def git(*args: str) -> str | None:
     else:
         startupinfo = None
     proc = subprocess.Popen(
-        args=['git'] + list(args), startupinfo=startupinfo,
+        args=['git', *list(args)], startupinfo=startupinfo,
         stdout=subprocess.PIPE, stdin=subprocess.PIPE, cwd=PACKAGE_PATH)
     stdout, _ = proc.communicate()
     return stdout.decode('utf-8').strip() if stdout else None
@@ -94,7 +89,7 @@ def git(*args: str) -> str | None:
 
 def commit_release(version: str) -> None:
     """Create a 'Cut <version>' commit and tag."""
-    commit_message = 'Cut %s' % version
+    commit_message = f'Cut {version}'
     git('add', '.')
     git('commit', '-m', commit_message)
     git('tag', '-a', '-m', commit_message, get_version_with_prefix(version))
@@ -110,7 +105,7 @@ def build_release(_: argparse.Namespace) -> None:
         put_message(PYTHON_VERSION_PATH, f'from __future__ import annotations\n\n__version__ = {version_tuple}\n')
     build_messages_json(history)
     commit_release(version)
-    print("Release %s created!" % version)
+    print(f"Release {version} created!")
 
 
 def publish_release(args: argparse.Namespace) -> None:
@@ -153,9 +148,9 @@ def publish_release(args: argparse.Namespace) -> None:
         client = http.client.HTTPSConnection('api.github.com')
         client.request('POST', post_url, body=data, headers=headers)
         response = client.getresponse()
-        print("Release %s published!" % version_with_prefix
+        print(f"Release {version_with_prefix} published!"
               if response.status == 201 else
-              "Release %s failed!" % version_with_prefix)
+              f"Release {version_with_prefix} failed!")
     finally:
         client.close()
 

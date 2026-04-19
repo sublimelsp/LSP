@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from .constants import SublimeKind
 from .css import css
 from .promise import Promise
 from .registry import LspWindowCommand
 from .registry import windows
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from functools import partial
+from typing import TYPE_CHECKING
 from typing import TypeVar
 import html
 import sublime
 import sublime_api  # pyright: ignore[reportMissingImports]
 import uuid
+
+if TYPE_CHECKING:
+    from .constants import SublimeKind
 
 # pyright: reportInvalidTypeVarUse=false
 T = TypeVar('T')
@@ -73,20 +76,21 @@ class TreeItem:
             disclosure_button_html = '<span class="disclosure-button">&nbsp;</span>'
         kind_class_name = KIND_CLASS_NAMES.get(self.kind[0], 'kind kind_ambiguous')
         icon_html = '<span class="{}" title="{}">{}</span>'.format(
-            kind_class_name, self.kind[2], self.kind[1] if self.kind[1] else '&nbsp;')
+            kind_class_name, self.kind[2], self.kind[1] or '&nbsp;')
+        escaped_tooltip = html.escape(self.tooltip)
+        escaped_label = html.escape(self.label)
         if self.command_url and self.tooltip:
-            label_html = '<a class="label" href="{}" title="{}">{}</a>'.format(
-                self.command_url, html.escape(self.tooltip), html.escape(self.label))
+            label_html = f'<a class="label" href="{self.command_url}" title="{escaped_tooltip}">{escaped_label}</a>'
         elif self.command_url:
-            label_html = f'<a class="label" href="{self.command_url}">{html.escape(self.label)}</a>'
+            label_html = f'<a class="label" href="{self.command_url}">{escaped_label}</a>'
         elif self.tooltip:
-            label_html = f'<span class="label" title="{html.escape(self.tooltip)}">{html.escape(self.label)}</span>'
+            label_html = f'<span class="label" title="{escaped_tooltip}">{escaped_label}</span>'
         else:
-            label_html = f'<span class="label">{html.escape(self.label)}</span>'
+            label_html = f'<span class="label">{escaped_label}</span>'
         description_html = f'<span class="description">{html.escape(self.description)}</span>' if \
             self.description else ''
-        return '<div class="tree-view-row">{}</div>'.format(
-            indent_html + disclosure_button_html + icon_html + label_html + description_html)
+        content = indent_html + disclosure_button_html + icon_html + label_html + description_html
+        return f'<div class="tree-view-row">{content}</div>'
 
 
 class Node:
@@ -101,12 +105,12 @@ class Node:
         self.is_resolved = False
 
 
-class TreeDataProvider(metaclass=ABCMeta):
+class TreeDataProvider(ABC):
 
     @abstractmethod
     def get_children(self, element: T | None) -> Promise[list[T]]:
         """Implement this to return the children for the given element or root (if no element is passed)."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_tree_item(self, element: T) -> TreeItem:
@@ -114,7 +118,7 @@ class TreeDataProvider(metaclass=ABCMeta):
         Implement this to return the UI representation (TreeItem) of the element that gets displayed in the
         TreeViewSheet.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class TreeViewSheet(sublime.HtmlSheet):
@@ -130,7 +134,7 @@ class TreeViewSheet(sublime.HtmlSheet):
         self.data_provider.get_children(None).then(self._set_root_nodes)
 
     def __repr__(self) -> str:
-        return 'TreeViewSheet(%r)' % self.sheet_id
+        return f'TreeViewSheet({self.sheet_id!r})'
 
     def set_provider(self, data_provider: TreeDataProvider, header: str = "") -> None:
         """
@@ -171,10 +175,9 @@ class TreeViewSheet(sublime.HtmlSheet):
         if node.is_resolved:
             self._update_contents()
             return
-        else:
-            self.data_provider.get_children(node.element) \
-                .then(partial(self._add_children, node_id)) \
-                .then(lambda _: self._update_contents())
+        self.data_provider.get_children(node.element) \
+            .then(partial(self._add_children, node_id)) \
+            .then(lambda _: self._update_contents())
 
     def collapse_item(self, node_id: str) -> None:
         assert node_id in self.nodes

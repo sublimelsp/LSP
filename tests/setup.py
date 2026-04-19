@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from .test_mocks import basic_responses
 from collections.abc import Generator
+from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
@@ -12,10 +14,14 @@ from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
-from test_mocks import basic_responses
 from typing import Any
+from typing import TYPE_CHECKING
 from unittesting import DeferrableTestCase
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from LSP.plugin.core.promise import Promise
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
@@ -41,21 +47,43 @@ class YieldPromise:
         return self.__result
 
 
-def make_stdio_test_config() -> ClientConfig:
+def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """Create a config for starting the fake language server in STDIO mode."""
     return ClientConfig(
-        name="TEST",
+        name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         enabled=True,
     )
 
 
-def make_tcp_test_config() -> ClientConfig:
+def make_tcp_server_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP server, awaiting a single
+    client connection.
+    """
     return ClientConfig(
-        name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=server"],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         tcp_port=0,  # select a free one for me
+        enabled=True,
+    )
+
+
+def make_tcp_client_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP client, where it connects to
+    the LSP plugin.
+    """
+    return ClientConfig(
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=client"],
+        selector="text.plain",
+        initialization_options=DottedDict(init_options),
+        tcp_port=-1,  # select a free one for me
         enabled=True,
     )
 
@@ -82,7 +110,7 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
-        return make_stdio_test_config()
+        return make_stdio_test_config("TEST")
 
     @classmethod
     def setUpClass(cls) -> Generator:
@@ -167,7 +195,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         :returns:   A generator with resolved value.
         """
         # cls.assertIsNotNone(cls.session)
-        assert cls.session  # mypy
+        assert cls.session
         if promise is None:
             promise = YieldPromise()
 
@@ -200,7 +228,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             yielder = promise
         else:
             yielder = YieldPromise()
-            promise.then(lambda result: yielder.fulfill(result))
+            promise.then(yielder.fulfill)
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
         return yielder.result()  # noqa: B901
 
@@ -215,12 +243,12 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def set_response(self, method: str, response: Any) -> None:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         self.session.send_notification(Notification("$test/setResponse", {"method": method, "response": response}))
 
     def set_responses(self, responses: list[tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:
@@ -235,7 +263,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def await_client_notification(self, method: str, params: Any = None) -> Generator:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:
@@ -260,8 +288,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert isinstance(self.view, sublime.View)
 
         def condition() -> bool:
-            nonlocal self
-            nonlocal expected_change_count
+            nonlocal self, expected_change_count
             assert self.view
             v = self.view
             return v.change_count() == expected_change_count

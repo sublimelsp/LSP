@@ -21,7 +21,6 @@ from .core.promise import Promise
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
@@ -37,6 +36,7 @@ from typing import cast
 from typing import Generator
 from typing import List
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
@@ -46,8 +46,11 @@ import sublime
 import weakref
 import webbrowser
 
+if TYPE_CHECKING:
+    from .core.sessions import Session
+
 SessionName: TypeAlias = str
-CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, None, Error]
+CompletionResponse: TypeAlias = Union[List[CompletionItem], CompletionList, Error, None]
 ResolvedCompletions: TypeAlias = Tuple[CompletionResponse, 'weakref.ref[Session]']
 CompletionsStore: TypeAlias = Tuple[List[CompletionItem], CompletionItemDefaults]
 
@@ -76,8 +79,7 @@ def format_completion(
     details: list[str] = []
     if can_resolve_completion_items or item.get('documentation'):
         # Not using "make_command_link" in a hot path to avoid slow json.dumps.
-        args = '{{"view_id":{},"command":"lsp_resolve_docs","args":{{"index":{},"session_name":"{}"}}}}'.format(
-            view_id, index, session_name)
+        args = f'{{"view_id":{view_id},"command":"lsp_resolve_docs","args":{{"index":{index},"session_name":"{session_name}"}}}}'  # noqa: E501
         href = f'subl:lsp_run_text_command_helper {args}'
         details.append(f"<a href='{href}'>More</a>")
     if lsp_label_detail and (lsp_label + lsp_label_detail).startswith(lsp_filter_text):
@@ -128,12 +130,12 @@ def format_completion(
 
 def get_text_edit_range(text_edit: TextEdit | InsertReplaceEdit) -> Range:
     if 'insert' in text_edit and 'replace' in text_edit:
-        text_edit = cast(InsertReplaceEdit, text_edit)
+        text_edit = cast('InsertReplaceEdit', text_edit)
         insert_mode = userprefs().completion_insert_mode
         if LspCommitCompletionWithOppositeInsertMode.active:
             insert_mode = 'replace' if insert_mode == 'insert' else 'insert'
         return text_edit.get(insert_mode)  # type: ignore
-    text_edit = cast(TextEdit, text_edit)
+    text_edit = cast('TextEdit', text_edit)
     return text_edit['range']
 
 
@@ -204,10 +206,10 @@ class QueryCompletionsTask:
 
     def query_completions_async(self, sessions: list[Session]) -> None:
         promises = [self._create_completion_request_async(session) for session in sessions]
-        Promise.all(promises).then(lambda response: self._resolve_completions_async(response))
+        Promise.all(promises).then(self._resolve_completions_async)
 
     def _create_completion_request_async(self, session: Session) -> Promise[ResolvedCompletions]:
-        params = cast(CompletionParams, text_document_position_params(self._view, self._location))
+        params = cast('CompletionParams', text_document_position_params(self._view, self._location))
         request = Request.complete(params, self._view)
         promise, request_id = session.send_request_task_2(request)
         weak_session = weakref.ref(session)
@@ -383,7 +385,7 @@ class LspSelectCompletionCommand(LspTextCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             self.view.run_command("insert", {"characters": new_text})
-        # todo: this should all run from the worker thread
+        # TODO: this should all run from the worker thread
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
         additional_text_edits = item.get('additionalTextEdits')
         if session and not additional_text_edits:

@@ -32,7 +32,6 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import LspSettingsChangeListener
 from .settings import userprefs
-from .transports import create_transport
 from .types import ClientConfig
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
@@ -60,6 +59,7 @@ import sublime
 import threading
 
 if TYPE_CHECKING:
+    from .collections import DottedDict
     from .tree_view import TreeViewSheet
 
 
@@ -207,8 +207,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
 
-    def get_session(self, config_name: str, file_path: str) -> Session | None:
-        return self._find_session(config_name, file_path)
+    def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
+        if file_path:
+            return self._find_session(config_name, file_path)
+        for session in self._sessions:
+            if session.config.name == config_name:
+                return session
+        return None
 
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
@@ -233,7 +238,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO remove after next release
+                    if plugin.should_ignore(view):  # TODO: remove after next release
                         debug(view, "ignored by plugin", plugin.__name__)
                     elif plugin.is_applicable(view, config):
                         return config
@@ -277,8 +282,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 transport_cwd: str | None = cwd
             else:
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
-            transport_config = config.resolve_transport_config(variables)
-            transport = create_transport(transport_config, transport_cwd, session)
+            transport = config.create_transport_config().start(
+                config.command, config.env, transport_cwd, variables, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
@@ -293,7 +298,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                         'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
                        f'Palette.\n\n--- Error: ---\n{e}')
-            exception_log(f"Unable to start subprocess for {config.name}", e)
+            exception_log(f"Unable to initialize language server for {config.name}", e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._config_manager.disable_config(config.name, only_for_session=True)
@@ -326,13 +331,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loggers.append(logger_map[logger_type])
         if len(loggers) == 0:
             return RouterLogger()  # logs nothing
-        elif len(loggers) == 1:
+        if len(loggers) == 1:
             return loggers[0](self, config_name)
-        else:
-            router_logger = RouterLogger()
-            for logger in loggers:
-                router_logger.append(logger(self, config_name))
-            return router_logger
+        router_logger = RouterLogger()
+        for logger in loggers:
+            router_logger.append(logger(self, config_name))
+        return router_logger
 
     def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
@@ -396,7 +400,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                         'choose Cancel to disable it for this window for the duration of the current session. '
                         'Re-enable by running "LSP: Enable Language Server In Project" from the Command Palette.')
                 if exception:
-                    msg += f"\n\n--- Error: ---\n{str(exception)}"
+                    msg += f"\n\n--- Error: ---\n{exception}"
                 restart = sublime.ok_cancel_dialog(msg, "Restart")
             if restart:
                 for listener in self._listeners:
@@ -527,7 +531,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         else:
             self._view_statuses[view_id][config_name] = f"{config_name} ({status})" if status else config_name
         if userprefs().show_view_status:
-            statuses = [status.replace('LSP-', '') for (_, status) in self._view_statuses[view_id].items()]
+            statuses = [status.replace('LSP-', '') for status in self._view_statuses[view_id].values()]
             if statuses:
                 statuses.sort()
                 view_status = f"LSP: {' | '.join(statuses)}"
@@ -583,11 +587,18 @@ class WindowRegistry(LspSettingsChangeListener):
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
 
+    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
+        for wm in self._windows.values():
+            if session := wm.get_session(config_name):
+                session.on_server_settings_changed(settings)
+
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():
             wm.on_diagnostics_updated()
             for session in wm.get_sessions():
                 sublime.set_timeout_async(session.on_userprefs_changed_async)
+            for listener in wm.listeners():
+                sublime.set_timeout_async(listener.on_userprefs_changed_async)
 
 
 class RequestTimeTracker:
@@ -685,8 +696,8 @@ class PanelLogger(Logger):
         self.log(self._format_notification(direction, method), params)
 
     def _format_response(self, direction: str, request_id: int | str, duration: str) -> str:
-        return "[{}] {} {} ({}) (duration: {})".format(
-            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
+        time = RequestTimeTracker.formatted_now()
+        return f"[{time}] {direction} {self._server_name} ({request_id}) (duration: {duration})"
 
     def _format_request(self, direction: str, method: str, request_id: int | str) -> str:
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method} ({request_id})"
@@ -718,7 +729,7 @@ class RemoteLogger(Logger):
                     debug('WebsocketServer not started - address already in use')
                     RemoteLogger._ws_server = None
                 else:
-                    raise ex
+                    raise
 
     def _start_server(self) -> None:
         def start_async() -> None:
@@ -737,16 +748,16 @@ class RemoteLogger(Logger):
 
     def _on_new_client(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client connecting (after handshake)."""
-        debug("New client connected and was given id %d" % client['id'])
+        debug(f"New client connected and was given id {client['id']}")
         # server.send_message_to_all("Hey all, a new client has joined us")
 
     def _on_client_left(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client disconnecting."""
-        debug("Client(%d) disconnected" % client['id'])
+        debug(f"Client({client['id']}) disconnected")
 
     def _on_message_received(self, client: dict, server: WebsocketServer, message: str) -> None:
         """Called when a client sends a message."""
-        debug("Client(%d) said: %s" % (client['id'], message))
+        debug(f"Client({client['id']}) said: {message}")
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({

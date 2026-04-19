@@ -11,8 +11,6 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
 from .core.registry import windows
-from .core.sessions import AbstractViewListener
-from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.views import entire_content_region
 from .core.views import first_selection_region
@@ -20,7 +18,7 @@ from .core.views import format_code_actions_for_quick_panel
 from .core.views import kind_contains_other_kind
 from .core.views import text_document_code_action_params
 from .lsp_task import LspTask
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
@@ -34,6 +32,8 @@ from typing_extensions import override
 import sublime
 
 if TYPE_CHECKING:
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import SessionBufferProtocol
     from collections.abc import Callable
     from collections.abc import Generator
     from collections.abc import Iterator
@@ -49,6 +49,38 @@ MENU_ACTIONS_KINDS = [CodeActionKind.Refactor, CodeActionKind.Source]
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
     return isinstance(action.get('command'), str)
+
+
+def is_code_action_with_diagnostics(action: Command | CodeAction) -> TypeGuard[CodeAction]:
+    return bool(action.get('diagnostics'))
+
+
+def is_quickfix(action: Command | CodeAction) -> bool:
+    # We consider code actions without `kind` property also to be a "quickfix".
+    # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_codeAction
+    # > In version 1.0 of the protocol, there weren't any source or refactoring code actions. Code actions were solely
+    # > used to (quick) fix code, not to write / rewrite code. So if a client asks for code actions without any kind,
+    # > the standard quick fix code actions should be returned.
+    return kind_contains_other_kind(CodeActionKind.QuickFix, action.get('kind', CodeActionKind.QuickFix))
+
+
+def filter_quickfix_actions(
+    only_with_diagnostics: bool, response: list[Command | CodeAction] | Error | None
+) -> list[Command | CodeAction]:
+    if isinstance(response, Error) or not response:
+        return []
+    if only_with_diagnostics:
+        # If there are multiple diagnostics for the region, in the hover popup we can only use those code actions which
+        # include the "diagnostics" property, because each code action needs to be matched with its corresponding
+        # diagnostics.
+        return [
+            action for action in response
+            if is_code_action_with_diagnostics(action) and is_quickfix(action) and not action.get('disabled', False)
+        ]
+    # If code actions are displayed independently of diagnostics, or if there is only a single diagnostic from this
+    # server, all enabled quickfix code actions can be used. Strictly speaking, for the latter case the code actions
+    # aren't necessarily associated with the diagnostic, but this heuristic works quite well in practice.
+    return [action for action in response if is_quickfix(action) and not action.get('disabled', False)]
 
 
 class CodeActionsManager:
@@ -84,8 +116,7 @@ class CodeActionsManager:
                 cache_key, task = self._response_cache
                 if location_cache_key == cache_key:
                     return task
-                else:
-                    self._response_cache = None
+                self._response_cache = None
         elif only_kinds == MENU_ACTIONS_KINDS:
             self.menu_actions_cache_key = f"{view.buffer_id()}#{view.change_count()}:{region}"
             self.refactor_actions_cache.clear()
@@ -216,7 +247,7 @@ def get_matching_kinds(code_actions: dict[str, bool], session_kinds: list[CodeAc
         action_parts = session_kind.split('.')
         for i in range(len(action_parts)):
             current_part = '.'.join(action_parts[0:i + 1])
-            user_value = code_actions.get(current_part, None)
+            user_value = code_actions.get(current_part)
             if isinstance(user_value, bool):
                 enabled = user_value
         if enabled:
@@ -406,11 +437,11 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
 
 # This command must be a WindowCommand in order to reliably hide corresponding menu entries when no view has focus.
-class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
+class LspMenuActionCommand(LspWindowCommand, ABC):
     """Handles a particular kind of code actions with the purpose to list them as items in a submenu."""
 
     capability = 'codeActionProvider'
@@ -451,6 +482,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
     def description(self, index: int, event: dict | None = None) -> str | None:
         if -1 < index < len(self.actions_cache):
             return self.actions_cache[index][1]['title']
+        return None
 
     def want_event(self) -> bool:
         return True
@@ -467,7 +499,7 @@ class LspMenuActionCommand(LspWindowCommand, metaclass=ABCMeta):
 
     def _handle_response_async(self, session_name: str, response: Any) -> None:
         if isinstance(response, Error):
-            sublime.error_message(f"{session_name}: {str(response)}")
+            sublime.error_message(f"{session_name}: {response}")
 
     def _is_cache_valid(self, event: dict | None) -> bool:
         view = self.view

@@ -58,15 +58,15 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | ------- | -------- | ------- |
 | Auto Complete | <kbd>Ctrl</kbd> <kbd>Space</kbd> (also on macOS) | `auto_complete`
 | Expand Selection | unbound | `lsp_expand_selection`
-| Find References | <kbd>Shift</kbd> <kbd>F12</kbd> | `lsp_symbol_references`<br>Supports optional args: `{"include_declaration": true | false, "output_mode": "output_panel" | "quick_panel"}`.<br>Triggering from context menus while holding <kbd>Ctrl</kbd> opens in "side by side" mode. Holding <kbd>Shift</kbd> triggers opposite behavior relative to what `show_references_in_quick_panel` is set to.
+| Find References | <kbd>Shift</kbd> <kbd>F12</kbd> | `lsp_symbol_references`<br>Supports optional args: `{"include_declaration": true/false, "output_mode": "output_panel" / "quick_panel"}`.<br>Triggering from context menus while holding <kbd>Ctrl</kbd> opens in "side by side" mode. Holding <kbd>Shift</kbd> triggers opposite behavior relative to what `show_references_in_quick_panel` is set to.
 | Fold | unbound | `lsp_fold`<br>Supports optional args: `{"strict": true/false}` - to configure whether to fold only when the caret is contained within the folded region (`true`), or even when it is anywhere on the starting line (`false`).
-| Fold All | unbound | `lsp_fold_all`<br>Supports optional args: `{"kind": "comment" | "imports" | "region"}`.
+| Fold All | unbound | `lsp_fold_all`<br>Supports optional args: `{"kind": "comment" / "imports" / "region"}`.
 | Follow Link | unbound | `lsp_open_link`
 | Format File | unbound | `lsp_format_document`
 | Format Selection | unbound | `lsp_format_document_range`
 | Goto Declaration | unbound | `lsp_symbol_declaration`
 | Goto Definition | unbound<br>suggested: <kbd>F12</kbd> | `lsp_symbol_definition`
-| Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`.
+| Goto Diagnostic | unbound<br>suggested: <kbd>F8</kbd> | `lsp_goto_diagnostic`<br>Supports optional argument `"severity_level"` for the severity level of included diagnostics: 1 (error), 2 (warning), 3 (information), 4 (hint). Uses the `"show_diagnostics_severity_level"` setting if not provided.
 | Goto Implementation | unbound | `lsp_symbol_implementation`
 | Goto Symbol in Project | unbound<br>suggested: <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>R</kbd> | `lsp_workspace_symbols`
 | Goto Symbol | unbound<br>suggested: <kbd>Ctrl</kbd> <kbd>R</kbd> | `lsp_document_symbols`
@@ -81,10 +81,10 @@ Below is a list of supported commands and the corresponding keyboard shortcut (i
 | Run Code Lens | unbound | `lsp_code_lens`
 | Run Refactor Action | unbound | `lsp_code_actions`<br>With args: `{"only_kinds": ["refactor"]}`.
 | Run Source Action | unbound | `lsp_code_actions`<br>With args: `{"only_kinds": ["source"]}`.
-| Save All | unbound | `lsp_save_all`<br>Supports optional args `{"only_files": true | false}` - whether to ignore buffers which have no associated file on disk.
+| Save All | unbound | `lsp_save_all`<br>Supports optional args `{"only_files": true/false}` - whether to ignore buffers which have no associated file on disk.
 | Show Call Hierarchy | unbound | `lsp_call_hierarchy`
 | Show Type Hierarchy | unbound | `lsp_type_hierarchy`
 | Signature Help | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Space</kbd> | `lsp_signature_help_show`
 | Toggle Diagnostics Panel | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>M</kbd> | `lsp_show_diagnostics_panel`
-| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`<br>Supports optional args: `{"enable": true | false}`.
+| Toggle Inlay Hints | unbound | `lsp_toggle_inlay_hints`<br>Supports optional args: `{"enable": true/false}`.
 | Toggle Log Panel | unbound | `lsp_toggle_server_panel`

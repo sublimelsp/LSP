@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import InlayHint
-from ..protocol import InlayHintLabelPart
-from ..protocol import MarkupContent
 from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
@@ -10,13 +7,19 @@ from .core.edit import apply_text_edits
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import position_to_offset
 from typing import cast
+from typing import TYPE_CHECKING
 import html
 import sublime
 import uuid
+
+if TYPE_CHECKING:
+    from ..protocol import InlayHint
+    from ..protocol import InlayHintLabelPart
+    from ..protocol import MarkupContent
+    from .core.sessions import Session
 
 
 class LspToggleInlayHintsCommand(LspWindowCommand):
@@ -113,7 +116,7 @@ def inlay_hint_to_phantom(view: sublime.View, inlay_hint: InlayHint, session: Se
 def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Session, phantom_uuid: str) -> str:
     label = format_inlay_hint_label(inlay_hint, session, phantom_uuid)
     font = view.settings().get('font_face') or "monospace"
-    html = f"""
+    return f"""
     <body id="lsp-inlay-hint">
         <style>
             .inlay-hint {{
@@ -126,7 +129,6 @@ def get_inlay_hint_html(view: sublime.View, inlay_hint: InlayHint, session: Sess
         </div>
     </body>
     """
-    return html
 
 
 def format_inlay_hint_tooltip(tooltip: str | MarkupContent | None) -> str:
@@ -151,12 +153,12 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid
                 }
             })
             result += f'<a href="{inlay_hint_click_command}">'
-        truncated = len(label) > truncate_limit and truncate_limit > 0
+        truncated = len(label) > truncate_limit > 0
         truncated_label = label[:truncate_limit - 1] + '…' if truncated else label
         instruction_text = '\nDouble-click to insert' if has_text_edits else ""
         truncation_tooltip = f'\n{html.escape(label)}' if truncated else ""
@@ -167,7 +169,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
         return result
     remaining_truncate_limit = truncate_limit
     full_label = "".join(label_part['value'] for label_part in label)
-    full_label_truncated = len(full_label) > truncate_limit and truncate_limit > 0
+    full_label_truncated = len(full_label) > truncate_limit > 0
     for label_part in label:
         if remaining_truncate_limit < 0 and truncate_limit > 0:
             break
@@ -179,9 +181,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid,
-                    'label_part': cast(dict, label_part)
+                    'label_part': cast('dict', label_part)
                 }
             })
             value += f'<a href="{inlay_hint_click_command}">'

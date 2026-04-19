@@ -13,7 +13,6 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import method_to_capability
 from .core.url import parse_uri
@@ -31,10 +30,15 @@ from collections import Counter
 from functools import partial
 from os.path import basename
 from pathlib import Path
+from typing import Any
 from typing import cast
+from typing import TYPE_CHECKING
 from typing import TypedDict
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 
 class LspGotoCommand(LspTextCommand):
@@ -97,7 +101,7 @@ class LspGotoCommand(LspTextCommand):
         fallback: bool,
         group: int,
         position: int,
-        response: None | Location | list[Location] | list[LocationLink]
+        response: Location | list[Location] | list[LocationLink] | None
     ) -> None:
         if isinstance(response, dict):
             self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
@@ -159,29 +163,35 @@ class DiagnosticData(TypedDict):
 
 class LspGotoDiagnosticCommand(LspWindowCommand):
 
-    def run(self, uri: DocumentUri | None, diagnostic: DiagnosticData | None) -> None:
+    def run(
+        self, uri: DocumentUri | None, diagnostic: DiagnosticData | None, severity_level: int | None = None
+    ) -> None:
         pass
 
-    def is_enabled(self) -> bool:
-        max_severity = userprefs().diagnostics_panel_include_severity_level
+    def is_enabled(self, **kwargs: dict[str, Any]) -> bool:
+        max_severity = self._max_severity(kwargs)
         return any(any(session.diagnostics.get_diagnostics(max_severity).values()) for session in self.sessions())
 
     def input_description(self) -> str:
         return 'Goto Diagnostic'
 
-    def input(self, args: dict) -> sublime_plugin.CommandInputHandler | None:
+    def input(self, args: dict[str, Any]) -> sublime_plugin.CommandInputHandler | None:
         view = self.window.active_view()
         if not view:
             return None
+        max_severity = self._max_severity(args)
         sessions = list(self.sessions())
         if (uri := args.get('uri')) and uri != "$view_uri":  # for backwards compatibility with previous command args
-            return DiagnosticUriInputHandler(self.window, view, sessions, uri)
-        elif (uri := view.settings().get('lsp_uri')) and self._has_diagnostics(uri):
-            return DiagnosticUriInputHandler(self.window, view, sessions, uri)
-        return DiagnosticUriInputHandler(self.window, view, sessions)
+            return DiagnosticUriInputHandler(self.window, view, sessions, max_severity, uri)
+        if (uri := view.settings().get('lsp_uri')) and self._has_diagnostics(uri, max_severity):
+            return DiagnosticUriInputHandler(self.window, view, sessions, max_severity, uri)
+        return DiagnosticUriInputHandler(self.window, view, sessions, max_severity)
 
-    def _has_diagnostics(self, uri: DocumentUri) -> bool:
-        max_severity = userprefs().diagnostics_panel_include_severity_level
+    @staticmethod
+    def _max_severity(args: dict[str, Any]) -> int:
+        return args.get('severity_level', userprefs().show_diagnostics_severity_level)
+
+    def _has_diagnostics(self, uri: DocumentUri, max_severity: int) -> bool:
         return any(session.diagnostics.get_diagnostics_for_uri(uri, max_severity) for session in self.sessions())
 
 
@@ -192,6 +202,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         window: sublime.Window,
         initial_view: sublime.View,
         sessions: list[Session],
+        max_severity: int,
         initial_value: DocumentUri | None = None
     ) -> None:
         super().__init__(window, initial_value)
@@ -200,7 +211,7 @@ class DiagnosticUriInputHandler(PreselectedListInputHandler):
         self.sessions = sessions
         self.uri: DocumentUri | None = None
         self._preview: sublime.View | None = None
-        self._max_severity = userprefs().diagnostics_panel_include_severity_level
+        self._max_severity = max_severity
 
     def name(self) -> str:
         return 'uri'
@@ -301,10 +312,11 @@ class DiagnosticInputHandler(sublime_plugin.ListInputHandler):
         caret_pos = region.b if self._preview and (region := first_selection_region(self._preview)) is not None else 0
         for index, diagnostic_data in enumerate(self.diagnostics):
             diagnostic = diagnostic_data['diagnostic']
-            message = diagnostic['message'] or '…'
+            message = diagnostic['message']
+            raw_message = (message['value'] if isinstance(message, dict) else message) or '…'
             severity = diagnostic_severity(diagnostic)
-            text = f"{'_EWIH'[severity]}: {message.splitlines()[0]}"
-            value = cast(dict, diagnostic_data)
+            text = f"{'_EWIH'[severity]}: {raw_message.splitlines()[0]}"
+            value = cast('dict', diagnostic_data)
             code = str(diagnostic.get('code', ''))
             kind = DIAGNOSTIC_KINDS[severity]
             items.append(sublime.ListInputItem(text, value, annotation=code, kind=kind))

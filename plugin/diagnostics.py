@@ -10,7 +10,7 @@ from .core.constants import DIAGNOSTIC_SEVERITY_SCOPES
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.protocol import Point
 from .core.settings import userprefs
-from .core.types import DocumentSelector_
+from .core.types import DocumentSelectorMatcher
 from .core.url import normalize_uri
 from .core.views import diagnostic_severity
 from .core.views import DIAGNOSTIC_STYLES
@@ -43,7 +43,7 @@ class DiagnosticsStorage:
             return identifiers
         identifiers = set(
             diagnostic_options.get('identifier') for diagnostic_options in self._providers.values()
-            if DocumentSelector_(diagnostic_options.get('documentSelector') or []).matches(view)
+            if DocumentSelectorMatcher(diagnostic_options.get('documentSelector') or []).matches(view)
         )
         self._identifiers_cache[view_id] = identifiers
         return identifiers
@@ -122,7 +122,7 @@ class DiagnosticsAnnotationsView:
 
     def initialize_region_keys(self) -> None:
         r = [sublime.Region(0, 0)]
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             self._view.add_regions(self._annotation_region_key(severity), r, flags=REGIONS_INITIALIZE_FLAGS)
 
     def _annotation_region_key(self, severity: DiagnosticSeverity) -> str:
@@ -133,7 +133,7 @@ class DiagnosticsAnnotationsView:
         max_severity_level = userprefs().show_diagnostics_annotations_severity_level
         # To achieve the correct order of annotations (most severe having priority) we have to add regions from the
         # most to the least severe.
-        for severity in DIAGNOSTIC_KINDS.keys():
+        for severity in DIAGNOSTIC_KINDS:
             if severity <= max_severity_level:
                 matching_diagnostics: tuple[list[Diagnostic], list[sublime.Region]] = ([], [])
                 for diagnostic, region in diagnostics:
@@ -142,7 +142,7 @@ class DiagnosticsAnnotationsView:
                     matching_diagnostics[0].append(diagnostic)
                     matching_diagnostics[1].append(region)
                 css_class = DIAGNOSTIC_STYLES[severity].css_class
-                annotations = format_diagnostics_for_annotation(matching_diagnostics[0], css_class)
+                annotations = format_diagnostics_for_annotation(self._view, matching_diagnostics[0], css_class)
                 color = self._severity_colors[severity]
                 self._view.add_regions(
                     self._annotation_region_key(severity), matching_diagnostics[1], flags=flags,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .constants import ST_VERSION
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from typing import Any
 from typing import Callable
@@ -29,7 +29,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     Note that the return value of the function will be discarded, so it only makes sense to use this decorator for
     functions that return None. The function will run on Sublime's main thread.
     """
-    DEBOUNCE_TIME = 0.5  # seconds
+    DEBOUNCE_TIME = 0.5  # seconds  # noqa: N806
 
     @functools.wraps(user_function)
     def wrapped_function(*args: P.args, **kwargs: P.kwargs) -> None:
@@ -41,7 +41,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
                     setattr(wrapped_function, '_target_time', None)
                     sublime.set_timeout(check_call_function, int(additional_delay * 1000))
                     return
-            delattr(wrapped_function, '_target_time')
+            delattr(wrapped_function, '_target_time')  # noqa: B043
             user_function(*args, **kwargs)
         if hasattr(wrapped_function, '_target_time'):
             setattr(wrapped_function, '_target_time', time.monotonic() + DEBOUNCE_TIME)
@@ -51,7 +51,7 @@ def debounced(user_function: Callable[P, Any]) -> Callable[P, None]:
     return wrapped_function
 
 
-class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class PreselectedListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can preselect a value.
 
@@ -77,8 +77,7 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
         if self._initial_value is not None:
             sublime.set_timeout(self._select_and_reset)
             return [self._initial_value], 0  # pyright: ignore[reportReturnType]
-        else:
-            return self.get_list_items()
+        return self.get_list_items()
 
     def _select_and_reset(self) -> None:
         self._initial_value = None
@@ -87,10 +86,10 @@ class PreselectedListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABC
 
     @abstractmethod
     def get_list_items(self) -> ListItemsReturn:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
-class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta):
+class DynamicListInputHandler(sublime_plugin.ListInputHandler, ABC):
     """
     A ListInputHandler which can update its items while typing in the input field.
 
@@ -147,10 +146,9 @@ class DynamicListInputHandler(sublime_plugin.ListInputHandler, metaclass=ABCMeta
         if items := getattr(self.command, '_items', None):  # Items were updated after typing
             if ST_VERSION >= 4157:
                 return items
-            else:
-                # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
-                sublime.set_timeout(self._select_first_row)
-                return [sublime.ListInputItem("", "")] + items
+            # Trick to select the topmost item; see https://github.com/sublimehq/sublime_text/issues/6162
+            sublime.set_timeout(self._select_first_row)
+            return [sublime.ListInputItem("", ""), *items]
         return [sublime.ListInputItem(f'No Symbol found: "{self.text}"', "")]
 
     def _select_first_row(self) -> None:

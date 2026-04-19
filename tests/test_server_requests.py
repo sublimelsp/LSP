@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-from LSP.plugin.core.sessions import SessionBufferProtocol
+from .setup import TextDocumentTestCase
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.url import filename_to_uri
 from LSP.protocol import ErrorCodes
 from LSP.protocol import TextDocumentSyncKind
-from setup import TextDocumentTestCase
+from pathlib import Path
 from typing import Any
 from typing import Generator
+from typing import TYPE_CHECKING
 import os
 import sublime
 import tempfile
+
+if TYPE_CHECKING:
+    from LSP.plugin.core.sessions import SessionBufferProtocol
 
 
 def get_auto_complete_trigger(sb: SessionBufferProtocol) -> list[dict[str, str]] | None:
@@ -73,10 +77,9 @@ class ServerRequests(TextDocumentTestCase):
         with tempfile.TemporaryDirectory() as dirpath:
             initial_text = ["a b", "c d"]
             file_paths = []
-            for i in range(0, 2):
+            for i in range(2):
                 file_paths.append(os.path.join(dirpath, f"file{i}.txt"))
-                with open(file_paths[-1], "w") as fp:
-                    fp.write(initial_text[i])
+                Path(file_paths[-1]).write_text(initial_text[i], encoding="utf-8")
             yield from verify(
                 self,
                 "workspace/applyEdit",
@@ -112,7 +115,7 @@ class ServerRequests(TextDocumentTestCase):
             )
             # Changes should have been applied
             expected = ["hello there", "general kenobi"]
-            for i in range(0, 2):
+            for i in range(2):
                 view = self.view.window().find_open_file(file_paths[i])
                 self.assertTrue(view)
                 view.set_scratch(True)

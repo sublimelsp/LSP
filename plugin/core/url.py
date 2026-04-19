@@ -1,17 +1,29 @@
 from __future__ import annotations
 
-from ...protocol import DocumentUri
 from .constants import ST_INSTALLED_PACKAGES_PATH
 from .constants import ST_PACKAGES_PATH
+from base64 import urlsafe_b64decode
+from base64 import urlsafe_b64encode
 from typing import Any
+from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import deprecated
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
 from urllib.request import url2pathname
+import json
 import os
 import re
-import sublime
+
+if TYPE_CHECKING:
+    from ...protocol import CodeAction
+    from ...protocol import Command
+    from ...protocol import DocumentUri
+    from ...protocol import URI
+    import sublime
+
+CODE_ACTION_SCHEME = 'code-action'
 
 
 def normalize_uri(uri: DocumentUri) -> DocumentUri:
@@ -65,10 +77,9 @@ def parse_uri(uri: str) -> tuple[str, str]:
             if netloc:
                 # Convert to UNC path
                 return parsed.scheme, f"\\\\{netloc}\\{path}"
-            else:
-                return parsed.scheme, path
+            return parsed.scheme, path
         return parsed.scheme, path
-    elif parsed.scheme == '' and ':' in parsed.path.split('/')[0]:
+    if not parsed.scheme and ':' in parsed.path.split('/')[0]:
         # workaround for bug in urllib.parse.urlparse
         return parsed.path.split(':')[0], uri
     return parsed.scheme, uri
@@ -92,3 +103,16 @@ def _to_resource_uri(path: str, prefix: str) -> str:
 def _uppercase_driveletter(match: Any) -> str:
     """For compatibility with Sublime's VCS status in the status bar."""
     return f"{match.group(1).upper()}:"
+
+
+def encode_code_action_uri(session_name: str, version: int, action: Command | CodeAction) -> URI:
+    return f'{CODE_ACTION_SCHEME}:{session_name}/{version}/{urlsafe_b64encode(json.dumps(action).encode()).decode()}'
+
+
+def decode_code_action_uri(uri: URI) -> tuple[str, int, Command | CodeAction]:
+    scheme = parse_uri(uri)[0]
+    if scheme != CODE_ACTION_SCHEME:
+        raise ValueError(f'Unsupported URI scheme: {scheme}')
+    session_name, version, data = uri[len(CODE_ACTION_SCHEME) + 1:].split('/')
+    action = cast('Command | CodeAction', json.loads(urlsafe_b64decode(data.encode()).decode()))
+    return session_name, int(version), action

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
+from .test_single_document import TEST_FILE_PATH
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.url import filename_to_uri
-from setup import TextDocumentTestCase
-from test_single_document import TEST_FILE_PATH
 from typing import TYPE_CHECKING
 from unittesting import AWAIT_WORKER
 import sublime
@@ -87,3 +87,41 @@ class DiagnosticsTestCase(TextDocumentTestCase):
             "textDocument/publishDiagnostics", create_test_diagnostics([], version=1000)
         )
         self.assertEqual(len(session_buffer.diagnostics), 0)
+
+    def test_handles_unknown_tag_gracefully(self) -> Generator:
+        self.insert_characters('const x = 1')
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            {
+                "uri": TEST_FILE_URI,
+                "diagnostics": [
+                    {
+                        "range": range_from_points(Point(0, 0), Point(0, 11)),
+                        "message": "error",
+                        "tags": [42]
+                    }
+                ]
+            }
+        )
+        session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
+        self.assertEqual(len(session_buffer.diagnostics), 1)
+
+    def test_handles_multiple_tags(self) -> Generator:
+        self.insert_characters('const x = 1')
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            {
+                "uri": TEST_FILE_URI,
+                "diagnostics": [
+                    {
+                        "range": range_from_points(Point(0, 0), Point(0, 11)),
+                        "message": "unnecessary and deprecated code",
+                        "tags": [1, 2]
+                    }
+                ]
+            }
+        )
+        session_buffer = self.session.get_session_buffer_for_uri_async(TEST_FILE_URI)
+        self.assertEqual(len(session_buffer.diagnostics), 1)

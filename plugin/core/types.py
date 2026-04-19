@@ -10,24 +10,26 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
-from .file_watcher import FileWatcherEventType
 from .logging import debug
 from .logging import set_debug_logging
+from .transports import StdioTransportConfig
+from .transports import TcpClientTransportConfig
+from .transports import TcpServerTransportConfig
+from .transports import TransportConfig
 from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Generator
 from typing import Iterable
-from typing import List
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
-from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
@@ -39,12 +41,13 @@ import contextlib
 import fnmatch
 import os
 import posixpath
-import socket
 import sublime
 import time
 import weakref
 
-TCP_CONNECT_TIMEOUT = 5  # seconds
+if TYPE_CHECKING:
+    from .file_watcher import FileWatcherEventType
+
 FEATURES_TIMEOUT = 300  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
@@ -176,12 +179,15 @@ class SettingsRegistration:
         weak_self = weakref.ref(self)
 
         def on_change_handler() -> None:
-            if _self := weak_self():
-                on_change(_self)
+            if self_ := weak_self():
+                on_change(self_)
 
         self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
+        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
+        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
+        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
         self.settings.clear_on_change("LSP")
 
 
@@ -239,50 +245,50 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 
 class Settings:
 
-    completion_insert_mode = cast(str, None)
-    diagnostics_additional_delay_auto_complete_ms = cast(int, None)
-    diagnostics_delay_ms = cast(int, None)
-    diagnostics_gutter_marker = cast(str, None)
-    diagnostics_highlight_style = cast(Union[str, Dict[str, str]], None)
-    diagnostics_panel_include_severity_level = cast(int, None)
-    disabled_capabilities = cast(List[str], None)
-    document_highlight_style = cast(str, None)
-    format_on_type = cast(bool, None)
-    hover_highlight_style = cast(str, None)
-    inhibit_snippet_completions = cast(bool, None)
-    inhibit_word_completions = cast(bool, None)
-    initially_folded = cast(List[str], None)
-    inlay_hints_max_length = cast(int, None)
-    link_highlight_style = cast(str, None)
-    log_debug = cast(bool, None)
-    log_max_size = cast(int, None)
-    log_server = cast(List[str], None)
-    lsp_code_actions_on_format = cast(Dict[str, bool], None)
-    lsp_code_actions_on_save = cast(Dict[str, bool], None)
-    lsp_format_on_paste = cast(bool, None)
-    lsp_format_on_save = cast(bool, None)
-    on_save_task_timeout_ms = cast(int, None)
-    only_show_lsp_completions = cast(bool, None)
-    popup_max_characters_height = cast(int, None)
-    popup_max_characters_width = cast(int, None)
-    refactoring_auto_save = cast(str, None)
-    semantic_highlighting = cast(bool, None)
-    show_code_actions = cast(str, None)
-    show_code_actions_in_hover = cast(bool, None)
-    show_code_lens = cast(str, None)
-    show_diagnostics_annotations_severity_level = cast(int, None)
-    show_diagnostics_count_in_view_status = cast(bool, None)
-    show_diagnostics_in_hover = cast(bool, None)
-    show_diagnostics_in_view_status = cast(bool, None)
-    show_diagnostics_panel_on_save = cast(int, None)
-    show_diagnostics_severity_level = cast(int, None)
-    show_inlay_hints = cast(bool, None)
-    show_multiline_diagnostics_highlights = cast(bool, None)
-    show_multiline_document_highlights = cast(bool, None)
-    show_references_in_quick_panel = cast(bool, None)
-    show_signature_help = cast(bool, None)
-    show_symbol_action_links = cast(bool, None)
-    show_view_status = cast(bool, None)
+    completion_insert_mode = cast("str", None)
+    diagnostics_additional_delay_auto_complete_ms = cast("int", None)
+    diagnostics_delay_ms = cast("int", None)
+    diagnostics_gutter_marker = cast("str", None)
+    diagnostics_highlight_style = cast("str | dict[str, str]", None)
+    diagnostics_panel_include_severity_level = cast("int", None)
+    disabled_capabilities = cast("list[str]", None)
+    document_highlight_style = cast("str", None)
+    format_on_type = cast("bool", None)
+    hover_highlight_style = cast("str", None)
+    inhibit_snippet_completions = cast("bool", None)
+    inhibit_word_completions = cast("bool", None)
+    initially_folded = cast("list[str]", None)
+    inlay_hints_max_length = cast("int", None)
+    link_highlight_style = cast("str", None)
+    log_debug = cast("bool", None)
+    log_max_size = cast("int", None)
+    log_server = cast("list[str]", None)
+    lsp_code_actions_on_format = cast("dict[str, bool]", None)
+    lsp_code_actions_on_save = cast("dict[str, bool]", None)
+    lsp_format_on_paste = cast("bool", None)
+    lsp_format_on_save = cast("bool", None)
+    on_save_task_timeout_ms = cast("int", None)
+    only_show_lsp_completions = cast("bool", None)
+    popup_max_characters_height = cast("int", None)
+    popup_max_characters_width = cast("int", None)
+    refactoring_auto_save = cast("str", None)
+    semantic_highlighting = cast("bool", None)
+    show_code_actions = cast("str", None)
+    show_code_actions_in_hover = cast("bool", None)
+    show_code_lens = cast("str", None)
+    show_diagnostics_annotations_severity_level = cast("int", None)
+    show_diagnostics_count_in_view_status = cast("bool", None)
+    show_diagnostics_in_hover = cast("bool", None)
+    show_diagnostics_in_view_status = cast("bool", None)
+    show_diagnostics_panel_on_save = cast("int", None)
+    show_diagnostics_severity_level = cast("int", None)
+    show_inlay_hints = cast("bool", None)
+    show_multiline_diagnostics_highlights = cast("bool", None)
+    show_multiline_document_highlights = cast("bool", None)
+    show_references_in_quick_panel = cast("bool", None)
+    show_signature_help = cast("bool", None)
+    show_symbol_action_links = cast("bool", None)
+    show_view_status = cast("bool", None)
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
@@ -376,7 +382,7 @@ class Settings:
 
     def highlight_style_region_flags(self, style_str: str) -> tuple[sublime.RegionFlags, sublime.RegionFlags]:
         default = sublime.RegionFlags.NO_UNDO
-        if style_str in ("background", "fill"):  # Backwards-compatible with "fill"
+        if style_str in {"background", "fill"}:  # Backwards-compatible with "fill"
             style = default | sublime.RegionFlags.DRAW_NO_OUTLINE
             return style, style
         if style_str == "outline":
@@ -390,7 +396,7 @@ class Settings:
     def _style_str_to_flag(style_str: str) -> sublime.RegionFlags | None:
         default = sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO  # noqa: E501
         # This method could be a dict or lru_cache
-        if style_str == "":
+        if not style_str:
             return default | sublime.RegionFlags.DRAW_NO_OUTLINE
         if style_str == "box":
             return default
@@ -408,7 +414,7 @@ class Settings:
         if isinstance(self.diagnostics_highlight_style, str):
             # same style for all severity levels
             return [self._style_str_to_flag(self.diagnostics_highlight_style)] * 4
-        elif isinstance(self.diagnostics_highlight_style, dict):
+        if isinstance(self.diagnostics_highlight_style, dict):
             flags: list[sublime.RegionFlags | None] = []
             for sev in ("error", "warning", "info", "hint"):
                 user_style = self.diagnostics_highlight_style.get(sev)
@@ -417,9 +423,8 @@ class Settings:
                 else:
                     flags.append(self._style_str_to_flag(user_style))
             return flags
-        else:
-            # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
-            return [None] * 4  # default styling
+        # Defaults are defined in DIAGNOSTIC_STYLES in plugin/core/views.py
+        return [None] * 4  # default styling
 
 
 @dataclass
@@ -435,7 +440,7 @@ class ClientStates:
     STOPPING = 2
 
 
-class DocumentFilter_:
+class DocumentFilterMatcher:
     """
     A document filter denotes a document through properties like language, scheme or pattern.
 
@@ -477,7 +482,7 @@ class DocumentFilter_:
         return True
 
 
-class DocumentSelector_:
+class DocumentSelectorMatcher:
     """
     A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
     filters matches against the view.
@@ -486,7 +491,7 @@ class DocumentSelector_:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilter_(**cast(dict, document_filter)) for document_filter in document_selector]
+        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -514,13 +519,14 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
             flags |= IGNORECASE
         return globmatch(file_name, pattern['glob'], flags=flags)
 
-    return any(matches(_filter) for _filter in filters)
+    return any(matches(filter_) for filter_ in filters)
 
 
 # method -> (capability dotted path, optional registration dotted path)
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
 _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
@@ -631,19 +637,18 @@ class Capabilities(DottedDict):
         if not isinstance(stored_registration_id, str):
             debug("stored registration ID at", registration_path, "is not a string")
             return None
-        elif stored_registration_id != registration_id:
+        if stored_registration_id != registration_id:
             msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
             debug(msg.format(stored_registration_id, registration_id))
             return None
-        else:
-            discarded = self.get(capability_path)
-            self.remove(capability_path)
-            self.remove(registration_path)
-            return discarded
+        discarded = self.get(capability_path)
+        self.remove(capability_path)
+        self.remove(registration_path)
+        return discarded
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(cast(dict, d))
+        super().assign(cast("dict", d))
         if textsync:
             self.update(textsync)
 
@@ -653,6 +658,9 @@ class Capabilities(DottedDict):
     def text_sync_kind(self) -> TextDocumentSyncKind:
         value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKind.None_
+
+    def should_notify_did_change_configuration(self) -> bool:
+        return 'workspace.didChangeConfiguration' in self
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
@@ -664,10 +672,9 @@ class Capabilities(DottedDict):
         save = self.get("textDocumentSync.save")
         if isinstance(save, bool):
             return save, False
-        elif isinstance(save, dict):
+        if isinstance(save, dict):
             return True, bool(save.get("includeText"))
-        else:
-            return False, False
+        return False, False
 
     def should_notify_did_close(self) -> bool:
         return "textDocumentSync.didClose" in self
@@ -677,7 +684,7 @@ def _translate_path(path: str, source: str, destination: str) -> tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
+    if path.startswith(source) and len(path) > len(source) and path[len(source)] in {"/", "\\"}:
         return path.replace(source, destination, 1), True
     return path, False
 
@@ -710,36 +717,19 @@ class PathMap:
             result.append(PathMap(local, remote))
         return result
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathMap):
             return False
         return self._local == other._local and self._remote == other._remote
+
+    def __hash__(self) -> int:
+        return hash(self.__slots__)
 
     def map_from_local_to_remote(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._local, self._remote)
 
     def map_from_remote_to_local(self, uri: str) -> tuple[str, bool]:
         return _translate_path(uri, self._remote, self._local)
-
-
-class TransportConfig:
-    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
-
-    def __init__(
-        self,
-        name: str,
-        command: list[str],
-        tcp_port: int | None,
-        env: dict[str, str],
-        listener_socket: socket.socket | None
-    ) -> None:
-        if not command and not tcp_port:
-            raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
-        self.name = name
-        self.command = command
-        self.tcp_port = tcp_port
-        self.env = env
-        self.listener_socket = listener_socket
 
 
 class DefaultViewStatusHandler(ViewStatusHandler):
@@ -777,7 +767,7 @@ class ClientConfig:
         enabled: bool = True,
         initialization_options: DottedDict | None = None,
         settings: DottedDict | None = None,
-        env: dict[str, str | list[str]] | None = None,
+        env: dict[str, str] | None = None,
         experimental_capabilities: dict[str, Any] | None = None,
         disabled_capabilities: DottedDict | None = None,
         file_watcher: FileWatcherConfig | None = None,
@@ -824,7 +814,7 @@ class ClientConfig:
         """
         self.name = name
         self.selector = selector
-        self.priority_selector = priority_selector if priority_selector else self.selector
+        self.priority_selector = priority_selector or self.selector
         if isinstance(schemes, list):
             self.schemes: list[str] = schemes
         else:
@@ -844,7 +834,13 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
-        self._all_settings = all_settings or {}
+        if isinstance(all_settings, dict):
+            self._all_settings = all_settings
+            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
+            if 'settings' in self._all_settings:
+                del self._all_settings['settings']
+        else:
+            self._all_settings = {}
         self._view_status_handler = default_status_view_handler
 
     @property
@@ -886,47 +882,44 @@ class ClientConfig:
         s = settings_registration.settings
         file = settings_registration.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
-        settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
-        settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
+        settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
+        settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
         # "initialization_options" with backwards compatibility for "initializationOptions"
-        base_old_init_opts = base.get("initializationOptions", {})
-        base_new_init_opts = base.get("initialization_options", {})
-        resolved_old_init_opts = read_dict_setting(s, "initializationOptions", {})
-        resolved_new_init_opts = read_dict_setting(s, "initialization_options", {})
+        base_old_init_opts = deepcopy(base.get("initializationOptions", {}))
+        base_new_init_opts = deepcopy(base.get("initialization_options", {}))
+        resolved_old_init_opts = deepcopy(read_dict_setting(s, "initializationOptions", {}))
+        resolved_new_init_opts = deepcopy(read_dict_setting(s, "initialization_options", {}))
         initialization_options = DottedDict(base_new_init_opts or base_old_init_opts)
         if resolved_old_init_opts != base_old_init_opts:
             debug(f'"initializationOptions" in config {name} is deprecated! Use "initialization_options" instead.')
             initialization_options.update(resolved_old_init_opts)
         if resolved_new_init_opts != base_new_init_opts:
             initialization_options.update(resolved_new_init_opts)
-        disabled_capabilities = s.get("disabled_capabilities")
-        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
-        semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
+        file_watcher = cast("FileWatcherConfig", deepcopy(read_dict_setting(s, "file_watcher", {})))
+        semantic_tokens = deepcopy(read_dict_setting(s, "semantic_tokens", {}))
+        disabled_capabilities = deepcopy(s.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
         return ClientConfig(
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
-            schemes=s.get("schemes"),
-            command=read_list_setting(s, "command", []),
-            tcp_port=s.get("tcp_port"),
-            auto_complete_selector=s.get("auto_complete_selector"),
+            schemes=deepcopy(s.get("schemes")),
+            command=deepcopy(read_list_setting(s, "command", [])),
+            tcp_port=deepcopy(s.get("tcp_port")),
+            auto_complete_selector=deepcopy(s.get("auto_complete_selector")),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,
-            env=read_dict_setting(s, "env", {}),
-            experimental_capabilities=s.get("experimental_capabilities"),
+            env=deepcopy(read_dict_setting(s, "env", {})),
+            experimental_capabilities=deepcopy(s.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
-            all_settings=s.to_dict()
+            all_settings=deepcopy(s.to_dict())
         )
 
     @classmethod
@@ -937,33 +930,31 @@ class ClientConfig:
         :param name: Unique server name.
         :param d: Dictionary of configuration values.
         """
-        disabled_capabilities = d.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
-        schemes = d.get("schemes")
+        disabled_capabilities = deepcopy(d.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
+        schemes = deepcopy(d.get("schemes"))
         if not isinstance(schemes, list):
             schemes = ["file"]
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
-            schemes=schemes,
-            command=d.get("command", []),
-            tcp_port=d.get("tcp_port"),
-            auto_complete_selector=d.get("auto_complete_selector"),
-            enabled=d.get("enabled", False),
-            initialization_options=DottedDict(d.get("initialization_options", d.get("initializationOptions"))),
-            settings=DottedDict(d.get("settings")),
-            env=d.get("env", {}),
-            experimental_capabilities=d.get("experimental_capabilities"),
+            schemes=deepcopy(schemes),
+            command=deepcopy(d.get("command", [])),
+            tcp_port=deepcopy(d.get("tcp_port")),
+            auto_complete_selector=deepcopy(d.get("auto_complete_selector")),
+            enabled=deepcopy(d.get("enabled", False)),
+            initialization_options=DottedDict(
+                deepcopy(d.get("initialization_options"), d.get("initializationOptions"))),
+            settings=DottedDict(deepcopy(d.get("settings"))),
+            env=deepcopy(d.get("env", {})),
+            experimental_capabilities=deepcopy(d.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=d.get("file_watcher", {}),
-            semantic_tokens=d.get("semantic_tokens", {}),
-            diagnostics_mode=d.get("diagnostics_mode", "open_files"),
+            file_watcher=deepcopy(d.get("file_watcher", {})),
+            semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
+            diagnostics_mode=deepcopy(d.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(d.get("path_maps")),
-            all_settings=d
+            all_settings=deepcopy(d)
         )
 
     @classmethod
@@ -978,38 +969,37 @@ class ClientConfig:
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
         """
-        path_map_override = PathMap.parse(override.get("path_maps"))
-        disabled_capabilities = override.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = src_config.disabled_capabilities
+        disabled_capabilities = deepcopy(override.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(
+            disabled_capabilities
+            if isinstance(disabled_capabilities, dict)
+            else src_config.disabled_capabilities.copy())
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
-            schemes=override.get("schemes", src_config.schemes),
-            command=override.get("command", src_config.command),
-            tcp_port=override.get("tcp_port", src_config.tcp_port),
-            auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
-            enabled=override.get("enabled", src_config.enabled),
+            schemes=deepcopy(override.get("schemes", src_config.schemes)),
+            command=deepcopy(override.get("command", src_config.command)),
+            tcp_port=deepcopy(override.get("tcp_port", src_config.tcp_port)),
+            auto_complete_selector=deepcopy(override.get("auto_complete_selector", src_config.auto_complete_selector)),
+            enabled=deepcopy(override.get("enabled", src_config.enabled)),
             initialization_options=DottedDict.from_base_and_override(
                 src_config.initialization_options,
                 override.get("initialization_options", override.get("initializationOptions"))),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
-            env=override.get("env", src_config.env),
-            experimental_capabilities=override.get(
-                "experimental_capabilities", src_config.experimental_capabilities),
+            env=deepcopy(override.get("env", src_config.env)),
+            experimental_capabilities=deepcopy(
+                override.get("experimental_capabilities", src_config.experimental_capabilities)),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=override.get("file_watcher", src_config.file_watcher),
-            semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
-            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override if path_map_override else src_config.path_maps,
+            file_watcher=deepcopy(override.get("file_watcher", src_config.file_watcher)),
+            semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
+            diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
+            path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
             settings_registration=src_config._settings_registration,
-            all_settings={**src_config._all_settings, **override}  # shallow merge
+            all_settings=deepcopy({**src_config._all_settings, **override})
         )
 
-    def resolve_transport_config(self, variables: dict[str, str]) -> TransportConfig:
+    def create_transport_config(self) -> TransportConfig:
         """
         Build a :class:`TransportConfig` ready for starting the language server.
 
@@ -1019,35 +1009,11 @@ class ClientConfig:
         :param variables: Sublime Text variable substitution dict (e.g. from `window.extract_variables()`). A `"port"`
             key is added automatically when a TCP port is in use.
         """
-        tcp_port: int | None = None
-        listener_socket: socket.socket | None = None
         if self.tcp_port is not None:
-            # < 0 means we're hosting a TCP server
             if self.tcp_port < 0:
-                # -1 means pick any free port
-                if self.tcp_port < -1:
-                    tcp_port = -self.tcp_port
-                # Create a listener socket for incoming connections
-                listener_socket = _start_tcp_listener(tcp_port)
-                tcp_port = int(listener_socket.getsockname()[1])
-            else:
-                tcp_port = _find_free_port() if self.tcp_port == 0 else self.tcp_port
-        if tcp_port is not None:
-            variables["port"] = str(tcp_port)
-        command = sublime.expand_variables(self.command, variables)
-        command = [os.path.expanduser(arg) for arg in command]
-        if tcp_port is not None:
-            # DEPRECATED -- replace {port} with $port or ${port} in your client config
-            command = [a.replace('{port}', str(tcp_port)) for a in command]
-        env = os.environ.copy()
-        for key, value in self.env.items():
-            if isinstance(value, list):
-                value = os.path.pathsep.join(value)
-            if key == 'PATH':
-                env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
-            else:
-                env[key] = sublime.expand_variables(value, variables)
-        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
+                return TcpServerTransportConfig(None if self.tcp_port == -1 else -self.tcp_port)
+            return TcpClientTransportConfig(None if self.tcp_port == 0 else self.tcp_port)
+        return StdioTransportConfig()
 
     def set_view_status_handler(self, handler: ViewStatusHandler) -> None:
         self._view_status_handler = handler
@@ -1118,7 +1084,7 @@ class ClientConfig:
         :raises ValueError: If the URI scheme is not `"file"` or `"res"`.
         """
         scheme, path = parse_uri(uri)
-        if scheme not in ("file", "res"):
+        if scheme not in {"file", "res"}:
             raise ValueError(f"{uri}: {scheme} URI scheme is unsupported")
         if self.path_maps:
             for path_map in self.path_maps:
@@ -1140,36 +1106,33 @@ class ClientConfig:
         for value in self.disabled_capabilities.walk(capability_path):
             if isinstance(value, bool):
                 return value
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 if value:
                     # If it's not empty we'll continue the walk
                     continue
-                else:
-                    # This might be a leaf node
-                    return True
+                # This might be a leaf node
+                return True
         return False
 
     def filter_out_disabled_capabilities(self, capability_path: str, options: dict[str, Any]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for k, v in options.items():
-            if not self.is_disabled_capability(f"{capability_path}.{k}"):
-                result[k] = v
-        return result
+        return {
+            k: v for k, v in options.items() if not self.is_disabled_capability(f"{capability_path}.{k}")
+        }
 
     def __repr__(self) -> str:
         items: list[str] = []
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
-                items.append(f"{k}={repr(v)}")
+                items.append(f"{k}={v!r}")
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
-        for k, v in self.__dict__.items():
-            if not k.startswith("_") and v != getattr(other, k):
-                return False
-        return True
+        return self.name == other.name and self._all_settings == other._all_settings
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
 
 
 def _read_selector(config: sublime.Settings | dict[str, Any]) -> str:
@@ -1184,18 +1147,3 @@ def _read_priority_selector(config: sublime.Settings | dict[str, Any]) -> str:
     if isinstance(selector, str):
         return selector
     return ""
-
-
-def _find_free_port() -> int:
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-def _start_tcp_listener(tcp_port: int | None) -> socket.socket:
-    sock = socket.socket()
-    sock.bind(('localhost', tcp_port or 0))
-    sock.settimeout(TCP_CONNECT_TIMEOUT)
-    sock.listen(1)
-    return sock

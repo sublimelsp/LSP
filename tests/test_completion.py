@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
 from copy import deepcopy
 from LSP.plugin.completion import completion_with_defaults
 from LSP.plugin.completion import format_completion
@@ -9,7 +10,6 @@ from LSP.protocol import CompletionItemKind
 from LSP.protocol import CompletionItemLabelDetails
 from LSP.protocol import CompletionItemTag
 from LSP.protocol import InsertTextFormat
-from setup import TextDocumentTestCase
 from typing import Any
 from typing import Callable
 from typing import Generator
@@ -63,8 +63,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
         def commit_completion() -> bool:
             if not self.view.is_auto_complete_visible():
                 return False
-            nonlocal committed
-            nonlocal current_change_count
+            nonlocal committed, current_change_count
             if not committed:
                 self.view.run_command(commit_completion_command)
                 committed = True
@@ -725,7 +724,7 @@ class QueryCompletionsTests(CompletionsTestsBase):
         )
         check(
             resolve_support=True,
-            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",  # noqa: E501
+            expected_regex=r"^<a href='subl:lsp_run_text_command_helper {\S+}'>More</a> \| f\(X&amp; x\)$",
             label="f",
             label_details={"detail": "(X& x)", "description": "does things"}
         )

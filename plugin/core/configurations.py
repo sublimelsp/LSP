@@ -7,20 +7,23 @@ from .types import ClientConfig
 from .url import parse_uri
 from .workspace import disable_in_project
 from .workspace import enable_in_project
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from collections import deque
 from datetime import datetime
 from datetime import timedelta
 from typing import Generator
+from typing import TYPE_CHECKING
 from weakref import WeakSet
-import sublime
+
+if TYPE_CHECKING:
+    import sublime
 
 RETRY_MAX_COUNT = 5
 RETRY_COUNT_TIMEDELTA = timedelta(minutes=3)
 
 
-class WindowConfigChangeListener(metaclass=ABCMeta):
+class WindowConfigChangeListener(ABC):
 
     @abstractmethod
     def on_configs_changed(self, configs: list[ClientConfig]) -> None:
@@ -127,13 +130,13 @@ class WindowConfigManager:
         self._crashes[config_name].append(now)
         timeout = now - RETRY_COUNT_TIMEDELTA
         crash_count = len([crash for crash in self._crashes[config_name] if crash > timeout])
-        printf("{} crashed ({} / {} times in the last {} seconds), exit code {}, exception: {}".format(
-            config_name, crash_count, RETRY_MAX_COUNT, RETRY_COUNT_TIMEDELTA.total_seconds(), exit_code, exception))
+        printf(f"{config_name} crashed ({crash_count} / {RETRY_MAX_COUNT} times in the last "
+               f"{RETRY_COUNT_TIMEDELTA.total_seconds()} seconds), exit code {exit_code}, exception: {exception}")
         return crash_count < RETRY_MAX_COUNT
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:
         try:
             self._disabled_for_session.remove(config_name)
-            return True
         except KeyError:
             return False
+        return True

@@ -13,10 +13,6 @@ from .core.constants import RegionKey
 from .core.constants import REGIONS_INITIALIZE_FLAGS
 from .core.constants import RequestFlags
 from .core.constants import SHOW_DEFINITIONS_KEY
-from .core.protocol import Request
-from .core.protocol import ResolvedCodeLens
-from .core.sessions import AbstractViewListener
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import diagnostic_icon
 from .core.views import DIAGNOSTIC_STYLES
@@ -26,11 +22,18 @@ from .core.views import range_to_region
 from .diagnostics import DiagnosticsAnnotationsView
 from .session_buffer import SessionBuffer
 from typing import Any
+from typing import TYPE_CHECKING
 from weakref import ref
 from weakref import WeakValueDictionary
 import html
 import itertools
 import sublime
+
+if TYPE_CHECKING:
+    from .core.protocol import Request
+    from .core.protocol import ResolvedCodeLens
+    from .core.sessions import AbstractViewListener
+    from .core.sessions import Session
 
 
 class TagData:
@@ -103,7 +106,7 @@ class SessionView:
         self.view.erase_regions(RegionKey.DOCUMENT_LINK)
         self.session_buffer.remove_session_view(self)
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(False)
+            listener.on_diagnostics_updated_async(self.session_buffer, False)
 
     def on_initialized(self) -> None:
         self.session_buffer.on_session_view_initialized(self._view)
@@ -140,37 +143,32 @@ class SessionView:
           - gutter icons from region keys which were initialized _first_ are drawn
         For more context, see https://github.com/sublimelsp/LSP/issues/1593.
         """
-        keys: list[str] = []
         r = [sublime.Region(0, 0)]
         document_highlight_style = userprefs().document_highlight_style
         hover_highlight_style = userprefs().hover_highlight_style
         line_modes = ["m", "s"]
         self.view.add_regions(RegionKey.CODE_ACTION, r)  # code actions lightbulb icon should always be on top
         session_name = self.session.config.name
-        for key in range(1, 100):
-            keys.append(f"lsp_semantic_{session_name}_{key}")
-        if document_highlight_style in ("background", "fill"):
+        keys = [f"lsp_semantic_{session_name}_{key}" for key in range(1, 100)]
+        if document_highlight_style in {"background", "fill"}:
             for kind in DocumentHighlightKind:
-                keys.append(document_highlight_key(kind, multiline=True))
-                keys.append(document_highlight_key(kind, multiline=False))
-        if hover_highlight_style in ("background", "fill"):
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
+        if hover_highlight_style in {"background", "fill"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for severity in range(1, 5):
             for mode in line_modes:
-                for tag in range(1, 3):
-                    keys.append(f"lsp{session_name}d{mode}{severity}_tags_{tag}")
+                keys.extend(f"lsp{session_name}d{mode}{severity}_tags_{tag}" for tag in range(1, 3))
         keys.append(RegionKey.DOCUMENT_LINK)
         for severity in range(1, 5):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_icon")
+            keys.extend(f"lsp{session_name}d{mode}{severity}_icon" for mode in line_modes)
         for severity in range(4, 0, -1):
-            for mode in line_modes:
-                keys.append(f"lsp{session_name}d{mode}{severity}_underline")
-        if document_highlight_style in ("underline", "stippled"):
+            keys.extend(f"lsp{session_name}d{mode}{severity}_underline" for mode in line_modes)
+        if document_highlight_style in {"underline", "stippled"}:
             for kind in DocumentHighlightKind:
-                keys.append(document_highlight_key(kind, multiline=True))
-                keys.append(document_highlight_key(kind, multiline=False))
-        if hover_highlight_style in ("underline", "stippled"):
+                keys.extend((document_highlight_key(kind, multiline=True),
+                             document_highlight_key(kind, multiline=False)))
+        if hover_highlight_style in {"underline", "stippled"}:
             keys.append(RegionKey.HOVER_HIGHLIGHT)
         for key in keys:
             self.view.add_regions(key, r, flags=REGIONS_INITIALIZE_FLAGS)
@@ -301,7 +299,7 @@ class SessionView:
     def present_diagnostics_async(self, is_view_visible: bool) -> None:
         self._redraw_diagnostics_async()
         if listener := self.listener():
-            listener.on_diagnostics_updated_async(is_view_visible)
+            listener.on_diagnostics_updated_async(self.session_buffer, is_view_visible)
 
     def _redraw_diagnostics_async(self) -> None:
         flags = userprefs().diagnostics_highlight_style_flags()  # for single lines

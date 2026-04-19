@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from ..protocol import Location
 from .core.constants import RegionKey
 from .core.protocol import Point
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.sessions import Session
 from .core.settings import userprefs
-from .core.types import ClientConfig
 from .core.views import get_line
 from .core.views import get_symbol_kind_from_scope
 from .core.views import get_uri_and_position_from_location
@@ -17,10 +14,16 @@ from .core.views import position_to_offset
 from .core.views import text_document_position_params
 from .locationpicker import LocationPicker
 from typing import Literal
+from typing import TYPE_CHECKING
 import functools
 import linecache
 import os
 import sublime
+
+if TYPE_CHECKING:
+    from ..protocol import Location
+    from .core.sessions import Session
+    from .core.types import ClientConfig
 
 OutputMode = Literal['output_panel', 'quick_panel']
 
@@ -56,8 +59,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         # We include "output panel" and "quick panel" variants of `LSP: Find References` in the Command Palette
         # but we only show the one that is not the same as the default one (per the `show_references_in_quick_panel`
         # setting).
-        if output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel or \
-                output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel:
+        if (output_mode == 'output_panel' and not userprefs().show_references_in_quick_panel) or \
+                (output_mode == 'quick_panel' and userprefs().show_references_in_quick_panel):
             return False
         if self.applies_to_context_menu(event):
             return self.is_enabled(

@@ -15,7 +15,6 @@ from .core.types import method2attr
 from .core.url import parse_uri
 from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
-from .core.workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from functools import wraps
@@ -31,8 +30,9 @@ if TYPE_CHECKING:
     from .core.collections import DottedDict
     from .core.promise import Promise
     from .core.sessions import Session
-    from plugin.core.sessions import SessionBufferProtocol
-    from plugin.core.sessions import SessionViewProtocol
+    from .core.sessions import SessionBufferProtocol
+    from .core.sessions import SessionViewProtocol
+    from .core.workspace import WorkspaceFolder
     import weakref
 
 __all__ = [
@@ -211,7 +211,7 @@ class AbstractPlugin(APIHandler, ABC):
         have your settings file called "LSP-foobar.sublime-settings", then you don't even need to re-implement the
         configuration method (see below).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @classmethod
     def configuration(cls) -> tuple[sublime.Settings, str]:
@@ -276,7 +276,7 @@ class AbstractPlugin(APIHandler, ABC):
         :param      config:           The config
         """
         if (syntax := view.syntax()) and (selector := cls.selector(view, config).strip()):
-            # TODO replace `cls.selector(view, config)` with `config.selector` after the next release
+            # TODO: replace `cls.selector(view, config)` with `config.selector` after the next release
             scheme, _ = parse_uri(uri_from_view(view))
             return scheme in config.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

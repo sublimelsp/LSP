@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from .types import diff
 from .types import matches_pattern
 from .types import sublime_pattern_to_glob
 from .url import filename_to_uri
-from typing import Any
+from typing import TYPE_CHECKING
 import os
 import sublime
+
+if TYPE_CHECKING:
+    from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
@@ -40,7 +42,7 @@ class WorkspaceFolder:
     def __str__(self) -> str:
         return self.path
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
@@ -80,8 +82,8 @@ class ProjectFolders:
                 elif pattern.startswith('/'):
                     exclude_patterns.append(sublime_pattern_to_glob(pattern, True))
                 else:
-                    exclude_patterns.append(sublime_pattern_to_glob('//' + pattern, True, path))
-                    exclude_patterns.append(sublime_pattern_to_glob('//**/' + pattern, True, path))
+                    exclude_patterns.extend((sublime_pattern_to_glob('//' + pattern, True, path),
+                                             sublime_pattern_to_glob('//**/' + pattern, True, path)))
             self._folders_exclude_patterns[i] = exclude_patterns
 
     def update(self) -> bool:

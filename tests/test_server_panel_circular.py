@@ -33,7 +33,7 @@ class LspServerPanelTests(DeferrableTestCase):
 
     def test_server_panel_circular_behavior(self) -> None:
         n = MAX_LOG_LINES_LIMIT_ON
-        for i in range(0, n + 1):
+        for i in range(n + 1):
             self.update_panel(str(i))
         self.update_panel("overflow")
         self.update_panel("overflow")

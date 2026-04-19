@@ -37,7 +37,7 @@ class DottedDict:
     def from_base_and_override(cls, base: DottedDict, override: dict[str, Any] | None) -> DottedDict:
         result = DottedDict(base.copy())
         if override:
-            result.update(override)
+            result.update(deepcopy(override))
         return result
 
     def get(self, path: str | None = None) -> Any:
@@ -82,7 +82,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):
@@ -99,7 +99,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):
@@ -173,7 +173,7 @@ class DottedDict:
         """
         current = self._d
         keys = path.split('.')
-        for i in range(0, len(keys) - 1):
+        for i in range(len(keys) - 1):
             key = keys[i]
             next_current = current.get(key)
             if not isinstance(next_current, dict):
@@ -189,9 +189,12 @@ class DottedDict:
             current[last_key] = value
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({repr(self._d)})"
+        return f"{self.__class__.__name__}({self._d!r})"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, DottedDict):
             return False
         return self._d == other._d
+
+    def __hash__(self) -> int:
+        return hash(self._d)

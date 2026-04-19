@@ -16,21 +16,24 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.tree_view import new_tree_view_sheet
 from .core.tree_view import TreeDataProvider
 from .core.tree_view import TreeItem
 from .core.views import make_command_link
 from .core.views import text_document_position_params
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from functools import partial
 from typing import Any
 from typing import Callable
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
 import sublime
 import weakref
+
+if TYPE_CHECKING:
+    from .core.sessions import Session
 
 HierarchyItem = Union[CallHierarchyItem, TypeHierarchyItem]
 
@@ -99,17 +102,17 @@ def make_data_provider(
     return HierarchyDataProvider(weaksession, request, handler, response)
 
 
-def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def incoming_calls_handler(response: list[CallHierarchyIncomingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [
         to_hierarchy_data(call['from'], call['fromRanges'][0] if call['fromRanges'] else None) for call in response
     ] if isinstance(response, list) else []
 
 
-def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | None | Error) -> list[HierarchyItemWrapper]:
+def outgoing_calls_handler(response: list[CallHierarchyOutgoingCall] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(call['to']) for call in response] if isinstance(response, list) else []
 
 
-def type_hierarchy_handler(response: list[TypeHierarchyItem] | None | Error) -> list[HierarchyItemWrapper]:
+def type_hierarchy_handler(response: list[TypeHierarchyItem] | Error | None) -> list[HierarchyItemWrapper]:
     return [to_hierarchy_data(item) for item in response] if isinstance(response, list) else []
 
 
@@ -140,7 +143,7 @@ def make_header(session_name: str, sheet_name: str, direction: int, root_element
     }, tooltip=tooltip))
 
 
-class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
+class LspHierarchyCommand(LspTextCommand, ABC):
 
     @classmethod
     @abstractmethod
@@ -148,7 +151,7 @@ class LspHierarchyCommand(LspTextCommand, metaclass=ABCMeta):
         cls, params: TextDocumentPositionParams, view: sublime.View
     ) -> Request[Any, list[HierarchyItem] | None]:
         """A function that generates the initial request when this command is invoked."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def is_visible(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.applies_to_context_menu(event):

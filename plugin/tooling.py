@@ -4,23 +4,20 @@ from .api import get_plugin
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
-from .core.transports import create_transport
-from .core.transports import Transport
 from .core.transports import TransportCallbacks
-from .core.types import Capabilities
-from .core.types import ClientConfig
+from .core.transports import TransportWrapper
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
 from .core.workspace import ProjectFolders
 from .core.workspace import sorted_workspace_folders
-from .session_buffer import SessionBuffer
 from base64 import b64decode
 from base64 import b64encode
 from subprocess import list2cmdline
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import TYPE_CHECKING
 import json
 import mdpopups
 import os
@@ -29,6 +26,11 @@ import sublime_plugin
 import textwrap
 import urllib.parse
 import urllib.request
+
+if TYPE_CHECKING:
+    from .core.types import Capabilities
+    from .core.types import ClientConfig
+    from .session_buffer import SessionBuffer
 
 
 def _translate_description(translations: dict[str, str] | None, descr: str) -> tuple[str, bool]:
@@ -256,7 +258,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                     "$ref": "sublime://settings/LSP-plugin-base"
                                 },
                                 {
-                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                 }
                             ]
                         }
@@ -272,7 +274,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                                         "LSP": {
                                             "properties": {
                                                 f"LSP-{base_package_name}": {
-                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"  # noqa: E501
+                                                    "$ref": f"sublime://settings/LSP-{base_package_name}#/definitions/PluginConfig"
                                                 }
                                             }
                                         }
@@ -473,7 +475,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
             p("## Global capabilities\n")
             p(print_capabilities(sv.session.capabilities) + "\n")
             p("## View-specific capabilities\n")
-            p(print_capabilities(cast(SessionBuffer, sv.session_buffer).capabilities) + "\n")
+            p(print_capabilities(cast("SessionBuffer", sv.session_buffer).capabilities) + "\n")
 
 
 class ServerTestRunner(TransportCallbacks):
@@ -493,7 +495,7 @@ class ServerTestRunner(TransportCallbacks):
         on_close: Callable[[list[str], str, int], None]
     ) -> None:
         self._on_close = on_close
-        self._transport: Transport | None = None
+        self._transport: TransportWrapper | None = None
         self._resolved_command: list[str] = []
         self._stderr_lines: list[str] = []
         try:
@@ -514,9 +516,9 @@ class ServerTestRunner(TransportCallbacks):
                 cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
             if not cwd and workspace_folders:
                 cwd = workspace_folders[0].path
-            transport_config = config.resolve_transport_config(variables)
-            self._resolved_command = transport_config.command
-            self._transport = create_transport(transport_config, cwd, self)
+            transport_config = config.create_transport_config()
+            self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
+            self._resolved_command = self._transport.process_args
             sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
         except Exception as ex:
             self.on_transport_close(-1, ex)

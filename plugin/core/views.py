@@ -42,6 +42,7 @@ from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
+from .constants import ST_PLATFORM
 from .constants import ST_STORAGE_PATH
 from .constants import SUBLIME_KIND_SCOPES
 from .constants import SublimeKind
@@ -50,25 +51,35 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Request
 from .settings import userprefs
-from .types import ClientConfig
+from .url import encode_code_action_uri
 from .url import parse_uri
 from .workspace import is_subpath_of
 from dataclasses import dataclass
+from functools import lru_cache
+from operator import itemgetter
+from os.path import commonpath
+from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterable
+from typing import Sequence
 from typing import Tuple
+from typing import TYPE_CHECKING
 import html
 import itertools
 import linecache
 import mdpopups
-import os
 import re
 import sublime
 import sublime_plugin
 import tempfile
+
+if TYPE_CHECKING:
+    from .sessions import SessionBufferProtocol
+    from .types import ClientConfig
+
 
 MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
@@ -132,7 +143,7 @@ class DiagnosticSeverityData:
         self.annotations: list[str] = []
 
 
-class InvalidUriSchemeException(Exception):
+class InvalidUriSchemeError(Exception):
     def __init__(self, uri: str) -> None:
         super().__init__(f"invalid URI scheme: {uri}")
 
@@ -158,7 +169,7 @@ def extract_variables(window: sublime.Window) -> dict[str, str]:
     variables["storage_path"] = ST_STORAGE_PATH
     variables["cache_path"] = ST_CACHE_PATH
     variables["temp_dir"] = tempfile.gettempdir()
-    variables["home"] = os.path.expanduser('~')
+    variables["home"] = expanduser('~')
     return variables
 
 
@@ -209,11 +220,11 @@ def to_encoded_filename(path: str, position: Position) -> str:
 
 def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Range]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         r = location["targetSelectionRange"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         r = location["range"]
     return uri, r
@@ -221,11 +232,11 @@ def get_uri_and_range_from_location(location: Location | LocationLink) -> tuple[
 
 def get_uri_and_position_from_location(location: Location | LocationLink) -> tuple[DocumentUri, Position]:
     if "targetUri" in location:
-        location = cast(LocationLink, location)
+        location = cast('LocationLink', location)
         uri = location["targetUri"]
         position = location["targetSelectionRange"]["start"]
     else:
-        location = cast(Location, location)
+        location = cast('Location', location)
         uri = location["uri"]
         position = location["range"]["start"]
     return uri, position
@@ -237,7 +248,7 @@ def location_to_encoded_filename(location: Location | LocationLink) -> str:
     scheme, parsed = parse_uri(uri)
     if scheme == "file":
         return to_encoded_filename(parsed, position)
-    raise InvalidUriSchemeException(uri)
+    raise InvalidUriSchemeError(uri)
 
 
 class MissingUriError(Exception):
@@ -255,10 +266,7 @@ def uri_from_view(view: sublime.View) -> DocumentUri:
 
 
 def text_document_identifier(view_or_uri: DocumentUri | sublime.View) -> TextDocumentIdentifier:
-    if isinstance(view_or_uri, DocumentUri):
-        uri = view_or_uri
-    else:
-        uri = uri_from_view(view_or_uri)
+    uri = view_or_uri if isinstance(view_or_uri, DocumentUri) else uri_from_view(view_or_uri)
     return {"uri": uri}
 
 
@@ -287,7 +295,7 @@ def entire_content_range(view: sublime.View) -> Range:
 
 
 def text_document_item(view: sublime.View, language_id: str) -> TextDocumentItem:
-    language_id = cast(LanguageKind, language_id)
+    language_id = cast('LanguageKind', language_id)
     return {
         "uri": uri_from_view(view),
         "languageId": language_id,
@@ -332,8 +340,7 @@ def did_change_text_document_params(
         content_changes.append({"text": entire_content(view)})
     else:
         # TextDocumentSyncKind.Incremental
-        for change in changes:
-            content_changes.append(render_text_change(change))
+        content_changes.extend(render_text_change(change) for change in changes)
     return result
 
 
@@ -390,7 +397,7 @@ def did_close(uri: DocumentUri) -> Notification[DidCloseTextDocumentParams]:
 def formatting_options(settings: sublime.Settings) -> FormattingOptions:
     # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
     # backwards-compatible way.
-    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, None, "none")
+    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in {False, None, "none"}
     return {
         # Size of a tab in spaces.
         "tabSize": settings.get("tab_size", 4),
@@ -449,7 +456,7 @@ def text_document_code_action_params(
     trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value
     context: CodeActionContext = {
         "diagnostics": diagnostics,
-        "triggerKind": cast(CodeActionTriggerKind, trigger_kind),
+        "triggerKind": cast('CodeActionTriggerKind', trigger_kind),
     }
     if only_kinds:
         context["only"] = only_kinds
@@ -602,7 +609,7 @@ def minihtml(
             }
         ]
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)  # noqa: RUF039
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
     return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
@@ -728,18 +735,17 @@ def diagnostic_severity(diagnostic: Diagnostic) -> DiagnosticSeverity:
 def diagnostic_icon(severity: DiagnosticSeverity) -> str:
     if userprefs().diagnostics_gutter_marker == "sign":
         return DIAGNOSTIC_STYLES[severity].icon_resource
-    else:
-        return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
+    return "" if severity == DiagnosticSeverity.Hint else userprefs().diagnostics_gutter_marker
 
 
-def format_diagnostics_for_annotation(diagnostics: list[Diagnostic], css_class: str) -> list[str]:
+def format_diagnostics_for_annotation(view: sublime.View, diagnostics: list[Diagnostic], css_class: str) -> list[str]:
     annotations = []
     for diagnostic in diagnostics:
-        message = text2html(diagnostic.get('message') or '')
+        message = _format_diagnostic_message(view, diagnostic['message'])
         source = diagnostic.get('source')
-        line = f"[{text2html(source)}] {message}" if source else message
-        content = '<body id="annotation" class="{}"><style>{}</style><div class="{}">{}</div></body>'.format(
-            lsp_css().annotations_classname, lsp_css().annotations, css_class, line)
+        line = f'{message} <span class="color-muted">{text2html(source)}</span>' if source else message
+        content = (f'<body id="lsp-annotation" class="{ST_PLATFORM}"><style>{lsp_css().annotations}</style>'
+                   f'<div class="{css_class}">{line}</div></body>')
         annotations.append(content)
     return annotations
 
@@ -755,14 +761,15 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> tuple[str, int | None
                 using the information given.
     """
     formatted, code, href = diagnostic_source_and_code(diagnostic)
-    lines = diagnostic["message"].splitlines() or [""]
+    message = diagnostic['message']
+    lines = (message['value'] if isinstance(message, dict) else message).splitlines() or [""]
     result = " {:>4}:{:<4}{:<8}{}".format(
         diagnostic["range"]["start"]["line"] + 1,
         diagnostic["range"]["start"]["character"] + 1,
         DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].kind,
         lines[0]
     )
-    if formatted != "" or code is not None:
+    if formatted or code is not None:
         # \u200B is the zero-width space
         result += f" \u200B{formatted}"
     offset = len(result) if href else None
@@ -796,7 +803,7 @@ def location_to_human_readable(
         fmt = "{}:{}"
         pathname = config.map_server_uri_to_client_path(uri)
         if base_dir and is_subpath_of(pathname, base_dir):
-            pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+            pathname = pathname[len(commonpath((pathname, base_dir))) + 1:]
     elif scheme == "res":
         fmt = "{}:{}"
         pathname = uri
@@ -824,6 +831,10 @@ def unpack_href_location(href: str) -> tuple[str, str, int, int]:
 def is_location_href(href: str) -> bool:
     """Check whether this href is an encoded location."""
     return href.startswith("location:")
+
+
+def _format_diagnostic_message(view: sublime.View, message: str | MarkupContent) -> str:
+    return minihtml(view, message, FORMAT_MARKUP_CONTENT) if isinstance(message, dict) else text2html(message)
 
 
 def _format_diagnostic_related_info(
@@ -860,28 +871,79 @@ def _html_element(tag: str, content: str, *, class_name: str | None = None, esca
     )
 
 
-def format_diagnostic_for_html(config: ClientConfig, diagnostic: Diagnostic, base_dir: str | None = None) -> str:
-    html = _html_element('span', diagnostic["message"])
+@lru_cache
+def lightbulb_html(color: str, star: bool) -> str:
+    if star:
+        img = 'Packages/LSP/icons/lightbulb-star-32.png'
+        tooltip = 'Preferred Quick Fix'
+    else:
+        img = 'Packages/LSP/icons/lightbulb-32.png'
+        tooltip = 'Quick Fix'
+    return f'<span class="lightbulb" title="{tooltip}">{mdpopups.tint(img, color)}</span>'
+
+
+def format_diagnostics_for_html(
+    view: sublime.View,
+    diagnostics_by_config: Sequence[tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
+    code_actions_by_config: dict[str, list[Command | CodeAction]],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    diagnostics_html: list[tuple[DiagnosticSeverity, str]] = []
+    for sb, diagnostics in diagnostics_by_config:
+        actions_for_config = code_actions_by_config.get(sb.session.config.name, [])
+        single_diagnostic = len(diagnostics) == 1
+        for diagnostic in diagnostics:
+            code_actions = actions_for_config if single_diagnostic else [
+                action for action in actions_for_config if diagnostic in action.get('diagnostics', [])
+            ]
+            diagnostic_html = format_diagnostic_for_html(
+                view, sb.session.config, diagnostic, code_actions, lightbulb_color, base_dir)
+            diagnostics_html.append((diagnostic_severity(diagnostic), diagnostic_html))
+    return f'<div class="diagnostics">{"".join(d[1] for d in sorted(diagnostics_html, key=itemgetter(0)))}</div>' if \
+        diagnostics_html else ''
+
+
+def format_diagnostic_for_html(
+    view: sublime.View,
+    config: ClientConfig,
+    diagnostic: Diagnostic,
+    code_actions: list[Command | CodeAction],
+    lightbulb_color: str,
+    base_dir: str | None = None
+) -> str:
+    message = diagnostic['message']
+    raw_message = message['value'] if isinstance(message, dict) else message
+    content = _format_diagnostic_message(view, message)
     code = diagnostic.get("code")
     source = diagnostic.get("source")
+    copy_text = raw_message.replace(' ', ' ')
     if source or code is not None:
         meta_info = ""
         if source:
             meta_info += text2html(source)
+            copy_text += f' ({source})' if code is None else f' ({source}[{code}])'
         if code is not None:
-            code_description = diagnostic.get("codeDescription")
-            meta_info += "({})".format(
-                make_link(code_description["href"], str(code)) if code_description else text2html(str(code)))
-        html += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
-    copy_text = f"{diagnostic['message']} {f'({source})' if source else ''}".strip().replace(' ', ' ')
-    html += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
+            if code_description := diagnostic.get("codeDescription"):
+                href = code_description["href"]
+                meta_info += f'({make_link(href, str(code), tooltip=html.escape(href))})'
+            else:
+                meta_info += f'({text2html(str(code))})'
+        content += " " + _html_element("span", meta_info, class_name="color-muted", escape=False)
+    content += f"""<a class='copy-icon' title='Copy to clipboard' href='{sublime.command_url(
         'lsp_copy_text', {'text': copy_text}
     )}'>⧉</a>"""
     if related_infos := diagnostic.get("relatedInformation"):
         info = "<br>".join(_format_diagnostic_related_info(config, info, base_dir) for info in related_infos)
-        html += '<hr>' + _html_element("div", info, escape=False)
+        content += '<hr>' + _html_element("div", info, escape=False)
+    if code_actions:
+        version = view.change_count()
+        for code_action in sorted(code_actions, key=lambda a: a.get('isPreferred', False), reverse=True):
+            icon = lightbulb_html(lightbulb_color, code_action.get('isPreferred', False))
+            code_action_uri = encode_code_action_uri(config.name, version, code_action)
+            content += '<hr>' + icon + make_link(code_action_uri, code_action['title'], tooltip='Run Code Action')
     severity_class = DIAGNOSTIC_STYLES[diagnostic_severity(diagnostic)].css_class
-    return html_wrapper(html, class_name=severity_class)
+    return html_wrapper(content, class_name=severity_class)
 
 
 def format_code_actions_for_quick_panel(
@@ -891,7 +953,7 @@ def format_code_actions_for_quick_panel(
     selected_index = -1
     for idx, (config_name, code_action) in enumerate(session_actions):
         lsp_kind = code_action.get("kind", "")
-        first_kind_component = cast(CodeActionKind, str(lsp_kind).split(".")[0])
+        first_kind_component = cast('CodeActionKind', str(lsp_kind).split(".")[0])
         kind = CODE_ACTION_KINDS.get(first_kind_component, sublime.KIND_AMBIGUOUS)
         items.append(sublime.QuickPanelItem(code_action["title"], annotation=config_name, kind=kind))
         if code_action.get('isPreferred', False):
@@ -904,7 +966,7 @@ def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     Check if `other_kind` is a sub-kind of `kind`.
 
     The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
-    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `refactor`.
+    but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `"refactor"`.
     """
     if kind == other_kind:
         return True

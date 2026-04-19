@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .setup import TextDocumentTestCase
+from .test_protocol import LSP_RANGE
 from LSP.plugin import apply_text_edits
 from LSP.plugin.core.edit import parse_workspace_edit
 from LSP.plugin.core.url import filename_to_uri
@@ -7,13 +9,14 @@ from LSP.plugin.core.views import entire_content
 from LSP.plugin.edit import _parse_text_edit as parse_text_edit
 from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.edit import temporary_setting
-from LSP.protocol import TextDocumentEdit
-from LSP.protocol import TextEdit
-from LSP.protocol import WorkspaceEdit
-from setup import TextDocumentTestCase
-from test_protocol import LSP_RANGE
+from typing import TYPE_CHECKING
 import sublime
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import TextDocumentEdit
+    from LSP.protocol import TextEdit
+    from LSP.protocol import WorkspaceEdit
 
 FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
 URI = filename_to_uri(FILENAME)
@@ -161,8 +164,8 @@ LSP_EDIT_DOCUMENT_CHANGES_3: WorkspaceEdit = {
 class TextEditTests(unittest.TestCase):
 
     def test_parse_from_lsp(self) -> None:
-        (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
-        self.assertEqual(newText, 'newText\n')  # Without the \r
+        (start, end, new_text) = parse_text_edit(LSP_TEXT_EDIT)
+        self.assertEqual(new_text, 'newText\n')  # Without the \r
         self.assertEqual(start[0], 10)
         self.assertEqual(start[1], 4)
         self.assertEqual(end[0], 11)
@@ -219,7 +222,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
     def test_sorts_in_application_order2(self) -> None:
         changes = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
-        (edits, label, version) = changes[URI]
+        (edits, _label, version) = changes[URI]
         self.assertEqual(version, 6)
         parsed_edits = [parse_text_edit(edit) for edit in edits]
         sorted_edits = list(reversed(sort_by_application_order(parsed_edits)))

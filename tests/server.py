@@ -1,8 +1,7 @@
 """
 A simple test server for integration tests.
 
-Only understands stdio.
-Uses the asyncio module and mypy types, so you'll need a modern Python.
+Can do JSON-RPC with stdio or TCP sockets as the transport.
 
 To make this server reply to requests, send the $test/setResponse notification.
 
@@ -18,12 +17,10 @@ with expected notification method in params['method'] and params in params['para
 Tests can await this request to make sure that they receive notification before code
 resumes (since response to request will arrive after requested notification).
 
-TODO: Untested on Windows.
 """
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from enum import IntEnum
 from typing import Any
 from typing import Awaitable
 from typing import Callable
@@ -31,19 +28,16 @@ from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Union
+import argparse
 import asyncio
+import enum
 import json
 import os
 import sys
 import uuid
 
 __package__ = "server"
-__version__ = "1.0.0"
-
-
-if sys.version_info[:2] < (3, 6):
-    print("only works for python3.6 and higher")
-    exit(1)
+__version__ = "2.0.0"
 
 
 StringDict = Dict[str, Any]
@@ -52,15 +46,15 @@ PayloadLike = Union[List[StringDict], StringDict, None]
 ENCODING = "utf-8"
 
 
-class ErrorCode(IntEnum):
+class ErrorCode(enum.IntEnum):
     # Defined by JSON RPC
     ParseError = -32700
     InvalidRequest = -32600
     MethodNotFound = -32601
     InvalidParams = -32602
     InternalError = -32603
-    serverErrorStart = -32099
-    serverErrorEnd = -32000
+    serverErrorStart = -32099  # noqa: N815
+    serverErrorEnd = -32000  # noqa: N815
     ServerNotInitialized = -32002
     UnknownErrorCode = -32001
 
@@ -132,7 +126,7 @@ class MessageType:
     log = 4
 
 
-class StopLoopException(Exception):
+class StopLoopError(Exception):
     pass
 
 
@@ -267,9 +261,8 @@ class Session:
             elif request_id is not None:
                 self._error(request_id, Error(
                     ErrorCode.MethodNotFound, f"method '{method}' not found"))
-            else:
-                if unhandled:
-                    self._log(f"unhandled {typestr} {method}")
+            elif unhandled:
+                self._log(f"unhandled {typestr} {method}")
         elif request_id is not None:
             # handle request
             try:
@@ -324,7 +317,7 @@ class Session:
                     continue
                 body = await self._reader.readexactly(num_bytes)
                 asyncio.get_event_loop().create_task(self._handle_body(body))
-        except (BrokenPipeError, ConnectionResetError, StopLoopException):
+        except (BrokenPipeError, ConnectionResetError, StopLoopError):
             pass
         return self._received_shutdown
 
@@ -401,7 +394,7 @@ class Session:
     async def _on_exit(self, params: PayloadLike) -> None:
         if params is not None:
             raise Error(ErrorCode.InvalidParams, "expected exit params to be null")
-        self._reader.set_exception(StopLoopException())
+        self._reader.set_exception(StopLoopError())
 
 
 # START: https://stackoverflow.com/a/52702646/990142
@@ -409,8 +402,7 @@ async def stdio() -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     loop = asyncio.get_event_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
-    else:
-        return await _unix_stdio(loop)
+    return await _unix_stdio(loop)
 
 
 async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
@@ -486,8 +478,19 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main(tcp_port: int | None = None) -> bool:
-    if tcp_port is not None:
+class Mode(enum.StrEnum):
+    server = "server"
+    client = "client"
+
+
+async def main(tcp_port: int | None = None, mode: Mode = Mode.server) -> bool:
+    if tcp_port is None:
+        reader, writer = await stdio()
+        session = Session(reader, writer)
+        return await session.run_forever()
+
+    if mode == Mode.server:
+        print("running in TCP server mode", file=sys.stderr)
 
         class ClientConnectedCallback:
 
@@ -500,31 +503,39 @@ async def main(tcp_port: int | None = None) -> bool:
 
         callback = ClientConnectedCallback()
         server = await asyncio.start_server(callback, port=tcp_port)
-        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received.
-        # But, it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
+        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received. But,
+        # it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
         await server.serve_forever()
         return callback.received_shutdown
-    else:
-        reader, writer = await stdio()
-        session = Session(reader, writer)
-        return await session.run_forever()
+
+    print("running in TCP client mode", file=sys.stderr)
+    reader, writer = await asyncio.open_connection(host=None, port=tcp_port)
+    session = Session(reader, writer)
+    return await session.run_forever()
 
 
 if __name__ == '__main__':
+
+    class CmdLineArgs(argparse.Namespace):
+        version: bool = False
+        tcp_port: int | None = None
+        mode: Mode = Mode.server
+
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
     parser.add_argument("-p", "--tcp-port", type=int)
-    args = parser.parse_args()
+    parser.add_argument("--mode", type=Mode, default=Mode.server)
+    args = parser.parse_args(namespace=CmdLineArgs())
     if args.version:
         print(__package__, __version__)
-        exit(0)
+        sys.exit(0)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main(args.tcp_port))
+        shutdown_received = loop.run_until_complete(main(args.tcp_port, args.mode))
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
-    exit(0 if shutdown_received else 1)
+    sys.exit(0 if shutdown_received else 1)

@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+from ..protocol import CodeAction
+from ..protocol import CodeActionContext
+from ..protocol import CodeActionKind
+from ..protocol import CodeActionParams
+from ..protocol import CodeActionTriggerKind
 from ..protocol import CodeLens
 from ..protocol import ColorInformation
+from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DiagnosticSeverity
 from ..protocol import DiagnosticTag
@@ -34,6 +40,7 @@ from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SEMANTIC_TOKEN_FLAGS
 from .core.constants import SEMANTIC_TOKENS_MAP
+from .core.constants import SUPPORTED_DIAGNOSTIC_TAGS
 from .core.edit import apply_text_edits
 from .core.promise import Promise
 from .core.protocol import Error
@@ -75,7 +82,6 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import List
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -225,7 +231,7 @@ class SessionBuffer:
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
             self.do_code_lenses_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             self.session.notify_plugin_on_session_buffer_change(self)
 
@@ -363,7 +369,7 @@ class SessionBuffer:
             return
         self._last_text_change_time = time.time()
         last_change = changes[-1]
-        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and not last_change.str and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
             # A special situation when view changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
@@ -377,8 +383,8 @@ class SessionBuffer:
             purge = True
         if purge:
             self._cancel_pending_requests_async()
-            if userprefs().format_on_type and action == ChangeEventAction.TYPE and \
-                    (params := self._get_on_type_formatting_params_async(view, last_change.str)):
+            if userprefs().format_on_type and \
+                    (params := self._get_on_type_formatting_params_async(view, action, last_change.str)):
                 self.purge_changes_async(view)
                 self.session.send_request_task(Request.onTypeFormatting(params, view)) \
                     .then(partial(self._on_type_formatting_result_async, view, change_count))
@@ -439,7 +445,7 @@ class SessionBuffer:
             self.do_document_diagnostic_async(view, version)
             if request_flags & RequestFlags.SEMANTIC_TOKENS:
                 self.do_semantic_tokens_async(view)
-            if userprefs().link_highlight_style in ("underline", "none"):
+            if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
             if request_flags & RequestFlags.INLAY_HINT:
                 self.do_inlay_hints_async(view)
@@ -543,7 +549,9 @@ class SessionBuffer:
                 self._supported_custom_tokens.add(token_type)
 
     def _update_supported_commands(self) -> None:
-        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        self._supported_commands = {'editor.action.showReferences'}  # Handled on client side in Session.execute_command
+        if commands := self.session.get_capability('executeCommandProvider.commands'):
+            self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
@@ -560,9 +568,8 @@ class SessionBuffer:
                 self._if_view_unchanged(self._on_color_boxes_async, version)
             )
 
-    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation]) -> None:
-        # None-check guards against spec violation from vue server - https://github.com/volarjs/volar.js/issues/301.
-        phantoms = [] if response is None else [lsp_color_to_phantom(view, color_info) for color_info in response]  # pyright: ignore[reportUnnecessaryComparison] # noqa: E501
+    def _on_color_boxes_async(self, view: sublime.View, response: list[ColorInformation] | None) -> None:
+        phantoms = [lsp_color_to_phantom(view, color_info) for color_info in response] if response else []
         sublime.set_timeout(lambda: self._color_phantoms.update(phantoms))
 
     def clear_color_boxes_async(self) -> None:
@@ -701,8 +708,13 @@ class SessionBuffer:
                 data = DiagnosticSeverityData()
                 data_per_severity[key] = data
             if tags := diagnostic.get('tags', []):
+                has_supported_tag = False
                 for tag in tags:
-                    data.regions_with_tag.setdefault(tag, []).append(region)
+                    if tag in SUPPORTED_DIAGNOSTIC_TAGS:
+                        data.regions_with_tag.setdefault(tag, []).append(region)
+                        has_supported_tag = True
+                if not has_supported_tag:
+                    data.regions.append(region)
             else:
                 data.regions.append(region)
             diagnostics.append((diagnostic, region))
@@ -754,22 +766,31 @@ class SessionBuffer:
             self._on_type_formatting_triggers = ()
 
     def _get_on_type_formatting_params_async(
-        self, view: sublime.View, text: str
+        self, view: sublime.View, action: ChangeEventAction, text: str
     ) -> DocumentOnTypeFormattingParams | None:
-        if not self._on_type_formatting_triggers:
+        if not self._on_type_formatting_triggers or \
+                not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
             return None
-        if not (self._get_request_flags(view) & RequestFlags.ON_TYPE_FORMATTING):
+        if action == ChangeEventAction.TYPE:
+            for trigger in self._on_type_formatting_triggers:
+                if text.endswith(trigger):
+                    return self._create_on_type_formatting_params_async(view, trigger)
             return None
-        selection = first_selection_region(view)
-        if selection is None:
+        if action == ChangeEventAction.INSERT_NEWLINE:
+            if '\n' in self._on_type_formatting_triggers and text.rstrip(' ').endswith('\n'):
+                return self._create_on_type_formatting_params_async(view, '\n')
             return None
-        for trigger in self._on_type_formatting_triggers:
-            if text.endswith(trigger):
-                return {
-                    **text_document_position_params(view, selection.a),
-                    'options': formatting_options(view.settings()),
-                    'ch': trigger[0],
-                }
+        return None
+
+    def _create_on_type_formatting_params_async(
+        self, view: sublime.View, trigger: str
+    ) -> DocumentOnTypeFormattingParams | None:
+        if (selection := first_selection_region(view)) is not None:
+            return {
+                **text_document_position_params(view, selection.a),
+                'options': formatting_options(view.settings()),
+                'ch': trigger[0],
+            }
         return None
 
     def _on_type_formatting_result_async(
@@ -858,8 +879,8 @@ class SessionBuffer:
         scope_regions: dict[int, tuple[str, list[sublime.Region]]] = {}
         prev_line = 0
         prev_col_utf16 = 0
-        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
-        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        types_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -888,7 +909,7 @@ class SessionBuffer:
             return
         session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys.copy():
-            if region_key not in scope_regions.keys():
+            if region_key not in scope_regions:
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
                     sv.view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
@@ -943,7 +964,7 @@ class SessionBuffer:
             phantoms = [inlay_hint_to_phantom(view, inlay_hint, self.session) for inlay_hint in response]
             sublime.set_timeout(lambda: self.present_inlay_hints(phantoms))
         else:
-            sublime.set_timeout(lambda: self.remove_all_inlay_hints())
+            sublime.set_timeout(self.remove_all_inlay_hints)
 
     def present_inlay_hints(self, phantoms: list[sublime.Phantom]) -> None:
         self._inlay_hints_phantom_set.update(phantoms)
@@ -957,6 +978,30 @@ class SessionBuffer:
 
     def remove_all_inlay_hints(self) -> None:
         self._inlay_hints_phantom_set.update([])
+
+    # --- textDocument/codeAction --------------------------------------------------------------------------------------
+
+    def request_code_actions_async(
+        self,
+        view: sublime.View,
+        region: sublime.Region,
+        diagnostics: list[Diagnostic],
+        kinds: list[CodeActionKind] | None = None,
+        trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
+    ) -> Promise[list[Command | CodeAction] | Error | None]:
+        context: CodeActionContext = {
+            'diagnostics': diagnostics,
+            'triggerKind': trigger_kind
+        }
+        if kinds:
+            context['only'] = kinds
+        params: CodeActionParams = {
+            'textDocument': text_document_identifier(view),
+            'range': region_to_range(view, region),
+            'context': context
+        }
+        request = Request.codeAction(params, view)
+        return self.session.send_request_task(request)
 
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
@@ -991,19 +1036,18 @@ class SessionBuffer:
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
         code_lenses = self._code_lenses.code_lenses_with_command()
         if self.session.uses_plugin():
-            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # TODO: should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
             return code_lenses
-        else:
-            supported_code_lenses: list[ResolvedCodeLens] = []
-            # Filter out CodeLenses with commands that are not handled directly by the language server
-            for code_lens in code_lenses:
-                command_name = code_lens['command']['command']
-                if command_name in self._supported_commands:
-                    supported_code_lenses.append(code_lens)
-                else:
-                    self.session.check_log_unsupported_command(command_name)
-            return supported_code_lenses
+        supported_code_lenses: list[ResolvedCodeLens] = []
+        # Filter out CodeLenses with commands that are not handled directly by the language server
+        for code_lens in code_lenses:
+            command_name = code_lens['command']['command']
+            if command_name in self._supported_commands:
+                supported_code_lenses.append(code_lens)
+            else:
+                self.session.check_log_unsupported_command(command_name)
+        return supported_code_lenses
 
     def _on_visible_code_lenses_resolved_async(self) -> None:
         supported_code_lenses = self._filter_supported_code_lenses()

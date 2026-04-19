@@ -609,7 +609,7 @@ def minihtml(
             }
         ]
         # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
-        result = re.sub('(\\S)  \n', '\\1\n\n', result)  # noqa: RUF039
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)
     if isinstance(language_id_map, dict):
         frontmatter["language_map"] = language_id_map
     return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
@@ -917,7 +917,7 @@ def format_diagnostic_for_html(
     content = _format_diagnostic_message(view, message)
     code = diagnostic.get("code")
     source = diagnostic.get("source")
-    copy_text = f'{raw_message}'.replace(' ', ' ')
+    copy_text = raw_message.replace(' ', ' ')
     if source or code is not None:
         meta_info = ""
         if source:

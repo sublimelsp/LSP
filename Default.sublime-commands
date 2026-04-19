@@ -8,6 +8,14 @@
         }
     },
     {
+        "caption": "Preferences: LSP Server Configurations",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/LanguageServers.sublime-settings",
+            "default": "{\n\t$0\n}\n"
+        }
+    },
+    {
         "caption": "Preferences: LSP Key Bindings",
         "command": "edit_settings",
         "args": {

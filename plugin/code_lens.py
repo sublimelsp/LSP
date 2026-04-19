@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import CodeLens
-from ..protocol import Command
-from ..protocol import Range
 from .core.constants import CODE_LENS_ENABLED_KEY
 from .core.protocol import Error
 from .core.protocol import ResolvedCodeLens
@@ -12,9 +9,15 @@ from .core.registry import windows
 from .core.views import range_to_region
 from functools import partial
 from typing import cast
+from typing import TYPE_CHECKING
 from typing_extensions import TypeGuard
 import itertools
 import sublime
+
+if TYPE_CHECKING:
+    from ..protocol import CodeLens
+    from ..protocol import Command
+    from ..protocol import Range
 
 
 def is_resolved(code_lens: CodeLens | ResolvedCodeLens) -> TypeGuard[ResolvedCodeLens]:
@@ -104,7 +107,7 @@ class CodeLensCache:
                 code_lenses.append(code_lens)
             elif cached_command := cached_code_lens.cached_command:
                 code_lens['command'] = cached_command
-                code_lens = cast(ResolvedCodeLens, code_lens)
+                code_lens = cast('ResolvedCodeLens', code_lens)
                 code_lens['uses_cached_command'] = True
                 code_lenses.append(code_lens)
         return code_lenses

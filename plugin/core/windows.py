@@ -53,12 +53,14 @@ from typing import TYPE_CHECKING
 from typing_extensions import override
 from weakref import ref
 from weakref import WeakSet
+import asyncio
 import functools
 import json
 import sublime
 import threading
 
 if TYPE_CHECKING:
+    from .collections import DottedDict
     from .tree_view import TreeViewSheet
 
 
@@ -81,12 +83,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def __init__(self, window: sublime.Window, workspace: ProjectFolders, config_manager: WindowConfigManager) -> None:
         self._window = window
         self._config_manager = config_manager
+        self._start_lock = asyncio.Lock()
+        self._starting_sessions: dict[ClientConfig, asyncio.Future[Session]] = {}
         self._sessions: set[Session] = set()
         self._workspace = workspace
-        self._pending_listeners: deque[AbstractViewListener] = deque()
         self._listeners: WeakSet[AbstractViewListener] = WeakSet()
-        self._new_listener: AbstractViewListener | None = None
-        self._new_session: Session | None = None
         self._panel_code_phantoms: sublime.PhantomSet | None = None
         self._server_log: list[tuple[str, str]] = []
         self.panel_manager: PanelManager | None = PanelManager(self._window)
@@ -142,9 +143,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
-        self._pending_listeners.appendleft(listener)
-        if self._new_listener is None:
-            self._dequeue_listener_async()
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -206,8 +204,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     message = f"failed to register session {session.config.name} to listener {listener}"
                     exception_log(message, ex)
 
-    def get_session(self, config_name: str, file_path: str) -> Session | None:
-        return self._find_session(config_name, file_path)
+    def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
+        if file_path:
+            return self._find_session(config_name, file_path)
+        for session in self._sessions:
+            if session.config.name == config_name:
+                return session
+        return None
 
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
@@ -232,7 +235,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO remove after next release
+                    if plugin.should_ignore(view):  # TODO: remove after next release
                         debug(view, "ignored by plugin", plugin.__name__)
                     elif plugin.is_applicable(view, config):
                         return config
@@ -240,13 +243,31 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     return config
         return None
 
-    def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
+    async def start(self, config: ClientConfig, initiating_view: sublime.View) -> Session | None:
+
+        # It can be the case that some other view in the recent past is already starting a session for this config.
+        future: asyncio.Future[Session] | None = None
+        async with self._start_lock:
+            future = self._starting_sessions.get(config):
+
+        if future:
+            # Let that other initiating view finish the work.
+            return await future
+
+        # No other view is starting a session for this config. Let's check if the config is applicable to the view,
+        # and check if there's already an existing initialized session for it.
+        file_path = initiating_view.file_name() or ''
+        inside = self._workspace.contains(file_path)
+        for session in self._sessions:
+            if session.config.name == config_name and session.handles_path(file_path, inside):
+                # OK, this session is already initialized for this view.
+                return session
+
+        # No other view is starting a session for this config, and there's no initialized session for it. So we have
+        # to start it now. Copy the config, as plugins may modify it
         config = ClientConfig.from_config(config, {})
         config.set_view_status_handler(self)
-        file_path = initiating_view.file_name() or ''
-        if not self._can_start_config(config.name, file_path):
-            # debug('Already starting on this window:', config.name)
-            return
+
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
@@ -276,18 +297,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 transport_cwd: str | None = cwd
             else:
                 transport_cwd = workspace_folders[0].path if workspace_folders else None
-            transport = config.create_transport_config().start(
+            await transport = config.create_transport_config().start(
                 config.command, config.env, transport_cwd, variables, session)
             if plugin_class:
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
-            session.initialize_async(
-                variables=variables,
-                transport=transport,
-                working_directory=cwd,
-                init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
-            )
-            self._new_session = session
+            await session.initialize(variables=variables, transport=transport, working_directory=cwd)
         except Exception as e:
             message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                         'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
@@ -298,19 +313,6 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             self._config_manager.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
             sublime.message_dialog(message)
-            # Continue with handling pending listeners
-            self._new_session = None
-            sublime.set_timeout_async(self._dequeue_listener_async)
-
-    def _on_post_session_initialize(
-        self, initiating_view: sublime.View, session: Session, is_error: bool = False
-    ) -> None:
-        if is_error:
-            session.config.erase_view_status(initiating_view)
-            self._new_listener = None
-            self._new_session = None
-        else:
-            sublime.set_timeout_async(self._dequeue_listener_async)
 
     def _create_logger(self, config_name: str) -> Logger:
         logger_map = {
@@ -581,6 +583,11 @@ class WindowRegistry(LspSettingsChangeListener):
         for wm in self._windows.values():
             wm.get_config_manager().update(config_name)
 
+    def on_server_settings_changed(self, config_name: str, settings: DottedDict) -> None:
+        for wm in self._windows.values():
+            if session := wm.get_session(config_name):
+                session.on_server_settings_changed(settings)
+
     def on_userprefs_updated(self) -> None:
         for wm in self._windows.values():
             wm.on_diagnostics_updated()
@@ -685,8 +692,8 @@ class PanelLogger(Logger):
         self.log(self._format_notification(direction, method), params)
 
     def _format_response(self, direction: str, request_id: int | str, duration: str) -> str:
-        return "[{}] {} {} ({}) (duration: {})".format(
-            RequestTimeTracker.formatted_now(), direction, self._server_name, request_id, duration)
+        time = RequestTimeTracker.formatted_now()
+        return f"[{time}] {direction} {self._server_name} ({request_id}) (duration: {duration})"
 
     def _format_request(self, direction: str, method: str, request_id: int | str) -> str:
         return f"[{RequestTimeTracker.formatted_now()}] {direction} {self._server_name} {method} ({request_id})"
@@ -718,7 +725,7 @@ class RemoteLogger(Logger):
                     debug('WebsocketServer not started - address already in use')
                     RemoteLogger._ws_server = None
                 else:
-                    raise ex
+                    raise
 
     def _start_server(self) -> None:
         def start_async() -> None:
@@ -737,16 +744,16 @@ class RemoteLogger(Logger):
 
     def _on_new_client(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client connecting (after handshake)."""
-        debug("New client connected and was given id %d" % client['id'])
+        debug(f"New client connected and was given id {client['id']}")
         # server.send_message_to_all("Hey all, a new client has joined us")
 
     def _on_client_left(self, client: dict, server: WebsocketServer) -> None:
         """Called for every client disconnecting."""
-        debug("Client(%d) disconnected" % client['id'])
+        debug(f"Client({client['id']}) disconnected")
 
     def _on_message_received(self, client: dict, server: WebsocketServer, message: str) -> None:
         """Called when a client sends a message."""
-        debug("Client(%d) said: %s" % (client['id'], message))
+        debug(f"Client({client['id']}) said: {message}")
 
     def stderr_message(self, message: str) -> None:
         self._broadcast_json({

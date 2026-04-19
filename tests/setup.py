@@ -15,8 +15,13 @@ from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
 from typing import Any
+from typing import TYPE_CHECKING
 from unittesting import DeferrableTestCase
 import sublime
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from LSP.plugin.core.promise import Promise
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
@@ -190,7 +195,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         :returns:   A generator with resolved value.
         """
         # cls.assertIsNotNone(cls.session)
-        assert cls.session  # mypy
+        assert cls.session
         if promise is None:
             promise = YieldPromise()
 
@@ -238,12 +243,12 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def set_response(self, method: str, response: Any) -> None:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         self.session.send_notification(Notification("$test/setResponse", {"method": method, "response": response}))
 
     def set_responses(self, responses: list[tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:
@@ -258,7 +263,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def await_client_notification(self, method: str, params: Any = None) -> Generator:
         self.assertIsNotNone(self.session)
-        assert self.session  # mypy
+        assert self.session
         promise = YieldPromise()
 
         def handler(params: Any) -> None:

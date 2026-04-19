@@ -9,11 +9,14 @@ from LSP.plugin.core.views import entire_content
 from LSP.plugin.edit import _parse_text_edit as parse_text_edit
 from LSP.plugin.edit import _sort_by_application_order as sort_by_application_order
 from LSP.plugin.edit import temporary_setting
-from LSP.protocol import TextDocumentEdit
-from LSP.protocol import TextEdit
-from LSP.protocol import WorkspaceEdit
+from typing import TYPE_CHECKING
 import sublime
 import unittest
+
+if TYPE_CHECKING:
+    from LSP.protocol import TextDocumentEdit
+    from LSP.protocol import TextEdit
+    from LSP.protocol import WorkspaceEdit
 
 FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
 URI = filename_to_uri(FILENAME)

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from ..protocol import InlayHint
-from ..protocol import InlayHintLabelPart
-from ..protocol import MarkupContent
 from .core.constants import RequestFlags
 from .core.constants import ST_VERSION
 from .core.css import css
@@ -10,13 +7,19 @@ from .core.edit import apply_text_edits
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import LspWindowCommand
-from .core.sessions import Session
 from .core.settings import userprefs
 from .core.views import position_to_offset
 from typing import cast
+from typing import TYPE_CHECKING
 import html
 import sublime
 import uuid
+
+if TYPE_CHECKING:
+    from ..protocol import InlayHint
+    from ..protocol import InlayHintLabelPart
+    from ..protocol import MarkupContent
+    from .core.sessions import Session
 
 
 class LspToggleInlayHintsCommand(LspWindowCommand):
@@ -150,7 +153,7 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid
                 }
             })
@@ -178,9 +181,9 @@ def format_inlay_hint_label(inlay_hint: InlayHint, session: Session, phantom_uui
                 'command': 'lsp_inlay_hint_click',
                 'args': {
                     'session_name': session.config.name,
-                    'inlay_hint': cast(dict, inlay_hint),
+                    'inlay_hint': cast('dict', inlay_hint),
                     'phantom_uuid': phantom_uuid,
-                    'label_part': cast(dict, label_part)
+                    'label_part': cast('dict', label_part)
                 }
             })
             value += f'<a href="{inlay_hint_click_command}">'

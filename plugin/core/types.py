@@ -10,7 +10,6 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
-from .file_watcher import FileWatcherEventType
 from .logging import debug
 from .logging import set_debug_logging
 from .transports import StdioTransportConfig
@@ -21,18 +20,16 @@ from .url import filename_to_uri
 from .url import parse_uri
 from abc import ABC
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Generator
 from typing import Iterable
-from typing import List
-from typing import Optional  # noqa: F401 - remove after https://github.com/scalameta/metals-sublime/pull/124 is merged
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
-from typing import Union
 from typing_extensions import deprecated
 from typing_extensions import NotRequired
 from typing_extensions import override
@@ -47,6 +44,9 @@ import posixpath
 import sublime
 import time
 import weakref
+
+if TYPE_CHECKING:
+    from .file_watcher import FileWatcherEventType
 
 FEATURES_TIMEOUT = 300  # milliseconds
 
@@ -185,6 +185,9 @@ class SettingsRegistration:
         self.settings.add_on_change("LSP", on_change_handler)
 
     def __del__(self) -> None:
+        # FIXME: Relying on reference counts and garbage collection timings for the change listener handling is a very
+        # bad idea, because instances of this class are dynamically passed between other object instances, and it can
+        # easily cause bugs like https://github.com/sublimelsp/LSP/pull/2867
         self.settings.clear_on_change("LSP")
 
 
@@ -242,50 +245,50 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 
 class Settings:
 
-    completion_insert_mode = cast(str, None)
-    diagnostics_additional_delay_auto_complete_ms = cast(int, None)
-    diagnostics_delay_ms = cast(int, None)
-    diagnostics_gutter_marker = cast(str, None)
-    diagnostics_highlight_style = cast(Union[str, Dict[str, str]], None)
-    diagnostics_panel_include_severity_level = cast(int, None)
-    disabled_capabilities = cast(List[str], None)
-    document_highlight_style = cast(str, None)
-    format_on_type = cast(bool, None)
-    hover_highlight_style = cast(str, None)
-    inhibit_snippet_completions = cast(bool, None)
-    inhibit_word_completions = cast(bool, None)
-    initially_folded = cast(List[str], None)
-    inlay_hints_max_length = cast(int, None)
-    link_highlight_style = cast(str, None)
-    log_debug = cast(bool, None)
-    log_max_size = cast(int, None)
-    log_server = cast(List[str], None)
-    lsp_code_actions_on_format = cast(Dict[str, bool], None)
-    lsp_code_actions_on_save = cast(Dict[str, bool], None)
-    lsp_format_on_paste = cast(bool, None)
-    lsp_format_on_save = cast(bool, None)
-    on_save_task_timeout_ms = cast(int, None)
-    only_show_lsp_completions = cast(bool, None)
-    popup_max_characters_height = cast(int, None)
-    popup_max_characters_width = cast(int, None)
-    refactoring_auto_save = cast(str, None)
-    semantic_highlighting = cast(bool, None)
-    show_code_actions = cast(str, None)
-    show_code_actions_in_hover = cast(bool, None)
-    show_code_lens = cast(str, None)
-    show_diagnostics_annotations_severity_level = cast(int, None)
-    show_diagnostics_count_in_view_status = cast(bool, None)
-    show_diagnostics_in_hover = cast(bool, None)
-    show_diagnostics_in_view_status = cast(bool, None)
-    show_diagnostics_panel_on_save = cast(int, None)
-    show_diagnostics_severity_level = cast(int, None)
-    show_inlay_hints = cast(bool, None)
-    show_multiline_diagnostics_highlights = cast(bool, None)
-    show_multiline_document_highlights = cast(bool, None)
-    show_references_in_quick_panel = cast(bool, None)
-    show_signature_help = cast(bool, None)
-    show_symbol_action_links = cast(bool, None)
-    show_view_status = cast(bool, None)
+    completion_insert_mode = cast("str", None)
+    diagnostics_additional_delay_auto_complete_ms = cast("int", None)
+    diagnostics_delay_ms = cast("int", None)
+    diagnostics_gutter_marker = cast("str", None)
+    diagnostics_highlight_style = cast("str | dict[str, str]", None)
+    diagnostics_panel_include_severity_level = cast("int", None)
+    disabled_capabilities = cast("list[str]", None)
+    document_highlight_style = cast("str", None)
+    format_on_type = cast("bool", None)
+    hover_highlight_style = cast("str", None)
+    inhibit_snippet_completions = cast("bool", None)
+    inhibit_word_completions = cast("bool", None)
+    initially_folded = cast("list[str]", None)
+    inlay_hints_max_length = cast("int", None)
+    link_highlight_style = cast("str", None)
+    log_debug = cast("bool", None)
+    log_max_size = cast("int", None)
+    log_server = cast("list[str]", None)
+    lsp_code_actions_on_format = cast("dict[str, bool]", None)
+    lsp_code_actions_on_save = cast("dict[str, bool]", None)
+    lsp_format_on_paste = cast("bool", None)
+    lsp_format_on_save = cast("bool", None)
+    on_save_task_timeout_ms = cast("int", None)
+    only_show_lsp_completions = cast("bool", None)
+    popup_max_characters_height = cast("int", None)
+    popup_max_characters_width = cast("int", None)
+    refactoring_auto_save = cast("str", None)
+    semantic_highlighting = cast("bool", None)
+    show_code_actions = cast("str", None)
+    show_code_actions_in_hover = cast("bool", None)
+    show_code_lens = cast("str", None)
+    show_diagnostics_annotations_severity_level = cast("int", None)
+    show_diagnostics_count_in_view_status = cast("bool", None)
+    show_diagnostics_in_hover = cast("bool", None)
+    show_diagnostics_in_view_status = cast("bool", None)
+    show_diagnostics_panel_on_save = cast("int", None)
+    show_diagnostics_severity_level = cast("int", None)
+    show_inlay_hints = cast("bool", None)
+    show_multiline_diagnostics_highlights = cast("bool", None)
+    show_multiline_document_highlights = cast("bool", None)
+    show_references_in_quick_panel = cast("bool", None)
+    show_signature_help = cast("bool", None)
+    show_symbol_action_links = cast("bool", None)
+    show_view_status = cast("bool", None)
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
@@ -488,7 +491,7 @@ class DocumentSelectorMatcher:
     __slots__ = ("filters",)
 
     def __init__(self, document_selector: DocumentSelector) -> None:
-        self.filters = [DocumentFilterMatcher(**cast(dict, document_filter)) for document_filter in document_selector]
+        self.filters = [DocumentFilterMatcher(**cast("dict", document_filter)) for document_filter in document_selector]
 
     def __bool__(self) -> bool:
         return bool(self.filters)
@@ -523,6 +526,7 @@ def match_file_operation_filters(filters: list[FileOperationFilter], uri: URI) -
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
 _METHOD_TO_CAPABILITY_EXCEPTIONS: dict[str, tuple[str, str | None]] = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeConfiguration': ('workspace.didChangeConfiguration', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
     'textDocument/didOpen': ('textDocumentSync.didOpen', None),
@@ -644,7 +648,7 @@ class Capabilities(DottedDict):
 
     def assign(self, d: ServerCapabilities) -> None:
         textsync = normalize_text_sync(d.pop("textDocumentSync", None))
-        super().assign(cast(dict, d))
+        super().assign(cast("dict", d))
         if textsync:
             self.update(textsync)
 
@@ -654,6 +658,9 @@ class Capabilities(DottedDict):
     def text_sync_kind(self) -> TextDocumentSyncKind:
         value: TextDocumentSyncKind = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKind.None_
+
+    def should_notify_did_change_configuration(self) -> bool:
+        return 'workspace.didChangeConfiguration' in self
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
@@ -827,7 +834,13 @@ class ClientConfig:
         self.diagnostics_mode = diagnostics_mode
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
-        self._all_settings = all_settings or {}
+        if isinstance(all_settings, dict):
+            self._all_settings = all_settings
+            # Exclude 'settings' because it shouldn't be considered when ClientConfig is checked for equality
+            if 'settings' in self._all_settings:
+                del self._all_settings['settings']
+        else:
+            self._all_settings = {}
         self._view_status_handler = default_status_view_handler
 
     @property
@@ -869,47 +882,44 @@ class ClientConfig:
         s = settings_registration.settings
         file = settings_registration.settings_path
         base = sublime.decode_value(sublime.load_resource(file))
-        settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
-        settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
+        settings = DottedDict(deepcopy(base.get("settings", {})))  # defined by the plugin author
+        settings.update(deepcopy(read_dict_setting(s, "settings", {})))  # overrides from the user
         # "initialization_options" with backwards compatibility for "initializationOptions"
-        base_old_init_opts = base.get("initializationOptions", {})
-        base_new_init_opts = base.get("initialization_options", {})
-        resolved_old_init_opts = read_dict_setting(s, "initializationOptions", {})
-        resolved_new_init_opts = read_dict_setting(s, "initialization_options", {})
+        base_old_init_opts = deepcopy(base.get("initializationOptions", {}))
+        base_new_init_opts = deepcopy(base.get("initialization_options", {}))
+        resolved_old_init_opts = deepcopy(read_dict_setting(s, "initializationOptions", {}))
+        resolved_new_init_opts = deepcopy(read_dict_setting(s, "initialization_options", {}))
         initialization_options = DottedDict(base_new_init_opts or base_old_init_opts)
         if resolved_old_init_opts != base_old_init_opts:
             debug(f'"initializationOptions" in config {name} is deprecated! Use "initialization_options" instead.')
             initialization_options.update(resolved_old_init_opts)
         if resolved_new_init_opts != base_new_init_opts:
             initialization_options.update(resolved_new_init_opts)
-        disabled_capabilities = s.get("disabled_capabilities")
-        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
-        semantic_tokens = read_dict_setting(s, "semantic_tokens", {})
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
+        file_watcher = cast("FileWatcherConfig", deepcopy(read_dict_setting(s, "file_watcher", {})))
+        semantic_tokens = deepcopy(read_dict_setting(s, "semantic_tokens", {}))
+        disabled_capabilities = deepcopy(s.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
         return ClientConfig(
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
-            schemes=s.get("schemes"),
-            command=read_list_setting(s, "command", []),
-            tcp_port=s.get("tcp_port"),
-            auto_complete_selector=s.get("auto_complete_selector"),
+            schemes=deepcopy(s.get("schemes")),
+            command=deepcopy(read_list_setting(s, "command", [])),
+            tcp_port=deepcopy(s.get("tcp_port")),
+            auto_complete_selector=deepcopy(s.get("auto_complete_selector")),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             initialization_options=initialization_options,
             settings=settings,
-            env=read_dict_setting(s, "env", {}),
-            experimental_capabilities=s.get("experimental_capabilities"),
+            env=deepcopy(read_dict_setting(s, "env", {})),
+            experimental_capabilities=deepcopy(s.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
-            all_settings=s.to_dict()
+            all_settings=deepcopy(s.to_dict())
         )
 
     @classmethod
@@ -920,33 +930,31 @@ class ClientConfig:
         :param name: Unique server name.
         :param d: Dictionary of configuration values.
         """
-        disabled_capabilities = d.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = DottedDict()
-        schemes = d.get("schemes")
+        disabled_capabilities = deepcopy(d.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(disabled_capabilities if isinstance(disabled_capabilities, dict) else {})
+        schemes = deepcopy(d.get("schemes"))
         if not isinstance(schemes, list):
             schemes = ["file"]
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
-            schemes=schemes,
-            command=d.get("command", []),
-            tcp_port=d.get("tcp_port"),
-            auto_complete_selector=d.get("auto_complete_selector"),
-            enabled=d.get("enabled", False),
-            initialization_options=DottedDict(d.get("initialization_options", d.get("initializationOptions"))),
-            settings=DottedDict(d.get("settings")),
-            env=d.get("env", {}),
-            experimental_capabilities=d.get("experimental_capabilities"),
+            schemes=deepcopy(schemes),
+            command=deepcopy(d.get("command", [])),
+            tcp_port=deepcopy(d.get("tcp_port")),
+            auto_complete_selector=deepcopy(d.get("auto_complete_selector")),
+            enabled=deepcopy(d.get("enabled", False)),
+            initialization_options=DottedDict(
+                deepcopy(d.get("initialization_options"), d.get("initializationOptions"))),
+            settings=DottedDict(deepcopy(d.get("settings"))),
+            env=deepcopy(d.get("env", {})),
+            experimental_capabilities=deepcopy(d.get("experimental_capabilities")),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=d.get("file_watcher", {}),
-            semantic_tokens=d.get("semantic_tokens", {}),
-            diagnostics_mode=d.get("diagnostics_mode", "open_files"),
+            file_watcher=deepcopy(d.get("file_watcher", {})),
+            semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
+            diagnostics_mode=deepcopy(d.get("diagnostics_mode", "open_files")),
             path_maps=PathMap.parse(d.get("path_maps")),
-            all_settings=d
+            all_settings=deepcopy(d)
         )
 
     @classmethod
@@ -961,35 +969,34 @@ class ClientConfig:
         :param src_config: The base configuration to start from.
         :param override: Dictionary of values to override.
         """
-        path_map_override = PathMap.parse(override.get("path_maps"))
-        disabled_capabilities = override.get("disabled_capabilities")
-        if isinstance(disabled_capabilities, dict):
-            disabled_capabilities = DottedDict(disabled_capabilities)
-        else:
-            disabled_capabilities = src_config.disabled_capabilities
+        disabled_capabilities = deepcopy(override.get("disabled_capabilities"))
+        disabled_capabilities = DottedDict(
+            disabled_capabilities
+            if isinstance(disabled_capabilities, dict)
+            else src_config.disabled_capabilities.copy())
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
-            schemes=override.get("schemes", src_config.schemes),
-            command=override.get("command", src_config.command),
-            tcp_port=override.get("tcp_port", src_config.tcp_port),
-            auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
-            enabled=override.get("enabled", src_config.enabled),
+            schemes=deepcopy(override.get("schemes", src_config.schemes)),
+            command=deepcopy(override.get("command", src_config.command)),
+            tcp_port=deepcopy(override.get("tcp_port", src_config.tcp_port)),
+            auto_complete_selector=deepcopy(override.get("auto_complete_selector", src_config.auto_complete_selector)),
+            enabled=deepcopy(override.get("enabled", src_config.enabled)),
             initialization_options=DottedDict.from_base_and_override(
                 src_config.initialization_options,
                 override.get("initialization_options", override.get("initializationOptions"))),
             settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
-            env=override.get("env", src_config.env),
-            experimental_capabilities=override.get(
-                "experimental_capabilities", src_config.experimental_capabilities),
+            env=deepcopy(override.get("env", src_config.env)),
+            experimental_capabilities=deepcopy(
+                override.get("experimental_capabilities", src_config.experimental_capabilities)),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=override.get("file_watcher", src_config.file_watcher),
-            semantic_tokens=override.get("semantic_tokens", src_config.semantic_tokens),
-            diagnostics_mode=override.get("diagnostics_mode", src_config.diagnostics_mode),
-            path_maps=path_map_override or src_config.path_maps,
+            file_watcher=deepcopy(override.get("file_watcher", src_config.file_watcher)),
+            semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
+            diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
+            path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
             settings_registration=src_config._settings_registration,
-            all_settings={**src_config._all_settings, **override}  # shallow merge
+            all_settings=deepcopy({**src_config._all_settings, **override})
         )
 
     def create_transport_config(self) -> TransportConfig:
@@ -1122,10 +1129,7 @@ class ClientConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientConfig):
             return False
-        for k, v in self.__dict__.items():
-            if not k.startswith("_") and v != getattr(other, k):
-                return False
-        return True
+        return self.name == other.name and self._all_settings == other._all_settings
 
     def __hash__(self) -> int:
         return hash(self.__repr__())

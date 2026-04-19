@@ -89,7 +89,7 @@ def git(*args: str) -> str | None:
 
 def commit_release(version: str) -> None:
     """Create a 'Cut <version>' commit and tag."""
-    commit_message = 'Cut %s' % version
+    commit_message = f'Cut {version}'
     git('add', '.')
     git('commit', '-m', commit_message)
     git('tag', '-a', '-m', commit_message, get_version_with_prefix(version))
@@ -105,7 +105,7 @@ def build_release(_: argparse.Namespace) -> None:
         put_message(PYTHON_VERSION_PATH, f'from __future__ import annotations\n\n__version__ = {version_tuple}\n')
     build_messages_json(history)
     commit_release(version)
-    print("Release %s created!" % version)
+    print(f"Release {version} created!")
 
 
 def publish_release(args: argparse.Namespace) -> None:
@@ -148,9 +148,9 @@ def publish_release(args: argparse.Namespace) -> None:
         client = http.client.HTTPSConnection('api.github.com')
         client.request('POST', post_url, body=data, headers=headers)
         response = client.getresponse()
-        print("Release %s published!" % version_with_prefix
+        print(f"Release {version_with_prefix} published!"
               if response.status == 201 else
-              "Release %s failed!" % version_with_prefix)
+              f"Release {version_with_prefix} failed!")
     finally:
         client.close()
 

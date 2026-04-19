@@ -4,7 +4,6 @@ from .core.registry import LspTextCommand
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import List
 from typing import Tuple
 import os
 import sublime
@@ -72,14 +71,14 @@ class LspShowScopeNameCommand(LspTextCommand):
             self._render_with_fancy_stackframes(
                 scope,
                 scope_list,
-                cast(List[sublime.ContextStackFrame], stack),
+                cast('list[sublime.ContextStackFrame]', stack),
                 semantic_info,
             )
         else:
             self._render_with_plain_string_stackframes(
                 scope,
                 scope_list,
-                cast(List[str], stack),
+                cast('list[str]', stack),
                 semantic_info
             )
 
@@ -139,8 +138,8 @@ class LspShowScopeNameCommand(LspTextCommand):
                 resource_path = '${packages}/' + resource_path[9:]
                 display_path = display_path[9:]
             if frame.source_location[0] > 0:
-                href = '%s:%d:%d' % (resource_path, frame.source_location[0], frame.source_location[1])
-                location = '%s:%d:%d' % (display_path, frame.source_location[0], frame.source_location[1])
+                href = f'{resource_path}:{frame.source_location[0]}:{frame.source_location[1]}'
+                location = f'{display_path}:{frame.source_location[0]}:{frame.source_location[1]}'
             else:
                 href = resource_path
                 location = display_path

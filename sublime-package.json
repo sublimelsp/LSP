@@ -760,16 +760,12 @@
               "markdownDescription": "When logging to the `\"panel\"` (see `\"log_server\"`), if the params of the request or response or notification exceed this many characters, then print a `<snip>` to the panel instead. If you don't want a limit, set this to zero."
             },
             "clients": {
+              "type": "object",
+              "deprecationMessage": "Use `LanguageServers.sublime-settings` instead (\"Preferences: LSP Server Configurations\" from the command palette).",
               "additionalProperties": {
                 "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
-            },
-            "default_clients": {
-              "additionalProperties": {
-                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
-              },
-              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
             },
             "show_inlay_hints": {
               "type": "boolean",
@@ -825,6 +821,18 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      {
+        "file_patterns": [
+          "/LanguageServers.sublime-settings"
+        ],
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+          },
+          "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
         }
       },
       {

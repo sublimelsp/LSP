@@ -82,7 +82,6 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import List
 from typing_extensions import Concatenate
 from typing_extensions import deprecated
 from typing_extensions import ParamSpec
@@ -550,7 +549,9 @@ class SessionBuffer:
                 self._supported_custom_tokens.add(token_type)
 
     def _update_supported_commands(self) -> None:
-        self._supported_commands = set(self.session.get_capability('executeCommandProvider.commands') or [])
+        self._supported_commands = {'editor.action.showReferences'}  # Handled on client side in Session.execute_command
+        if commands := self.session.get_capability('executeCommandProvider.commands'):
+            self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
@@ -878,8 +879,8 @@ class SessionBuffer:
         scope_regions: dict[int, tuple[str, list[sublime.Region]]] = {}
         prev_line = 0
         prev_col_utf16 = 0
-        types_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenTypes')))
-        modifiers_legend = tuple(cast(List[str], self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
+        types_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenTypes')))
+        modifiers_legend = tuple(cast('list[str]', self.get_capability('semanticTokensProvider.legend.tokenModifiers')))
         for idx in range(0, len(self.semantic_tokens.data), 5):
             delta_line = self.semantic_tokens.data[idx]
             delta_start_utf16 = self.semantic_tokens.data[idx + 1]
@@ -908,7 +909,7 @@ class SessionBuffer:
             return
         session_name = self.session.config.name
         for region_key in self.semantic_tokens.active_region_keys.copy():
-            if region_key not in scope_regions.keys():
+            if region_key not in scope_regions:
                 self.semantic_tokens.active_region_keys.remove(region_key)
                 for sv in self.session_views:
                     sv.view.erase_regions(f"lsp_semantic_{session_name}_{region_key}")
@@ -1035,7 +1036,7 @@ class SessionBuffer:
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
         code_lenses = self._code_lenses.code_lenses_with_command()
         if self.session.uses_plugin():
-            # TODO should plugins announce the commands that they can handle, so we can filter out the unsupported
+            # TODO: should plugins announce the commands that they can handle, so we can filter out the unsupported
             # commands here as well?
             return code_lenses
         supported_code_lenses: list[ResolvedCodeLens] = []

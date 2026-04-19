@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from .core.registry import windows
 from .core.settings import client_configs
-from .core.windows import WindowManager
 from functools import partial
+from typing import TYPE_CHECKING
 import sublime
 import sublime_plugin
+
+if TYPE_CHECKING:
+    from .core.windows import WindowManager
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):

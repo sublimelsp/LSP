@@ -277,10 +277,14 @@ class SessionBuffer:
 
     def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
-        if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.on_text_document_publish_diagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        if wm := self.session.manager():
-            wm.on_diagnostics_updated()
+        # With pull diagnostics, the client is responsible to update or clear diagnostics when appropriate.
+        # Clear all diagnostics for this view if the file is outside of the workspace folders, so that they don't
+        # clutter the diagnostics panel and the Goto Diagnostics quick panel.
+        if self.session.diagnostics.has_provider() and (
+                not (workspace_folders := self.session.get_workspace_folders()) or
+                not any(folder.includes_uri(self._last_known_uri) for folder in workspace_folders)
+            ):
+            self.session.clear_diagnostics_for_uri(self._last_known_uri)
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.

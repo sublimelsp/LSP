@@ -74,6 +74,9 @@ class DiagnosticsStorage:
         self._providers.pop(registration_id)
         self._update_identifiers()
 
+    def has_provider(self) -> bool:
+        return bool(self._providers)
+
     def set_diagnostics(
         self, uri: DocumentUri, identifier: DiagnosticsIdentifier, diagnostics: list[Diagnostic]
     ) -> None:
@@ -81,6 +84,9 @@ class DiagnosticsStorage:
             raise ValueError(f'diagnostic stream with identifier {identifier} must be registered first')
         normalized_uri = normalize_uri(uri)
         self._diagnostics.setdefault(normalized_uri, {})[identifier] = diagnostics
+
+    def clear_diagnostics(self, uri: DocumentUri) -> None:
+        self._diagnostics.pop(normalize_uri(uri), None)
 
     def _sorted_diagnostics_for_uri(self, uri: DocumentUri, max_severity: int) -> list[Diagnostic]:
         return sorted(

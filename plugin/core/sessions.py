@@ -1916,6 +1916,11 @@ class Session(APIHandler, TransportCallbacks):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 
+    def clear_diagnostics_for_uri(self, uri: DocumentUri) -> None:
+        self.diagnostics.clear_diagnostics(uri)
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
+
     @request_handler('client/registerCapability')
     def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
         new_diagnostics_provider = False

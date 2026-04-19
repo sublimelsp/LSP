@@ -107,6 +107,7 @@ from .promise import Promise
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
+from .protocol import Point
 from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
@@ -133,6 +134,7 @@ from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
 from .views import MarkdownLangMap
+from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
 from abc import ABC
@@ -1370,7 +1372,16 @@ class Session(APIHandler, TransportCallbacks):
                     if len(references) == 1:
                         self.open_location_async(references[0])
                     else:
-                        LocationPicker(view, self, references, side_by_side=False)
+                        view_uri = uri_from_view(view)
+                        locations = sorted(
+                            references,
+                            key=lambda location: (
+                                normalize_uri(location['uri']) != view_uri,
+                                location['uri'],
+                                Point.from_lsp(location['range']['start'])
+                            )
+                        )
+                        LocationPicker(view, self, locations, side_by_side=False)
             return Promise.resolve(None)
         request = Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress)
         execute_command_promise = self.send_request_task(request)

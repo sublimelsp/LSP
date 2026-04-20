@@ -12,3 +12,32 @@
   one of those, please add the configuration to your user configurations file under
   `Packages/User/LanguageServers.sublime-settings`. Examples can be found on the
   documentation website at https://lsp.sublimetext.io/language_servers/.
+
+# Features
+
+- Add support for workspace/didChangeConfiguration (#2862) (jwortmann)
+- Add support for VSCode-specific editor.action.showReferences command (#2874) (jwortmann)
+- Add support for MarkupContent in diagnostic message (#2845) (jwortmann)
+
+# Fixes
+
+- Deep copy all ClientConfig properties when copying it (#2861) (Rafał Chłodnicki)
+- Fix crash on checking for membership (#2857) (Rafał Chłodnicki)
+- Fix formatting triggering on swapping lines (#2852) (Rafał Chłodnicki)
+- Mark changes triggered by edits as OTHER for on-type-formatting (#2854) (Rafał Chłodnicki)
+- Handle unknown diagnostic tags gracefully (#2847) (jwortmann)
+
+# Enhancements
+
+- Make Goto Diagnostics panel follow show_diagnostics_severity_level (#2856) (jwortmann)
+- Update style for diagnostic annotations (#2839) (jwortmann)
+
+# Refactors
+
+- Add an opt-in pre-commit hook for development (#2873) (Rafał Chłodnicki)
+- Refactor transports (#2851) (Rafał Chłodnicki)
+- Refactor code action annotations (#2835) (jwortmann)
+
+# Documentation
+
+- Add rumdl to list of language servers for Markdown (#2842) (Evan Read)

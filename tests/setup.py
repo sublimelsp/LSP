@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from .test_mocks import basic_responses
+from collections.abc import Generator
+from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
@@ -44,21 +47,43 @@ class YieldPromise:
         return self.__result
 
 
-def make_stdio_test_config() -> ClientConfig:
+def make_stdio_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """Create a config for starting the fake language server in STDIO mode."""
     return ClientConfig(
-        name="TEST",
+        name=name,
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         enabled=True,
     )
 
 
-def make_tcp_test_config() -> ClientConfig:
+def make_tcp_server_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP server, awaiting a single
+    client connection.
+    """
     return ClientConfig(
-        name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=server"],
         selector="text.plain",
+        initialization_options=DottedDict(init_options),
         tcp_port=0,  # select a free one for me
+        enabled=True,
+    )
+
+
+def make_tcp_client_test_config(name: str, init_options: dict[str, Any] | None = None) -> ClientConfig:
+    """
+    Create a config for starting the fake server in TCP mode, and make it act as the TCP client, where it connects to
+    the LSP plugin.
+    """
+    return ClientConfig(
+        name=name,
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port", "--mode=client"],
+        selector="text.plain",
+        initialization_options=DottedDict(init_options),
+        tcp_port=-1,  # select a free one for me
         enabled=True,
     )
 
@@ -85,7 +110,7 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
-        return make_stdio_test_config()
+        return make_stdio_test_config("TEST")
 
     @classmethod
     def setUpClass(cls) -> Generator:

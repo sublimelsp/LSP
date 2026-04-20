@@ -24,6 +24,7 @@ from .core.promise import Promise
 from .core.protocol import ClientNotification
 from .core.protocol import ClientRequest
 from .core.protocol import ClientResponse
+from .core.protocol import Error
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -59,6 +60,7 @@ __all__ = [
     'ContextOnStart',
     'DebouncerNonThreadSafe',
     'DottedDict',
+    'Error',
     'FileWatcher',
     'FileWatcherEvent',
     'FileWatcherEventType',

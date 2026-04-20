@@ -18,6 +18,7 @@
 | `on_post_start(window, view, folders, config)` | `on_start_async(context)` |
 | `on_settings_changed(settings: DottedDict)` | `on_after_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
+| `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
@@ -216,7 +217,31 @@ def on_pre_send_response_async(self, response: ClientResponse) -> None:
 
 ---
 
-### 7. Update `is_applicable`
+### 7. Replace `on_workspace_configuration`
+
+`on_workspace_configuration` has been removed from `LspPlugin`. In `AbstractPlugin` it was called each time the server sent a `workspace/configuration` request, allowing the plugin to modify the configuration value for a given section before it was returned to the server.
+
+The same result can be achieved in `LspPlugin` by overriding `on_pre_send_response_async` and intercepting the `workspace/configuration` response. The `response['result']` list contains one entry per requested configuration item and can be mutated before it is sent back to the server:
+
+```python
+# Before
+def on_workspace_configuration(self, params: ConfigurationItem, configuration: Any) -> Any:
+    if params.get('section') == 'myServer':
+        configuration['myKey'] = 'myValue'
+    return configuration
+```
+
+```python
+# After
+def on_pre_send_response_async(self, response: ClientResponse) -> None:
+    if response['method'] == 'workspace/configuration':
+        for item in response['result']:
+            item['myKey'] = 'myValue'
+```
+
+---
+
+### 8. Update `is_applicable`
 
 `is_applicable` now receives a `ContextIsApplicable` argument instead of separate `view` and `config` parameters:
 
@@ -238,7 +263,7 @@ def is_applicable(cls, context: ContextIsApplicable) -> bool:
 
 ---
 
-### 8. Replace `on_pre_server_command` with `@command_handler`
+### 9. Replace `on_pre_server_command` with `@command_handler`
 
 The callback-based `on_pre_server_command` is replaced by the `@command_handler` decorator. Each decorated method handles one specific command by name and receives the command's `arguments` list (or `None`):
 
@@ -264,7 +289,7 @@ def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[None]:
 
 ---
 
-### 9. Update `on_pre_send_request_async` and `on_server_response_async`
+### 10. Update `on_pre_send_request_async` and `on_server_response_async`
 
 Both methods have had their signatures simplified.
 
@@ -299,7 +324,7 @@ def on_server_response_async(self, response: ServerResponse) -> None:
 
 ---
 
-### 10. Use `@notification_handler` and `@request_handler` for custom messages
+### 11. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 

@@ -254,13 +254,10 @@ class Manager(ABC):
     # Mutators
 
     @abstractmethod
-    def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
+    async def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> Session | None:
         """
         Start a new Session with the given configuration. The initiating view is the view that caused this method to
         be called.
-
-        A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
-        However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
         raise NotImplementedError
 
@@ -1253,6 +1250,17 @@ class Session(APIHandler, TransportCallbacks):
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
+    async def initialize(
+        self,
+        variables: dict[str, str],
+        working_directory: str | None,
+        transport: TransportWrapper
+    ) -> InitializeResult
+        self.transport = transport
+        self.working_directory = working_directory
+        params = get_initialize_params(variables, self._workspace_folders, self.config)
+        return await self.request(Request.initialize(params))
+
     def _handle_initialize_success(self, result: InitializeResult) -> None:
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
@@ -2157,6 +2165,26 @@ class Session(APIHandler, TransportCallbacks):
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
+    async def request(self, request: Request[P, R]) -> R:
+        self.request_id += 1
+        request_id = self.request_id
+        if request.progress and isinstance(request.params, dict):
+            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        if request.on_partial_result and isinstance(request.params, dict):
+            request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        future = asyncio.Future()
+        self._response_handlers[request_id] = (
+            request,
+            lambda r: future.set_result(r),
+            lambda e: future.set_exception(ErrorException(e))
+        )
+        self._invoke_views(request, "on_request_started_async", request_id, request)
+        if self._plugin:
+            self._plugin.on_pre_send_request_async(request_id, request)
+        self._logger.outgoing_request(request_id, request.method, request.params)
+        await self.send_payload(request.to_payload(request_id))
+        return await future
+
     def send_request_async(
             self,
             request: Request[P, R],
@@ -2228,9 +2256,9 @@ class Session(APIHandler, TransportCallbacks):
             self.transport.close()
             self.transport = None
 
-    def send_payload(self, payload: JSONRPCMessage) -> None:
+    async def send_payload(self, payload: JSONRPCMessage) -> None:
         try:
-            self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
+            await self.transport.send(payload)  # pyright: ignore[reportOptionalMemberAccess]
         except AttributeError:
             pass
 

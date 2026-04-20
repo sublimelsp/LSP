@@ -58,6 +58,7 @@ import functools
 import json
 import sublime
 import threading
+import sublime_aio
 
 if TYPE_CHECKING:
     from .collections import DottedDict
@@ -143,6 +144,8 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
+        if config := self._needed_config(listener.view):
+            sublime_aio.run_coroutine(self.start(config, listener.view))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
@@ -244,75 +247,95 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     async def start(self, config: ClientConfig, initiating_view: sublime.View) -> Session | None:
-
         # It can be the case that some other view in the recent past is already starting a session for this config.
         future: asyncio.Future[Session] | None = None
         async with self._start_lock:
-            future = self._starting_sessions.get(config):
+            future = self._starting_sessions.get(config)
+            if future:
+                # Let that other initiating view finish the work.
+                break
 
-        if future:
-            # Let that other initiating view finish the work.
-            return await future
+            # No other view is starting a session for this config. Let's check if the config is applicable to the view,
+            # and check if there's already an existing initialized session for it.
+            file_path = initiating_view.file_name() or ''
+            inside = self._workspace.contains(file_path)
+            for session in self._sessions:
+                if session.config.name == config_name and session.handles_path(file_path, inside):
+                    # OK, this session is already initialized for this view.
+                    return session
 
-        # No other view is starting a session for this config. Let's check if the config is applicable to the view,
-        # and check if there's already an existing initialized session for it.
-        file_path = initiating_view.file_name() or ''
-        inside = self._workspace.contains(file_path)
-        for session in self._sessions:
-            if session.config.name == config_name and session.handles_path(file_path, inside):
-                # OK, this session is already initialized for this view.
-                return session
+            # No other view is starting a session for this config, and there's no initialized session for it. So we have
+            # to start it now. Copy the config, as plugins may modify it
+            config = ClientConfig.from_config(config, {})
+            config.set_view_status_handler(self)
 
-        # No other view is starting a session for this config, and there's no initialized session for it. So we have
-        # to start it now. Copy the config, as plugins may modify it
-        config = ClientConfig.from_config(config, {})
-        config.set_view_status_handler(self)
+            try:
+                workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
+                plugin_class = get_plugin(config.name)
+                variables = extract_variables(self._window)
+                cwd: str | None = None
+                if plugin_class is not None:
+                    if plugin_class.needs_update_or_installation():
+                        config.set_view_status(initiating_view, "installing...")
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
+                    cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
+                    if cannot_start_reason:
+                        config.erase_view_status(initiating_view)
+                        message = f"cannot start {config.name}: {cannot_start_reason}"
+                        self._config_manager.disable_config(config.name, only_for_session=True)
+                        # Continue with handling pending listeners
+                        self._new_session = None
+                        sublime.set_timeout_async(self._dequeue_listener_async)
+                        self._window.status_message(message)
+                        return None
+                    cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
+                config.set_view_status(initiating_view, "starting...")
+                session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
+                self._starting_sessions[config] = session
+                if cwd:
+                    transport_cwd: str | None = cwd
+                else:
+                    transport_cwd = workspace_folders[0].path if workspace_folders else None
+                transport = await config.create_transport_config().start(
+                    config.command, config.env, transport_cwd, variables, session)
+                if plugin_class:
+                    plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
+            except Exception as e:
+                message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
+                            'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
+                           f'Palette.\n\n--- Error: ---\n{e}')
+                exception_log(f"Unable to start language server for {config.name}", e)
+                if isinstance(e, CalledProcessError):
+                    print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
+                self._config_manager.disable_config(config.name, only_for_session=True)
+                config.erase_view_status(initiating_view)
+                sublime.message_dialog(message)
+                self._starting_sessions.pop(config)
+                return None
 
         try:
-            workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
-            plugin_class = get_plugin(config.name)
-            variables = extract_variables(self._window)
-            cwd: str | None = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
-                    config.set_view_status(initiating_view, "installing...")
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    config.erase_view_status(initiating_view)
-                    message = f"cannot start {config.name}: {cannot_start_reason}"
-                    self._config_manager.disable_config(config.name, only_for_session=True)
-                    # Continue with handling pending listeners
-                    self._new_session = None
-                    sublime.set_timeout_async(self._dequeue_listener_async)
-                    self._window.status_message(message)
-                    return
-                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
-            config.set_view_status(initiating_view, "starting...")
-            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if cwd:
-                transport_cwd: str | None = cwd
-            else:
-                transport_cwd = workspace_folders[0].path if workspace_folders else None
-            await transport = config.create_transport_config().start(
-                config.command, config.env, transport_cwd, variables, session)
-            if plugin_class:
-                plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             await session.initialize(variables=variables, transport=transport, working_directory=cwd)
         except Exception as e:
-            message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
-                        'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
-                       f'Palette.\n\n--- Error: ---\n{e}')
-            exception_log(f"Unable to initialize language server for {config.name}", e)
-            if isinstance(e, CalledProcessError):
-                print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
-            self._config_manager.disable_config(config.name, only_for_session=True)
+                message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
+                            'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
+                           f'Palette.\n\n--- Error: ---\n{e}')
+                exception_log(f"Unable to initialize language server for {config.name}", e)
+                if isinstance(e, CalledProcessError):
+                    print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
+                self._config_manager.disable_config(config.name, only_for_session=True)
+                sublime.message_dialog(message)
+                return None
+        finally:
+            async with self._start_lock:
+                self._starting_sessions.pop(config)
             config.erase_view_status(initiating_view)
-            sublime.message_dialog(message)
+
+        if future:
+            return await future
 
     def _create_logger(self, config_name: str) -> Logger:
         logger_map = {

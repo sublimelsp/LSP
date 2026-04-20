@@ -439,6 +439,13 @@ class ResponseError(TypedDict):
     data: NotRequired[LSPAny]
 
 
+class ResponseException(Exception):
+    error: ResponseError
+
+    def __init__(error: ResponseError) -> None:
+        self.error = error
+
+
 class ResolvedCodeLens(TypedDict):
     range: Range
     command: Command

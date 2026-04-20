@@ -6,6 +6,7 @@ from typing import Protocol
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
+import asyncio
 import functools
 import threading
 
@@ -206,6 +207,22 @@ class Promise(Generic[T]):
         if self._is_resolved():
             return Promise(sync_wrapper)
         return Promise(async_wrapper)
+
+    def __await__(self):
+        """You can `await` a Promise."""
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+
+        def resolve_callback(value: T) -> None:
+            if not future.done():
+                future.set_result(value)
+
+        if self._is_resolved():
+            resolve_callback(self._get_value())
+        else:
+            self._add_callback(resolve_callback)
+
+        return future.__await__()
 
     def _do_resolve(self, new_value: T) -> None:
         # No need to block as we can't change from resolved to unresolved.

@@ -21,12 +21,6 @@ resumes (since response to request will arrive after requested notification).
 from __future__ import annotations
 
 from argparse import ArgumentParser
-<<<<<<< HEAD
-import argparse
-from enum import IntEnum
-import enum
-=======
->>>>>>> chore/add-tests
 from typing import Any
 from typing import Awaitable
 from typing import Callable
@@ -46,6 +40,7 @@ import uuid
 __package__ = "server"
 __version__ = "2.0.0"
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 if sys.version_info[:2] < (3, 6):
@@ -53,6 +48,8 @@ if sys.version_info[:2] < (3, 6):
     sys.exit(1)
 =======
 >>>>>>> chore/add-tests
+=======
+>>>>>>> main
 
 
 StringDict = Dict[str, Any]

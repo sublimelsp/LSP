@@ -771,7 +771,7 @@ class SessionBufferProtocol(Protocol):
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
-        kinds: list[CodeActionKind] | None = ...,
+        kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
@@ -1995,7 +1995,7 @@ class Session(APIHandler, TransportCallbacks):
             return
         self.unregister_file_system_watchers(registration_id)
         # List of patterns aggregated by base path and kind.
-        aggregated_watchers: dict[tuple[str, WatchKind], list[str]] = {}
+        aggregated_watchers: dict[tuple[str, int | WatchKind], list[str]] = {}
         for config in watchers:
             kind = config.get("kind") or DEFAULT_WATCH_KIND
             glob_pattern = config["globPattern"]

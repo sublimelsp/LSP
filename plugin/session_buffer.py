@@ -986,7 +986,7 @@ class SessionBuffer:
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
-        kinds: list[CodeActionKind] | None = None,
+        kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         context: CodeActionContext = {

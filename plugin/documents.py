@@ -575,7 +575,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().diagnostics_gutter_marker:
             region = self.view.line(point)
             if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
-                kinds = [CodeActionKind.QuickFix]
+                kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
                 code_action_promises = [
                     sb.request_code_actions_async(self.view, region, diagnostics, kinds)
                         .then(partial(filter_quickfix_actions, len(diagnostics) > 1))
@@ -819,7 +819,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         version = self.view.change_count()
         region = self._stored_selection[0]
         diagnostics_by_config = dict(self.get_diagnostics_async(region))
-        kinds = [CodeActionKind.QuickFix]
+        kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
         code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
         for sb in session_buffers:
             if diagnostics := diagnostics_by_config.get(sb):

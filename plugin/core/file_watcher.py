@@ -15,7 +15,7 @@ FilePath = str
 FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
 
-def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> list[FileWatcherEventType]:
+def lsp_watch_kind_to_file_watcher_event_types(kind: int | WatchKind) -> list[FileWatcherEventType]:
     event_types: list[FileWatcherEventType] = []
     if kind & WatchKind.Create:
         event_types.append('create')

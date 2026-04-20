@@ -279,21 +279,21 @@ COMMAND_TO_CHANGE_EVENT_ACTION: dict[str, ChangeEventAction] = {
 # match any of the entries here, then the rule is that we split the base scope on the ".", and take the second
 # component. The resulting string is assumed to be the language ID. The official list is maintained at
 # https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
-LANGUAGE_IDENTIFIERS: dict[str, LanguageKind] = {
+LANGUAGE_IDENTIFIERS: dict[str, str] = {
     "source.c++": LanguageKind.CPP,
     "source.coffee": LanguageKind.Coffeescript,
     "source.cs": LanguageKind.CSharp,
     "source.dosbatch": LanguageKind.WindowsBat,
-    "source.fixedform-fortran": LanguageKind("fortran"),  # https://packagecontrol.io/packages/Fortran
+    "source.fixedform-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
     "source.git.commit": LanguageKind.GitCommit,
     "source.git.rebase": LanguageKind.GitRebase,
     "source.js": LanguageKind.JavaScript,
     "source.js.react": LanguageKind.JavaScriptReact,  # https://github.com/Thom1729/Sublime-JS-Custom
-    "source.json-tmlanguage": LanguageKind("jsonc"),  # https://github.com/SublimeText/PackageDev
-    "source.json.sublime": LanguageKind("jsonc"),  # https://github.com/SublimeText/PackageDev
+    "source.json-tmlanguage": "jsonc",  # https://github.com/SublimeText/PackageDev
+    "source.json.sublime": "jsonc",  # https://github.com/SublimeText/PackageDev
     "source.jsx": LanguageKind.JavaScriptReact,
-    "source.Kotlin": LanguageKind("kotlin"),  # https://github.com/vkostyukov/kotlin-sublime-package
-    "source.modern-fortran": LanguageKind("fortran"),  # https://packagecontrol.io/packages/Fortran
+    "source.Kotlin": "kotlin",  # https://github.com/vkostyukov/kotlin-sublime-package
+    "source.modern-fortran": "fortran",  # https://packagecontrol.io/packages/Fortran
     "source.objc": LanguageKind.ObjectiveC,
     "source.objc++": LanguageKind.ObjectiveCPP,
     "source.shader": LanguageKind.ShaderLab,  # https://github.com/waqiju/unity_shader_st3
@@ -303,16 +303,16 @@ LANGUAGE_IDENTIFIERS: dict[str, LanguageKind] = {
     "source.tsx": LanguageKind.TypeScriptReact,
     "source.unity.unity_shader": LanguageKind.ShaderLab,  # https://github.com/petereichinger/Unity3D-Shader
     "source.yaml-tmlanguage": LanguageKind.YAML,  # https://github.com/SublimeText/PackageDev
-    "source.yaml.helm": LanguageKind("helm"),  # https://github.com/SublimeText/YamlPipelines
-    "text.advanced_csv": LanguageKind("csv"),  # https://github.com/SublimeText/AFileIcon
+    "source.yaml.helm": 'helm',  # https://github.com/SublimeText/YamlPipelines
+    "text.advanced_csv": "csv",  # https://github.com/SublimeText/AFileIcon
     "text.django": LanguageKind.HTML,  # https://github.com/willstott101/django-sublime-syntax
     "text.html.handlebars": LanguageKind.Handlebars,
     "text.html.markdown": LanguageKind.Markdown,
     "text.html.markdown.rmarkdown": LanguageKind.R,  # https://github.com/REditorSupport/sublime-ide-r
-    "text.html.rails": LanguageKind("erb"),
-    "text.html.vue": LanguageKind("vue"),
+    "text.html.rails": "erb",
+    "text.html.vue": "vue",
     "text.jinja": LanguageKind.HTML,  # https://github.com/Sublime-Instincts/BetterJinja
-    "text.plain": LanguageKind("plaintext"),
+    "text.plain": "plaintext",
     "text.plist": LanguageKind.XML,  # https://bitbucket.org/fschwehn/sublime_plist
     "text.tex.latex": LanguageKind.LaTeX,
     "text.xml.xsl": LanguageKind.XSL,

@@ -163,6 +163,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
             for listener in list(frozen_listeners):
                 listener.on_text_changed_async(change_count, changes, action)
 
+        print(f'Notify text changed: {self._last_edit_action}')
         sublime.set_timeout_async(partial(notify, self._last_edit_action))
         self._reset_last_edit_action()
 
@@ -175,12 +176,14 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
             listener.revert_async()
 
     def set_last_edit_action(self, action: ChangeEventAction) -> None:
+        print(f'Set Last Edit Action: {action}')
         self._last_edit_action = action
         # ST should have already scheduled text_change event internally so resetting it from a timeout ensures it's
         # reset after the event was triggered and also in case the change event didn't trigger.
         sublime.set_timeout(self._reset_last_edit_action)
 
     def _reset_last_edit_action(self) -> None:
+        print(f'Reset Last Edit Action')
         self._last_edit_action = ChangeEventAction.TYPE
 
     def __repr__(self) -> str:
@@ -629,6 +632,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             format_on_paste = self.view.settings().get('lsp_format_on_paste', userprefs().lsp_format_on_paste)
             if format_on_paste and self.session_async("documentRangeFormattingProvider"):
                 return ('paste', {})
+        print(f'Command: {command_name}')
         if action := self.get_change_event_action(command_name, args):
             self.set_change_event_action(action)
         return None

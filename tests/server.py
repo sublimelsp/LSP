@@ -27,7 +27,6 @@ from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
-from typing import Literal
 from typing import Union
 import argparse
 import asyncio
@@ -39,11 +38,6 @@ import uuid
 
 __package__ = "server"
 __version__ = "2.0.0"
-
-
-if sys.version_info[:2] < (3, 6):
-    print("only works for python3.6 and higher")
-    sys.exit(1)
 
 
 StringDict = Dict[str, Any]

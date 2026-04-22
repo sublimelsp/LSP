@@ -63,9 +63,9 @@
   //   "env": { },
   //
   //   // Sets the diagnostics mode:
-  //   // "open_files" - All diagnostics reported from the server are shown.
+  //   // "all_files" - All diagnostics reported from the server are shown.
   //   // "workspace" - If there are project folders (folders in the side bar),
   //   //     diagnostics for files not within those folders are ignored.
-  //   "diagnostics_mode": "open_files",
+  //   "diagnostics_mode": "all_files",
   // }
 }

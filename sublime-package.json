@@ -309,14 +309,14 @@
               "markdownDescription": "Controls whether diagnostics are shown for files that are not within the project folders.",
               "type": "string",
               "enum": [
-                "open_files",
+                "all_files",
                 "workspace"
               ],
               "markdownEnumDescriptions": [
-                "Diagnostics are shown for all open files and they are cleared when the file closes.",
+                "Diagnostics are shown for all files.",
                 "Diagnostics for files not within the project folders are ignored."
               ],
-              "default": "open_files"
+              "default": "all_files"
             },
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."

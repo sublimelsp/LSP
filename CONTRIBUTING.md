@@ -20,7 +20,8 @@ The issues also allow you to gather some feedback and help from other contributo
 LSP uses [Pyright](https://microsoft.github.io/pyright) for type-checking and [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
 Run `tox` to check your work before submitting — this runs the same checks that CI enforces.
 
-> **Note:** Changes in the plugin code only apply after restarting Sublime Text.
+> [!NOTE]
+> Changes in the plugin code only apply after restarting Sublime Text.
 
 ### Recommended editor setup
 

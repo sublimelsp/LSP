@@ -730,7 +730,7 @@ class CompletionTriggerKind(IntEnum):
     """Completion was re-triggered as current completion list is incomplete"""
 
 
-class ApplyKind(IntFlag):
+class ApplyKind(IntEnum):
     """
     Defines how values from a set of defaults and an individual item will be
     merged.

@@ -282,6 +282,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
+        debug("on_session_initialized_async", session, self)
         if session.config.name not in self._session_views:
             session_view = SessionView(self, session, self._uri)
             self._session_views[session.config.name] = session_view

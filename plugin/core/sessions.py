@@ -2167,14 +2167,12 @@ class Session(APIHandler, TransportCallbacks):
             # Remember: this on_result callback is invoked on ST async thread.
             # Resolving asyncio futures *must* be done from the loop from which
             # they were created.
-            debug("got result:", response)
             loop.call_soon_threadsafe(lambda: future.set_result(response))
 
         def on_error(error: ErrorResponse) -> None:
             # Remember: this on_error callback is invoked on ST async thread.
             # Resolving asyncio futures *must* be done from the loop from which
             # they were created.
-            debug("got error:", error)
             loop.call_soon_threadsafe(lambda: future.set_exception(ErrorException(e)))
 
         self._response_handlers[request_id] = (request, on_result, on_error)
@@ -2190,22 +2188,17 @@ class Session(APIHandler, TransportCallbacks):
             request: Request[P, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None
-    ) -> int:
-        """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
-        self.request_id += 1
-        request_id = self.request_id
-        if request.progress and isinstance(request.params, dict):
-            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
-        if request.on_partial_result and isinstance(request.params, dict):
-            request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        on_error = on_error or (lambda _: None)
-        self._response_handlers[request_id] = (request, on_result, on_error)
-        self._invoke_views(request, "on_request_started_async", request_id, request)
-        if self._plugin:
-            self._plugin.on_pre_send_request_async(request_id, request)
-        self._logger.outgoing_request(request_id, request.method, request.params)
-        self.send_payload(request.to_payload(request_id))
-        return request_id
+    ) -> None:
+        """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
+
+        async def wrap() -> None:
+            try:
+                result = await self.request(request)
+                sublime.set_timeout_async(lambda: on_result(result))
+            except ResponseException as e:
+                sublime.set_timeout_async(lambda: on_error(e.data))
+
+        sublime_aio.run_coroutine(wrap())
 
     def send_request(
             self,
@@ -2214,7 +2207,7 @@ class Session(APIHandler, TransportCallbacks):
             on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
-        sublime.set_timeout_async(partial(self.send_request_async, request, on_result, on_error))
+        self.send_request_async(request, on_result, on_error)
 
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()

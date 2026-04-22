@@ -240,9 +240,9 @@ class TcpServerTransportConfig(TransportConfig):
 
 
 class TransportCallbacks:
-    def on_transport_close(self, exit_code: int, exception: Exception | None) -> None: ...
+    async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None: ...
 
-    def on_payload(self, payload: JSONRPCMessage) -> None: ...
+    async def on_payload(self, payload: JSONRPCMessage) -> None: ...
 
     def on_stderr_message(self, message: str) -> None: ...
 
@@ -274,11 +274,9 @@ async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str] | None:
     while True:
         line = await reader.readline()
         if not line:
-            # stream closed
             return None
         line = line.decode("ascii").strip()
         if not line:
-            # end of headers
             break
         key, value = line.split(":", 1)
         headers[key.strip().lower()] = value.strip()
@@ -367,7 +365,7 @@ class TransportWrapper:
     async def close(self) -> None:
         if self._transport is not None:
             if self._error_reader:
-                self._error_reader.on_transport_close()
+                await self._error_reader.on_transport_close()
                 self._error_reader = None
             if self._transport:
                 await self._transport.close()
@@ -380,13 +378,11 @@ class TransportWrapper:
                 if (payload := await self._transport.read()) is None:
                     continue
 
-                def invoke(p: JSONRPCMessage) -> None:
-                    if not self._transport:
-                        return
+                async def process_payload() -> None:
                     if callback_object := self._callback_object():
-                        callback_object.on_payload(p)
+                        await callback_object.on_payload(payload)
 
-                sublime.set_timeout_async(partial(invoke, payload))
+                asyncio.get_running_loop().create_task(process_payload())
         except (AttributeError, BrokenPipeError, StopLoopError):
             pass
         except Exception as ex:
@@ -414,13 +410,7 @@ class TransportWrapper:
                     pass
                 except Exception as ex:
                     exception = ex  # TODO: Old captured exception is overwritten
-
-        def invoke() -> None:
-            callback_object = self._callback_object()
-            if callback_object:
-                callback_object.on_transport_close(exit_code or 0, exception)
-
-        sublime.set_timeout_async(invoke)
+        await callback_object.on_transport_close(exit_code or 0, exception)
         await self.close()
 
 
@@ -468,9 +458,10 @@ class ErrorReader:
     async def _loop(self) -> None:
         try:
             while self._reader:
-                message = (await self._reader.readline()).decode("utf-8", "replace")
-                if not message:
-                    continue
+                raw = await self._reader.readline()
+                if not raw:
+                    break
+                message = raw.decode("utf-8", "replace")
                 callback_object = self._callback_object()
                 if callback_object:
                     callback_object.on_stderr_message(message.rstrip())
@@ -547,7 +538,6 @@ async def _start_subprocess(
 ) -> asyncio.subprocess.Process:
     debug(f"starting {args} in {cwd or os.getcwd()}")
     process = await asyncio.create_subprocess_exec(
-        args[0],
         *args,
         stdin=stdin,
         stdout=stdout,

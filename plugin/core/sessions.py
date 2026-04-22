@@ -112,6 +112,7 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
+from .protocol import ResponseException
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import TransportCallbacks
@@ -156,10 +157,12 @@ from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from weakref import WeakSet
+import asyncio
 import itertools
 import mdpopups
 import os
 import sublime
+import sublime_aio
 import weakref
 
 if TYPE_CHECKING:
@@ -270,7 +273,7 @@ class Manager(ABC):
     # Event callbacks
 
     @abstractmethod
-    def on_post_exit_async(self, session: Session, exit_code: int, exception: Exception | None) -> None:
+    async def on_post_exit(self, session: Session, exit_code: int, exception: Exception | None) -> None:
         """The given Session has stopped with the given exit code."""
         raise NotImplementedError
 
@@ -979,8 +982,6 @@ class Session(APIHandler, TransportCallbacks):
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
         self._registrations: dict[str, _RegistrationData] = {}
-        self._init_callback: InitCallback | None = None
-        self._initialize_error: tuple[int, Exception | None] | None = None
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
@@ -1238,32 +1239,20 @@ class Session(APIHandler, TransportCallbacks):
         else:
             self._workspace_folders = folders[:1]
 
-    def initialize_async(
-        self,
-        variables: dict[str, str],
-        working_directory: str | None,
-        transport: TransportWrapper,
-        init_callback: InitCallback
-    ) -> None:
-        self.transport = transport
-        self.working_directory = working_directory
-        params = get_initialize_params(variables, self._workspace_folders, self.config)
-        self._init_callback = init_callback
-        self.send_request_async(
-            Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
-
     async def initialize(
         self,
         variables: dict[str, str],
         working_directory: str | None,
         transport: TransportWrapper
-    ) -> InitializeResult
+    ) -> InitializeResult:
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
-        return await self.request(Request.initialize(params))
-
-    def _handle_initialize_success(self, result: InitializeResult) -> None:
+        try:
+            result = await self.request(Request.initialize(params))
+        except ResponseException as e:
+            await self.end()
+            raise
         capabilities = result['capabilities']
         self.capabilities.assign(capabilities)
         if self._workspace_folders and not self._supports_workspace_folders():
@@ -1276,12 +1265,12 @@ class Session(APIHandler, TransportCallbacks):
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
             self._plugin.on_server_response_async('initialize', Response(-1, result))
-        self.send_notification(Notification.initialized())
+        await self.notify(Notification.initialized())
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
         if code_action_kinds := self.get_capability('codeActionProvider.codeActionKinds'):
-            debug(f'{self.config.name}: supported code action kinds: {code_action_kinds}')
+            debug(f'{self.config.name}: Supported code action kinds: {code_action_kinds}')
         if semantic_token_types := self.get_capability('semanticTokensProvider.legend.tokenTypes'):
             debug(f'{self.config.name}: Supported semantic token types: {semantic_token_types}')
         if semantic_token_modifiers := self.get_capability('semanticTokensProvider.legend.tokenModifiers'):
@@ -1294,15 +1283,8 @@ class Session(APIHandler, TransportCallbacks):
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
-        if self._init_callback:
-            self._init_callback(self, False)
-            self._init_callback = None
         self.do_workspace_diagnostics_async()
-
-    def _handle_initialize_error(self, result: ResponseError) -> None:
-        self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
-        # Init callback called after transport is closed to avoid pre-mature GC of Session.
-        self.end_async()
+        return result
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
         folder_exclude_patterns = cast('list[str]', globalprefs().get('folder_exclude_patterns'))
@@ -2127,8 +2109,7 @@ class Session(APIHandler, TransportCallbacks):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
-    def end_async(self) -> None:
-        # TODO: Ensure this function is called only from the async thread
+    async def end(self) -> None:
         if self.exiting:
             return
         self.exiting = True
@@ -2146,33 +2127,29 @@ class Session(APIHandler, TransportCallbacks):
             watcher.destroy()
         self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
-        self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
+        try:
+            await self.request(Request.shutdown())
+        finally:
+            await self.exit()
 
     def shutdown_session_view_async(self, session_view: SessionViewProtocol) -> None:
         for status_key in self._status_messages:
             session_view.view.erase_status(status_key)
         session_view.shutdown_async()
 
-    def _handle_shutdown_result(self, _: Any) -> None:
-        self._progress.clear()
-        self.exit()
-
-    def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
+    async def on_transport_close(self, exit_code: int, exception: Exception | None) -> None:
         self.exiting = True
         self.state = ClientStates.STOPPING
         self.transport = None
         self._response_handlers.clear()
         if self._plugin:
-            self._plugin.on_session_end_async(exit_code, exception)
+            sublime.set_timeout_async(lambda: self._plugin.on_session_end_async(exit_code, exception))
             self._plugin = None
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
         if mgr := self.manager():
-            if self._init_callback:
-                self._init_callback(self, True)
-                self._init_callback = None
-            mgr.on_post_exit_async(self, exit_code, exception)
+            await mgr.on_post_exit(self, exit_code, exception)
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
@@ -2183,12 +2160,24 @@ class Session(APIHandler, TransportCallbacks):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if request.on_partial_result and isinstance(request.params, dict):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        future = asyncio.Future()
-        self._response_handlers[request_id] = (
-            request,
-            lambda r: future.set_result(r),
-            lambda e: future.set_exception(ErrorException(e))
-        )
+        future: asyncio.Future[R] = asyncio.Future()
+        loop = asyncio.get_running_loop()
+
+        def on_result(response: R) -> None:
+            # Remember: this on_result callback is invoked on ST async thread.
+            # Resolving asyncio futures *must* be done from the loop from which
+            # they were created.
+            debug("got result:", response)
+            loop.call_soon_threadsafe(lambda: future.set_result(response))
+
+        def on_error(error: ErrorResponse) -> None:
+            # Remember: this on_error callback is invoked on ST async thread.
+            # Resolving asyncio futures *must* be done from the loop from which
+            # they were created.
+            debug("got error:", error)
+            loop.call_soon_threadsafe(lambda: future.set_exception(ErrorException(e)))
+
+        self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:
             self._plugin.on_pre_send_request_async(request_id, request)
@@ -2248,23 +2237,26 @@ class Session(APIHandler, TransportCallbacks):
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification[P]) -> None:
+        sublime_aio.run_coroutine(self.notify(notification))
+
+    async def notify(self, notification: Notification[P]) -> None:
         if self._plugin:
             self._plugin.on_pre_send_notification_async(notification)
         self._logger.outgoing_notification(notification.method, notification.params)
-        self.send_payload(notification.to_payload())
+        await self.send_payload(notification.to_payload())
 
-    def send_response(self, response: Response[P]) -> None:
+    async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
-        self.send_payload(response.to_payload())
+        await self.send_payload(response.to_payload())
 
-    def send_error_response(self, request_id: int | str, error: Error) -> None:
+    async def send_error_response(self, request_id: int | str, error: Error) -> None:
         self._logger.outgoing_error_response(request_id, error)
-        self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
+        await self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
-    def exit(self) -> None:
-        self.send_notification(Notification.exit())
+    async def exit(self) -> None:
+        await self.notify(Notification.exit())
         if self.transport:
-            self.transport.close()
+            await self.transport.close()
             self.transport = None
 
     async def send_payload(self, payload: JSONRPCMessage) -> None:
@@ -2273,7 +2265,7 @@ class Session(APIHandler, TransportCallbacks):
         except AttributeError:
             pass
 
-    def deduce_payload(
+    async def deduce_payload(
         self,
         payload: JSONRPCMessage
     ) -> tuple[Callable | None, Any, str | int | None, str | None, str | None]:
@@ -2285,14 +2277,16 @@ class Session(APIHandler, TransportCallbacks):
                 req_id = payload["id"]
                 self._logger.incoming_request(req_id, method, result)
                 if handler is None:
-                    self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
+                    await self.send_error_response(req_id, Error(ErrorCodes.MethodNotFound, method))
                 else:
                     return (handler, result, req_id, "request", method)
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
                 if self._plugin:
-                    self._plugin.on_server_notification_async(Notification(method, result))
+                    sublime.set_timeout_async(
+                        lambda: self._plugin.on_server_notification_async(Notification(method, result))
+                    )
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2303,14 +2297,16 @@ class Session(APIHandler, TransportCallbacks):
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
             if self._plugin and not is_error:
-                self._plugin.on_server_response_async(method, response)  # type: ignore
+                sublime.set_timeout_async(
+                    lambda: self._plugin.on_server_response_async(method, response)  # type: ignore
+                )
             return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)  # pyright: ignore[reportUnreachable]
         return (None, None, None, None, None)
 
-    def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = self.deduce_payload(payload)
+    async def on_payload(self, payload: JSONRPCMessage) -> None:
+        handler, result, req_id, typestr, _method = await self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
             try:
@@ -2322,16 +2318,16 @@ class Session(APIHandler, TransportCallbacks):
                     try:
                         result_promise = cast('Promise[Response[Any]] | None', handler(result, req_id))
                     except Error as err:
-                        self.send_error_response(req_id, err)
+                        await self.send_error_response(req_id, err)
                         return
                     except Exception as ex:
-                        self.send_error_response(req_id, Error.from_exception(ex))
+                        await self.send_error_response(req_id, Error.from_exception(ex))
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
                 return
             if isinstance(result_promise, Promise):
-                result_promise.then(self.send_response)
+                await self.send_response(await result_promise)
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage

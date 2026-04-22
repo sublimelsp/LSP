@@ -212,16 +212,16 @@ class Promise(Generic[T]):
         """You can `await` a Promise."""
         loop = asyncio.get_running_loop()
         future = loop.create_future()
+        with self.mutex:
+            if self.resolved:
+                future.set_result(self.value)
+            else:
 
-        def resolve_callback(value: T) -> None:
-            if not future.done():
-                future.set_result(value)
+                def resolve_callback(value: T) -> None:
+                    # We don't know from which thread we are resolving, so use call_soon_threadsafe.
+                    loop.call_soon_threadsafe(functools.partial(future.set_result, value))
 
-        if self._is_resolved():
-            resolve_callback(self._get_value())
-        else:
-            self._add_callback(resolve_callback)
-
+                self.callbacks.append(resolve_callback)
         return future.__await__()
 
     def _do_resolve(self, new_value: T) -> None:

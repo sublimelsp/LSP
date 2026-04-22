@@ -4987,7 +4987,7 @@ class FileSystemWatcher(TypedDict):
 
     @since 3.17.0 support for relative patterns.
     """
-    kind: NotRequired[Union[Uint, WatchKind]]
+    kind: NotRequired['WatchKind']
     """
     The kind of events of interest. If omitted it defaults
     to WatchKind.Create | WatchKind.Change | WatchKind.Delete

@@ -945,7 +945,7 @@ class ClientConfig:
             auto_complete_selector=deepcopy(d.get("auto_complete_selector")),
             enabled=deepcopy(d.get("enabled", False)),
             initialization_options=DottedDict(
-                deepcopy(d.get("initialization_options"), d.get("initializationOptions"))),
+                deepcopy(d.get("initialization_options", d.get("initializationOptions")))),
             settings=DottedDict(deepcopy(d.get("settings"))),
             env=deepcopy(d.get("env", {})),
             experimental_capabilities=deepcopy(d.get("experimental_capabilities")),

@@ -8,6 +8,21 @@ import sublime
 class _SetTimeoutAsyncExecutor(concurrent.futures.Executor):
     """
     An Executor that wraps sublime.set_timeout_async.
+
+    Use in combination with an asyncio loop:
+
+    ```python
+    from .executors import executor
+
+    def some_cpu_heavy_function() -> int:
+        time.sleep(1)
+        return 42
+
+    async def foo() -> int:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(executor, some_cpu_heavy_function)
+        return result
+    ```
     """
 
     def __init__(self) -> None:

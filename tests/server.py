@@ -39,17 +39,11 @@ import uuid
 
 __package__ = "server"
 __version__ = "2.0.0"
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 
 if sys.version_info[:2] < (3, 6):
     print("only works for python3.6 and higher")
     sys.exit(1)
-=======
->>>>>>> chore/add-tests
-=======
->>>>>>> main
 
 
 StringDict = Dict[str, Any]

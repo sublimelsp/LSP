@@ -772,7 +772,7 @@ class ClientConfig:
         disabled_capabilities: DottedDict | None = None,
         file_watcher: FileWatcherConfig | None = None,
         semantic_tokens: dict[str, str] | None = None,
-        diagnostics_mode: str = "open_files",
+        diagnostics_mode: str = "all_files",
         path_maps: list[PathMap] | None = None,
         settings_registration: SettingsRegistration | None = None,
         all_settings: dict[str, Any] | None = None
@@ -803,8 +803,8 @@ class ClientConfig:
         :param file_watcher: Configuration for LSP file-watching (glob patterns, etc.).
         :param semantic_tokens: Mapping of semantic token types/modifiers to Sublime Text scopes for syntax
             highlighting.
-        :param diagnostics_mode: When to show diagnostics. `"open_files"` (default) shows them only for open views;
-            `"workspace"` shows them for the whole workspace.
+        :param diagnostics_mode: When to show diagnostics. `"all_files"` (default) shows them for all views;
+            `"workspace"` filters out diagnostics for files not within the workspace folders.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
         :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
@@ -916,7 +916,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
-            diagnostics_mode=str(s.get("diagnostics_mode", "open_files")),
+            diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
             all_settings=deepcopy(s.to_dict())
@@ -952,7 +952,7 @@ class ClientConfig:
             disabled_capabilities=disabled_capabilities,
             file_watcher=deepcopy(d.get("file_watcher", {})),
             semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
-            diagnostics_mode=deepcopy(d.get("diagnostics_mode", "open_files")),
+            diagnostics_mode=deepcopy(d.get("diagnostics_mode", "all_files")),
             path_maps=PathMap.parse(d.get("path_maps")),
             all_settings=deepcopy(d)
         )

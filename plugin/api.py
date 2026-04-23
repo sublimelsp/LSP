@@ -448,10 +448,14 @@ class LspPlugin(APIHandler):
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """
-        Constructs a new instance. Your instance is constructed after a response to the initialize request.
+        Constructs a new instance.
 
-        :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
-                                  self.weaksession(), but don't hold on to that reference.
+        Called inside ``initialize_async`` — after the transport is established but before the LSP ``initialize``
+        request is sent to the server. ``on_start_async`` is invoked immediately after construction.
+
+        :param weaksession: A weak reference to the ``Session``. Resolve it with ``self.weaksession()`` when needed,
+                            but do not store the resulting strong reference as an attribute - doing so creates a
+                            reference cycle that prevents garbage collection.
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession

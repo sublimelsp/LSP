@@ -536,8 +536,8 @@ class LspPlugin(APIHandler):
 
     def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
         """
-        Called when a language server reports to open an URI. If you know how to handle this URI, then return a Promise
-        resolved with `sublime.Sheet` instance.
+        Called when a language server reports to open an URI as a tab in the editor. If you know how to handle this URI,
+        then return a Promise resolved with the `sublime.Sheet` instance.
         """
         pass
 

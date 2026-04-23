@@ -776,7 +776,7 @@ class SessionBufferProtocol(Protocol):
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
-        kinds: list[CodeActionKind] | None = ...,
+        kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
     ) -> Promise[list[Command | CodeAction] | Error | None]:
         ...
@@ -1733,8 +1733,6 @@ class Session(APIHandler, TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics_async(self) -> None:
-        if self.config.diagnostics_mode != 'workspace':
-            return
         if not self.get_workspace_folders():
             return
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:
@@ -1920,6 +1918,11 @@ class Session(APIHandler, TransportCallbacks):
         if session_buffer := self.get_session_buffer_for_uri_async(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
+
+    def clear_diagnostics_for_uri(self, uri: DocumentUri) -> None:
+        self.diagnostics.clear_diagnostics(uri)
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     @request_handler('client/registerCapability')
     def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:

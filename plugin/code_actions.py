@@ -44,7 +44,7 @@ ConfigName = str
 CodeActionOrCommand = Union[CodeAction, Command]
 CodeActionsByConfigName = Tuple[ConfigName, List[CodeActionOrCommand]]
 
-MENU_ACTIONS_KINDS = [CodeActionKind.Refactor, CodeActionKind.Source]
+MENU_ACTIONS_KINDS: list[str | CodeActionKind] = [CodeActionKind.Refactor, CodeActionKind.Source]
 
 
 def is_command(action: CodeActionOrCommand) -> TypeGuard[Command]:
@@ -97,7 +97,7 @@ class CodeActionsManager:
         view: sublime.View,
         region: sublime.Region,
         session_buffer_diagnostics: list[tuple[SessionBufferProtocol, list[Diagnostic]]],
-        only_kinds: list[CodeActionKind] | None = None,
+        only_kinds: list[str | CodeActionKind] | None = None,
         manual: bool = False,
     ) -> Promise[list[CodeActionsByConfigName]]:
         """
@@ -370,7 +370,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self,
         event: dict | None = None,
         point: int | None = None,
-        only_kinds: list[CodeActionKind] | None = None
+        only_kinds: list[str | CodeActionKind] | None = None
     ) -> bool:
         if self.applies_to_context_menu(event):
             return self.is_enabled(event, point)
@@ -380,7 +380,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self,
         edit: sublime.Edit,
         event: dict | None = None,
-        only_kinds: list[CodeActionKind] | None = None,
+        only_kinds: list[str | CodeActionKind] | None = None,
         code_actions_by_config: list[CodeActionsByConfigName] | None = None
     ) -> None:
         if code_actions_by_config:
@@ -388,7 +388,7 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         self._run_async(only_kinds)
 
-    def _run_async(self, only_kinds: list[CodeActionKind] | None = None) -> None:
+    def _run_async(self, only_kinds: list[str | CodeActionKind] | None = None) -> None:
         view = self.view
         region = first_selection_region(view)
         if region is None:

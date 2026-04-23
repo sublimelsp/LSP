@@ -450,7 +450,7 @@ def text_document_code_action_params(
     view: sublime.View,
     region: sublime.Region,
     diagnostics: list[Diagnostic],
-    only_kinds: list[CodeActionKind] | None = None,
+    only_kinds: list[str | CodeActionKind] | None = None,
     manual: bool = False
 ) -> CodeActionParams:
     trigger_kind = CodeActionTriggerKind.Invoked.value if manual else CodeActionTriggerKind.Automatic.value

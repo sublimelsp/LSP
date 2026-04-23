@@ -338,7 +338,8 @@ class LspPlugin(APIHandler):
     prevent plugin from starting while showing relevant message in the status field.
 
     Use `@notification_handler` and `@request_handler` decorators to handle non-standard
-    server-to-client notifications and requests respectively.
+    server-to-client notifications and requests respectively. Use `@command_handler` to handle
+    specific ``workspace/executeCommand`` requests sent by the server.
     """
 
     name: Final[str] = ''

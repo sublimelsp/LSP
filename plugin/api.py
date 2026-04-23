@@ -445,7 +445,7 @@ class LspPlugin(APIHandler):
 
         :returns:   The markdown language map, or None
         """
-        pass
+        return None
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

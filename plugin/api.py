@@ -250,12 +250,12 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
 
     Usage:
         ```py
-        @command_handler('editor.action.showReferences')
+        @command_handler('rust-analyzer.showReferences')
         def on_show_references(self, arguments: list[LSPAny] | None) -> Promise[None]:
             ...
         ```
 
-    :param      command_name:   The command name as advertised by the server (e.g., 'editor.action.showReferences').
+    :param      command_name:   The command name as advertised by the server (e.g., 'rust-analyzer.showReferences').
     :returns:   A decorator that registers the function as a command handler.
     """
 

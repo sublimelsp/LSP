@@ -245,8 +245,8 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
     """
     Decorator to mark a method as a handler for a specific server command.
 
-    When the language server sends a `workspace/executeCommand` request with the given
-    command name, the decorated method is called with the command's `arguments` list (or `None` if absent).
+    Intercepts a `workspace/executeCommand` request with the given command name when triggered by the client.
+    The decorated method is called with the command's `arguments` list (or `None` if absent).
 
     Usage:
         ```py
@@ -338,8 +338,9 @@ class LspPlugin(APIHandler):
     prevent plugin from starting while showing relevant message in the status field.
 
     Use `@notification_handler` and `@request_handler` decorators to handle non-standard
-    server-to-client notifications and requests respectively. Use `@command_handler` to handle
-    specific ``workspace/executeCommand`` requests sent by the server.
+    server-to-client notifications and requests respectively.
+
+    Use `@command_handler` to handle server-specific commands.
     """
 
     name: Final[str] = ''

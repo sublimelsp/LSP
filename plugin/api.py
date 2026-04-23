@@ -268,12 +268,12 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
 
 @dataclass
 class ContextIsApplicable:
-    """Context passed to `LspPlugin.is_applicable_async`."""
+    """Context passed to `LspPlugin.is_applicable`."""
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
     view: sublime.View
-    """Template variables to be substituted in `command`, `env`, and `initialization_options`."""
+    """The view being evaluated for server applicability."""
     workspace_folders: list[WorkspaceFolder]
     """The workspace folders active for this session."""
 
@@ -288,7 +288,7 @@ class ContextOnBeforeStart:
     """Template variables to be substituted in `command`, `env`, and `initialization_options`.
     Can be mutated to inject or override variables."""
     view: sublime.View
-    """The view relevant to the method being called."""
+    """The view whose opening or activation triggered the server start."""
     working_directory: str | None
     """The working directory for the server process. Can be mutated to override the default (first workspace folder)."""
     workspace_folders: list[WorkspaceFolder]

@@ -1454,8 +1454,15 @@ class Session(APIHandler, TransportCallbacks):
             if isinstance(self._plugin, LspPlugin):
                 scheme, _ = parse_uri(uri)
                 if handler_name := self._plugin.uri_handler_map.get(scheme):
+
+                    def on_sheet_opened(sheet: sublime.Sheet | None) -> Promise[sublime.View | None]:
+                        if sheet and (view := sheet.view()):
+                            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+                            return Promise.resolve(view)
+                        return Promise.resolve(None)
+
                     handler = getattr(self._plugin, handler_name)
-                    return handler(uri, r, flags, group)
+                    return handler(uri, r, flags, group).then(on_sheet_opened)
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None

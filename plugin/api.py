@@ -468,7 +468,7 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    def on_after_initialize_async(self) -> None:
+    def on_initialize_async(self) -> None:
         """
         Called after the `initialize` response has been received from the language server.
 

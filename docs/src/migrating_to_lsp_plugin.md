@@ -16,7 +16,7 @@
 | `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
 | `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_before_start_async(context)` |
 | `on_post_start(window, view, folders, config)` | `on_start_async(context)` |
-| `on_settings_changed(settings: DottedDict)` | `on_after_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
+| `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
@@ -26,7 +26,7 @@
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
 | *(not present)* | `on_before_start_async(context)` — classmethod, replaces several AbstractPlugin hooks |
 | *(not present)* | `on_start_async(context)` — replaces `on_before_initialize` |
-| *(not present)* | `on_after_initialize_async()` |
+| *(not present)* | `on_initialize_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
 All other instance methods (`on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`, `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`) are available in `LspPlugin` with the same name and the same signature.
@@ -197,11 +197,11 @@ def on_start_async(self, context: ContextOnStart) -> None:
 
 `LspPlugin` does not provide an `on_settings_changed` override point. The method has been removed because it was only called once right after sending the `initialize` request. Depending on what you were doing in it, one of these replacements applies:
 
-**One-time setup at startup** — move the logic to `on_after_initialize_async`, which is called after a successful `initialize` response:
+**One-time setup at startup** — move the logic to `on_initialize_async`, which is called after a successful `initialize` response:
 
 ```python
 # After — one-time setup
-def on_after_initialize_async(self) -> None:
+def on_initialize_async(self) -> None:
     if session := self.weaksession():
         session.config.settings.set('foo', 'bar')
 ```

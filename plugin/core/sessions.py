@@ -1268,7 +1268,7 @@ class Session(APIHandler, TransportCallbacks):
                 self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
         if self._plugin and isinstance(self._plugin, LspPlugin):
-            self._plugin.on_after_initialize_async()
+            self._plugin.on_initialize_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")

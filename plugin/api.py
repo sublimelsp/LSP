@@ -279,8 +279,8 @@ class ContextIsApplicable:
 
 
 @dataclass
-class ContextOnBeforeStart:
-    """Context passed to `LspPlugin.on_before_start_async`."""
+class ContextOnPreStart:
+    """Context passed to `LspPlugin.on_pre_start_async`."""
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session. Can be mutated to adjust server settings before startup."""
@@ -416,7 +416,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def on_before_start_async(cls, context: ContextOnBeforeStart) -> None:
+    def on_pre_start_async(cls, context: ContextOnPreStart) -> None:
         """
         Called just before the language server process is started.
 

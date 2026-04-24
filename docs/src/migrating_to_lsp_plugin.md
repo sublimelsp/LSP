@@ -14,7 +14,7 @@
 | `name()` | Removed - derived automatically from the package name and exposed as a `name` property |
 | `configuration()` | Removed - settings file located automatically |
 | `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
-| `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_before_start_async(context)` |
+| `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_pre_start_async(context)` |
 | `on_post_start(window, view, folders, config)` | `on_start_async(context)` |
 | `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
@@ -24,7 +24,7 @@
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
-| *(not present)* | `on_before_start_async(context)` — classmethod, replaces several AbstractPlugin hooks |
+| *(not present)* | `on_pre_start_async(context)` — classmethod, replaces several AbstractPlugin hooks |
 | *(not present)* | `on_start_async(context)` — replaces `on_before_initialize` |
 | *(not present)* | `on_initialize_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
@@ -121,9 +121,9 @@ server_dir = cls.plugin_storage_path / "server"
 
 ---
 
-### 4. Consolidate server setup into `on_before_start_async`
+### 4. Consolidate server setup into `on_pre_start_async`
 
-`on_before_start_async` is the single hook called just before the server process starts. It runs on a worker thread and replaces `needs_update_or_installation`, `install_or_update`, `can_start`, `on_pre_start`, and `additional_variables` from `AbstractPlugin`.
+`on_pre_start_async` is the single hook called just before the server process starts. It runs on a worker thread and replaces `needs_update_or_installation`, `install_or_update`, `can_start`, `on_pre_start`, and `additional_variables` from `AbstractPlugin`.
 
 Mutate `context.configuration`, `context.variables`, and `context.working_directory` to influence how the server is launched. To abort startup with a user-visible message, raise `PluginStartError` with a chosen message:
 
@@ -155,11 +155,11 @@ def additional_variables(cls) -> dict[str, str] | None:
 
 ```python
 # After
-from LSP.plugin import ContextOnBeforeStart
+from LSP.plugin import ContextOnPreStart
 from LSP.plugin import PluginStartError
 
 @classmethod
-def on_before_start_async(cls, context: ContextOnBeforeStart) -> None:
+def on_pre_start_async(cls, context: ContextOnPreStart) -> None:
     if not server_binary().exists():
         download_server(server_binary())
     if not server_binary().exists():

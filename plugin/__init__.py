@@ -3,7 +3,7 @@ from __future__ import annotations
 from .api import AbstractPlugin
 from .api import command_handler
 from .api import ContextIsApplicable
-from .api import ContextOnBeforeStart
+from .api import ContextOnPreStart
 from .api import ContextOnStart
 from .api import LspPlugin
 from .api import notification_handler
@@ -56,7 +56,7 @@ __all__ = [
     'ClientRequest',
     'ClientResponse',
     'ContextIsApplicable',
-    'ContextOnBeforeStart',
+    'ContextOnPreStart',
     'ContextOnStart',
     'DebouncerNonThreadSafe',
     'DottedDict',

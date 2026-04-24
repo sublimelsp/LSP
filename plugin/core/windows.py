@@ -10,7 +10,7 @@ from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
 from ..api import ContextIsApplicable
-from ..api import ContextOnBeforeStart
+from ..api import ContextOnPreStart
 from ..api import get_plugin
 from ..api import LspPlugin
 from ..api import PluginStartError
@@ -269,11 +269,11 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd = workspace_folders[0].path if workspace_folders else None
-            context = ContextOnBeforeStart(config, variables, initiating_view, cwd, workspace_folders)
+            context = ContextOnPreStart(config, variables, initiating_view, cwd, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
-                    plugin_class.on_before_start_async(context)
+                    plugin_class.on_pre_start_async(context)
                     cwd = context.working_directory
                 else:
                     if plugin_class.needs_update_or_installation():

@@ -280,7 +280,6 @@ def uri_handler(scheme: str) -> Callable[[UriHandler], UriHandler]:
     """
     Decorator to mark a method as a handler for URIs with a specific scheme.
 
-    Intercepts a `window/showDocument` or `workspace/openUri` request when the URI scheme matches.
     The decorated method receives the full URI and must return a `Promise` resolved with the opened
     `sublime.Sheet`, or `None` if the URI could not be opened.
 
@@ -288,11 +287,7 @@ def uri_handler(scheme: str) -> Callable[[UriHandler], UriHandler]:
         ```py
         @uri_handler('foo')
         def on_open_foo_uri(
-            self,
-            uri: DocumentUri,
-            r: Range | None = None,
-            flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
-            group: int = -1,
+            self, uri: DocumentUri, r: Range | None, flags: sublime.NewFileFlags, group: int
         ) -> Promise[sublime.Sheet | None]:
             ...
         ```

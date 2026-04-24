@@ -374,11 +374,7 @@ from LSP.plugin import uri_handler
 
 @uri_handler('foo')
 def on_open_foo_uri(
-    self,
-    uri: DocumentUri,
-    r: Range | None = None,
-    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
-    group: int = -1,
+    self, uri: DocumentUri, r: Range | None, flags: sublime.NewFileFlags, group: int
 ) -> Promise[sublime.Sheet | None]:
     title, content, syntax = render_foo_uri(uri)
     if session := self.weaksession():

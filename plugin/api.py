@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..protocol import LSPAny
+from ..protocol import Range
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
 from .core.protocol import Response
@@ -50,15 +51,21 @@ __all__ = [
     'PluginStartError',
     'notification_handler',
     'request_handler',
+    'uri_handler',
 ]
 
 HANDLER_MARKER = '__HANDLER_MARKER'
 COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'
+URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
+UriHandler = Callable[
+    [Any, 'DocumentUri', 'Range | None', sublime.NewFileFlags, int],
+    'Promise[sublime.Sheet | None]'
+]
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -175,11 +182,14 @@ class APIHandler:
         # the reference cycle self → bound_method.__self__ → self that prevents GC.
         self.handler_attr_map: dict[str, str] = {}
         self.command_handler_map: dict[str, str] = {}
+        self.uri_handler_map: dict[str, str] = {}
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if hasattr(value, HANDLER_MARKER):
                 self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
             elif hasattr(value, COMMAND_HANDLER_MARKER):
                 self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
+            elif hasattr(value, URI_HANDLER_MARKER):
+                self.uri_handler_map[getattr(value, URI_HANDLER_MARKER)] = name
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
@@ -261,6 +271,38 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
 
     def decorator(func: CommandHandler) -> CommandHandler:
         setattr(func, COMMAND_HANDLER_MARKER, command_name)
+        return func
+
+    return decorator
+
+
+def uri_handler(scheme: str) -> Callable[[UriHandler], UriHandler]:
+    """
+    Decorator to mark a method as a handler for URIs with a specific scheme.
+
+    Intercepts a `window/showDocument` or `workspace/openUri` request when the URI scheme matches.
+    The decorated method receives the full URI and must return a `Promise` resolved with the opened
+    `sublime.Sheet`, or `None` if the URI could not be opened.
+
+    Usage:
+        ```py
+        @uri_handler('foo')
+        def on_open_foo_uri(
+            self,
+            uri: DocumentUri,
+            r: Range | None = None,
+            flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+            group: int = -1,
+        ) -> Promise[sublime.Sheet | None]:
+            ...
+        ```
+
+    :param      scheme:     The URI scheme to handle (e.g. `'foo'` for URIs like `foo://...`).
+    :returns:   A decorator that registers the function as a URI handler for the given scheme.
+    """
+
+    def decorator(func: UriHandler) -> UriHandler:
+        setattr(func, URI_HANDLER_MARKER, scheme)
         return func
 
     return decorator
@@ -521,13 +563,6 @@ class LspPlugin(APIHandler):
         Notifies about a notification message that has been received from the language server.
 
         :param    notification:  The notification object.
-        """
-        pass
-
-    def on_open_uri_async(self, uri: DocumentUri) -> Promise[sublime.Sheet] | None:
-        """
-        Called when a language server reports to open an URI as a tab in the editor. If you know how to handle this URI,
-        then return a Promise resolved with the `sublime.Sheet` instance.
         """
         pass
 

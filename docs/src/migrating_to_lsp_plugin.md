@@ -20,6 +20,7 @@
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
+| `on_open_uri_async(uri, callback)` | `@uri_handler` decorator |
 | `markdown_language_id_to_st_syntax_map()` | `markdown_language_map` setting in `.sublime-settings` |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
@@ -29,7 +30,7 @@
 | *(not present)* | `on_initialize_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
-All other instance methods (`on_pre_send_notification_async`, `on_server_notification_async`, `on_open_uri_async`, `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`) are available in `LspPlugin` with the same name and the same signature.
+All other instance methods (`on_pre_send_notification_async`, `on_server_notification_async`, `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`) are available in `LspPlugin` with the same name and the same signature.
 
 ---
 
@@ -353,7 +354,41 @@ Each entry maps a fenced-code-block language tag to a two-element array: the fir
 
 ---
 
-### 12. Use `@notification_handler` and `@request_handler` for custom messages
+### 12. Replace `on_open_uri_async` with `@uri_handler`
+
+The callback-based `on_open_uri_async` is replaced by the `@uri_handler` decorator. Each decorated method handles URIs whose scheme matches the argument and receives the full URI string. Return a `Promise` resolved with the opened `sublime.Sheet`, or `None` if the URI cannot be handled:
+
+```python
+# Before
+def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, str, str], None]) -> bool:
+    if uri.startswith("foo://"):
+        title, content, syntax = render_foo_uri(uri)
+        callback(title, content, syntax)
+        return True
+    return False
+```
+
+```python
+# After
+from LSP.plugin import uri_handler
+
+@uri_handler('foo')
+def on_open_foo_uri(
+    self,
+    uri: DocumentUri,
+    r: Range | None = None,
+    flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+    group: int = -1,
+) -> Promise[sublime.Sheet | None]:
+    title, content, syntax = render_foo_uri(uri)
+    if session := self.weaksession():
+        return session.open_scratch_buffer(title, content, syntax, uri, r, flags, group)
+    return Promise.resolve(None)
+```
+
+---
+
+### 13. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 

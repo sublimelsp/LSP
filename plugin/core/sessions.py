@@ -1449,17 +1449,13 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
-        # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
+        # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
-                def on_sheet_opened(sheet: sublime.Sheet) -> sublime.View | None:
-                    if view := sheet.view():
-                        view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
-                        return view
-                    return None
-
-                if promise := self._plugin.on_open_uri_async(uri):
-                    return promise.then(on_sheet_opened)
+                scheme, _ = parse_uri(uri)
+                if handler_name := self._plugin.uri_handler_map.get(scheme):
+                    handler = getattr(self._plugin, handler_name)
+                    return handler(uri, r, flags, group)
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
@@ -1522,28 +1518,43 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-
-            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
-                if title is not None:
-                    if group > -1:
-                        self.window.focus_group(group)
-                    view = self.window.new_file(syntax=syntax, flags=flags)
-                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                    # settings object here at our leisure.
-                    view.settings().set("lsp_uri", uri)
-                    view.set_scratch(True)
-                    view.set_name(title)
-                    view.run_command("append", {"characters": content})
-                    view.set_read_only(True)
-                    if r:
-                        center_selection(view, r)
-                    sublime.set_timeout_async(lambda: result[1](view))
-                else:
-                    sublime.set_timeout_async(lambda: result[1](None))
-
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
+            pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
             return result[0]
         return None
+
+    def open_scratch_buffer(
+        self,
+        title: str | None,
+        content: str,
+        syntax: str,
+        uri: DocumentUri,
+        r: Range | None,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1,
+    ) -> Promise[sublime.View | None]:
+        task: PackagedTask[sublime.View | None] = Promise.packaged_task()
+        promise, resolve = task
+
+        def continue_on_main_thread() -> None:
+            if title is None:
+                resolve(None)
+                return
+            if group > -1:
+                self.window.focus_group(group)
+            view = self.window.new_file(syntax=syntax, flags=flags)
+            # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+            # settings object here at our leisure.
+            view.settings().set("lsp_uri", uri)
+            view.set_scratch(True)
+            view.set_name(title)
+            view.run_command("append", {"characters": content})
+            view.set_read_only(True)
+            if r:
+                center_selection(view, r)
+            resolve(view)
+
+        sublime.set_timeout(continue_on_main_thread)
+        return promise
 
     def open_location_async(
         self,

@@ -11,6 +11,7 @@ from .api import PluginStartError
 from .api import register_plugin
 from .api import request_handler
 from .api import unregister_plugin
+from .api import uri_handler
 from .core.collections import DottedDict
 from .core.constants import MarkdownLangMap
 from .core.css import css
@@ -96,5 +97,6 @@ __all__ = [
     'request_handler',
     'unregister_plugin',
     'uri_from_view',
+    'uri_handler',
     'uri_to_filename',  # deprecated
 ]

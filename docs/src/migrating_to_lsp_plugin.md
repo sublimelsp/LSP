@@ -382,6 +382,8 @@ def on_open_foo_uri(
     return Promise.resolve(None)
 ```
 
+Returning the result of  `session.open_scratch_buffer()` is equivalent to invoking the `callback` before.
+
 ---
 
 ### 13. Use `@notification_handler` and `@request_handler` for custom messages

@@ -15,6 +15,7 @@ from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
 from .core.constants import COMPLETION_KINDS
+from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
@@ -25,7 +26,6 @@ from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import html_wrapper
-from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup

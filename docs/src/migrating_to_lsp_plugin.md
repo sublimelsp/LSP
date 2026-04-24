@@ -20,6 +20,7 @@
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
+| `markdown_language_id_to_st_syntax_map()` | `markdown_language_map` setting in `.sublime-settings` |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
@@ -324,7 +325,35 @@ def on_server_response_async(self, response: ServerResponse) -> None:
 
 ---
 
-### 11. Use `@notification_handler` and `@request_handler` for custom messages
+### 11. Replace `markdown_language_id_to_st_syntax_map` with the `markdown_language_map` setting
+
+`LspPlugin` no longer provides the `markdown_language_id_to_st_syntax_map` classmethod. The same effect is achieved by adding a `markdown_language_map` key directly to the package's `.sublime-settings` file (or to any `ClientConfig` override).
+
+```python
+# Before
+@classmethod
+def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
+    return {
+        "js": (("js",), ("MyPackage/JsSyntax",)),
+        "ts": (("ts",), ("MyPackage/TsSyntax",)),
+    }
+```
+
+```json
+// After — in LSP-foo.sublime-settings (or any ClientConfig override)
+{
+    "markdown_language_map": {
+        "js": [["js"], ["MyPackage/JsSyntax"]],
+        "ts": [["ts"], ["scope:source.ts"]]
+    }
+}
+```
+
+Each entry maps a fenced-code-block language tag to a two-element array: the first element is an array of additional aliases, and the second is an array of Sublime Text syntaxes (e.g. `"MyPackage/MySyntaxLanguage"`) or `scope:BASE_SCOPE` selectors (e.g. `"scope:source.js"`). See [mdpopups `sublime_user_lang_map`](https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map) for the full format description.
+
+---
+
+### 12. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 

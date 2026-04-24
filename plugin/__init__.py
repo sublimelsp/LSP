@@ -12,6 +12,7 @@ from .api import register_plugin
 from .api import request_handler
 from .api import unregister_plugin
 from .core.collections import DottedDict
+from .core.constants import MarkdownLangMap
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.file_watcher import FileWatcher
@@ -44,7 +45,6 @@ from .core.url import filename_to_uri
 from .core.url import parse_uri
 from .core.url import uri_to_filename  # deprecated
 from .core.version import __version__
-from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from .core.workspace import WorkspaceFolder
 

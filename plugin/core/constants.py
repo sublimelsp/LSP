@@ -14,6 +14,7 @@ from enum import IntEnum
 from enum import IntFlag
 from os.path import dirname
 from os.path import join
+from typing import Dict
 from typing import Tuple
 import sublime
 
@@ -23,6 +24,7 @@ except ImportError:
     marko_version = None
 
 
+MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 SublimeKind = Tuple[int, str, str]
 
 

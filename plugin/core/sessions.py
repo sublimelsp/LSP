@@ -83,6 +83,7 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .constants import ChangeEventAction
+from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
@@ -139,7 +140,6 @@ from .url import parse_uri
 from .version import __version__
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
-from .views import MarkdownLangMap
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -1196,7 +1196,11 @@ class Session(APIHandler, TransportCallbacks):
             sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
-        return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
+        if self.config.resolved_markdown_language_map is not None:
+            return self.config.resolved_markdown_language_map
+        if isinstance(self._plugin, AbstractPlugin):
+            return self._plugin.markdown_language_id_to_st_syntax_map()
+        return None
 
     def handles_path(self, file_path: str | None, inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():

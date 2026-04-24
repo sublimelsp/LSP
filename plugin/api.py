@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from ..protocol import DocumentUri
     from ..protocol import ExecuteCommandParams
     from .core.collections import DottedDict
+    from .core.constants import MarkdownLangMap
     from .core.promise import Promise
     from .core.protocol import ClientNotification
     from .core.protocol import ClientRequest
@@ -41,7 +42,6 @@ if TYPE_CHECKING:
     from .core.sessions import SessionViewProtocol
     from .core.transports import TransportWrapper
     from .core.types import ClientConfig
-    from .core.views import MarkdownLangMap
     from .core.workspace import WorkspaceFolder
     from weakref import ref
 
@@ -435,18 +435,6 @@ class LspPlugin(APIHandler):
                                 `context.working_directory` can be mutated to influence how the server is launched.
         """
         pass
-
-    @classmethod
-    def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
-        """
-        Override this method to tweak the syntax highlighting of code blocks in popups from your language server.
-        The returned object should be a dictionary exactly in the form of mdpopup's language_map setting.
-
-        See: https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map
-
-        :returns:   The markdown language map, or None
-        """
-        return None
 
     def __init__(self, weaksession: ref[Session]) -> None:
         """

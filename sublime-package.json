@@ -377,6 +377,9 @@
                 "diagnostics_mode": {
                   "$ref": "#/definitions/ClientDiagnosticsMode"
                 },
+                "markdown_language_map": {
+                  "$ref": "#/definitions/ClientMarkdownLanguageMap"
+                },
               }
             },
             "SemanticTokens": {
@@ -384,6 +387,45 @@
               "items": {
                 "type": "string"
               }
+            },
+            "ClientMarkdownLanguageMap": {
+              "type": "object",
+              "markdownDescription": "A mapping of markdown language identifiers to aliases and Sublime Text syntaxes, used for syntax-highlighting fenced code blocks in popups.\n\nEach key is a fenced-code-block language tag (e.g. `\"js\"`). Each value is a two-element array: the first element is an array of additional aliases, and the second is an array of Sublime Text syntaxes associated with that language (e.g. `[\"MyPackage/MySyntaxLanguage\"]`) or `scope:BASE_SCOPE` selectors (e.g. `[\"scope:source.js\"]`).\n\nSee [mdpopups `sublime_user_lang_map`](https://facelessuser.github.io/sublime-markdown-popups/settings/#mdpopupssublime_user_lang_map) for the full format description.",
+              "additionalProperties": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "markdownDescription": "Additional aliases for given language."
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "markdownDescription": "Syntax files associated with given language / alias."
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "defaultSnippets": [
+                {
+                  "body": {
+                    "language": [
+                      [
+                        "mapping_alias"
+                      ],
+                      [
+                        "MyPackage/MySyntaxLanguage"
+                      ]
+                    ]
+                  }
+                }
+              ]
             }
           }
         }
@@ -983,6 +1025,9 @@
             },
             "semantic_tokens": {
               "$ref": "sublime://settings/LSP#/definitions/SemanticTokens"
+            },
+            "markdown_language_map": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientMarkdownLanguageMap"
             },
           }
         }

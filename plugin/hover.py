@@ -10,6 +10,7 @@ from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
 from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.open import lsp_range_from_uri_fragment
@@ -31,7 +32,6 @@ from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
-from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup

@@ -815,8 +815,8 @@ class ClientConfig:
             `"workspace"` filters out diagnostics for files not within the workspace folders.
         :param markdown_language_map: Optional mapping of markdown language identifiers to aliases and Sublime Text
             syntaxes, used for syntax-highlighting fenced code blocks in popups. Each key is a fenced-code-block
-            language tag. Each value is a two-element tuple: aliases and syntax paths or ``scope:BASE_SCOPE``
-            selectors. Follows the format of mdpopups' ``sublime_user_lang_map`` setting. ``None`` (the default)
+            language tag. Each value is a two-element tuple: aliases and syntax paths or `scope:BASE_SCOPE`
+            selectors. Follows the format of mdpopups' `sublime_user_lang_map` setting. `None` (the default)
             applies no extra mapping.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).

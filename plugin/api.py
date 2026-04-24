@@ -301,7 +301,7 @@ class ContextOnStart:
 
     transport: TransportWrapper
     """The raw transport to the language server process.
-    Use ``send()`` for JSON-RPC messages or ``send_bytes()`` for raw bytes."""
+    Use `send()` for JSON-RPC messages or `send_bytes()` for raw bytes."""
 
 
 class LspPlugin(APIHandler):
@@ -309,7 +309,7 @@ class LspPlugin(APIHandler):
     Base class for LSP helper packages.
 
     Subclass this to integrate a language server with LSP. The session name is automatically
-    derived from the top-level package name (i.e. ``__module__.split('.')[0]``), so no manual
+    derived from the top-level package name (i.e. `__module__.split('.')[0]`), so no manual
     configuration is needed.
 
     A minimal integration looks like this:
@@ -330,11 +330,11 @@ class LspPlugin(APIHandler):
         LspFooPlugin.unregister()
     ```
 
-    LSP will look for a settings file at ``Packages/<package_name>/<package_name>.sublime-settings``
-    to read the ``command``, ``selector``, ``schemes``, and other server configuration. Override
+    LSP will look for a settings file at `Packages/<package_name>/<package_name>.sublime-settings`
+    to read the `command`, `selector`, `schemes`, and other server configuration. Override
     the classmethods below to customise behaviour beyond what the settings file provides.
 
-    Raise ``PluginStartError`` exception from any of the classmethods (but typically from ``install_async``) to
+    Raise `PluginStartError` exception from any of the classmethods (but typically from `install_async`) to
     prevent plugin from starting while showing relevant message in the status field.
 
     Use `@notification_handler` and `@request_handler` decorators to handle non-standard
@@ -440,10 +440,10 @@ class LspPlugin(APIHandler):
         """
         Constructs a new instance.
 
-        Called inside ``initialize_async`` — after the transport is established but before the LSP ``initialize``
-        request is sent to the server. ``on_start_async`` is invoked immediately after construction.
+        Called inside `initialize_async` — after the transport is established but before the LSP `initialize`
+        request is sent to the server. `on_start_async` is invoked immediately after construction.
 
-        :param weaksession: A weak reference to the ``Session``. Resolve it with ``self.weaksession()`` when needed,
+        :param weaksession: A weak reference to the `Session`. Resolve it with `self.weaksession()` when needed,
                             but do not store the resulting strong reference as an attribute - doing so creates a
                             reference cycle that prevents garbage collection.
         """
@@ -452,19 +452,19 @@ class LspPlugin(APIHandler):
 
     def on_start_async(self, context: ContextOnStart) -> None:
         """
-        Called after the transport is established but before the LSP ``initialize`` request is sent.
+        Called after the transport is established but before the LSP `initialize` request is sent.
 
         Override this method when your server requires out-of-band communication that must happen
         before LSP negotiation begins — for example, sending a proprietary handshake or
         authentication token over the raw transport.
 
         Warning:
-            Anything sent via ``context.transport.send()`` or ``context.transport.send_bytes()`` bypasses the LSP
+            Anything sent via `context.transport.send()` or `context.transport.send_bytes()` bypasses the LSP
             message queue. Only use this hook for pre-initialization messages that your server explicitly expects
-            before the ``initialize`` request. Sending arbitrary LSP messages here will corrupt the session.
+            before the `initialize` request. Sending arbitrary LSP messages here will corrupt the session.
 
-        :param context:     The startup context. ``context.transport`` exposes ``send(payload)`` for JSON-RPC messages
-                            and ``send_bytes(payload)`` for raw bytes, both of which write directly to the transport.
+        :param context:     The startup context. `context.transport` exposes `send(payload)` for JSON-RPC messages
+                            and `send_bytes(payload)` for raw bytes, both of which write directly to the transport.
         """
         pass
 

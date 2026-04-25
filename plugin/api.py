@@ -549,7 +549,7 @@ class LspPlugin(APIHandler):
         pass
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """Called when the context of the session buffer has changed or a new buffer was opened."""
+        """Called when the content of the session buffer has changed or a new buffer was opened."""
         pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:
@@ -854,7 +854,7 @@ class AbstractPlugin(APIHandler, ABC):
         return False
 
     def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """Called when the context of the session buffer has changed or a new buffer was opened."""
+        """Called when the content of the session buffer has changed or a new buffer was opened."""
         pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:

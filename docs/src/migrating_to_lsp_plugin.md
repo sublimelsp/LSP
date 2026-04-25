@@ -225,12 +225,12 @@ def on_pre_send_response_async(self, response: ClientResponse) -> None:
             item['myKey'] = 'myValue'
 ```
 
-**Overriding settings in outgoing `workspace/didChangeConfiguration` notifications** — if the client sends a `workspace/didChangeConfiguration` notification and you need to override its `settings` payload before it reaches the server, intercept it in `on_pre_send_notification_async`:
+**Reacting to client setting changes** — if you need to react to user changing client settings then intercept `workspace/didChangeConfiguration` notification in `on_pre_send_notification_async`:
 
 ```python
 def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
     if notification['method'] == 'workspace/didChangeConfiguration':
-        cast('Any', notification['params']['settings'])['myKey'] = 'myValue'
+        doSomeWork()
 ```
 
 ---

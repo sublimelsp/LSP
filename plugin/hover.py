@@ -347,7 +347,7 @@ class LspHoverCommand(LspTextCommand):
     def try_open_custom_uri_async(self, uri: str) -> None:
         uri_parts = urlsplit(uri)
         r = lsp_range_from_uri_fragment(uri_parts.fragment)
-        if r is not None:
+        if r:
             uri = urlunsplit(uri_parts._replace(fragment=''))
         for session in self.sessions():
             if session.try_open_uri_async(uri, r) is not None:

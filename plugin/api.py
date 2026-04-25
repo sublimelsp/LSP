@@ -63,7 +63,13 @@ P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
 UriHandler = Callable[
-    [Any, 'DocumentUri', 'Range | None', sublime.NewFileFlags, int],
+    ['DocumentUri', 'Range | None', sublime.NewFileFlags],
+    'Promise[sublime.Sheet | None]'
+]
+# The decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
+# implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
+UriHandlerForDecorator = Callable[
+    [Any, 'DocumentUri', 'Range | None', sublime.NewFileFlags],
     'Promise[sublime.Sheet | None]'
 ]
 
@@ -182,14 +188,19 @@ class APIHandler:
         # the reference cycle self → bound_method.__self__ → self that prevents GC.
         self.handler_attr_map: dict[str, str] = {}
         self.command_handler_map: dict[str, str] = {}
-        self.uri_handler_map: dict[str, str] = {}
+        self._uri_handler_map: dict[str, str] = {}
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if hasattr(value, HANDLER_MARKER):
                 self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
             elif hasattr(value, COMMAND_HANDLER_MARKER):
                 self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
             elif hasattr(value, URI_HANDLER_MARKER):
-                self.uri_handler_map[getattr(value, URI_HANDLER_MARKER)] = name
+                self._uri_handler_map[getattr(value, URI_HANDLER_MARKER)] = name
+
+    def get_uri_handler(self, scheme: str) -> UriHandler | None:
+        if handler_name := self._uri_handler_map.get(scheme):
+            return getattr(self, handler_name)
+        return None
 
 
 def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Callable[[Any, P], None]]:
@@ -276,7 +287,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
     return decorator
 
 
-def uri_handler(scheme: str) -> Callable[[UriHandler], UriHandler]:
+def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerForDecorator]:
     """
     Decorator to mark a method as a handler for URIs with a specific scheme.
 
@@ -296,7 +307,7 @@ def uri_handler(scheme: str) -> Callable[[UriHandler], UriHandler]:
     :returns:   A decorator that registers the function as a URI handler for the given scheme.
     """
 
-    def decorator(func: UriHandler) -> UriHandler:
+    def decorator(func: UriHandlerForDecorator) -> UriHandlerForDecorator:
         setattr(func, URI_HANDLER_MARKER, scheme)
         return func
 

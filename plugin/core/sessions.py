@@ -1453,16 +1453,8 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             if isinstance(self._plugin, LspPlugin):
                 scheme, _ = parse_uri(uri)
-                if handler_name := self._plugin.uri_handler_map.get(scheme):
-
-                    def on_sheet_opened(sheet: sublime.Sheet | None) -> Promise[sublime.View | None]:
-                        if sheet and (view := sheet.view()):
-                            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
-                            return Promise.resolve(view)
-                        return Promise.resolve(None)
-
-                    handler = getattr(self._plugin, handler_name)
-                    return handler(uri, r, flags, group).then(on_sheet_opened)
+                if handler := self._plugin.get_uri_handler(scheme):
+                    return handler(uri, r, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
             else:
                 return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
@@ -1551,17 +1543,24 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(syntax=syntax, flags=flags)
             # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
             # settings object here at our leisure.
-            view.settings().set("lsp_uri", uri)
             view.set_scratch(True)
             view.set_name(title)
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
-            if r:
-                center_selection(view, r)
-            resolve(view)
+            self._on_sheet_opened(view.sheet(), uri, r).then(resolve)
 
         sublime.set_timeout(continue_on_main_thread)
         return promise
+
+    def _on_sheet_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> Promise[sublime.View | None]:
+        if sheet and (view := sheet.view()):
+            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+            if r:
+                center_selection(view, r)
+            return Promise.resolve(view)
+        return Promise.resolve(None)
 
     def open_location_async(
         self,

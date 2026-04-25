@@ -74,7 +74,7 @@ class PluginStartError(Exception):
     """
     Abort startup with a user-visible message.
 
-    Raise it from `install_async` or other LspPlugin's `@classmethod` to prevent plugin from starting.
+    Raise it from `on_pre_start_async` to prevent plugin from starting.
     First argument is the text that will be shown in the status field.
     """
 

@@ -30,7 +30,7 @@
 | *(not present)* | `on_initialize_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
-All other instance methods (`on_pre_send_notification_async`, `on_server_notification_async`, `on_session_buffer_changed_async`, `on_selection_modified_async`, `on_session_end_async`) are available in `LspPlugin` with the same name and the same signature.
+The methods `on_session_buffer_changed_async`, `on_selection_modified_async`, and `on_session_end_async` are available in `LspPlugin` with the same name and the same signature. `on_pre_send_notification_async` and `on_server_notification_async` keep the same names but use more specific argument types - see step 11.
 
 ---
 
@@ -335,7 +335,47 @@ def on_server_response_async(self, response: ServerResponse) -> None:
 
 ---
 
-### 11. Replace `markdown_language_id_to_st_syntax_map` with the `markdown_language_map` setting
+### 11. Update `on_pre_send_notification_async` and `on_server_notification_async`
+
+Both methods use more specific types in `LspPlugin`. `ClientNotification` and `ServerNotification` are each a `Union` of per-method typed dicts, so a type checker can narrow `notification['params']` to the exact params type for a given method once you check `notification['method']` - no cast needed.
+
+`on_pre_send_notification_async` receives a `ClientNotification` instead of the generic `Notification[Any]`:
+
+```python
+# Before
+def on_pre_send_notification_async(self, notification: Notification[Any]) -> None:
+    if notification.method == 'textDocument/didOpen':
+        params: DidOpenTextDocumentParams = notification.params  # type: ignore
+        log(params['textDocument']['uri'])
+```
+
+```python
+# After
+def on_pre_send_notification_async(self, notification: ClientNotification) -> None:
+    if notification['method'] == 'textDocument/didOpen':
+        log(notification['params']['textDocument']['uri'])  # params fully typed, no cast
+```
+
+`on_server_notification_async` receives a `ServerNotification` instead of `Notification[Any]`:
+
+```python
+# Before
+def on_server_notification_async(self, notification: Notification[Any]) -> None:
+    if notification.method == 'window/logMessage':
+        params: LogMessageParams = notification.params  # type: ignore
+        log(params['message'])
+```
+
+```python
+# After
+def on_server_notification_async(self, notification: ServerNotification) -> None:
+    if notification['method'] == 'window/logMessage':
+        log(notification['params']['message'])  # params fully typed, no cast
+```
+
+---
+
+### 12. Replace `markdown_language_id_to_st_syntax_map` with the `markdown_language_map` setting
 
 `LspPlugin` no longer provides the `markdown_language_id_to_st_syntax_map` classmethod. The same effect is achieved by adding a `markdown_language_map` key directly to the package's `.sublime-settings` file (or to any `ClientConfig` override).
 
@@ -363,7 +403,7 @@ Each entry maps a fenced-code-block language tag to a two-element array: the fir
 
 ---
 
-### 12. Replace `on_open_uri_async` with `@uri_handler`
+### 13. Replace `on_open_uri_async` with `@uri_handler`
 
 The callback-based `on_open_uri_async` is replaced by the `@uri_handler` decorator. Each decorated method handles URIs whose scheme matches the argument and receives the full URI string. Return a `Promise` resolved with the opened `sublime.Sheet`, or `None` if the URI cannot be handled:
 
@@ -393,7 +433,7 @@ Returning the result of  `session.open_scratch_buffer()` is equivalent to invoki
 
 ---
 
-### 13. Use `@notification_handler` and `@request_handler` for custom messages
+### 14. Use `@notification_handler` and `@request_handler` for custom messages
 
 `LspPlugin` introduces decorators to handle non-standard server-to-client notifications and requests. These replace manual approach with method names transformed using logic from `method2attr`:
 

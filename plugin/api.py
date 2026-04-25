@@ -382,10 +382,6 @@ class LspPlugin(APIHandler):
     Use this as your directory to install server files. Its path is `$DATA/Package Storage/<Package Name>`.
     """
 
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
-        cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
-
     @classmethod
     @final
     def register(cls) -> None:
@@ -473,6 +469,10 @@ class LspPlugin(APIHandler):
         """
         super().__init__()
         self.weaksession: ref[Session] = weaksession
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
+        cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
     def on_transport_ready_async(self, transport: TransportWrapper) -> None:
         """

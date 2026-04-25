@@ -284,8 +284,8 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
     """
     Decorator to mark a method as a handler for URIs with a specific scheme.
 
-    The decorated method receives the full URI and must return a `Promise` resolved with the opened
-    `sublime.Sheet`, or `None` if the URI could not be opened.
+    The decorated method receives the full URI and a `sublime.NewFileFlags` bitflag and must return a `Promise` resolved
+    with the opened `sublime.Sheet`, or `None` if the URI could not be opened.
 
     Usage:
         ```py

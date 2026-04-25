@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from .api import AbstractPlugin
 from .api import command_handler
-from .api import ContextIsApplicable
-from .api import ContextOnPreStart
+from .api import IsApplicableContext
 from .api import LspPlugin
 from .api import notification_handler
+from .api import OnPreStartContext
 from .api import PluginStartError
 from .api import register_plugin
 from .api import request_handler
@@ -57,8 +57,6 @@ __all__ = [
     'ClientNotification',
     'ClientRequest',
     'ClientResponse',
-    'ContextIsApplicable',
-    'ContextOnPreStart',
     'DebouncerNonThreadSafe',
     'DottedDict',
     'Error',
@@ -66,11 +64,13 @@ __all__ = [
     'FileWatcherEvent',
     'FileWatcherEventType',
     'FileWatcherProtocol',
+    'IsApplicableContext',
     'LspPlugin',
     'LspTextCommand',
     'LspWindowCommand',
     'MarkdownLangMap',
     'Notification',
+    'OnPreStartContext',
     'PackagedTask',
     'PluginStartError',
     'Promise',

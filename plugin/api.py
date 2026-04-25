@@ -307,7 +307,7 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
 
 
 @dataclass
-class ContextIsApplicable:
+class IsApplicableContext:
     """Context passed to `LspPlugin.is_applicable`."""
 
     configuration: ClientConfig
@@ -319,7 +319,7 @@ class ContextIsApplicable:
 
 
 @dataclass
-class ContextOnPreStart:
+class OnPreStartContext:
     """Context passed to `LspPlugin.on_pre_start_async`."""
 
     configuration: ClientConfig
@@ -426,7 +426,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable(cls, context: ContextIsApplicable) -> bool:
+    def is_applicable(cls, context: IsApplicableContext) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 
@@ -447,7 +447,7 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def on_pre_start_async(cls, context: ContextOnPreStart) -> None:
+    def on_pre_start_async(cls, context: OnPreStartContext) -> None:
         """
         Called just before the language server process is started.
 

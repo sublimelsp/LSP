@@ -17,7 +17,7 @@
 | `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_pre_start_async(context)` |
 | `on_post_start(window, view, folders, config)` | `__init__(weaksession)` |
 | `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
-| `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
+| `is_applicable(view, config)` | `is_applicable(context: IsApplicableContext)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
 | `on_open_uri_async(uri, callback)` | `@uri_handler` decorator |
@@ -156,11 +156,11 @@ def additional_variables(cls) -> dict[str, str] | None:
 
 ```python
 # After
-from LSP.plugin import ContextOnPreStart
+from LSP.plugin import OnPreStartContext
 from LSP.plugin import PluginStartError
 
 @classmethod
-def on_pre_start_async(cls, context: ContextOnPreStart) -> None:
+def on_pre_start_async(cls, context: OnPreStartContext) -> None:
     if not server_binary().exists():
         download_server(server_binary())
     if not server_binary().exists():
@@ -261,7 +261,7 @@ def on_pre_send_response_async(self, response: ClientResponse) -> None:
 
 ### 8. Update `is_applicable`
 
-`is_applicable` now receives a `ContextIsApplicable` argument instead of separate `view` and `config` parameters:
+`is_applicable` now receives a `IsApplicableContext` argument instead of separate `view` and `config` parameters:
 
 ```python
 # Before
@@ -272,10 +272,10 @@ def is_applicable(cls, view: sublime.View, config: ClientConfig) -> bool:
 
 ```python
 # After
-from LSP.plugin import ContextIsApplicable
+from LSP.plugin import IsApplicableContext
 
 @classmethod
-def is_applicable(cls, context: ContextIsApplicable) -> bool:
+def is_applicable(cls, context: IsApplicableContext) -> bool:
     return super().is_applicable(context) and my_condition(context.view)
 ```
 

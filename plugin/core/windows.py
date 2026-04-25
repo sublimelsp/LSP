@@ -9,10 +9,10 @@ from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
 from ..api import AbstractPlugin
-from ..api import ContextIsApplicable
-from ..api import ContextOnPreStart
 from ..api import get_plugin
+from ..api import IsApplicableContext
 from ..api import LspPlugin
+from ..api import OnPreStartContext
 from ..api import PluginStartError
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
@@ -249,7 +249,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             if not handled:
                 if plugin := get_plugin(config.name):
                     if issubclass(plugin, LspPlugin):
-                        context = ContextIsApplicable(config, view, self._workspace.get_workspace_folders())
+                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
                         if plugin.is_applicable(context):
                             return config
                     elif plugin.is_applicable(view, config):
@@ -269,7 +269,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
             cwd = workspace_folders[0].path if workspace_folders else None
-            context = ContextOnPreStart(config, variables, initiating_view, cwd, workspace_folders)
+            context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
             if plugin_class:
                 if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")

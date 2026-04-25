@@ -53,7 +53,7 @@ URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
-CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
+CommandHandler = Callable[[Any, 'list[P] | None'], 'Promise[None]']
 UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
@@ -261,6 +261,8 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
         def on_show_references(self, arguments: list[LSPAny] | None) -> Promise[None]:
             ...
         ```
+
+    Instead of `LSPAny` you can use more appropriate type for the specific command that is being handled.
 
     :param      command_name:   The command name as advertised by the server (e.g., 'rust-analyzer.showReferences').
     :returns:   A decorator that registers the function as a command handler.

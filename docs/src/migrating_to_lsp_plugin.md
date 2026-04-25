@@ -15,7 +15,7 @@
 | `configuration()` | Removed - settings file located automatically |
 | `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
 | `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_pre_start_async(context)` |
-| `on_post_start(window, view, folders, config)` | `on_start_async(context)` |
+| `on_post_start(window, view, folders, config)` | `__init__(weaksession)` |
 | `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
 | `is_applicable(view, config)` | `is_applicable(context: ContextIsApplicable)` |
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
@@ -26,7 +26,7 @@
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `register_plugin(MyPlugin)` / `unregister_plugin(MyPlugin)` | `MyPlugin.register()` / `MyPlugin.unregister()` - no standalone import needed |
 | *(not present)* | `on_pre_start_async(context)` — classmethod, replaces several AbstractPlugin hooks |
-| *(not present)* | `on_start_async(context)` — replaces `on_before_initialize` |
+| *(not present)* | `on_transport_ready_async(transport)` - new hook, called after transport is up but before `initialize` |
 | *(not present)* | `on_initialize_async()` |
 | *(not present)* | `on_pre_send_response_async(response)` |
 
@@ -172,9 +172,9 @@ def on_pre_start_async(cls, context: ContextOnPreStart) -> None:
 
 ---
 
-### 5. Replace `on_post_start` with `on_start_async`
+### 5. Replace `on_post_start` with `__init__`
 
-`on_post_start` ran after the subprocess started but before the `initialize` handshake. `on_start_async` covers the same window — it is called after the transport is established and before the `initialize` request is sent. Use `context.transport` to send any pre-initialization messages your server requires:
+`on_post_start` ran after the subprocess started but before the `initialize` handshake. In `LspPlugin` the equivalent moment is `__init__` - the instance is constructed at that exact point, so any setup that previously lived in `on_post_start` can go directly into `__init__`. Call `super().__init__(weaksession)` first, then access the session via `self.weaksession()`:
 
 ```python
 # Before
@@ -185,11 +185,19 @@ def on_post_start(cls, window, initiating_view, workspace_folders, configuration
 
 ```python
 # After
-from LSP.plugin import ContextOnStart
-
-def on_start_async(self, context: ContextOnStart) -> None:
+def __init__(self, weaksession: ref[Session]) -> None:
+    super().__init__(weaksession)
     if session := self.weaksession():
         log_start(session.window, session.config)
+```
+
+If your `on_post_start` sent raw bytes or custom JSON-RPC messages before the `initialize` request, use the new `on_transport_ready_async` hook instead - it receives the live `TransportWrapper` and has no equivalent in `AbstractPlugin`:
+
+```python
+from LSP.plugin.core.transports import TransportWrapper
+
+def on_transport_ready_async(self, transport: TransportWrapper) -> None:
+    transport.send({"jsonrpc": "2.0", "method": "myServer/handshake"})
 ```
 
 ---

@@ -4,7 +4,6 @@ from .api import AbstractPlugin
 from .api import command_handler
 from .api import ContextIsApplicable
 from .api import ContextOnPreStart
-from .api import ContextOnStart
 from .api import LspPlugin
 from .api import notification_handler
 from .api import PluginStartError
@@ -60,7 +59,6 @@ __all__ = [
     'ClientResponse',
     'ContextIsApplicable',
     'ContextOnPreStart',
-    'ContextOnStart',
     'DebouncerNonThreadSafe',
     'DottedDict',
     'Error',

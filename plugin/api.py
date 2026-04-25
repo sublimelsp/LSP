@@ -334,15 +334,6 @@ class ContextOnPreStart:
     """The workspace folders active for this session."""
 
 
-@dataclass
-class ContextOnStart:
-    """Context passed to `LspPlugin.on_start_async`."""
-
-    transport: TransportWrapper
-    """The raw transport to the language server process.
-    Use `send()` for JSON-RPC messages or `send_bytes()` for raw bytes."""
-
-
 class LspPlugin(APIHandler):
     """
     Base class for LSP helper packages.
@@ -479,8 +470,8 @@ class LspPlugin(APIHandler):
         """
         Constructs a new instance.
 
-        Called inside `initialize_async` — after the transport is established but before the LSP `initialize`
-        request is sent to the server. `on_start_async` is invoked immediately after construction.
+        Called inside `initialize_async` - after the transport is established but before the LSP `initialize`
+        request is sent to the server.
 
         :param weaksession: A weak reference to the `Session`. Resolve it with `self.weaksession()` when needed,
                             but do not store the resulting strong reference as an attribute - doing so creates a
@@ -489,7 +480,7 @@ class LspPlugin(APIHandler):
         super().__init__()
         self.weaksession: ref[Session] = weaksession
 
-    def on_start_async(self, context: ContextOnStart) -> None:
+    def on_transport_ready_async(self, transport: TransportWrapper) -> None:
         """
         Called after the transport is established but before the LSP `initialize` request is sent.
 
@@ -498,12 +489,12 @@ class LspPlugin(APIHandler):
         authentication token over the raw transport.
 
         Warning:
-            Anything sent via `context.transport.send()` or `context.transport.send_bytes()` bypasses the LSP
-            message queue. Only use this hook for pre-initialization messages that your server explicitly expects
-            before the `initialize` request. Sending arbitrary LSP messages here will corrupt the session.
+            Anything sent via `transport.send()` or `transport.send_bytes()` bypasses the LSP message queue.
+            Only use this hook for pre-initialization data that your server explicitly expects before the
+            `initialize` request. Sending arbitrary LSP messages here will corrupt the session.
 
-        :param context:     The startup context. `context.transport` exposes `send(payload)` for JSON-RPC messages
-                            and `send_bytes(payload)` for raw bytes, both of which write directly to the transport.
+        :param transport:   The raw transport. `send(payload)` writes a JSON-RPC message; `send_bytes(payload)`
+                            writes raw bytes - both go directly to the server process.
         """
         pass
 

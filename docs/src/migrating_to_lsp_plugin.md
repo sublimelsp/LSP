@@ -329,7 +329,8 @@ def on_server_response_async(self, method: str, response: Response) -> None:
 ```python
 # After
 def on_server_response_async(self, response: ServerResponse) -> None:
-    process(response.get('result'))
+    if response['method'] == 'textDocument/hover':
+        process(response['result'])
 ```
 
 ---

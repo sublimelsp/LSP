@@ -13,7 +13,7 @@
 |---|---|
 | `name()` | Removed - derived automatically from the package name and exposed as a `name` property |
 | `configuration()` | Removed - settings file located automatically |
-| `storage_path()` | `plugin_storage_path` class attribute (derived automatically) |
+| `storage_path()` | `ST_STORAGE_PATH` constant or `plugin_storage_path` class attribute |
 | `needs_update_or_installation()` + `install_or_update()` + `can_start()` + `on_pre_start()` + `additional_variables()` | `on_pre_start_async(context)` |
 | `on_post_start(window, view, folders, config)` | `__init__(weaksession)` |
 | `on_settings_changed(settings: DottedDict)` | `on_initialize_async()` for one-time setup; `on_pre_send_response_async(response)` for dynamic `workspace/configuration` |
@@ -108,15 +108,23 @@ def configuration(cls) -> tuple[sublime.Settings, str]:
 
 ---
 
-### 3. Replace `storage_path()` with `plugin_storage_path`
+### 3. Replace `storage_path()` with `ST_STORAGE_PATH` or `plugin_storage_path`
 
-The storage path is now a class attribute set automatically to `$DATA/Package Storage/<PackageName>`. Replace calls to `cls.storage_path()` with `cls.plugin_storage_path`:
+`storage_path()` returned `$DATA/Package Storage` as a string. It is replaced by the `ST_STORAGE_PATH` module-level constant exported from `LSP.plugin`. Append the package name manually to get the per-plugin subdirectory:
 
 ```python
 # Before
 server_dir = os.path.join(cls.storage_path(), cls.name(), "server")
 
 # After
+from LSP.plugin import ST_STORAGE_PATH
+
+server_dir = os.path.join(ST_STORAGE_PATH, "LSP-foo", "server")
+```
+
+If you only need the package-specific storage, `LspPlugin` also exposes `plugin_storage_path` - a `Path` class attribute automatically set to `$DATA/Package Storage/<PackageName>` when the class is defined:
+
+```python
 server_dir = cls.plugin_storage_path / "server"
 ```
 

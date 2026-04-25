@@ -62,11 +62,8 @@ URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
-UriHandler = Callable[
-    ['DocumentUri', 'Range | None', sublime.NewFileFlags],
-    'Promise[sublime.Sheet | None]'
-]
-# The decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
+UriHandler = Callable[['DocumentUri', 'Range | None', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+# Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
 UriHandlerForDecorator = Callable[
     [Any, 'DocumentUri', 'Range | None', sublime.NewFileFlags],

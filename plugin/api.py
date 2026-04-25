@@ -45,13 +45,6 @@ if TYPE_CHECKING:
     from .core.workspace import WorkspaceFolder
     from weakref import ref
 
-__all__ = [
-    'APIHandler',
-    'PluginStartError',
-    'notification_handler',
-    'request_handler',
-    'uri_handler',
-]
 
 HANDLER_MARKER = '__HANDLER_MARKER'
 COMMAND_HANDLER_MARKER = '__COMMAND_HANDLER_MARKER'

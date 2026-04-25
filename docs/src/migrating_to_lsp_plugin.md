@@ -309,11 +309,11 @@ from LSP.plugin import command_handler
 from LSP.plugin import LSPAny
 
 @command_handler('foo/bar')
-def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[None]:
+def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[LSPAny]:
     return Promise.resolve(handle_command(arguments))
 ```
 
-Instead of `LSPAny` you can use more appropriate type for the specific command that is being handled.
+Instead of `LSPAny`'s you can use more appropriate type for the specific command that is being handled.
 
 ---
 

@@ -559,7 +559,7 @@ class SessionBuffer:
             self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
         if isinstance(self.session.plugin, LspPlugin):
-            self._supported_commands.update(self.session.plugin.command_handler_map.keys())
+            self._supported_commands.update(self.session.plugin._command_handler_map.keys())
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):

@@ -53,7 +53,8 @@ URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 # P represents the parameters *after* the 'self' argument
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
-CommandHandler = Callable[[Any, 'list[P] | None'], 'Promise[None]']
+CommandHandler = Callable[['list[P] | None'], 'Promise[R]']
+CommandHandlerForDecorator = Callable[[Any, 'list[P] | None'], 'Promise[R]']
 UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
@@ -173,15 +174,20 @@ class APIHandler:
         # Map m_* attr names → method names (strings only, no bound methods) to avoid
         # the reference cycle self → bound_method.__self__ → self that prevents GC.
         self.handler_attr_map: dict[str, str] = {}
-        self.command_handler_map: dict[str, str] = {}
+        self._command_handler_map: dict[str, str] = {}
         self._uri_handler_map: dict[str, str] = {}
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if hasattr(value, HANDLER_MARKER):
                 self.handler_attr_map[method2attr(getattr(value, HANDLER_MARKER))] = name
             elif hasattr(value, COMMAND_HANDLER_MARKER):
-                self.command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
+                self._command_handler_map[getattr(value, COMMAND_HANDLER_MARKER)] = name
             elif hasattr(value, URI_HANDLER_MARKER):
                 self._uri_handler_map[getattr(value, URI_HANDLER_MARKER)] = name
+
+    def get_command_handler(self, command_name: str) -> CommandHandler[P, R] | None:
+        if handler_name := self._command_handler_map.get(command_name):
+            return getattr(self, handler_name)
+        return None
 
     def get_uri_handler(self, scheme: str) -> UriHandler | None:
         if handler_name := self._uri_handler_map.get(scheme):
@@ -248,7 +254,7 @@ def request_handler(
     return decorator
 
 
-def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHandler]:
+def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator], CommandHandlerForDecorator]:
     """
     Decorator to mark a method as a handler for a specific server command.
 
@@ -268,7 +274,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandler], CommandHand
     :returns:   A decorator that registers the function as a command handler.
     """
 
-    def decorator(func: CommandHandler) -> CommandHandler:
+    def decorator(func: CommandHandlerForDecorator) -> CommandHandlerForDecorator:
         setattr(func, COMMAND_HANDLER_MARKER, command_name)
         return func
 

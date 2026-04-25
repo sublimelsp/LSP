@@ -358,8 +358,8 @@ class LspPlugin(APIHandler):
     to read the `command`, `selector`, `schemes`, and other server configuration. Override
     the classmethods below to customise behaviour beyond what the settings file provides.
 
-    Raise `PluginStartError` exception from any of the classmethods (but typically from `install_async`) to
-    prevent plugin from starting while showing relevant message in the status field.
+    Raise `PluginStartError` exception from `on_pre_start_async` to prevent plugin from starting while
+    showing relevant message in the status field.
 
     Use `@notification_handler` and `@request_handler` decorators to handle non-standard
     server-to-client notifications and requests respectively.

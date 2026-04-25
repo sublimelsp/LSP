@@ -373,12 +373,10 @@ def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str | None, st
 from LSP.plugin import uri_handler
 
 @uri_handler('foo')
-def on_open_foo_uri(
-    self, uri: DocumentUri, r: Range | None, flags: sublime.NewFileFlags, group: int
-) -> Promise[sublime.Sheet | None]:
+def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> Promise[sublime.Sheet | None]:
     title, content, syntax = render_foo_uri(uri)
     if session := self.weaksession():
-        return session.open_scratch_buffer(title, content, syntax, uri, r, flags, group)
+        return session.open_scratch_buffer(title, content, syntax, uri, None, flags)
     return Promise.resolve(None)
 ```
 

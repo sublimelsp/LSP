@@ -14,6 +14,7 @@ from .api import unregister_plugin
 from .api import uri_handler
 from .core.collections import DottedDict
 from .core.constants import MarkdownLangMap
+from .core.constants import ST_STORAGE_PATH
 from .core.css import css
 from .core.edit import apply_text_edits
 from .core.file_watcher import FileWatcher
@@ -51,6 +52,7 @@ from .core.workspace import WorkspaceFolder
 
 # This is the public API for LSP-* packages
 __all__ = [
+    'ST_STORAGE_PATH',
     'AbstractPlugin',
     'ClientConfig',
     'ClientNotification',

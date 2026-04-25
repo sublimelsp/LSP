@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from ..protocol import LSPAny
-from ..protocol import Range
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
 from .core.protocol import Response
@@ -62,13 +61,10 @@ URI_HANDLER_MARKER = '__URI_HANDLER_MARKER'
 P = TypeVar('P', bound=LSPAny)
 R = TypeVar('R', bound=LSPAny)
 CommandHandler = Callable[[Any, 'list[LSPAny] | None'], 'Promise[None]']
-UriHandler = Callable[['DocumentUri', 'Range | None', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
+UriHandler = Callable[['DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
 # Decorator needs a dedicated type with `Any` as the first parameter representing `Self` to make its
 # implementation happy. I couldn't find a better way (Concatenate and ParamSpec don't seem to help here).
-UriHandlerForDecorator = Callable[
-    [Any, 'DocumentUri', 'Range | None', sublime.NewFileFlags],
-    'Promise[sublime.Sheet | None]'
-]
+UriHandlerForDecorator = Callable[[Any, 'DocumentUri', sublime.NewFileFlags], 'Promise[sublime.Sheet | None]']
 
 
 g_plugins: dict[str, type[AbstractPlugin | LspPlugin]] = {}
@@ -294,9 +290,7 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
     Usage:
         ```py
         @uri_handler('foo')
-        def on_open_foo_uri(
-            self, uri: DocumentUri, r: Range | None, flags: sublime.NewFileFlags, group: int
-        ) -> Promise[sublime.Sheet | None]:
+        def on_open_foo_uri(self, uri: DocumentUri, flags: sublime.NewFileFlags) -> Promise[sublime.Sheet | None]:
             ...
         ```
 

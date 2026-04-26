@@ -1571,7 +1571,11 @@ class Session(APIHandler, TransportCallbacks):
         return self.open_uri_async(uri, r, flags, group)
 
     def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
-        if self._plugin:
+        if not self._plugin:
+            return
+        if isinstance(self._plugin, LspPlugin):
+            self._plugin.on_text_changed_async(session_buffer)
+        else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
     def _maybe_resolve_code_action(

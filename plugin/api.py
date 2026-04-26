@@ -557,8 +557,8 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    def on_session_buffer_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
-        """Called when the content of the session buffer has changed or a new buffer was opened."""
+    def on_text_changed_async(self, session_buffer: SessionBufferProtocol) -> None:
+        """Called when the content of the session buffer has changed or a new buffer was opened (debounced)."""
         pass
 
     def on_selection_modified_async(self, session_view: SessionViewProtocol) -> None:

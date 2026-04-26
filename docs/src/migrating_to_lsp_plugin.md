@@ -409,7 +409,7 @@ def markdown_language_id_to_st_syntax_map(cls) -> MarkdownLangMap | None:
     }
 ```
 
-```json
+```jsonc
 // After — in LSP-foo.sublime-settings (or any ClientConfig override)
 {
     "markdown_language_map": {

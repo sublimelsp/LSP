@@ -263,7 +263,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
 
     Usage:
         ```py
-        @command_handler('custom-rename')
+        @command_handler('typescript.rename')
         def on_custom_rename(self, arguments: list[LSPAny] | None) -> Promise[LspAny]:
             ...
         ```
@@ -276,7 +276,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
         result in an infinite loop. If you need this, use session.send_request_task() instead. For example:
 
         ```py
-        command: ExecuteCommandParams = {'name': 'custom-rename', 'arguments': arguments}
+        command: ExecuteCommandParams = {'name': 'typescript.rename', 'arguments': arguments}
         return self.send_request_task(Request.executeCommand(command))
         ```
 

@@ -296,7 +296,7 @@ The callback-based `on_pre_server_command` is replaced by the `@command_handler`
 ```python
 # Before
 def on_pre_server_command(self, command: ExecuteCommandParams, done_callback: Callable[[], None]) -> bool:
-    if command["command"] == "foo/bar":
+    if command["command"] == "typescript.rename":
         handle_command(command)
         done_callback()
         return True
@@ -308,7 +308,7 @@ def on_pre_server_command(self, command: ExecuteCommandParams, done_callback: Ca
 from LSP.plugin import command_handler
 from LSP.plugin import LSPAny
 
-@command_handler('foo/bar')
+@command_handler('typescript.rename')
 def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[LSPAny]:
     return Promise.resolve(handle_command(arguments))
 ```
@@ -318,7 +318,7 @@ Instead of `LSPAny`'s you can use more appropriate type for the specific command
 Note that in the `AbstractPlugin` implementation, returning `False` resulted in the command being passed through to the server. In the new implementation this is not possible using the return value alone, but you can use `session.send_request_task()` to forward the command to the server instead. For example:
 
 ```py
-command: ExecuteCommandParams = {'name': 'custom-rename', 'arguments': arguments}
+command: ExecuteCommandParams = {'name': 'typescript.rename', 'arguments': arguments}
 return self.send_request_task(Request.executeCommand(command))
 ```
 

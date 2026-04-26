@@ -21,7 +21,7 @@
 | `on_workspace_configuration(params, configuration)` | `on_pre_send_response_async(response)` — intercept `workspace/configuration` response |
 | `on_pre_server_command(command, done_callback)` | `@command_handler` decorator |
 | `on_open_uri_async(uri, callback)` | `@uri_handler` decorator |
-| `markdown_language_id_to_st_syntax_map()` | `markdown_language_map` setting in `.sublime-settings` |
+| `markdown_language_id_to_st_syntax_map()` | `markdown_language_map` setting in `LSP-*.sublime-settings` |
 | `on_pre_send_request_async(request_id, request)` | `on_pre_send_request_async(request, view)` |
 | `on_server_response_async(method, response)` | `on_server_response_async(response)` |
 | `on_session_buffer_changed_async(session_buffer)` | `on_text_changed_async(session_buffer)` |

@@ -273,8 +273,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
 
     Warning:
         It's not possible to forward the same command to the server using `session.execute_command()` - that would
-        result in an infinite loop. If your code requires that then use `session.send_request_task()` instead.
-        For example:
+        result in an infinite loop. If you need this, use session.send_request_task() instead. For example:
 
         ```py
         command: ExecuteCommandParams = {'name': 'custom-rename', 'arguments': arguments}

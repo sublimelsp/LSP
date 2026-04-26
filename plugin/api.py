@@ -263,12 +263,23 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
 
     Usage:
         ```py
-        @command_handler('rust-analyzer.showReferences')
-        def on_show_references(self, arguments: list[LSPAny] | None) -> Promise[None]:
+        @command_handler('custom-rename')
+        def on_custom_rename(self, arguments: list[LSPAny] | None) -> Promise[LspAny]:
             ...
         ```
 
-    Instead of `LSPAny` you can use more appropriate type for the specific command that is being handled.
+    Note:
+        Instead of `LSPAny`'s you can use more appropriate type for the specific command that is being handled.
+
+    Warning:
+        It's not possible to forward the same command to the server using `session.execute_command()` - that would
+        result in an infinite loop. If your code requires that then use `session.send_request_task()` instead.
+        For example:
+
+        ```py
+        command: ExecuteCommandParams = {'name': 'custom-rename', 'arguments': arguments}
+        return self.send_request_task(Request.executeCommand(command))
+        ```
 
     :param      command_name:   The command name as advertised by the server (e.g., 'rust-analyzer.showReferences').
     :returns:   A decorator that registers the function as a command handler.

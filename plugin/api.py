@@ -271,13 +271,6 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
     Note:
         Instead of `LSPAny`'s you can use more appropriate type for the specific command that is being handled.
 
-        If you need to forward the same command to the server use `session.send_request_task()`. For example:
-
-        ```py
-        command: ExecuteCommandParams = {'name': 'typescript.rename', 'arguments': arguments}
-        return self.send_request_task(Request.executeCommand(command))
-        ```
-
     :param      command_name:   The command name as advertised by the server (e.g., 'rust-analyzer.showReferences').
     :returns:   A decorator that registers the function as a command handler.
     """

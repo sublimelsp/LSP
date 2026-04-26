@@ -315,14 +315,7 @@ def on_foo_bar(self, arguments: list[LSPAny] | None) -> Promise[LSPAny]:
 
 Instead of `LSPAny`'s you can use more appropriate type for the specific command that is being handled.
 
-Note that in the `AbstractPlugin` implementation, returning `False` resulted in the command being passed through to the server. In the new implementation this is not possible using the return value alone, but you can use `session.send_request_task()` to forward the command to the server instead. For example:
-
-```py
-command: ExecuteCommandParams = {'name': 'typescript.rename', 'arguments': arguments}
-return self.send_request_task(Request.executeCommand(command))
-```
-
-Don't use `session.execute_command()` to forward the command as that will result in an infinite loop.
+Note that in the `AbstractPlugin` implementation, returning `False` resulted in the command being passed through to the server. In the new implementation this is not possible.
 
 ---
 

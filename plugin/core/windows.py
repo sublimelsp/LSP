@@ -250,7 +250,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if plugin := get_plugin(config.name):
                     if issubclass(plugin, LspPlugin):
                         context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
-                        if plugin.is_applicable(context):
+                        if plugin.is_applicable_async(context):
                             return config
                     elif plugin.is_applicable(view, config):
                         return config

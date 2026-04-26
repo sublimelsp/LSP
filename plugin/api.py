@@ -310,7 +310,7 @@ def uri_handler(scheme: str) -> Callable[[UriHandlerForDecorator], UriHandlerFor
 
 @dataclass
 class IsApplicableContext:
-    """Context passed to `LspPlugin.is_applicable`."""
+    """Context passed to `LspPlugin.is_applicable_async`."""
 
     configuration: ClientConfig
     """The resolved `ClientConfig` for this session."""
@@ -424,7 +424,7 @@ class LspPlugin(APIHandler):
         unregister_plugin_impl(cls)
 
     @classmethod
-    def is_applicable(cls, context: IsApplicableContext) -> bool:
+    def is_applicable_async(cls, context: IsApplicableContext) -> bool:
         """
         Determine whether the server should run on the view given by `context.view`.
 

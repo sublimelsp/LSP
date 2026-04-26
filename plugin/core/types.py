@@ -1101,7 +1101,7 @@ class ClientConfig:
             if issubclass(plugin, AbstractPlugin):
                 return plugin.is_applicable(view, self)
             plugin_context = IsApplicableContext(self, view, workspace_folders)
-            return plugin.is_applicable(plugin_context)
+            return plugin.is_applicable_async(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

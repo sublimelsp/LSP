@@ -271,9 +271,7 @@ def command_handler(command_name: str) -> Callable[[CommandHandlerForDecorator],
     Note:
         Instead of `LSPAny`'s you can use more appropriate type for the specific command that is being handled.
 
-    Warning:
-        It's not possible to forward the same command to the server using `session.execute_command()` - that would
-        result in an infinite loop. If you need this, use session.send_request_task() instead. For example:
+        If you need to forward the same command to the server use `session.send_request_task()`. For example:
 
         ```py
         command: ExecuteCommandParams = {'name': 'typescript.rename', 'arguments': arguments}

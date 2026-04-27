@@ -6,6 +6,8 @@ from ..protocol import Command
 from ..protocol import Diagnostic
 from ..protocol import DocumentLink
 from ..protocol import Hover
+from ..protocol import MarkedString
+from ..protocol import MarkupContent
 from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
@@ -45,6 +47,7 @@ from typing import Union
 from urllib.parse import urlparse
 import html
 import mdpopups
+import re
 import sublime
 import sublime_plugin
 
@@ -83,6 +86,33 @@ link_kinds = [
     LinkKind("references", "References", "lsp_symbol_references", False),
     LinkKind("rename", "Rename", "lsp_symbol_rename", False),
 ]
+
+
+SINGLE_CODE_FENCE_RE = re.compile(r'\A```[\w+-]*\n(.*)\n```\s*\Z', re.DOTALL)
+
+
+def strip_single_code_fence(text: str) -> str:
+    match = SINGLE_CODE_FENCE_RE.match(text.strip())
+    if match and '```' not in match.group(1):
+        return match.group(1)
+    return text
+
+
+def plaintext_from_lsp_content(content: MarkupContent | MarkedString | list[MarkedString]) -> str:
+    if isinstance(content, str):
+        result = content
+    elif isinstance(content, list):
+        chunks: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                chunks.append(item)
+            elif isinstance(item, dict):
+                if value := item.get("value") or "":
+                    chunks.append(value)
+        result = '\n\n'.join(chunks)
+    else:
+        result = content.get("value") or ""
+    return strip_single_code_fence(result)
 
 
 class LspHoverCommand(LspTextCommand):
@@ -215,8 +245,10 @@ class LspHoverCommand(LspTextCommand):
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
         return bool(listener.session_async(f'{link.lsp_name}Provider'))
 
-    def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
+    def symbol_actions_content(self, listener: AbstractViewListener, point: int, text_to_copy: str = "") -> str:
         actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
+        if text_to_copy:
+            actions.append(make_command_link("lsp_copy_text", "Copy", {"text": text_to_copy}))
         return " | ".join(actions) if actions else ""
 
     def link_content_and_range(self) -> tuple[str, sublime.Region | None]:
@@ -246,6 +278,15 @@ class LspHoverCommand(LspTextCommand):
                 contents.append(html_wrapper(parsed))
         return '<hr class="m-0">'.join(contents)
 
+    def hover_plaintext(self) -> str:
+        parts: list[str] = []
+        for hover, _ in self._hover_responses:
+            if not isinstance(hover, dict):
+                continue
+            if text := plaintext_from_lsp_content(hover.get('contents') or ''):
+                parts.append(text)
+        return '\n\n---\n\n'.join(parts)
+
     def hover_range(self) -> sublime.Region | None:
         for hover, _ in self._hover_responses:
             if hover_range := hover.get('range'):
@@ -272,7 +313,7 @@ class LspHoverCommand(LspTextCommand):
         link_content, link_range = self.link_content_and_range()
         only_link_content = not bool(contents) and link_range is not None
         if prefs.show_symbol_action_links and contents and not only_diagnostics and hover_content:
-            symbol_actions_content = self.symbol_actions_content(listener, point)
+            symbol_actions_content = self.symbol_actions_content(listener, point, self.hover_plaintext())
             if link_content:
                 if symbol_actions_content:
                     symbol_actions_content += ' | '

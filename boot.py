@@ -88,6 +88,7 @@ from .plugin.tooling import LspTroubleshootServerCommand
 from typing import Any
 import os
 import sublime
+import sublime_aio
 import sublime_plugin
 
 __all__ = (
@@ -219,10 +220,10 @@ def plugin_unloaded() -> None:
     unload_settings()
 
 
-class Listener(sublime_plugin.EventListener):
+class Listener(sublime_aio.EventListener):
 
-    def on_exit(self) -> None:
-        kill_all_subprocesses()
+    async def on_exit(self) -> None:
+        await kill_all_subprocesses()
 
     def on_load_project_async(self, window: sublime.Window) -> None:
         if manager := windows.lookup(window):
@@ -251,27 +252,27 @@ class Listener(sublime_plugin.EventListener):
                     sublime.set_timeout_async(listener.on_post_move_window_async, 1)
                     return
 
-    def on_load(self, view: sublime.View) -> None:
+    async def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in g_opening_files:
-            if fn == file_name or os.path.samefile(fn, file_name):
-                # Remove it from the pending opening files, and resolve the promise.
-                g_opening_files.pop(fn)[1](view)
-                break
+        if future := await self._find_opening_file_future(file_name):
+            future.set_result(view)
 
-    def on_pre_close(self, view: sublime.View) -> None:
+    async def on_pre_close(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:
             return
-        for fn in g_opening_files:
-            if fn == file_name or os.path.samefile(fn, file_name):
-                tup = g_opening_files.pop(fn, None)  # noqa: B909
-                if tup:
-                    # The view got closed before it finished loading. This can happen.
-                    tup[1](None)
-                    break
+        if future := await self._find_opening_file_future(file_name):
+            # The view got closed before it finished loading. This can happen.
+            future.set_result(None)
+
+    async def _find_opening_file_future(file_name: str) -> asyncio.Future[sublime.View | None] | None:
+        async with g_opening_files_lock:
+            for fn in g_opening_files:
+                if fn == file_name or os.path.samefile(fn, file_name):
+                    return g_opening_files.pop(fn, None)
+        return None
 
     def on_post_window_command(self, window: sublime.Window, command_name: str, args: dict[str, Any] | None) -> None:
         if command_name == "show_panel":

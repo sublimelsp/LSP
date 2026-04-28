@@ -38,6 +38,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
+from .core.logging import debug
 from functools import partial
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -99,11 +100,14 @@ class LspHoverCommand(LspTextCommand):
         point: int | None = None,
         event: dict | None = None
     ) -> None:
+        debug("asdf")
         hover_point = get_position(self.view, event, point)
         if hover_point is None:
+            debug("hover point is None...")
             return
         wm = windows.lookup(self.view.window())
         if not wm:
+            debug("view not found in window manager")
             return
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover_responses: list[tuple[Hover, MarkdownLangMap | None]] = []
@@ -114,8 +118,10 @@ class LspHoverCommand(LspTextCommand):
         # rather than just the hover point.
 
         def run_async() -> None:
+            debug("running thing")
             listener = wm.listener_for_view(self.view)
             if not listener:
+                debug("no listener found for view", self.view)
                 return
             if not only_diagnostics:
                 self.request_symbol_hover_async(listener, hover_point)

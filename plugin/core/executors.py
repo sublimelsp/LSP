@@ -5,27 +5,41 @@ from typing import Any, Callable, TypeVar
 import sublime
 
 
-class _SetTimeoutAsyncExecutor(concurrent.futures.Executor):
+class _Executor(concurrent.futures.Executor):
     """
-    An Executor that wraps sublime.set_timeout_async.
+    An Executor that wraps sublime.set_timeout(_async)
 
     Use in combination with an asyncio loop:
 
     ```python
-    from .executors import executor
+    from .executors import executor_main, executor_async
+
+
+    def some_blocking_function_that_interacts_with_gui() -> int:
+        window = sublime.current_window()
+        return 42
+
+
+    async def foo() -> int:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(executor_main, some_blocking_function_that_interacts_with_gui)
+        return result
+
 
     def some_cpu_heavy_function() -> int:
         time.sleep(1)
         return 42
 
-    async def foo() -> int:
+
+    async def bar() -> int:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(executor, some_cpu_heavy_function)
+        result = await loop.run_in_executor(executor_async, some_cpu_heavy_function)
         return result
     ```
     """
 
-    def __init__(self) -> None:
+    def __init__(self, dispatch_func: Callable[[Callable[..., Any]], Any]) -> None:
+        self._dispatch_func = dispatch_func
         self._running = 0
         self._shuttingdown = False
         self._lock = threading.Lock()
@@ -48,7 +62,7 @@ class _SetTimeoutAsyncExecutor(concurrent.futures.Executor):
                 if self._running == 0:
                     self._cv.notify()
 
-        sublime.set_timeout_async(run)
+        self._dispatch_func(run)
         return future
 
     def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
@@ -58,4 +72,5 @@ class _SetTimeoutAsyncExecutor(concurrent.futures.Executor):
                 self._cv.wait_for(lambda: self._running == 0)
 
 
-executor = _SetTimeoutAsyncExecutor()
+executor_main = _Executor(sublime.set_timeout)
+executor_async = _Executor(sublime.set_timeout_async)

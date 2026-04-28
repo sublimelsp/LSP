@@ -141,12 +141,14 @@ from .workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from enum import IntFlag
+from collections.abc import Awaitable
 from functools import lru_cache
 from functools import partial
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Generator
+from typing import Generic
 from typing import Literal
 from typing import overload
 from typing import Protocol
@@ -163,6 +165,7 @@ import mdpopups
 import os
 import sublime
 import sublime_aio
+import threading
 import weakref
 
 if TYPE_CHECKING:
@@ -278,15 +281,15 @@ class Manager(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def handle_message_request(
+    async def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
-    ) -> Promise[MessageActionItem | None]:
+    ) -> MessageActionItem | None:
         ...
 
     @abstractmethod
-    def handle_show_message(
+    async def handle_show_message(
         self, config_name: str, params: ShowMessageParams
-    ) -> Promise[MessageActionItem | None]:
+    ) -> MessageActionItem | None:
         ...
 
     @abstractmethod
@@ -707,7 +710,7 @@ class SessionBufferProtocol(Protocol):
     def get_view_in_group(self, group: int = ...) -> sublime.View:
         ...
 
-    def register_capability_async(
+    def register_capability(
         self,
         registration_id: str,
         capability_path: str,
@@ -717,7 +720,7 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def unregister_capability_async(
+    def unregister_capability(
         self,
         registration_id: str,
         capability_path: str,
@@ -763,20 +766,20 @@ class SessionBufferProtocol(Protocol):
     def remove_all_inlay_hints(self) -> None:
         ...
 
-    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
+    def do_document_diagnostic(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
-    def request_code_actions_async(
+    async def request_code_actions(
         self,
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
         kinds: list[CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
-    ) -> Promise[list[Command | CodeAction] | Error | None]:
+    ) -> list[Command | CodeAction] | Error | None:
         ...
 
-    def do_code_lenses_async(self, view: sublime.View) -> None:
+    def do_code_lenses(self, view: sublime.View) -> None:
         ...
 
     def set_pending_refresh(self, flags: RequestFlags) -> None:
@@ -792,23 +795,23 @@ class AbstractViewListener(ABC):
     lightbulb_color: str = ''
 
     @abstractmethod
-    def session_async(self, capability: str, point: int | None = None) -> Session | None:
+    def get_session(self, capability: str, point: int | None = None) -> Session | None:
         raise NotImplementedError
 
     @abstractmethod
-    def sessions_async(self, capability: str | None = None) -> list[Session]:
+    def sessions(self, capability: str | None = None) -> list[Session]:
         raise NotImplementedError
 
     @abstractmethod
-    def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
+    def session_buffers(self, capability: str | None = None) -> list[SessionBufferProtocol]:
         raise NotImplementedError
 
     @abstractmethod
-    def session_views_async(self) -> list[SessionViewProtocol]:
+    def session_views(self) -> list[SessionViewProtocol]:
         raise NotImplementedError
 
     @abstractmethod
-    def purge_changes_async(self) -> None:
+    def purge_changes(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -816,11 +819,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_session_initialized_async(self, session: Session) -> None:
+    def on_session_initialized(self, session: Session) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def on_session_shutdown_async(self, session: Session) -> None:
+    def on_session_shutdown(self, session: Session) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -868,7 +871,7 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_post_move_window_async(self) -> None:
+    def on_post_move_window(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -919,6 +922,93 @@ class Logger(ABC):
         pass
 
 
+class CancellableRequest(Generic[R]):
+    """A request that is cancellable."""
+
+    _id: int
+    _weaksession: weakref.ref["Session"]
+
+    def __init__(self, id: int, session: "Session") -> None:
+        self._id = id
+        self._weaksession = weakref.ref(session)
+
+    def cancel(self) -> None:
+        """Cancel this request."""
+        if self._id != 0:
+            if session := self._weaksession():
+                session.cancel_request_async(self._id)
+                self._id = 0
+
+    @property
+    def id(self) -> int:
+        """Get the request ID."""
+        return self._id
+
+
+class CancellableInflightRequest(CancellableRequest[R]):
+    """A request that is in flight. The result can be awaited."""
+
+    _future: asyncio.Future[R]
+
+    def __init__(self, future: asyncio.Future[R], id: int, session: "Session") -> None:
+        super().__init__(id, session)
+        self._future = future
+
+    def __await__(self) -> Awaitable[R]:
+        """
+        You can `await` the response of an in-flight request.
+        However, note that immediately awaiting this object prevents you from ever canceling it.
+        """
+        return self._future.__await__()
+
+
+class CancellableInflightStreamingRequest(CancellableRequest[R]):
+    """
+    A streaming request that is in flight.
+    Use `async for` syntax to asynchronously stream the partial results.
+    Only requests for which the partial results are of type list[...] can work with this class.
+    An empty list signals the end of the stream. So the class knows when to signal the end of the `async for` loop.
+    """
+
+    _future: asyncio.Future[R] | None
+    _stop: bool
+
+    def __init__(self, id: int, session: "Session") -> None:
+        super().__init__(id, session)
+        self._future = None
+        self._stopped = False
+
+    def on_partial_result(self, response: R) -> None:
+        if self._future:
+            if response:
+                self._future.set_result(response)
+            elif not self._stopped:
+                self._future.set_exception(StopAsyncIteration())
+                self._stopped = True
+            else:
+                debug(f"streaming request with ID {self.id} got partial result while already stopped: {response}")
+        else:
+            debug(f"streaming request with ID {self.id} is missing a future!")
+
+    def on_error(self, error: ResponseError) -> None:
+        if self._future:
+            self._future.set_exception(ResponseException(error))
+        else:
+            debug(f"streaming request with ID {self.id} got an error response without a future set: {error}")
+
+    def __aiter__(self) -> "CancellableInflightStreamingRequest":
+        """
+        Stream partial results using the `async for` syntax.
+        """
+        return self
+
+    def __anext__(self) -> Awaitable[R]:
+        if self._stopped:
+            raise StopAsyncIteration
+        self._future = asyncio.get_running_loop().create_future()
+        return self._future
+
+
 def print_to_status_bar(error: ResponseError) -> None:
     sublime.status_message(error["message"])
 
@@ -946,13 +1036,13 @@ class _RegistrationData:
 
     def __del__(self) -> None:
         for sb in self.session_buffers:
-            sb.unregister_capability_async(self.registration_id, self.capability_path, self.registration_path)
+            sb.unregister_capability(self.registration_id, self.capability_path, self.registration_path)
 
     def check_applicable(self, sb: SessionBufferProtocol, *, suppress_requests: bool = False) -> None:
         for sv in sb.session_views:
             if self.selector.matches(sv.view):
                 self.session_buffers.add(sb)
-                sb.register_capability_async(
+                sb.register_capability(
                     self.registration_id, self.capability_path, self.registration_path, self.options, suppress_requests)
                 return
 
@@ -981,6 +1071,7 @@ class Session(APIHandler, TransportCallbacks):
         self.diagnostics_result_ids: dict[tuple[DocumentUri, DiagnosticsIdentifier], str | None] = {}
         self.workspace_diagnostics_pending_responses: dict[DiagnosticsIdentifier, int | None] = {}
         self.exiting = False
+        self._request_cv = threading.Condition()
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
         self._workspace_folders = workspace_folders
@@ -1037,12 +1128,12 @@ class Session(APIHandler, TransportCallbacks):
             current_count = self._views_opened
             debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
-    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
+    def session_views(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
         yield from self._session_views
 
     def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:
-        for sv in self.session_views_async():
+        for sv in self.session_views():
             if sv.view == view:
                 return sv
         return None
@@ -1057,19 +1148,19 @@ class Session(APIHandler, TransportCallbacks):
         self._redraw_config_status_async()
 
     def _redraw_config_status_async(self) -> None:
-        for sv in self.session_views_async():
+        for sv in self.session_views():
             self.config.set_view_status(sv.view, self.config_status_message)
 
     @deprecated("Use set_config_status_async(message) instead")
     def set_window_status_async(self, key: str, message: str) -> None:
         self._status_messages[key] = message
-        for sv in self.session_views_async():
+        for sv in self.session_views():
             sv.view.set_status(key, message)
 
     @deprecated("Use set_config_status_async('') instead")
     def erase_window_status_async(self, key: str) -> None:
         self._status_messages.pop(key, None)
-        for sv in self.session_views_async():
+        for sv in self.session_views():
             sv.view.erase_status(key)
 
     # --- session buffer management ------------------------------------------------------------------------------------
@@ -1089,11 +1180,11 @@ class Session(APIHandler, TransportCallbacks):
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
 
-    def session_buffers_async(self) -> Generator[SessionBufferProtocol, None, None]:
-        """It is only safe to iterate over this in the async thread."""
+    def session_buffers(self) -> Generator[SessionBufferProtocol, None, None]:
+        """It is only safe to iterate over this in the asyncio thread."""
         yield from self._session_buffers
 
-    def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> SessionBufferProtocol | None:
+    def get_session_buffer_for_uri(self, uri: DocumentUri) -> SessionBufferProtocol | None:
         scheme, path = parse_uri(uri)
         if scheme == "file":
 
@@ -1120,7 +1211,7 @@ class Session(APIHandler, TransportCallbacks):
                 return sb.get_uri() == path if sb else False
 
             predicate = compare_by_string
-        return next(filter(predicate, self.session_buffers_async()), None)
+        return next(filter(predicate, self.session_buffers()), None)
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
@@ -1156,7 +1247,7 @@ class Session(APIHandler, TransportCallbacks):
         if value is not False and value is not None:
             return True
         if check_views:
-            return any(sb.has_capability(capability) for sb in self.session_buffers_async())
+            return any(sb.has_capability(capability) for sb in self.session_buffers())
         return False
 
     def get_capability(self, capability: str) -> Any | None:
@@ -1201,7 +1292,7 @@ class Session(APIHandler, TransportCallbacks):
 
     def on_userprefs_changed_async(self) -> None:
         self._redraw_config_status_async()
-        for sb in self.session_buffers_async():
+        for sb in self.session_buffers():
             sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
@@ -1283,7 +1374,7 @@ class Session(APIHandler, TransportCallbacks):
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
-        self.do_workspace_diagnostics_async()
+        self.do_workspace_diagnostics()
         return result
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
@@ -1326,22 +1417,22 @@ class Session(APIHandler, TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def execute_command(
+    async def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
-    ) -> Promise[R | Error | None]:  # pyright: ignore[reportInvalidTypeVarUse]
-        """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
+    ) -> R | None:  # pyright: ignore[reportInvalidTypeVarUse]
+        """Run a command from the asyncio thread."""
         if self._plugin:
             task: PackagedTask[R | Error | None] = Promise.packaged_task()
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                return promise
+                return await promise
         command_name = command['command']
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
             sublime.set_timeout(lambda: view.run_command("auto_complete"))
-            return Promise.resolve(None)
+            return None
         if command_name == "editor.action.triggerParameterHints" and view:
 
             def run_async() -> None:
@@ -1354,7 +1445,7 @@ class Session(APIHandler, TransportCallbacks):
                 listener.do_signature_help_async(SignatureHelpTriggerKind.Invoked)
 
             sublime.set_timeout_async(run_async)
-            return Promise.resolve(None)
+            return None
         # Handle VSCode-specific command which is often used for "References" code lenses
         if command_name == "editor.action.showReferences" and view:
             if (arguments := command.get('arguments')) and len(arguments) == 3:
@@ -1372,25 +1463,24 @@ class Session(APIHandler, TransportCallbacks):
                             )
                         )
                         LocationPicker(view, self, locations, side_by_side=False)
-            return Promise.resolve(None)
-        request = Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress)
-        execute_command_promise = self.send_request_task(request)
+            return None
+        future = self.request(Request[ExecuteCommandParams, Union[R, None]].executeCommand(command, progress=progress))
         if is_refactoring:
             self._is_executing_refactoring_command = True
-            execute_command_promise.then(lambda _: self._reset_is_executing_refactoring_command())
-        return execute_command_promise
-
-    def _reset_is_executing_refactoring_command(self) -> None:
-        self._is_executing_refactoring_command = False
+            try:
+                return await future
+            finally:
+                self._is_executing_refactoring_command = False
+        return await future
 
     def check_log_unsupported_command(self, command: str) -> None:
         if userprefs().log_debug and command not in self._logged_unsupported_commands:
             self._logged_unsupported_commands.add(command)
             debug(f'{self.config.name}: unsupported command: {command}')
 
-    def run_code_action_async(
+    async def run_code_action(
         self, code_action: Command | CodeAction, progress: bool, view: sublime.View | None = None
-    ) -> Promise[None]:
+    ) -> R | None:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast('Command', code_action)
@@ -1400,33 +1490,32 @@ class Session(APIHandler, TransportCallbacks):
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
             is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-            return self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring) \
-                .then(lambda _: None)
+            return await self.execute_command(command_params, progress=progress, view=view, is_refactoring=is_refactoring)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
         code_action = cast('CodeAction', code_action)
-        return self._maybe_resolve_code_action(code_action, view) \
-            .then(lambda code_action: self._apply_code_action_async(code_action, view))
+        code_action = await self._maybe_resolve_code_action(code_action, view)
+        return await self._apply_code_action(code_action, view)
 
-    def try_open_uri_async(
+    async def try_open_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> Promise[sublime.View | None] | None:
+    ) -> sublime.View | bool | None:
         if uri.startswith("file:"):
-            return self._open_file_uri_async(uri, r, flags, group)
+            return await self._open_file_uri(uri, r, flags, group)
         # Try to find a pre-existing session-buffer
-        if sb := self.get_session_buffer_for_uri_async(uri):
+        if sb := self.get_session_buffer_for_uri(uri):
             view = sb.get_view_in_group(group)
             self.window.focus_view(view)
             if r:
                 center_selection(view, r)
-            return Promise.resolve(view)
+            return view
         if uri.startswith('res:'):
-            return self._open_res_uri_async(uri, r, group)
+            return await self._open_res_uri(uri, r, group)
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
             flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
             if name := uri[len('untitled:'):]:
@@ -1434,36 +1523,35 @@ class Session(APIHandler, TransportCallbacks):
                 for view in self.window.views():
                     if view.file_name() is None and view.name() == name:
                         self.window.focus_view(view)
-                        return Promise.resolve(view)
+                        return view
                 view = self.window.new_file(flags)
                 view.set_scratch(True)
                 view.set_name(name)
-                return Promise.resolve(view)
+                return view
             view = self.window.new_file(flags)
             view.set_scratch(True)
-            return Promise.resolve(view)
+            return view
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
-            return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
-        return None
+            return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
+        return False
 
-    def open_uri_async(
+    async def open_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> Promise[sublime.View | None]:
-        promise = self.try_open_uri_async(uri, r, flags, group)
-        return Promise.resolve(None) if promise is None else promise
+    ) -> sublime.View | bool | None:
+        return await self.try_open_uri(uri, r, flags, group)
 
-    def _open_file_uri_async(
+    async def _open_file_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> Promise[sublime.View | None]:
+    ) -> sublime.View | None:
         result: PackagedTask[sublime.View | None] = Promise.packaged_task()
 
         def handle_continuation(view: sublime.View | None) -> None:
@@ -1472,14 +1560,14 @@ class Session(APIHandler, TransportCallbacks):
             sublime.set_timeout_async(lambda: result[1](view))
 
         sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))
-        return result[0]
+        await result[0]
 
-    def _open_res_uri_async(
+    async def _open_res_uri(
         self,
         uri: DocumentUri,
         r: Range | None = None,
         group: int = -1
-    ) -> Promise[sublime.View | None]:
+    ) -> sublime.View | None:
 
         def continue_on_main_thread() -> None:
             view = open_resource(self.window, uri, group)
@@ -1489,16 +1577,16 @@ class Session(APIHandler, TransportCallbacks):
 
         result: PackagedTask[sublime.View | None] = Promise.packaged_task()
         sublime.set_timeout(continue_on_main_thread)
-        return result[0]
+        return await result[0]
 
-    def _open_uri_with_plugin_async(
+    async def _open_uri_with_plugin(
         self,
         plugin: AbstractPlugin,
         uri: DocumentUri,
         r: Range | None,
         flags: sublime.NewFileFlags,
         group: int,
-    ) -> Promise[sublime.View | None] | None:
+    ) -> sublime.View | bool | None:
         # I cannot type-hint an unpacked tuple
         pair: PackagedTask[tuple[str | None, str, str]] = Promise.packaged_task()
         # It'd be nice to have automatic tuple unpacking continuations
@@ -1528,22 +1616,22 @@ class Session(APIHandler, TransportCallbacks):
             return result[0]
         return None
 
-    def open_location_async(
+    async def open_location(
         self,
         location: Location | LocationLink,
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
-    ) -> Promise[sublime.View | None]:
+    ) -> sublime.View | None:
         uri, r = get_uri_and_range_from_location(location)
-        return self.open_uri_async(uri, r, flags, group)
+        return await self.open_uri(uri, r, flags, group)
 
-    def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
+    def notify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
         if self._plugin:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
-    def _maybe_resolve_code_action(
+    async def _maybe_resolve_code_action(
         self, code_action: CodeAction, view: sublime.View | None
-    ) -> Promise[CodeAction | Error]:
+    ) -> CodeAction:
         if "edit" not in code_action:
             has_capability = self.has_capability("codeActionProvider.resolveProvider")
             if not has_capability and view:
@@ -1551,24 +1639,21 @@ class Session(APIHandler, TransportCallbacks):
                     has_capability = session_view.has_capability_async("codeActionProvider.resolveProvider")
             if has_capability:
                 # We must first resolve the command and edit properties, because they can potentially be absent.
-                request = Request("codeAction/resolve", code_action)
-                return self.send_request_task(request)
-        return Promise.resolve(code_action)
+                return await self.request(Request("codeAction/resolve", code_action))
+        return code_action
 
-    def _apply_code_action_async(
-        self, code_action: CodeAction | Error | None, view: sublime.View | None
-    ) -> Promise[None]:
+    async def _apply_code_action(self, code_action: CodeAction | Error | None, view: sublime.View | None) -> None:
         if not code_action:
-            return Promise.resolve(None)
+            return
         if isinstance(code_action, Error):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message(f"Failed to apply code action: {code_action}")
-            return Promise.resolve(None)
+            return
         title = code_action['title']
         edit = code_action.get("edit")
         is_refactoring = kind_contains_other_kind(CodeActionKind.Refactor, code_action.get('kind', ''))
-        promise = self.apply_workspace_edit_async(edit, label=title, is_refactoring=is_refactoring) \
-            .then(lambda _: None) if edit else Promise.resolve(None)
+        if edit:
+            await self.apply_workspace_edit(edit, label=title, is_refactoring=is_refactoring)
         command = code_action.get("command")
         if command is not None:
             execute_command: ExecuteCommandParams = {
@@ -1577,27 +1662,24 @@ class Session(APIHandler, TransportCallbacks):
             arguments = command.get("arguments")
             if arguments is not None:
                 execute_command['arguments'] = arguments
-            return promise \
-                .then(lambda _: self.execute_command(execute_command, progress=False, view=view,
-                                                     is_refactoring=is_refactoring)) \
-                .then(lambda _: None)
-        return promise
+            await self.execute_command(execute_command, progress=False, view=view, is_refactoring=is_refactoring)
+        return None
 
-    def apply_workspace_edit_async(
+    async def apply_workspace_edit(
         self, edit: WorkspaceEdit, *, label: str | None = None, is_refactoring: bool = False
-    ) -> Promise[WorkspaceEditSummary]:
+    ) -> WorkspaceEditSummary:
         """
         Apply a WorkspaceEdit, and return a promise that resolves on the async thread again after the edits have been
         applied. The resolved promise contains a summary of the changes in the WorkspaceEdit.
         """
         is_refactoring = self._is_executing_refactoring_command or is_refactoring
-        return self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
+        return await self.apply_parsed_workspace_edits(parse_workspace_edit(edit, label), is_refactoring)
 
-    def apply_parsed_workspace_edits(
+    async def apply_parsed_workspace_edits(
         self, changes: WorkspaceChanges, is_refactoring: bool = False
-    ) -> Promise[WorkspaceEditSummary]:
+    ) -> WorkspaceEditSummary:
 
-        def handle_view(
+        async def handle_view(
             edits: list[TextEdit],
             label: str | None,
             view_version: int | None,
@@ -1607,13 +1689,14 @@ class Session(APIHandler, TransportCallbacks):
         ) -> Promise[None]:
             if view is None:
                 print(f'LSP: ignoring edits due to no view for uri: {uri}')
-                return Promise.resolve(None)
-            return apply_text_edits(view, edits, label=label, required_view_version=view_version) \
-                .then(lambda view: self._set_view_state(view_state_actions, view) if view else None)
+                return
+            view = await apply_text_edits(view, edits, label=label, required_view_version=view_version)
+            if view:
+                await self._set_view_state(view_state_actions, view)
 
         active_sheet = self.window.active_sheet()
         selected_sheets = self.window.selected_sheets()
-        promises: list[Promise[None]] = []
+        futures: list[asyncio.Future[None]] = []
         auto_save = userprefs().refactoring_auto_save if is_refactoring else 'never'
         summary: WorkspaceEditSummary = {
             'total_changes': sum(len(value[0]) for value in changes.values()),
@@ -1621,14 +1704,13 @@ class Session(APIHandler, TransportCallbacks):
         }
         for uri, (edits, label, view_version) in changes.items():
             view_state_actions = self._get_view_state_actions(uri, auto_save)
-            promises.append(
-                self.open_uri_async(uri)
-                    .then(partial(handle_view, edits, label, view_version, uri, view_state_actions))
-            )
-        return Promise.all(promises) \
-            .then(lambda _: self._set_selected_sheets(selected_sheets)) \
-            .then(lambda _: self._set_focused_sheet(active_sheet)) \
-            .then(lambda _: summary)
+            future = self.open_uri(uri)
+            future.add_done_callback(partial(handle_view, edits, label, view_version, uri, view_state_actions))
+            futures.append(future)
+        await asyncio.gather(*futures)
+        self._set_selected_sheets(selected_sheets)
+        self._set_focused_sheet(active_sheet)
+        return summary
 
     def _get_view_state_actions(self, uri: DocumentUri, auto_save: str) -> ViewStateActions:
         """
@@ -1663,8 +1745,8 @@ class Session(APIHandler, TransportCallbacks):
                 actions |= ViewStateActions.SAVE
         return actions
 
-    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> Promise[None]:
-        promise = Promise.resolve(None)
+    def _set_view_state(self, actions: ViewStateActions, view: sublime.View) -> asyncio.Future[None]:
+        future = asyncio.get_running_loop().create_future()
         should_save = bool(actions & ViewStateActions.SAVE)
         should_close = bool(actions & ViewStateActions.CLOSE)
         if should_save and view.is_dirty():
@@ -1705,7 +1787,7 @@ class Session(APIHandler, TransportCallbacks):
         ))
         visible_session_buffers: list[tuple[SessionBufferProtocol, SessionViewProtocol]] = []
         not_visible_session_buffers: list[SessionBufferProtocol] = []
-        for session_buffer in self.session_buffers_async():
+        for session_buffer in self.session_buffers():
             for session_view in session_buffer.session_views:
                 if (sheet := session_view.view.sheet()) and sheet in selected_sheets:
                     visible_session_buffers.append((session_buffer, session_view))
@@ -1715,11 +1797,11 @@ class Session(APIHandler, TransportCallbacks):
         return visible_session_buffers, not_visible_session_buffers
 
     def visible_session_views(self) -> set[SessionViewProtocol]:
-        return set(sv for sv in self.session_views_async() if (sheet := sv.view.sheet()) and sheet.is_selected())
+        return set(sv for sv in self.session_views() if (sheet := sv.view.sheet()) and sheet.is_selected())
 
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
-    def do_workspace_diagnostics_async(self) -> None:
+    def do_workspace_diagnostics(self) -> None:
         if self.config.diagnostics_mode != 'workspace':
             return
         if not self.get_workspace_folders():
@@ -1729,9 +1811,9 @@ class Session(APIHandler, TransportCallbacks):
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
                 continue
-            self._do_workspace_diagnostics_async(identifier)
+            sublime_aio.run_coroutine(self._do_workspace_diagnostics(identifier))
 
-    def _do_workspace_diagnostics_async(self, identifier: DiagnosticsIdentifier) -> None:
+    async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
             {'uri': uri, 'value': result_id} for (uri, id_), result_id in self.diagnostics_result_ids.items()
             if id_ == identifier and result_id is not None
@@ -1739,15 +1821,41 @@ class Session(APIHandler, TransportCallbacks):
         params: WorkspaceDiagnosticParams = {'previousResultIds': previous_result_ids}
         if identifier is not None:
             params['identifier'] = identifier
-        self.workspace_diagnostics_pending_responses[identifier] = self.send_request_async(
-            Request.workspaceDiagnostic(
-                params,
-                on_partial_result=partial(self._on_workspace_diagnostics_async, identifier, reset_pending_response=False)),  # noqa: E501
-            partial(self._on_workspace_diagnostics_async, identifier),
-            partial(self._on_workspace_diagnostics_error_async, identifier)
-        )
 
-    def _on_workspace_diagnostics_async(
+        self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.request(
+            Request.workspaceDiagnostic(params),
+            partial_results=True
+        )
+        try:
+            async for partial_response in inflight_request:
+                for diagnostic_report in partial_response['items']:
+                    uri = normalize_uri(diagnostic_report['uri'])
+                    version = diagnostic_report['version']
+                    # Skip if outdated
+                    if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri(uri)) and \
+                            version < session_buffer.last_synced_version:
+                        continue
+                    self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
+                    if is_workspace_full_document_diagnostic_report(diagnostic_report):
+                        self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
+            await inflight_request
+            self.workspace_diagnostics_pending_responses[identifier] = None
+        except ResponseException as e:
+            if e.error['code'] == LSPErrorCodes.ServerCancelled:
+                data = e.error.get('data')
+                if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
+                    # Retrigger the request after a short delay, but don't reset the pending response variable for this
+                    # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
+                    # infinite cycles of cancel -> retrigger, in case the server is busy.
+                    sublime.set_timeout_async(
+                        lambda: self._do_workspace_diagnostics_async(identifier),
+                        WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
+                    )
+                    return
+            self.workspace_diagnostics_pending_responses[identifier] = None
+
+
+    def _on_workspace_diagnostics(
         self,
         identifier: DiagnosticsIdentifier,
         response: WorkspaceDiagnosticReport,
@@ -1760,26 +1868,13 @@ class Session(APIHandler, TransportCallbacks):
             uri = normalize_uri(diagnostic_report['uri'])
             version = diagnostic_report['version']
             # Skip if outdated
-            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri_async(uri)) and \
+            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri(uri)) and \
                     version < session_buffer.last_synced_version:
                 continue
             self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
             if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics_async(uri, identifier, version, diagnostic_report['items'])
+                self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
 
-    def _on_workspace_diagnostics_error_async(self, identifier: DiagnosticsIdentifier, error: ResponseError) -> None:
-        if error['code'] == LSPErrorCodes.ServerCancelled:
-            data = error.get('data')
-            if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
-                # Retrigger the request after a short delay, but don't reset the pending response variable for this
-                # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
-                # infinite cycles of cancel -> retrigger, in case the server is busy.
-                sublime.set_timeout_async(
-                    lambda: self._do_workspace_diagnostics_async(identifier),
-                    WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-                )
-                return
-        self.workspace_diagnostics_pending_responses[identifier] = None
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
 
@@ -1794,10 +1889,10 @@ class Session(APIHandler, TransportCallbacks):
     # --- server request handlers --------------------------------------------------------------------------------------
 
     @request_handler('window/showMessageRequest')
-    def on_window_show_message_request(self, params: ShowMessageRequestParams) -> Promise[MessageActionItem | None]:
+    async def on_window_show_message_request(self, params: ShowMessageRequestParams) -> MessageActionItem | None:
         if mgr := self.manager():
-            return mgr.handle_message_request(self.config.name, params)
-        return Promise.resolve(None)
+            return await mgr.handle_message_request(self.config.name, params)
+        return None
 
     @notification_handler('window/showMessage')
     def on_window_show_message(self, params: ShowMessageParams) -> None:
@@ -1810,11 +1905,11 @@ class Session(APIHandler, TransportCallbacks):
             mgr.handle_log_message(self.config.name, params)
 
     @request_handler('workspace/workspaceFolders')
-    def on_workspace_workspace_folders(self, _: None) -> Promise[list[LspWorkspaceFolder]]:
-        return Promise.resolve([wf.to_lsp() for wf in self._workspace_folders])
+    async def on_workspace_workspace_folders(self, _: None) -> list[LspWorkspaceFolder]:
+        return [wf.to_lsp() for wf in self._workspace_folders]
 
     @request_handler('workspace/configuration')
-    def on_workspace_configuration(self, params: ConfigurationParams) -> Promise[list[LSPAny]]:
+    async def on_workspace_configuration(self, params: ConfigurationParams) -> list[LSPAny]:
         items: list[LSPAny] = []
         requested_items = params.get("items") or []
         for requested_item in requested_items:
@@ -1823,28 +1918,27 @@ class Session(APIHandler, TransportCallbacks):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
-        return Promise.resolve(sublime.expand_variables(items, self._template_variables()))
+        return sublime.expand_variables(items, self._template_variables())
 
     @request_handler('workspace/applyEdit')
-    def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> Promise[ApplyWorkspaceEditResult]:
-        return self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label')) \
-            .then(lambda _: {"applied": True})
+    async def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> ApplyWorkspaceEditResult:
+        await self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label'))
+        return {"applied": True}
 
     @request_handler('workspace/codeLens/refresh')
-    def on_workspace_code_lens_refresh(self, _: None) -> Promise[None]:
+    async def on_workspace_code_lens_refresh(self, _: None) -> None:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
             for session_buffer, session_view in visible_session_buffers:
-                session_buffer.do_code_lenses_async(session_view.view)
+                session_buffer.do_code_lenses(session_view.view)
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.CODE_LENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        asyncio.get_running_loop().call_soon(continue_after_response)
 
     @request_handler('workspace/semanticTokens/refresh')
-    def on_workspace_semantic_tokens_refresh(self, _: None) -> Promise[None]:
+    async def on_workspace_semantic_tokens_refresh(self, _: None) -> None:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -1856,11 +1950,10 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.SEMANTIC_TOKENS)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        asyncio.get_running_loop().call_soon(continue_after_response)
 
     @request_handler('workspace/inlayHint/refresh')
-    def on_workspace_inlay_hint_refresh(self, _: None) -> Promise[None]:
+    async def on_workspace_inlay_hint_refresh(self, _: None) -> None:
 
         def continue_after_response() -> None:
             visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
@@ -1872,27 +1965,25 @@ class Session(APIHandler, TransportCallbacks):
             for session_buffer in not_visible_session_buffers:
                 session_buffer.set_pending_refresh(RequestFlags.INLAY_HINT)
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        asyncio.get_running_loop().call_soon(continue_after_response)
 
     @request_handler('workspace/diagnostic/refresh')
-    def on_workspace_diagnostic_refresh(self, _: None) -> Promise[None]:
-        sublime.set_timeout_async(self._refresh_diagnostics)
-        return Promise.resolve(None)
+    async def on_workspace_diagnostic_refresh(self, _: None) -> None:
+        self._refresh_diagnostics()
 
     def _refresh_diagnostics(self) -> None:
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
         for session_buffer, session_view in visible_session_buffers:
             view = session_view.view
-            session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
+            session_buffer.do_document_diagnostic(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
     @notification_handler('textDocument/publishDiagnostics')
     def on_text_document_publish_diagnostics(self, params: PublishDiagnosticsParams) -> None:
-        self.handle_diagnostics_async(params['uri'], None, None, params['diagnostics'])
+        self.handle_diagnostics(params['uri'], None, None, params['diagnostics'])
 
-    def handle_diagnostics_async(
+    def handle_diagnostics(
         self, uri: DocumentUri, identifier: DiagnosticsIdentifier, version: int | None, diagnostics: list[Diagnostic]
     ) -> None:
         mgr = self.manager()
@@ -1904,12 +1995,12 @@ class Session(APIHandler, TransportCallbacks):
             return
         self.diagnostics.set_diagnostics(uri, identifier, diagnostics)
         mgr.on_diagnostics_updated()
-        if session_buffer := self.get_session_buffer_for_uri_async(uri):
+        if session_buffer := self.get_session_buffer_for_uri(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
 
     @request_handler('client/registerCapability')
-    def on_client_register_capability(self, params: RegistrationParams) -> Promise[None]:
+    async def on_client_register_capability(self, params: RegistrationParams) -> None:
         new_diagnostics_provider = False
         new_workspace_diagnostics_provider = False
         for registration in params["registrations"]:
@@ -1933,14 +2024,14 @@ class Session(APIHandler, TransportCallbacks):
             self._registrations[registration_id] = data
             if data.selector:
                 # The registration is applicable only to certain buffers, so let's check which buffers apply.
-                for sb in self.session_buffers_async():
+                for sb in self.session_buffers():
                     data.check_applicable(sb)
             else:
                 # The registration applies globally to all buffers.
                 self.capabilities.register(registration_id, capability_path, registration_path, options)
                 # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
-                for sv in self.session_views_async():
+                for sv in self.session_views():
                     inform = partial(sv.on_capability_added_async, registration_id, capability_path, options)
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
@@ -1955,11 +2046,10 @@ class Session(APIHandler, TransportCallbacks):
             if new_workspace_diagnostics_provider:
                 self.do_workspace_diagnostics_async()
 
-        sublime.set_timeout_async(continue_after_response)
-        return Promise.resolve(None)
+        asyncio.get_running_loop().call_soon(continue_after_response)
 
     @request_handler('client/unregisterCapability')
-    def on_client_unregister_capability(self, params: UnregistrationParams) -> Promise[None]:
+    async def on_client_unregister_capability(self, params: UnregistrationParams) -> None:
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:
             registration_id = unregistration["id"]
@@ -1976,9 +2066,8 @@ class Session(APIHandler, TransportCallbacks):
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
                 if isinstance(discarded, dict):
-                    for sv in self.session_views_async():
+                    for sv in self.session_views():
                         sv.on_capability_removed_async(registration_id, discarded)
-        return Promise.resolve(None)
 
     def register_file_system_watchers(self, registration_id: str, watchers: list[FileSystemWatcher]) -> None:
         if not self._watcher_impl:
@@ -2010,34 +2099,31 @@ class Session(APIHandler, TransportCallbacks):
                 file_watcher.destroy()
 
     @request_handler('window/showDocument')
-    def on_window_show_document(self, params: ShowDocumentParams) -> Promise[ShowDocumentResult]:
+    async def on_window_show_document(self, params: ShowDocumentParams) -> ShowDocumentResult:
         uri = params.get("uri")
-
-        def success(b: bool | sublime.View | None) -> ShowDocumentResult:
+        if params.get("external"):
+            open_externally(uri)
+        else:
+            # TODO: ST API does not allow us to say "do not focus this new view"
+            result = await self.open_uri_async(uri, params.get("selection"))
             if isinstance(b, bool):
                 pass
             elif isinstance(b, sublime.View):
                 b = b.is_valid()
             else:
                 b = False
-            return ({"success": b})
-
-        if params.get("external"):
-            return Promise.resolve(success(open_externally(uri)))
-        # TODO: ST API does not allow us to say "do not focus this new view"
-        return self.open_uri_async(uri, params.get("selection")).then(success)
+        return ({"success": b})
 
     @request_handler('window/workDoneProgress/create')
-    def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> Promise[None]:
+    async def on_window_work_done_progress_create(self, params: WorkDoneProgressCreateParams) -> None:
         self._progress[params['token']] = None
-        return Promise.resolve(None)
 
-    def _invoke_views(self, request: Request[Any, Any], method: str, *args: Any) -> None:
+    def _invoke_views_async(self, request: Request[Any, Any], method: str, *args: Any) -> None:
         if request.view:
             if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
         else:
-            for sv in self.session_views_async():
+            for sv in self.session_views():
                 getattr(sv, method)(*args)
 
     def _create_window_progress_reporter(self, token: ProgressToken, value: WorkDoneProgressBegin) -> None:
@@ -2078,7 +2164,9 @@ class Session(APIHandler, TransportCallbacks):
                     token = str(token)
                     request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
                     request = self._response_handlers[request_id][0]
-                    self._invoke_views(request, "on_request_progress", request_id, params)
+                    sublime.set_timeout_async(
+                        lambda: self._invoke_views_async(request, "on_request_progress", request_id, params)
+                    )
                 except (TypeError, IndexError, ValueError, KeyError):
                     # The parse failed so possibility (1) is apparently not applicable. At this point we may still be
                     # dealing with possibility (2).
@@ -2100,12 +2188,13 @@ class Session(APIHandler, TransportCallbacks):
             elif kind == 'end':
                 value = cast('WorkDoneProgressEnd', value)
                 progress = self._progress.pop(token)
-                assert isinstance(progress, WindowProgressReporter)
-                title = progress.title
-                progress = None
-                message = value.get('message')
-                if message:
-                    self.window.status_message(title + ': ' + message)
+                if progress:
+                    assert isinstance(progress, WindowProgressReporter)
+                    title = progress.title
+                    progress = None
+                    message = value.get('message')
+                    if message:
+                        self.window.status_message(title + ': ' + message)
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
@@ -2116,7 +2205,7 @@ class Session(APIHandler, TransportCallbacks):
         if self._plugin:
             self._plugin.on_session_end_async(None, None)
             self._plugin = None
-        for sv in self.session_views_async():
+        for sv in self.session_views():
             self.shutdown_session_view_async(sv)
         self.capabilities.clear()
         self._registrations.clear()
@@ -2153,52 +2242,100 @@ class Session(APIHandler, TransportCallbacks):
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
-    async def request(self, request: Request[P, R]) -> R:
+    def request(self, request: Request[P, R]) -> CancellableInflightRequest[R]:
+        """You must call this method from the sublime_aio loop thread. Callbacks will be run in the loop thread."""
         self.request_id += 1
         request_id = self.request_id
+        future: asyncio.Future[R] = asyncio.Future()
+        loop = asyncio.get_running_loop()
+        result = CancellableInflightRequest(future, request_id, self)
         if request.progress and isinstance(request.params, dict):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         if request.on_partial_result and isinstance(request.params, dict):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
-        future: asyncio.Future[R] = asyncio.Future()
-        loop = asyncio.get_running_loop()
 
         def on_result(response: R) -> None:
-            # Remember: this on_result callback is invoked on ST async thread.
-            # Resolving asyncio futures *must* be done from the loop from which
-            # they were created.
-            loop.call_soon_threadsafe(lambda: future.set_result(response))
+            loop.call_soon(lambda: future.set_result(response))
 
         def on_error(error: ErrorResponse) -> None:
-            # Remember: this on_error callback is invoked on ST async thread.
-            # Resolving asyncio futures *must* be done from the loop from which
-            # they were created.
-            loop.call_soon_threadsafe(lambda: future.set_exception(ErrorException(e)))
+            loop.call_soon(lambda: future.set_exception(ResponseException(e)))
 
         self._response_handlers[request_id] = (request, on_result, on_error)
-        self._invoke_views(request, "on_request_started_async", request_id, request)
+        self._invoke_views_async(request, "on_request_started_async", request_id, request)
         if self._plugin:
             self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
-        await self.send_payload(request.to_payload(request_id))
-        return await future
+        sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
+        return result
+
+    def stream(self, request: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
+        """
+        Stream a request. Use in combination with `async for` syntax:
+
+        ```py
+        async for partial_result in session.stream(Request(...)):
+            pass
+        ```
+        """
+        self.request_id += 1
+        request_id = self.request_id
+        result = CancellableInflightStreamingRequest(request_id, self)
+        if request.progress and isinstance(request.params, dict):
+            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
+        request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
+        request.on_partial_result = result.on_partial_result
+
+        def on_result(response: R) -> None:
+            result.on_partial_result(response)
+
+        def on_error(error: ErrorResponse) -> None:
+            result.on_error(error)
+
+        self._response_handlers[request_id] = (request, on_result, on_error)
+        self._invoke_views_async(request, "on_request_started_async", request_id, request)
+        if self._plugin:
+            self._plugin.on_pre_send_request_async(request_id, request)
+        self._logger.outgoing_request(request_id, request.method, request.params)
+        sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
+        return result
 
     def send_request_async(
             self,
             request: Request[P, R],
             on_result: Callable[[R], None],
             on_error: Callable[[ResponseError], None] | None = None
-    ) -> None:
-        """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
+    ) -> int:
+        """
+        You must not call this method from the sublime_aio loop thread (or deadlock will occur).
+        Callbacks will run in Sublime's worker thread.
+        """
+        request_id: int | None = None
 
         async def wrap() -> None:
             try:
-                result = await self.request(request)
-                sublime.set_timeout_async(lambda: on_result(result))
+                result = self.request(request)
+
+                def on_done(future: asyncio.Future[R]) -> None:
+                    if future.cancelled():
+                        return
+                    if ex := future.exception():
+                        sublime.set_timeout_async(lambda: on_error(ex.error))
+                    else:
+                        sublime.set_timeout_async(lambda: on_result(future.result()))
+
+                result._future.add_done_callback(on_done)
+                with self._request_cv:
+                    request_id = result.id
+                    self._request_cv.notify()
+                await result
             except ResponseException as e:
-                sublime.set_timeout_async(lambda: on_error(e.data))
+                pass
 
         sublime_aio.run_coroutine(wrap())
+        with self._request_cv:
+            self._request_cv.wait_for(lambda: request_id is not None)
+        assert request_id is not None
+        return request_id
 
     def send_request(
             self,
@@ -2207,7 +2344,7 @@ class Session(APIHandler, TransportCallbacks):
             on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
-        self.send_request_async(request, on_result, on_error)
+        sublime.set_timeout_async(lambda: self.send_request_async(request, on_result, on_error))
 
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
@@ -2226,7 +2363,7 @@ class Session(APIHandler, TransportCallbacks):
             self.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             request, _, error_handler = self._response_handlers[request_id]
             error_handler({"code": LSPErrorCodes.RequestCancelled, "message": "Request canceled by client"})
-            self._invoke_views(request, "on_request_canceled_async", request_id)
+            self._invoke_views_async(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification[P]) -> None:
@@ -2301,36 +2438,35 @@ class Session(APIHandler, TransportCallbacks):
     async def on_payload(self, payload: JSONRPCMessage) -> None:
         handler, result, req_id, typestr, _method = await self.deduce_payload(payload)
         if handler:
-            result_promise: Promise[Response[Any]] | None = None
             try:
                 if req_id is None:
-                    # notification or response
+                    # notification or response handler
                     handler(result)
                 else:
                     # request
                     try:
-                        result_promise = cast('Promise[Response[Any]] | None', handler(result, req_id))
+                        debug(f"start handling {typestr}: {req_id} {_method}")
+                        await self.send_response(await handler(result, req_id))
+                        debug(f"done  handling {typestr}: {req_id} {_method}")
                     except Error as err:
                         await self.send_error_response(req_id, err)
-                        return
                     except Exception as ex:
                         await self.send_error_response(req_id, Error.from_exception(ex))
                         raise
             except Exception as err:
                 exception_log(f"Error handling {typestr}", err)
-                return
-            if isinstance(result_promise, Promise):
-                await self.send_response(await result_promise)
+        else:
+            debug("no handler found for payload:", payload)
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
-        matching_handler = self._response_handlers.pop(response_id)
+        matching_handler = self._response_handlers.pop(response_id, None)
         if not matching_handler:
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         request, handler, error_handler = matching_handler
-        self._invoke_views(request, "on_request_finished_async", response_id)
+        sublime.set_timeout_async(lambda: self._invoke_views_async(request, "on_request_finished_async", response_id))
         if "result" in response and "error" not in response:
             return (handler, request.method, response["result"], False)
         if "result" not in response and "error" in response:

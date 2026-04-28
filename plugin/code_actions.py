@@ -183,7 +183,7 @@ class CodeActionsManager:
             if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
                 listener.purge_changes_async()
-                sb.do_document_diagnostic_async(listener.view, listener.view.change_count())
+                sb.do_document_diagnostic(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
                 task = session.send_request_task(request)
                 tasks.append(task.then(response_handler))
@@ -216,7 +216,7 @@ class CodeActionsManager:
             for kind in matching_kinds:
                 listener.purge_changes_async()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
-                sb.do_document_diagnostic_async(view, view.change_count())
+                sb.do_document_diagnostic(view, view.change_count())
                 region = entire_content_region(view)
                 diagnostics = [diagnostic for diagnostic, _ in sb.diagnostics]
                 params = text_document_code_action_params(view, region, diagnostics, [kind], manual=False)

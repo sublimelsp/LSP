@@ -14,7 +14,7 @@ from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
 from .configurations import WindowConfigManager
 from .constants import MESSAGE_TYPE_LEVELS
-from .executors import executor
+from .executors import executor_async
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
@@ -144,7 +144,9 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         # Update workspace folders in case the user have changed those since window was created.
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
+        debug("checking if config is needed for", listener)
         if config := self._needed_config(listener.view):
+            debug("found config for", listener)
             sublime_aio.run_coroutine(self.start(config, listener))
 
     def unregister_listener_async(self, listener: AbstractViewListener) -> None:
@@ -217,6 +219,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             for session in list(self._sessions):
                 if session.config.name == config_name and session.handles_path(file_path, inside):
                     # OK, this session is already initialized for this view.
+                    self._listeners.add(listener)
                     sublime.set_timeout_async(lambda: listener.on_session_initialized_async(session))
                     return
 
@@ -231,15 +234,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 cwd: str | None = None
                 if plugin_class is not None:
                     # TODO: Make needs_update_or_installation & install_or_update async somehow
-                    debug("foo")
-                    if await loop.run_in_executor(executor, plugin_class.needs_update_or_installation):
+                    if await loop.run_in_executor(executor_async, plugin_class.needs_update_or_installation):
                         config.set_view_status(listener.view, "installing...")
-                        debug("bar")
-                        await loop.run_in_executor(executor, plugin_class.install_or_update)
+                        await loop.run_in_executor(executor_async, plugin_class.install_or_update)
                     additional_variables = plugin_class.additional_variables()
                     if isinstance(additional_variables, dict):
                         variables.update(additional_variables)
-                    debug("baz")
                     cannot_start_reason = plugin_class.can_start(self._window, listener.view, workspace_folders, config)
                     if cannot_start_reason:
                         config.erase_view_status(listener.view)
@@ -277,6 +277,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 await session.initialize(variables=variables, transport=transport, working_directory=cwd)
                 self._sessions.add(session)
                 debug(f"session {session} initialized")
+                self._listeners.add(listener)
                 sublime.set_timeout_async(lambda: listener.on_session_initialized_async(session))
             except Exception as e:
                     message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
@@ -311,12 +312,12 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             router_logger.append(logger(self, config_name))
         return router_logger
 
-    def handle_message_request(
+    async def handle_message_request(
         self, config_name: str, params: ShowMessageRequestParams
-    ) -> Promise[MessageActionItem | None]:
+    ) -> MessageActionItem | None:
         if view := self._window.active_view():
             return MessageRequestHandler(view, params, config_name).show()
-        return Promise.resolve(None)
+        return None
 
     def restart_sessions_async(self, config_names: list[str]) -> None:
         self._end_sessions_async(config_names)

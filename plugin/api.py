@@ -6,6 +6,7 @@ from ..protocol import ExecuteCommandParams
 from ..protocol import LSPAny
 from .core.constants import ST_STORAGE_PATH
 from .core.logging import exception_log
+from .core.logging import debug
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -17,6 +18,7 @@ from .core.views import MarkdownLangMap
 from .core.views import uri_from_view
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Awaitable
 from functools import wraps
 from typing import Any
 from typing import Callable
@@ -169,31 +171,30 @@ def notification_handler(method: str) -> Callable[[Callable[[Any, P], None]], Ca
 
 def request_handler(
     method: str
-) -> Callable[[Callable[[Any, P], Promise[R]]], Callable[[Any, P, int], Promise[Response[R]]]]:
+) -> Callable[[Callable[[Any, P], Awaitable[R]]], Callable[[Any, P, int], Awaitable[Response[R]]]]:
     """
-    Decorator to mark a method as a handler for a specific LSP request.
+    Decorator to mark a coroutine method as a handler for a specific LSP request.
 
     Usage:
         ```py
         @request_handler('eslint/openDoc')
-        def on_open_doc(self, params: TextDocumentIdentifier) -> Promise[bool]:
+        async def on_open_doc(self, params: TextDocumentIdentifier) -> bool:
             ...
         ```
 
-    The decorated method will be called with the request parameters whenever the specified
-    request is received from the language server. The method must return a Promise that resolves
-    to the response value. The framework will automatically send it back to the server.
+    The decorated coroutine method will be called with the request parameters whenever the specified
+    request is received from the language server. The coroutine method must return a response value.
+    The framework will automatically send it back to the server.
 
     :param      method:             The LSP request method name (e.g., 'eslint/openDoc').
-    :returns:   A decorator that registers the function as a request handler.
+    :returns:   A decorator that registers the coroutine function as a request handler.
     """
 
-    def decorator(func: Callable[[Any, P], Promise[R]]) -> Callable[[Any, P, int], Promise[Response[R]]]:
+    def decorator(func: Callable[[Any, P], Awaitable[R]]) -> Callable[[Any, P, int], Awaitable[Response[R]]]:
 
         @wraps(func)
-        def wrapper(self: Any, params: P, request_id: int) -> Promise[Response[Any]]:
-            promise = func(self, params)
-            return promise.then(lambda result: Response(request_id, result))
+        async def wrapper(self: Any, params: P, request_id: int) -> Response[Any]:
+            return Response(request_id, await func(self, params))
 
         setattr(wrapper, HANDLER_MARKER, method)
         return wrapper

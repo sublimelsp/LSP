@@ -7,6 +7,7 @@ from .types import ClientConfig
 from .url import parse_uri
 from .workspace import disable_in_project
 from .workspace import enable_in_project
+from .workspace import WorkspaceFolder
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
@@ -49,7 +50,7 @@ class WindowConfigManager:
     def get_configs(self) -> list[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
 
-    def match_view(self, view: sublime.View) -> Generator[ClientConfig, None, None]:
+    def match_view(self, view: sublime.View, workspace_folders: list[WorkspaceFolder]) -> Generator[ClientConfig]:
         """
         Yields matching configuration.
 
@@ -63,7 +64,7 @@ class WindowConfigManager:
                 return
             scheme = parse_uri(uri)[0]
             for config in self.all.values():
-                if config.enabled and config.match_view(view, scheme):
+                if config.enabled and config.match_view(view, scheme, self._window, workspace_folders):
                     yield config
         except (IndexError, RuntimeError):
             pass

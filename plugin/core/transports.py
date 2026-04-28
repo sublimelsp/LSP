@@ -258,6 +258,10 @@ class Transport(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def write_bytes(self, payload: bytes) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def close(self) -> None:
         raise NotImplementedError
 
@@ -298,6 +302,11 @@ class FileObjectTransport(Transport):
     def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
+        self._writer.flush()
+
+    @override
+    def write_bytes(self, payload: bytes) -> None:
+        self._writer.write(payload)
         self._writer.flush()
 
     @override
@@ -349,7 +358,7 @@ class TransportWrapper:
         self._error_reader = error_reader
         self._reader_thread = threading.Thread(target=self._read_loop)
         self._writer_thread = threading.Thread(target=self._write_loop)
-        self._send_queue: Queue[JSONRPCMessage | None] = Queue(0)
+        self._send_queue: Queue[JSONRPCMessage | bytes | None] = Queue(0)
         self._reader_thread.start()
         self._writer_thread.start()
 
@@ -358,6 +367,9 @@ class TransportWrapper:
         return self._process.args if self._process else None
 
     def send(self, payload: JSONRPCMessage) -> None:
+        self._send_queue.put_nowait(payload)
+
+    def send_bytes(self, payload: bytes) -> None:
         self._send_queue.put_nowait(payload)
 
     def close(self) -> None:
@@ -431,7 +443,10 @@ class TransportWrapper:
             while self._transport:
                 if (d := self._send_queue.get()) is None:
                     break
-                self._transport.write(d)
+                if isinstance(d, bytes):
+                    self._transport.write_bytes(d)
+                else:
+                    self._transport.write(d)
         except (BrokenPipeError, AttributeError):
             pass
         except Exception as ex:

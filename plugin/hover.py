@@ -10,6 +10,7 @@ from ..protocol import Position
 from ..protocol import Range
 from .code_actions import filter_quickfix_actions
 from .core.constants import HOVER_ENABLED_KEY
+from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
 from .core.constants import SHOW_DEFINITIONS_KEY
 from .core.open import lsp_range_from_uri_fragment
@@ -31,7 +32,6 @@ from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import html_wrapper
 from .core.views import is_location_href
 from .core.views import make_command_link
-from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -42,7 +42,8 @@ from functools import partial
 from typing import Sequence
 from typing import TYPE_CHECKING
 from typing import Union
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 import html
 import mdpopups
 import sublime
@@ -310,19 +311,19 @@ class LspHoverCommand(LspTextCommand):
         if contents != original_contents and self.view.is_popup_visible():
             update_lsp_popup(self.view, contents)
 
-    def _on_navigate(self, href: str) -> None:
-        scheme = parse_uri(href)[0]
+    def _on_navigate(self, uri: str) -> None:
+        scheme = parse_uri(uri)[0]
         if scheme == 'subl':
             pass
         elif scheme == 'file':
             if window := self.view.window():
-                open_file_uri(window, href)
+                open_file_uri(window, uri)
         elif scheme == CODE_ACTION_SCHEME:
-            session_name, version, action = decode_code_action_uri(href)
+            session_name, version, action = decode_code_action_uri(uri)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
                 sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
-        elif href == "quick-panel:DocumentLink":
+        elif uri == "quick-panel:DocumentLink":
             if window := self.view.window():
                 targets = [link["target"] for link in self._document_links]  # pyright: ignore
 
@@ -332,21 +333,24 @@ class LspHoverCommand(LspTextCommand):
 
                 window.show_quick_panel(
                     [parse_uri(target)[1] for target in targets], partial(on_select, targets), placeholder="Open Link")
-        elif is_location_href(href):
-            session_name, uri, row, col_utf16 = unpack_href_location(href)
+        elif is_location_href(uri):
+            session_name, uri, row, col_utf16 = unpack_href_location(uri)
             if session := self.session_by_name(session_name):
                 position: Position = {"line": row, "character": col_utf16}
                 r: Range = {"start": position, "end": position}
                 sublime.set_timeout_async(partial(session.open_uri_async, uri, r))
-        elif scheme.lower() in {"http", "https"} or (not scheme and href.startswith('www.')):
-            open_in_browser(href)
+        elif scheme.lower() in {"http", "https"} or (not scheme and uri.startswith('www.')):
+            open_in_browser(uri)
         elif scheme:
-            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, href))
+            sublime.set_timeout_async(partial(self.try_open_custom_uri_async, uri))
 
-    def try_open_custom_uri_async(self, href: str) -> None:
-        r = lsp_range_from_uri_fragment(urlparse(href).fragment)
+    def try_open_custom_uri_async(self, uri: str) -> None:
+        uri_parts = urlsplit(uri)
+        r = lsp_range_from_uri_fragment(uri_parts.fragment)
+        if r:
+            uri = urlunsplit(uri_parts._replace(fragment=''))
         for session in self.sessions():
-            if session.try_open_uri_async(href, r) is not None:
+            if session.try_open_uri_async(uri, r) is not None:
                 return
 
 

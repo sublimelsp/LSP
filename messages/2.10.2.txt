@@ -1,0 +1,14 @@
+=> 2.10.2
+
+# Fixes
+
+- [3.14] Emit spec-compliant file:/// URIs for filename_to_uri (#2878) (Sean Demura)
+
+# Enhancements
+
+- Adjust font size of code lens annotations (#2883) (jwortmann)
+- Always request workspace diagnostics if supported by server (#2827) (jwortmann)
+
+# Docs
+
+- add more details to editor setup (#2881) (Rafał Chłodnicki)

@@ -40,6 +40,7 @@ from ...protocol import TextEdit
 from ...protocol import VersionedTextDocumentIdentifier
 from ...protocol import WillSaveTextDocumentParams
 from .constants import CODE_ACTION_KINDS
+from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import ST_CACHE_PATH
 from .constants import ST_PLATFORM
@@ -62,10 +63,8 @@ from os.path import expanduser
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Iterable
 from typing import Sequence
-from typing import Tuple
 from typing import TYPE_CHECKING
 import html
 import itertools
@@ -80,8 +79,6 @@ if TYPE_CHECKING:
     from .sessions import SessionBufferProtocol
     from .types import ClientConfig
 
-
-MarkdownLangMap = Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 _baseflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.DRAW_NO_OUTLINE | sublime.RegionFlags.DRAW_EMPTY_AS_OVERWRITE | sublime.RegionFlags.NO_UNDO  # noqa: E501
 _multilineflags = sublime.RegionFlags.DRAW_NO_FILL | sublime.RegionFlags.NO_UNDO
@@ -965,7 +962,7 @@ def kind_contains_other_kind(kind: str, other_kind: str) -> bool:
     """
     Check if `other_kind` is a sub-kind of `kind`.
 
-    The kind `"refactor.extract"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`,
+    The kind `"refactor.extract"` for example contains `"refactor.extract"` and `"refactor.extract.function"`,
     but not `"unicorn.refactor.extract"`, or `"refactor.extractAll"` or `"refactor"`.
     """
     if kind == other_kind:

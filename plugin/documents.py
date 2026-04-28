@@ -24,6 +24,7 @@ from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import LIGHTBULB_SCOPE
+from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
@@ -59,7 +60,6 @@ from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
-from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier

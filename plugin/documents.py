@@ -200,7 +200,7 @@ class TestEventListener(sublime_aio.ViewEventListener):
         debug("on_activated", self)
 
 
-class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
+class DocumentSyncListener(sublime_aio.ViewEventListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
@@ -236,8 +236,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         self._should_format_on_paste = False
         self.hover_provider_count = 0
         self._setup()
+        debug("__init__", self)
 
     def __del__(self) -> None:
+        debug("__del__", self)
         self._cleanup()
 
     def __repr__(self) -> str:
@@ -275,7 +277,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         for session in self.sessions():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the asyncio thread again
-        sublime_aio.run_coroutine(self.on_activated())
+        debug("_reset", self)
+        sublime_aio.run_coroutine(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
@@ -392,10 +395,12 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
     def session_views(self) -> list[SessionView]:
         return list(self._session_views.values())
 
-    @requires_session
+    # @requires_session
     async def on_text_changed(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
+        if not self.session_views():
+            return None
         if self.view.is_primary():
             for sv in self.session_views():
                 sv.on_text_changed(change_count, changes, action)
@@ -427,7 +432,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     async def on_load(self) -> None:
         debug("on_load", self)
-        debug("asdf")
         if not self._registered and is_regular_view(self.view):
             self._register()
             return
@@ -437,7 +441,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
                 session.send_request_async(
                     Request.foldingRange(params, self.view),
                     partial(self._on_initial_folding_ranges, initially_folded_kinds))
-        await self.on_activated()
+        await self._activated_impl()
 
     async def on_post_move(self) -> None:
         if ST_VERSION < 4184:  # Already handled in boot.Listener.on_pre_move
@@ -446,6 +450,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     async def on_activated(self) -> None:
         debug("on_activated", self)
+        await self._activated_impl()
+
+    async def _activated_impl(self) -> None:
+        debug("_activated_impl", self)
         if self.view.is_loading() or not is_regular_view(self.view):
             return
         if not self._registered:
@@ -469,8 +477,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers('codeActionProvider'))
 
-    @requires_session
+    # @requires_session
     async def on_selection_modified(self) -> None:
+        if not self.session_views():
+            return
         first_region, _ = self._update_stored_selection()
         if first_region is None:
             return
@@ -576,8 +586,10 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             return operand == bool(session_view.session_buffer.get_document_link_at_point(self.view, position))
         return None
 
-    @requires_session
+    # @requires_session
     def on_hover(self, point: int, hover_zone: int) -> None:
+        if not self.session_views():
+            return
         if self.view.is_popup_visible():
             return
         if window := self.view.window():
@@ -634,6 +646,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     @requires_session
     def on_text_command(self, command_name: str, args: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
+        if not self.session_views():
+            return
         if command_name == "auto_complete":
             self._auto_complete_triggered_manually = True
         elif command_name == "show_scope_name" and userprefs().semantic_highlighting:

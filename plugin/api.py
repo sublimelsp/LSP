@@ -443,7 +443,7 @@ class LspPlugin(APIHandler):
             scheme, _ = parse_uri(uri_from_view(context.view))
             return scheme in context.configuration.schemes \
                 and sublime.score_selector(syntax.scope, selector) > 0 \
-                and context.view.settings().get("repl")
+                and not context.view.settings().get("repl")
         return False
 
     @classmethod

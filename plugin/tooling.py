@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from .api import get_plugin
+from .api import LspPlugin
+from .api import OnPreStartContext
+from .api import PluginStartError
 from .core.css import css
 from .core.logging import debug
 from .core.registry import windows
@@ -504,18 +507,23 @@ class ServerTestRunner(TransportCallbacks):
             workspace = ProjectFolders(window)
             workspace_folders = sorted_workspace_folders(workspace.folders, initiating_view.file_name() or '')
             cwd = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    raise Exception(f'Plugin.can_start() prevented the start due to: {cannot_start_reason}')
-                cwd = plugin_class.on_pre_start(window, initiating_view, workspace_folders, config)
-            if not cwd and workspace_folders:
-                cwd = workspace_folders[0].path
+            if plugin_class:
+                # TODO: We should share this common code with WindowManager.start_async
+                cwd = workspace_folders[0].path if workspace_folders else None
+                plugin_context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
+                if issubclass(plugin_class, LspPlugin):
+                    plugin_class.on_pre_start_async(plugin_context)
+                else:
+                    if plugin_class.needs_update_or_installation():
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
+                    reason = plugin_class.can_start(window, initiating_view, workspace_folders, config)
+                    if reason:
+                        raise PluginStartError(f'Plugin.can_start() prevented the start due to: {reason}')
+                    if new_cwd := plugin_class.on_pre_start(window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
             transport_config = config.create_transport_config()
             self._transport = transport_config.start(config.command, config.env, cwd, variables, self)
             self._resolved_command = self._transport.process_args

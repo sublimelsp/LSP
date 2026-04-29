@@ -29,6 +29,7 @@ from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
 from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
+from .api import LspPlugin
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import AUTO_CLOSE_BRACKETS
@@ -557,6 +558,8 @@ class SessionBuffer:
         if commands := self.session.get_capability('executeCommandProvider.commands'):
             self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
+        if isinstance(self.session.plugin, LspPlugin):
+            self._supported_commands.update(self.session.plugin._command_handler_map.keys())
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):
@@ -1038,14 +1041,9 @@ class SessionBuffer:
         Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
-        code_lenses = self._code_lenses.code_lenses_with_command()
-        if self.session.uses_plugin():
-            # TODO: should plugins announce the commands that they can handle, so we can filter out the unsupported
-            # commands here as well?
-            return code_lenses
         supported_code_lenses: list[ResolvedCodeLens] = []
-        # Filter out CodeLenses with commands that are not handled directly by the language server
-        for code_lens in code_lenses:
+        # Filter out CodeLenses with commands that are not handled by the language server or plugin
+        for code_lens in self._code_lenses.code_lenses_with_command():
             command_name = code_lens['command']['command']
             if command_name in self._supported_commands:
                 supported_code_lenses.append(code_lens)

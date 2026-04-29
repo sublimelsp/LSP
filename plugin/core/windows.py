@@ -8,7 +8,12 @@ from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
+from ..api import AbstractPlugin
 from ..api import get_plugin
+from ..api import IsApplicableContext
+from ..api import LspPlugin
+from ..api import OnPreStartContext
+from ..api import PluginStartError
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -43,6 +48,7 @@ from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from .workspace import WorkspaceFolder
 from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
@@ -104,6 +110,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     @property
     def window(self) -> sublime.Window:
         return self._window
+
+    @property
+    def workspace_folders(self) -> list[WorkspaceFolder]:
+        return self._workspace.get_workspace_folders()
 
     def get_and_clear_server_log(self) -> list[tuple[str, str]]:
         log = self._server_log
@@ -226,7 +236,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        configs = self._config_manager.match_view(view)
+        configs = self._config_manager.match_view(view, self._workspace.get_workspace_folders())
         handled = False
         file_name = view.file_name()
         inside = self._workspace.contains(view)
@@ -238,8 +248,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO: remove after next release
-                        debug(view, "ignored by plugin", plugin.__name__)
+                    if issubclass(plugin, LspPlugin):
+                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
+                        if plugin.is_applicable_async(context):
+                            return config
                     elif plugin.is_applicable(view, config):
                         return config
                 else:
@@ -251,40 +263,35 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         config.set_view_status_handler(self)
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
-            # debug('Already starting on this window:', config.name)
             return
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             variables = extract_variables(self._window)
-            cwd: str | None = None
-            if plugin_class is not None:
-                if plugin_class.needs_update_or_installation():
+            cwd = workspace_folders[0].path if workspace_folders else None
+            context = OnPreStartContext(config, variables, initiating_view, cwd, workspace_folders)
+            if plugin_class:
+                if issubclass(plugin_class, LspPlugin):
                     config.set_view_status(initiating_view, "installing...")
-                    plugin_class.install_or_update()
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
-                if cannot_start_reason:
-                    config.erase_view_status(initiating_view)
-                    message = f"cannot start {config.name}: {cannot_start_reason}"
-                    self._config_manager.disable_config(config.name, only_for_session=True)
-                    # Continue with handling pending listeners
-                    self._new_session = None
-                    sublime.set_timeout_async(self._dequeue_listener_async)
-                    self._window.status_message(message)
-                    return
-                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
+                    plugin_class.on_pre_start_async(context)
+                    cwd = context.working_directory
+                else:
+                    if plugin_class.needs_update_or_installation():
+                        config.set_view_status(initiating_view, "installing...")
+                        plugin_class.install_or_update()
+                    additional_variables = plugin_class.additional_variables()
+                    if isinstance(additional_variables, dict):
+                        variables.update(additional_variables)
+                    cannot_start_reason = plugin_class.can_start(
+                        self._window, initiating_view, workspace_folders, config)
+                    if cannot_start_reason:
+                        raise PluginStartError(cannot_start_reason)
+                    if new_cwd := plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config):
+                        cwd = new_cwd
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            if cwd:
-                transport_cwd: str | None = cwd
-            else:
-                transport_cwd = workspace_folders[0].path if workspace_folders else None
-            transport = config.create_transport_config().start(
-                config.command, config.env, transport_cwd, variables, session)
-            if plugin_class:
+            transport = config.create_transport_config().start(config.command, config.env, cwd, variables, session)
+            if plugin_class and issubclass(plugin_class, AbstractPlugin):
                 plugin_class.on_post_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
@@ -294,6 +301,14 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 init_callback=functools.partial(self._on_post_session_initialize, initiating_view)
             )
             self._new_session = session
+        except PluginStartError as ex:
+            config.erase_view_status(initiating_view)
+            message = f"cannot start {config.name}: {ex!s}"
+            self._config_manager.disable_config(config.name, only_for_session=True)
+            # Continue with handling pending listeners
+            self._new_session = None
+            sublime.set_timeout_async(self._dequeue_listener_async)
+            self._window.status_message(message)
         except Exception as e:
             message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                         'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '

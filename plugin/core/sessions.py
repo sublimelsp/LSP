@@ -74,6 +74,7 @@ from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..api import AbstractPlugin
 from ..api import APIHandler
+from ..api import LspPlugin
 from ..api import notification_handler
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
@@ -81,6 +82,7 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .constants import ChangeEventAction
+from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
@@ -104,6 +106,9 @@ from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
+from .protocol import ClientNotification
+from .protocol import ClientRequest
+from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
@@ -112,6 +117,8 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
+from .protocol import ServerNotification
+from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import TransportCallbacks
@@ -130,10 +137,8 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
-from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
-from .views import MarkdownLangMap
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -152,7 +157,6 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
-from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
 from weakref import WeakSet
@@ -965,7 +969,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
+                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
+    ) -> None:
         self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -985,6 +990,7 @@ class Session(APIHandler, TransportCallbacks):
         self._init_callback: InitCallback | None = None
         self._initialize_error: tuple[int, Exception | None] | None = None
         self._views_opened = 0
+        self._variables: dict[str, str] = {}
         self._workspace_folders = workspace_folders
         self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
         self._session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
@@ -993,7 +999,7 @@ class Session(APIHandler, TransportCallbacks):
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
         self._plugin_class = plugin_class
-        self._plugin: AbstractPlugin | None = None
+        self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
@@ -1008,7 +1014,7 @@ class Session(APIHandler, TransportCallbacks):
                 if handler_name := self._plugin.handler_attr_map.get(name):
                     return getattr(self._plugin, handler_name)
                 # Handler added through 'm_*' method.
-                if plugin_handler := getattr(self._plugin, name, None):
+                if isinstance(self._plugin, AbstractPlugin) and (plugin_handler := getattr(self._plugin, name, None)):
                     return plugin_handler
             if handler_name := self.handler_attr_map.get(name):
                 return getattr(self, handler_name)
@@ -1018,11 +1024,8 @@ class Session(APIHandler, TransportCallbacks):
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
 
-    def uses_plugin(self) -> bool:
-        return self._plugin is not None
-
     @property
-    def plugin(self) -> AbstractPlugin | None:
+    def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
@@ -1061,18 +1064,6 @@ class Session(APIHandler, TransportCallbacks):
     def _redraw_config_status_async(self) -> None:
         for sv in self.session_views_async():
             self.config.set_view_status(sv.view, self.config_status_message)
-
-    @deprecated("Use set_config_status_async(message) instead")
-    def set_window_status_async(self, key: str, message: str) -> None:
-        self._status_messages[key] = message
-        for sv in self.session_views_async():
-            sv.view.set_status(key, message)
-
-    @deprecated("Use set_config_status_async('') instead")
-    def erase_window_status_async(self, key: str) -> None:
-        self._status_messages.pop(key, None)
-        for sv in self.session_views_async():
-            sv.view.erase_status(key)
 
     # --- session buffer management ------------------------------------------------------------------------------------
 
@@ -1129,9 +1120,6 @@ class Session(APIHandler, TransportCallbacks):
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if self.state != ClientStates.READY:
             return False
-        if self._plugin and self._plugin.should_ignore(view):  # TODO: remove after next release
-            debug(view, "ignored by plugin", self._plugin.__class__.__name__)
-            return False
         if scheme == "file":
             file_name = view.file_name()
             if not file_name:
@@ -1139,7 +1127,7 @@ class Session(APIHandler, TransportCallbacks):
                 return False
             if not self.handles_path(file_name, inside_workspace):
                 return False
-        if self.config.match_view(view, scheme):
+        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
@@ -1207,7 +1195,11 @@ class Session(APIHandler, TransportCallbacks):
             sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
-        return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
+        if self.config.resolved_markdown_language_map is not None:
+            return self.config.resolved_markdown_language_map
+        if isinstance(self._plugin, AbstractPlugin):
+            return self._plugin.markdown_language_id_to_st_syntax_map()
+        return None
 
     def handles_path(self, file_path: str | None, inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():
@@ -1248,9 +1240,13 @@ class Session(APIHandler, TransportCallbacks):
         transport: TransportWrapper,
         init_callback: InitCallback
     ) -> None:
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            self._plugin = self._plugin_class(weakref.ref(self))
+            self._plugin.on_transport_ready_async(transport)
         self.transport = transport
         self.working_directory = working_directory
-        params = get_initialize_params(variables, self._workspace_folders, self.config)
+        self._variables = variables
+        params = get_initialize_params(self._variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
         self.send_request_async(
             Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
@@ -1263,12 +1259,15 @@ class Session(APIHandler, TransportCallbacks):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
+        if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            self._plugin.on_server_response_async('initialize', Response(-1, result))
+            if issubclass(self._plugin_class, AbstractPlugin):
+                self._plugin = self._plugin_class(weakref.ref(self))
+                self._plugin.on_server_response_async('initialize', Response[InitializeResult](-1, result))
         self.send_notification(Notification.initialized())
+        if self._plugin and isinstance(self._plugin, LspPlugin):
+            self._plugin.on_initialize_async()
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
             debug(f"{self.config.name}: Supported execute commands: {execute_commands}")
@@ -1324,29 +1323,26 @@ class Session(APIHandler, TransportCallbacks):
             }))
 
     def _get_resolved_settings(self) -> dict[str, Any]:
-        if self._plugin:
+        if isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_settings_changed(self.config.settings)
-        variables = self._template_variables()
-        return self.config.settings.get_resolved(variables)
-
-    def _template_variables(self) -> dict[str, str]:
-        variables = extract_variables(self.window)
-        if self._plugin_class is not None:
-            if extra_vars := self._plugin_class.additional_variables():
-                variables.update(extra_vars)
-        return variables
+        return self.config.settings.get_resolved(self._variables)
 
     def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
         is_refactoring: bool = False,
     ) -> Promise[R | Error | None]:  # pyright: ignore[reportInvalidTypeVarUse]
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
-        if self._plugin:
-            task: PackagedTask[R | Error | None] = Promise.packaged_task()
-            promise, resolve = task
-            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
-                return promise
         command_name = command['command']
+        if self._plugin:
+            if isinstance(self._plugin, LspPlugin):
+                if command_handler := self._plugin.get_command_handler(command_name):
+                    return command_handler(command.get('arguments'))
+            else:
+                task: PackagedTask[R | Error | None] = Promise.packaged_task()
+                promise, resolve = task
+                if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
+                    return promise
+                resolve(None)
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
@@ -1452,9 +1448,14 @@ class Session(APIHandler, TransportCallbacks):
             view = self.window.new_file(flags)
             view.set_scratch(True)
             return Promise.resolve(view)
-        # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
+        # There is no pre-existing session-buffer, so we have to go through the plugin's URI handler.
         if self._plugin:
-            return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
+            if isinstance(self._plugin, LspPlugin):
+                scheme, _ = parse_uri(uri)
+                if handler := self._plugin.get_uri_handler(scheme):
+                    return handler(uri, flags).then(lambda sheet: self._on_sheet_opened(sheet, uri, r))
+            else:
+                return self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return None
 
     def open_uri_async(
@@ -1515,28 +1516,50 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-
-            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
-                if title is not None:
-                    if group > -1:
-                        self.window.focus_group(group)
-                    view = self.window.new_file(syntax=syntax, flags=flags)
-                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                    # settings object here at our leisure.
-                    view.settings().set("lsp_uri", uri)
-                    view.set_scratch(True)
-                    view.set_name(title)
-                    view.run_command("append", {"characters": content})
-                    view.set_read_only(True)
-                    if r:
-                        center_selection(view, r)
-                    sublime.set_timeout_async(lambda: result[1](view))
-                else:
-                    sublime.set_timeout_async(lambda: result[1](None))
-
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
+            pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
             return result[0]
         return None
+
+    def open_scratch_buffer(
+        self,
+        title: str | None,
+        content: str,
+        syntax: str,
+        uri: DocumentUri,
+        r: Range | None,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1,
+    ) -> Promise[sublime.View | None]:
+        task: PackagedTask[sublime.View | None] = Promise.packaged_task()
+        promise, resolve = task
+
+        def continue_on_main_thread() -> None:
+            if title is None:
+                resolve(None)
+                return
+            if group > -1:
+                self.window.focus_group(group)
+            view = self.window.new_file(syntax=syntax, flags=flags)
+            # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+            # settings object here at our leisure.
+            view.set_scratch(True)
+            view.set_name(title)
+            view.run_command("append", {"characters": content})
+            view.set_read_only(True)
+            self._on_sheet_opened(view.sheet(), uri, r).then(resolve)
+
+        sublime.set_timeout(continue_on_main_thread)
+        return promise
+
+    def _on_sheet_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> Promise[sublime.View | None]:
+        if sheet and (view := sheet.view()):
+            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+            if r:
+                center_selection(view, r)
+            return Promise.resolve(view)
+        return Promise.resolve(None)
 
     def open_location_async(
         self,
@@ -1548,7 +1571,11 @@ class Session(APIHandler, TransportCallbacks):
         return self.open_uri_async(uri, r, flags, group)
 
     def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
-        if self._plugin:
+        if not self._plugin:
+            return
+        if isinstance(self._plugin, LspPlugin):
+            self._plugin.on_text_changed_async(session_buffer)
+        else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
     def _maybe_resolve_code_action(
@@ -1827,11 +1854,11 @@ class Session(APIHandler, TransportCallbacks):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
-            if self._plugin:
+            if isinstance(self._plugin, AbstractPlugin):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
-        return Promise.resolve(sublime.expand_variables(items, self._template_variables()))
+        return Promise.resolve(sublime.expand_variables(items, self._variables))
 
     @request_handler('workspace/applyEdit')
     def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> Promise[ApplyWorkspaceEditResult]:
@@ -2187,8 +2214,12 @@ class Session(APIHandler, TransportCallbacks):
         on_error = on_error or (lambda _: None)
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views(request, "on_request_started_async", request_id, request)
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, request)
+        elif self._plugin:
+            client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
+            self._plugin.on_pre_send_request_async(client_request, request.view)
+            request.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
         return request_id
@@ -2223,8 +2254,13 @@ class Session(APIHandler, TransportCallbacks):
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
     def send_notification(self, notification: Notification[P]) -> None:
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
+        elif self._plugin:
+            client_notification = cast('ClientNotification',
+                                       cast('object', {'method': notification.method, 'params': notification.params}))
+            self._plugin.on_pre_send_notification_async(client_notification)
+            notification.params = cast('P', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
@@ -2266,8 +2302,12 @@ class Session(APIHandler, TransportCallbacks):
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
-                if self._plugin:
+                if self._plugin and isinstance(self._plugin, AbstractPlugin):
                     self._plugin.on_server_notification_async(Notification(method, result))
+                elif self._plugin:
+                    server_notification = cast('ServerNotification',
+                                               cast('object', {'method': method, 'result': result}))
+                    self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2277,15 +2317,21 @@ class Session(APIHandler, TransportCallbacks):
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
-            if self._plugin and not is_error:
-                self._plugin.on_server_response_async(method, response)  # type: ignore
+            if not is_error and self._plugin:
+                if isinstance(self._plugin, AbstractPlugin):
+                    self._plugin.on_server_response_async(cast('str', method), response)
+                else:
+                    server_response = cast('ServerResponse',
+                                           cast('object', {'method': method, 'result': response.result}))
+                    self._plugin.on_server_response_async(server_response)
+                    response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)  # pyright: ignore[reportUnreachable]
         return (None, None, None, None, None)
 
     def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = self.deduce_payload(payload)
+        handler, result, req_id, typestr, method = self.deduce_payload(payload)
         if handler:
             result_promise: Promise[Response[Any]] | None = None
             try:
@@ -2306,7 +2352,17 @@ class Session(APIHandler, TransportCallbacks):
                 exception_log(f"Error handling {typestr}", err)
                 return
             if isinstance(result_promise, Promise):
-                result_promise.then(self.send_response)
+                result_promise \
+                    .then(lambda r: self._handle_plugin_on_pre_send_response_async(method, result, r)) \
+                    .then(self.send_response)
+
+    def _handle_plugin_on_pre_send_response_async(
+        self, method: str | None, params: Any, response: Response[Any]
+    ) -> Response[Any]:
+        if method and isinstance(self._plugin, LspPlugin):
+            obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
+            self._plugin.on_pre_send_response_async(obj)
+        return response
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage

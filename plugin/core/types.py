@@ -10,6 +10,7 @@ from ...protocol import TextDocumentSyncOptions
 from ...protocol import URI
 from .collections import DottedDict
 from .constants import LANGUAGE_IDENTIFIERS
+from .constants import MarkdownLangMap
 from .logging import debug
 from .logging import set_debug_logging
 from .transports import StdioTransportConfig
@@ -25,8 +26,10 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Dict
 from typing import Generator
 from typing import Iterable
+from typing import List
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
@@ -47,11 +50,15 @@ import weakref
 
 if TYPE_CHECKING:
     from .file_watcher import FileWatcherEventType
+    from .workspace import WorkspaceFolder
 
 FEATURES_TIMEOUT = 300  # milliseconds
 
 PANEL_FILE_REGEX = r"^(\S.*):$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
+
+
+MarkdownLangMapJson = Dict[str, List[List[str]]]
 
 
 class FileWatcherConfig(TypedDict):
@@ -773,6 +780,7 @@ class ClientConfig:
         file_watcher: FileWatcherConfig | None = None,
         semantic_tokens: dict[str, str] | None = None,
         diagnostics_mode: str = "all_files",
+        markdown_language_map: MarkdownLangMapJson | None = None,
         path_maps: list[PathMap] | None = None,
         settings_registration: SettingsRegistration | None = None,
         all_settings: dict[str, Any] | None = None
@@ -805,6 +813,11 @@ class ClientConfig:
             highlighting.
         :param diagnostics_mode: When to show diagnostics. `"all_files"` (default) shows them for all views;
             `"workspace"` filters out diagnostics for files not within the workspace folders.
+        :param markdown_language_map: Optional mapping of markdown language identifiers to aliases and Sublime Text
+            syntaxes, used for syntax-highlighting fenced code blocks in popups. Each key is a fenced-code-block
+            language tag. Each value is a two-element tuple: aliases and syntax paths or `scope:BASE_SCOPE`
+            selectors. Follows the format of mdpopups' `sublime_user_lang_map` setting. `None` (the default)
+            applies no extra mapping.
         :param path_maps: List of :class:`PathMap` entries for translating paths between the local machine and a remote
             server (e.g. inside a container).
         :param settings_registration: The `SettingsRegistration` instance holding resource path and `Settings` instance
@@ -832,6 +845,9 @@ class ClientConfig:
         self.path_maps = path_maps
         self.semantic_tokens = semantic_tokens
         self.diagnostics_mode = diagnostics_mode
+        # Transformed mapping that uses tuples instead of lists for mdpopups.
+        self.resolved_markdown_language_map: MarkdownLangMap | None = None
+        self._markdown_language_map = markdown_language_map
         # For accessing configuration keys not explicitly handled above. Accessable through dunder methods below.
         self._settings_registration = settings_registration
         if isinstance(all_settings, dict):
@@ -842,6 +858,12 @@ class ClientConfig:
         else:
             self._all_settings = {}
         self._view_status_handler = default_status_view_handler
+
+    def __getattr__(self, name: str, /) -> Any:
+        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
+        if name in self._all_settings:
+            return self._all_settings[name]
+        raise AttributeError(name)
 
     @property
     @deprecated('Use initialization_options instead')
@@ -862,11 +884,30 @@ class ClientConfig:
             sublime.save_settings(settings_basename)
         self._enabled = enabled
 
-    def __getattr__(self, name: str, /) -> Any:
-        """Get property through attribute access (`.foo`) for properties that don't exist natively."""
-        if name in self._all_settings:
-            return self._all_settings[name]
-        raise AttributeError(name)
+    @property
+    def markdown_language_map(self) -> MarkdownLangMapJson | None:
+        return self._markdown_language_map
+
+    @markdown_language_map.setter
+    def markdown_language_map(self, lang_map: MarkdownLangMapJson | None) -> None:
+        self._markdown_language_map = lang_map
+        self.resolved_markdown_language_map = None
+        if resolved := self._resolve_markdown_language_map(lang_map):
+            self.resolved_markdown_language_map = resolved
+        else:
+            debug(f'Invalid markdown_language_map setting ignored:\n{lang_map}')
+
+    def _resolve_markdown_language_map(self, lang_map: MarkdownLangMapJson | None) -> MarkdownLangMap | None:
+        if lang_map is None:
+            return None
+        result: MarkdownLangMap = {}
+        for tag, mapping in lang_map.items():
+            if isinstance(mapping, list) and len(mapping) == 2:
+                aliases, syntaxes = mapping
+                result[tag] = (tuple(aliases), tuple(syntaxes))
+            else:
+                return None
+        return result
 
     @classmethod
     def from_sublime_settings(cls, name: str, settings_registration: SettingsRegistration) -> ClientConfig:
@@ -917,6 +958,7 @@ class ClientConfig:
             file_watcher=file_watcher,
             semantic_tokens=semantic_tokens,
             diagnostics_mode=str(s.get("diagnostics_mode", "all_files")),
+            markdown_language_map=deepcopy(s.get("markdown_language_map")),
             path_maps=PathMap.parse(s.get("path_maps")),
             settings_registration=settings_registration,
             all_settings=deepcopy(s.to_dict())
@@ -953,6 +995,7 @@ class ClientConfig:
             file_watcher=deepcopy(d.get("file_watcher", {})),
             semantic_tokens=deepcopy(d.get("semantic_tokens", {})),
             diagnostics_mode=deepcopy(d.get("diagnostics_mode", "all_files")),
+            markdown_language_map=deepcopy(d.get("markdown_language_map")),
             path_maps=PathMap.parse(d.get("path_maps")),
             all_settings=deepcopy(d)
         )
@@ -994,6 +1037,7 @@ class ClientConfig:
             file_watcher=deepcopy(override.get("file_watcher", src_config.file_watcher)),
             semantic_tokens=deepcopy(override.get("semantic_tokens", src_config.semantic_tokens)),
             diagnostics_mode=deepcopy(override.get("diagnostics_mode", src_config.diagnostics_mode)),
+            markdown_language_map=deepcopy(override.get("markdown_language_map", src_config.markdown_language_map)),
             path_maps=PathMap.parse(override.get("path_maps")) or deepcopy(src_config.path_maps),
             settings_registration=src_config._settings_registration,
             all_settings=deepcopy({**src_config._all_settings, **override})
@@ -1038,7 +1082,9 @@ class ClientConfig:
         """
         self._view_status_handler.on_view_status_changed(self.name, view, None)
 
-    def match_view(self, view: sublime.View, scheme: str) -> bool:
+    def match_view(
+        self, view: sublime.View, scheme: str, window: sublime.Window, workspace_folders: list[WorkspaceFolder]
+    ) -> bool:
         """
         Return `True` if this server should be active for the given view.
 
@@ -1048,9 +1094,14 @@ class ClientConfig:
         :param view: The view to test.
         :param scheme: The URI scheme of the view's resource (e.g. `"file"`).
         """
+        from ..api import AbstractPlugin
         from ..api import get_plugin
+        from ..api import IsApplicableContext
         if plugin := get_plugin(self.name):
-            return plugin.is_applicable(view, self)
+            if issubclass(plugin, AbstractPlugin):
+                return plugin.is_applicable(view, self)
+            plugin_context = IsApplicableContext(self, view, workspace_folders)
+            return plugin.is_applicable_async(plugin_context)
         if (syntax := view.syntax()) and (selector := self.selector.strip()):
             return scheme in self.schemes and sublime.score_selector(syntax.scope, selector) > 0
         return False

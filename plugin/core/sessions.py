@@ -537,6 +537,7 @@ def get_initialize_params(
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
             },
+            "metadataSupport": True,
             "snippetEditSupport": True
         },
         "workspaceFolders": True,

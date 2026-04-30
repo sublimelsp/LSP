@@ -117,7 +117,8 @@ def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), and not a special view like a console, output panel or find-in-files panels.
     if v.element() is not None:
         return False
-    if v.settings().get('is_widget'):
+    settings = v.settings()
+    if settings.get('is_widget') or settings.get('repl'):  # Input widgets or SublimeREPL views.
         return False
     # Not a syntax test file.
     if (filename := v.file_name()) and basename(filename).startswith('syntax_test_'):

@@ -59,7 +59,7 @@ class LspTask(ABC):
 
     def _purge_changes_async(self) -> None:
         if listener := self._task_runner.get_listener():
-            listener.purge_changes_async()
+            listener.purge_changes()
 
 
 @final

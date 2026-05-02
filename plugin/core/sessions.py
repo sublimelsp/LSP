@@ -346,7 +346,7 @@ def get_initialize_params(
     }
     text_document_capabilities: TextDocumentClientCapabilities = {
         "synchronization": {
-            "dynamicRegistration": True,  # exceptional
+            "dynamicRegistration": True,
             "willSave": True,
             "willSaveWaitUntil": True,
             "didSave": True
@@ -458,10 +458,10 @@ def get_initialize_params(
             "tooltipSupport": True
         },
         "colorProvider": {
-            "dynamicRegistration": True  # exceptional
+            "dynamicRegistration": True
         },
         "formatting": {
-            "dynamicRegistration": True  # exceptional
+            "dynamicRegistration": True
         },
         "rangeFormatting": {
             "dynamicRegistration": True,
@@ -549,7 +549,7 @@ def get_initialize_params(
             "dynamicRegistration": True
         },
         "symbol": {
-            "dynamicRegistration": True,  # exceptional
+            "dynamicRegistration": True,
             "symbolKind": {
                 "valueSet": symbol_kinds
             },

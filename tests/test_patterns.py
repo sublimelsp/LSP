@@ -49,6 +49,41 @@ class PatternToGlobTests(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+class PatternToGlobWindowsTests(unittest.TestCase):
+    # Unlike Unix roots (which start with /), Windows roots do not start with /,
+    # so posixpath.join produces a path that triggers the **/ prefix in the output.
+
+    def test_project_relative_directory_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo', is_directory_pattern=True, root_path='C:/project'),
+            '**/C:/project/foo/**')
+
+    def test_project_relative_file_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False, root_path='C:/project'),
+            '**/C:/project/**/*.pyo')
+
+    def test_project_relative_nested_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo/bar', is_directory_pattern=True, root_path='C:/project'),
+            '**/C:/project/foo/bar/**')
+
+    def test_project_relative_directory_pattern_backslash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo', is_directory_pattern=True, root_path=r'C:\Users\me\project'),
+            '**/C:/Users/me/project/foo/**')
+
+    def test_project_relative_file_pattern_backslash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False, root_path=r'C:\Users\me\project'),
+            '**/C:/Users/me/project/**/*.pyo')
+
+    def test_project_relative_without_root_path(self) -> None:
+        self.assertEqual(sublime_pattern_to_glob('//foo', is_directory_pattern=True), '//foo/**')
+        self.assertEqual(sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False), '//**/*.pyo')
+
+
+@unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
 class MatchesPatternWindowsTests(unittest.TestCase):
 
     def test_absolute_path(self) -> None:

@@ -145,7 +145,7 @@ def sublime_pattern_to_glob(pattern: str, *, is_directory_pattern: bool, root_pa
             glob += '**'
         # If pattern begins with '//', it will be compared as a relative path from the project root.
         if glob.startswith('//') and root_path:
-            glob = posixpath.join(root_path, glob[2:])
+            glob = posixpath.join(root_path.replace('\\', '/'), glob[2:])
         # If a pattern begins with a single /, it will be treated as an absolute path.
         if not glob.startswith('/') and not glob.startswith('**/'):
             glob = f'**/{glob}'

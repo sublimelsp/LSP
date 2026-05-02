@@ -151,7 +151,7 @@ class ServerRequests(TextDocumentTestCase):
 
         # willSaveWaitUntil is *only* registered on the buffer
         self.assertFalse(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"))
-        sb = next(self.session.session_buffers_async())
+        sb = next(self.session.session_buffers())
         self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKind.Full)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
         self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKind.Incremental)
@@ -210,7 +210,7 @@ class ServerRequestsWithAutoCompleteSelector(TextDocumentTestCase):
                 ]
             },
             None)
-        sb = next(self.session.session_buffers_async())
+        sb = next(self.session.session_buffers())
         # Check that textDocument/completion was registered onto the SessionBuffer
         self.assertEqual(sb.capabilities.get("completionProvider.id"), "anotherCompletionRegistrationId")
         # Trigger characters should not have been registered

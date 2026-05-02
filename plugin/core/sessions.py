@@ -2384,7 +2384,7 @@ class Session(APIHandler, TransportCallbacks):
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
-        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_done))
+        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result))
 
     @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:

@@ -178,7 +178,7 @@ class CodeActionsManager:
             return (sb.session.config.name, actions)
 
         tasks: list[Promise[CodeActionsByConfigName]] = []
-        for sb in listener.session_buffers_async('codeActionProvider'):
+        for sb in listener.session_buffers('codeActionProvider'):
             session = sb.session
             if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
@@ -211,7 +211,7 @@ class CodeActionsManager:
                 actions = [a for a in response if a.get('kind') in matching_kinds and not a.get('disabled')]
             return (sb.session.config.name, actions)
 
-        for sb in listener.session_buffers_async('codeActionProvider'):
+        for sb in listener.session_buffers('codeActionProvider'):
             matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
                 listener.purge_changes_async()

@@ -85,7 +85,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         text_edits = inlay_hint.get('textEdits')
         if not text_edits:
             return
-        for sb in session.session_buffers_async():
+        for sb in session.session_buffers():
             sb.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
 

@@ -44,6 +44,7 @@ import contextlib
 import fnmatch
 import os
 import posixpath
+import re
 import sublime
 import time
 import weakref
@@ -124,7 +125,7 @@ def matches_pattern(path: str, patterns: Any) -> bool:
     return False
 
 
-def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path: str | None = None) -> str:
+def sublime_pattern_to_glob(pattern: str, *, is_directory_pattern: bool, root_path: str | None = None) -> str:
     """
     Convert a Sublime Text pattern (http://www.sublimetext.com/docs/file_patterns.html)
     to a glob pattern that utilizes globstar extension.
@@ -135,11 +136,9 @@ def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path:
         if is_directory_pattern:
             glob += '/**'
     else:  # complex pattern
-        # With '*/' prefix or '/*' suffix, the '*' matches '/' characters.
-        if glob.startswith('*/'):
-            glob = f'*{glob}'
-        if glob.endswith('/*'):
-            glob += '*'
+        # With '*/' or '/*' sequence, the '*' matches '/' characters.
+        glob = re.sub(r'(?<!\*)\*/', '*/**/', glob)
+        glob = re.sub(r'/\*(?!\*)', '/**/*', glob)
         # If a pattern ends in '/' it will be treated as a directory pattern, and will match both a directory with that
         # name and any contained files or subdirectories.
         if glob.endswith('/'):
@@ -152,6 +151,11 @@ def sublime_pattern_to_glob(pattern: str, is_directory_pattern: bool, root_path:
             glob = f'**/{glob}'
         if is_directory_pattern and not glob.endswith('/**'):
             glob += '/**'
+        # Question mark also matches slashes.
+        glob = glob.replace('?', '{?,/}')
+        # Compact pattern to remove redundant repeated globs
+        glob = re.sub(r'\*\*/(\*\*?/)+', '**/', glob)
+        glob = re.sub(r'(/\*\*?)+/\*\*', '/**', glob)
     return glob
 
 

@@ -407,7 +407,10 @@ class SessionView:
             key = self._code_lens_key()
             regions = [self._code_lens_region(code_lens) for code_lens in self._code_lenses]
             flags = sublime.RegionFlags.NO_UNDO
-            annotations = [self._code_lens_annotation(code_lens) for code_lens in self._code_lenses]
+            annotations = [
+                f'<span style="font-family: system">{self._code_lens_html(code_lens)}</span>'
+                for code_lens in self._code_lenses
+            ]
             annotation_color = self.session_buffer.code_lens_annotation_color
             self.view.add_regions(key, regions, flags=flags, annotations=annotations, annotation_color=annotation_color)
         elif userprefs().show_code_lens == 'phantom':
@@ -419,11 +422,9 @@ class SessionView:
             phantoms: list[sublime.Phantom] = []
             for region, group in itertools.groupby(self._code_lenses, key=self._code_lens_region):
                 phantom_region = self._get_phantom_region(region)
-                html = '<body id="lsp-code-lens">{}</body>'.format(
-                    '\n<small style="font-family: system">|</small>\n'.join(
-                        self._code_lens_annotation(code_lens) for code_lens in group
-                    )
-                )
+                phantom_css = 'body {font-family: system}'
+                content = ' | '.join(self._code_lens_html(code_lens) for code_lens in group)
+                html = f'<body id="lsp-code-lens"><style>{phantom_css}</style><small>{content}</small></body>'
                 phantoms.append(sublime.Phantom(phantom_region, html, sublime.PhantomLayout.BELOW))
             self._code_lens_phantoms.update(phantoms)
 
@@ -433,19 +434,17 @@ class SessionView:
     def _code_lens_region(self, code_lens: ResolvedCodeLens) -> sublime.Region:
         return range_to_region(code_lens['range'], self.view)
 
-    def _code_lens_annotation(self, code_lens: ResolvedCodeLens) -> str:
+    def _code_lens_html(self, code_lens: ResolvedCodeLens) -> str:
         command = code_lens['command']
         if code_lens.get('uses_cached_command', False):
             # Only show the cached command title but don't create a clickable link until the code lens gets resolved
             # with the actual command.
-            annotation = html.escape(command['title'])
-        else:
-            annotation = make_command_link('lsp_execute', command['title'], {
-                'session_name': self.session.config.name,
-                'command_name': command['command'],
-                'command_args': command.get('arguments', [])
-            }, view_id=self.view.id())
-        return f'<small style="font-family: system">{annotation}</small>'
+            return html.escape(command['title'])
+        return make_command_link('lsp_execute', command['title'], {
+            'session_name': self.session.config.name,
+            'command_name': command['command'],
+            'command_args': command.get('arguments', [])
+        }, view_id=self.view.id())
 
     def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
         line = self.view.line(region)

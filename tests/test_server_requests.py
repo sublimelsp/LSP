@@ -49,14 +49,7 @@ class ServerRequests(TextDocumentTestCase):
         self.session.config.settings.set("foo.a", 1)
         self.session.config.settings.set("foo.b", None)
         self.session.config.settings.set("foo.c", ["asdf ${hello} ${world}"])
-
-        class TempPlugin:
-
-            @classmethod
-            def additional_variables(cls) -> dict[str, str] | None:
-                return {"hello": "X", "world": "Y"}
-
-        self.session._plugin_class = TempPlugin  # type: ignore
+        self.session._variables.update({"hello": "X", "world": "Y"})
         method = "workspace/configuration"
         params = {"items": [{"section": "foo"}]}
         expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]

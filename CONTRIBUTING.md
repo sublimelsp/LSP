@@ -17,12 +17,35 @@ The issues also allow you to gather some feedback and help from other contributo
 
 ## Coding
 
-Sublime Text bundles Python 3.8, please be sure to set up your environment to match.
-LSP uses [Pyright](https://microsoft.github.io/pyright) and [Ruff](https://docs.astral.sh/ruff/) to provide some code quality assurances.
-Run `tox` to check your work.
-Consider using [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and/or [LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) as a language server.
-Enable `"pyright.dev_environment": "sublime_text_38"` in `LSP-pyright` settings to ensure that types for Sublime Text modules are known.
-Changes in the code only apply after restarting Sublime Text.
+LSP uses [Pyright](https://microsoft.github.io/pyright) for type-checking and [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
+Run `tox` to check your work before submitting — this runs the same checks that CI enforces.
+
+> [!NOTE]
+> Changes in the plugin code only apply after restarting Sublime Text.
+
+### Recommended editor setup
+
+For the best in-editor experience, install [LSP-pyright](https://packages.sublimetext.io/packages/LSP-pyright) and
+[LSP-ruff](https://packages.sublimetext.io/packages/LSP-ruff) packages.
+
+**LSP-pyright** - enable the following setting to ensure that `sublime` and `sublime_plugin` module types are resolved
+correctly. Add this to your `LSP-pyright` settings or to your project-specific settings:
+
+```json
+"settings": {
+    "pyright.dev_environment": "sublime_text_38"
+}
+```
+
+**LSP-ruff** - enable auto-fix on save so that linting violations and import ordering are corrected automatically.
+Add this to your `LSP` settings or to your project-specific settings:
+
+```json
+"lsp_code_actions_on_save": {
+    "source.fixAll.ruff": true,
+    "source.organizeImports.ruff": true,
+}
+```
 
 ## Pre-commit hooks
 

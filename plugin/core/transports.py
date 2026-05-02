@@ -265,6 +265,10 @@ class Transport(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def write_bytes(self, payload: bytes) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def close(self) -> None:
         raise NotImplementedError
 
@@ -324,6 +328,11 @@ class StreamTransport(Transport):
         await self._writer.drain()
 
     @override
+    async def write_bytes(self, payload: bytes) -> None:
+        self._writer.write(payload)
+        await self._writer.drain()
+
+    @override
     async def close(self) -> None:
         self._writer.close()
         await self._writer.wait_closed()
@@ -361,6 +370,10 @@ class TransportWrapper:
     async def send(self, payload: JSONRPCMessage) -> None:
         if self._transport:
             await self._transport.write(payload)
+
+    async def send_bytes(self, payload: bytes) -> None:
+        if self._transport:
+            await self._transport.write_bytes(payload)
 
     async def close(self) -> None:
         if self._transport is not None:

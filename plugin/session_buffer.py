@@ -29,6 +29,7 @@ from ..protocol import TextDocumentSaveReason
 from ..protocol import TextDocumentSyncKind
 from ..protocol import TextEdit
 from ..protocol import UnchangedDocumentDiagnosticReport
+from .api import LspPlugin
 from .code_lens import CodeLensCache
 from .code_lens import LspToggleCodeLensesCommand
 from .core.constants import AUTO_CLOSE_BRACKETS
@@ -174,7 +175,7 @@ class SessionBuffer:
         self._document_diagnostic_pending_requests: dict[DiagnosticsIdentifier, PendingDocumentDiagnosticRequest | None] = {}  # noqa: E501
         self._last_synced_version = 0
         self._last_text_change_time = 0.0
-        self._diagnostics_debouncer_async = DebouncerNonThreadSafe(async_thread=True)
+        self._diagnostics_debouncer_async = DebouncerNonThreadSafe()
         self._color_phantoms = sublime.PhantomSet(view, "lsp_color")
         self._document_links: list[DocumentLink] = []
         self.semantic_tokens = SemanticTokensData()
@@ -278,10 +279,14 @@ class SessionBuffer:
 
     def _on_before_destroy(self, view: sublime.View) -> None:
         self.remove_all_inlay_hints()
-        if self.has_capability("diagnosticProvider") and self.session.config.diagnostics_mode == "open_files":
-            self.session.on_text_document_publish_diagnostics({'uri': self._last_known_uri, 'diagnostics': []})
-        if wm := self.session.manager():
-            wm.on_diagnostics_updated()
+        # With pull diagnostics, the client is responsible to update or clear diagnostics when appropriate.
+        # Clear all diagnostics for this view if the file is outside of the workspace folders, so that they don't
+        # clutter the diagnostics panel and the Goto Diagnostics quick panel.
+        if self.session.diagnostics.has_provider() and (
+                not (workspace_folders := self.session.get_workspace_folders()) or
+                not any(folder.includes_uri(self._last_known_uri) for folder in workspace_folders)
+            ):
+            self.session.clear_diagnostics_for_uri(self._last_known_uri)
         self._color_phantoms.update([])
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
@@ -557,6 +562,8 @@ class SessionBuffer:
         if commands := self.session.get_capability('executeCommandProvider.commands'):
             self._supported_commands.update(commands)
         self._supported_commands.update(itertools.chain.from_iterable(self._dynamically_registered_commands.values()))
+        if isinstance(self.session.plugin, LspPlugin):
+            self._supported_commands.update(self.session.plugin._command_handler_map.keys())
 
     def _get_request_flags(self, view: sublime.View) -> RequestFlags:
         if session_view := self.session.session_view_for_view_async(view):
@@ -788,7 +795,7 @@ class SessionBuffer:
     def _on_type_formatting_result_async(
         self, view: sublime.View, version: int, result: list[TextEdit] | Error | None
     ) -> None:
-        if version == view.change_count() and not isinstance(result, Error):
+        if result and not isinstance(result, Error) and version == view.change_count():
             apply_text_edits(view, result)
 
     # --- textDocument/semanticTokens ----------------------------------------------------------------------------------
@@ -978,7 +985,7 @@ class SessionBuffer:
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
-        kinds: list[CodeActionKind] | None = None,
+        kinds: list[str | CodeActionKind] | None = None,
         trigger_kind: CodeActionTriggerKind = CodeActionTriggerKind.Automatic
     ) -> list[Command | CodeAction] | Error | None:
         context: CodeActionContext = {
@@ -1025,14 +1032,9 @@ class SessionBuffer:
         Promise.all(promises).then(lambda _: self._on_visible_code_lenses_resolved_async())
 
     def _filter_supported_code_lenses(self) -> list[ResolvedCodeLens]:
-        code_lenses = self._code_lenses.code_lenses_with_command()
-        if self.session.uses_plugin():
-            # TODO: should plugins announce the commands that they can handle, so we can filter out the unsupported
-            # commands here as well?
-            return code_lenses
         supported_code_lenses: list[ResolvedCodeLens] = []
-        # Filter out CodeLenses with commands that are not handled directly by the language server
-        for code_lens in code_lenses:
+        # Filter out CodeLenses with commands that are not handled by the language server or plugin
+        for code_lens in self._code_lenses.code_lenses_with_command():
             command_name = code_lens['command']['command']
             if command_name in self._supported_commands:
                 supported_code_lenses.append(code_lens)

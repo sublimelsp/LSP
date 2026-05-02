@@ -730,7 +730,7 @@ class CompletionTriggerKind(IntEnum):
     """Completion was re-triggered as current completion list is incomplete"""
 
 
-class ApplyKind(IntFlag):
+class ApplyKind(IntEnum):
     """
     Defines how values from a set of defaults and an individual item will be
     merged.
@@ -1249,7 +1249,7 @@ class FoldingRange(TypedDict):
     """
     endCharacter: NotRequired[Uint]
     """The zero-based character offset before the folded range ends. If not defined, defaults to the length of the end line."""
-    kind: NotRequired['FoldingRangeKind']
+    kind: NotRequired[Union[str, FoldingRangeKind]]
     """
     Describes the kind of the folding range such as 'comment' or 'region'. The kind
     is used to categorize folding ranges and used by commands like 'Fold all comments'.
@@ -3322,7 +3322,7 @@ class CodeAction(TypedDict):
 
     title: str
     """A short, human-readable, title for this code action."""
-    kind: NotRequired['CodeActionKind']
+    kind: NotRequired[Union[str, CodeActionKind]]
     """
     The kind of the code action.
 
@@ -3389,7 +3389,7 @@ class CodeActionRegistrationOptions(TypedDict):
     A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used.
     """
-    codeActionKinds: NotRequired[List['CodeActionKind']]
+    codeActionKinds: NotRequired[List[Union[str, CodeActionKind]]]
     """
     CodeActionKinds that this server may return.
 
@@ -4624,7 +4624,7 @@ class TextDocumentItem(TypedDict):
 
     uri: DocumentUri
     """The text document's uri."""
-    languageId: 'LanguageKind'
+    languageId: Union[str, LanguageKind]
     """The text document's language identifier."""
     version: int
     """
@@ -4804,7 +4804,7 @@ class ServerCapabilities(TypedDict):
     server.
     """
 
-    positionEncoding: NotRequired['PositionEncodingKind']
+    positionEncoding: NotRequired[Union[str, PositionEncodingKind]]
     """
     The position encoding the server picked from the encodings offered
     by the client via the client capability `general.positionEncodings`.
@@ -5419,7 +5419,7 @@ class CodeActionContext(TypedDict):
     that these accurately reflect the error state of the resource. The primary parameter
     to compute code actions is the provided range.
     """
-    only: NotRequired[List['CodeActionKind']]
+    only: NotRequired[List[Union[str, CodeActionKind]]]
     """
     Requested kind of actions to return.
 
@@ -5452,7 +5452,7 @@ class CodeActionDisabled(TypedDict):
 class CodeActionOptions(TypedDict):
     """Provider options for a {@link CodeActionRequest}."""
 
-    codeActionKinds: NotRequired[List['CodeActionKind']]
+    codeActionKinds: NotRequired[List[Union[str, CodeActionKind]]]
     """
     CodeActionKinds that this server may return.
 
@@ -6123,7 +6123,7 @@ class CodeActionKindDocumentation(TypedDict):
     @proposed
     """
 
-    kind: 'CodeActionKind'
+    kind: Union[str, CodeActionKind]
     """
     The kind of the code action being documented.
 
@@ -6513,7 +6513,7 @@ class GeneralClientCapabilities(TypedDict):
 
     @since 3.16.0
     """
-    positionEncodings: NotRequired[List['PositionEncodingKind']]
+    positionEncodings: NotRequired[List[Union[str, PositionEncodingKind]]]
     """
     The position encodings supported by the client. Client and server
     have to agree on the same position encoding to ensure that offsets
@@ -7893,7 +7893,7 @@ class ClientCodeLensResolveOptions(TypedDict):
 class ClientFoldingRangeKindOptions(TypedDict):
     """@since 3.18.0"""
 
-    valueSet: NotRequired[List['FoldingRangeKind']]
+    valueSet: NotRequired[List[Union[str, FoldingRangeKind]]]
     """
     The folding range kind values the client supports. When this
     property exists the client also guarantees that it will
@@ -8010,7 +8010,7 @@ class ClientSignatureParameterInformationOptions(TypedDict):
 class ClientCodeActionKindOptions(TypedDict):
     """@since 3.18.0"""
 
-    valueSet: List['CodeActionKind']
+    valueSet: List[Union[str, CodeActionKind]]
     """
     The code action kind values the client supports. When this
     property exists the client also guarantees that it will

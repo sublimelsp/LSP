@@ -322,7 +322,6 @@ JETLS requires Julia 1.12 or higher.
             "command": ["jetls", "serve", "--socket=${port}"],
             "tcp_port": 0,
             "selector": "source.julia",
-            "diagnostics_mode": "workspace",
             // For all configuration options see https://aviatesk.github.io/JETLS.jl/configuration/
             "settings": {
                 // "jetls.full_analysis.debounce": 1.0,

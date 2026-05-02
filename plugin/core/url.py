@@ -15,6 +15,7 @@ from urllib.request import url2pathname
 import json
 import os
 import re
+import sys
 
 if TYPE_CHECKING:
     from ...protocol import CodeAction
@@ -38,8 +39,12 @@ def filename_to_uri(file_name: str) -> str:
     prefix = ST_PACKAGES_PATH
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
-    path = pathname2url(file_name)
-    return urljoin("file:", path)
+    # CI only exercises the CPython version bundled with Sublime Text (3.8
+    # today), so the >= 3.14 branch is not covered by the test suite until ST
+    # ships a public 3.14 build.
+    if sys.version_info >= (3, 14):
+        return pathname2url(file_name, add_scheme=True)
+    return urljoin('file:', pathname2url(file_name))
 
 
 def view_to_uri(view: sublime.View) -> str:

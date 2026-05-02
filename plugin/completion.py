@@ -15,6 +15,7 @@ from ..protocol import MarkupKind
 from ..protocol import Range
 from ..protocol import TextEdit
 from .core.constants import COMPLETION_KINDS
+from .core.constants import MarkdownLangMap
 from .core.edit import apply_text_edits
 from .core.logging import debug
 from .core.promise import Promise
@@ -25,7 +26,6 @@ from .core.settings import userprefs
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import html_wrapper
-from .core.views import MarkdownLangMap
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -402,7 +402,7 @@ class LspSelectCompletionCommand(LspTextCommand):
         sublime.set_timeout(functools.partial(self._on_resolved, session_name, item))
 
     def _on_resolved(self, session_name: str, item: CompletionItem) -> None:
-        if additional_edits := item.get('additionalTextEdits'):
+        if additional_edits := item.get('additionalTextEdits', []):
             apply_text_edits(self.view, additional_edits)
         if command := item.get("command"):
             debug(f'Running server command "{command}" for view {self.view.id()}')

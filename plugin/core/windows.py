@@ -8,7 +8,12 @@ from ...protocol import MessageType
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...third_party import WebsocketServer  # type: ignore
+from ..api import AbstractPlugin
 from ..api import get_plugin
+from ..api import IsApplicableContext
+from ..api import LspPlugin
+from ..api import OnPreStartContext
+from ..api import PluginStartError
 from .configurations import RETRY_COUNT_TIMEDELTA
 from .configurations import RETRY_MAX_COUNT
 from .configurations import WindowConfigChangeListener
@@ -44,6 +49,7 @@ from .views import format_diagnostic_for_panel
 from .views import make_link
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from .workspace import WorkspaceFolder
 from collections import deque
 from datetime import datetime
 from subprocess import CalledProcessError
@@ -106,6 +112,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
     def window(self) -> sublime.Window:
         return self._window
 
+    @property
+    def workspace_folders(self) -> list[WorkspaceFolder]:
+        return self._workspace.get_workspace_folders()
+
     def get_and_clear_server_log(self) -> list[tuple[str, str]]:
         log = self._server_log
         self._server_log = []
@@ -149,7 +159,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             debug("found config for", listener)
             sublime_aio.run_coroutine(self.start(config, listener))
 
-    def unregister_listener_async(self, listener: AbstractViewListener) -> None:
+    def unregister_listener(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
 
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
@@ -161,17 +171,17 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return listener
         return None
 
-    def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
-        inside_workspace = self._workspace.contains(listener.view)
-        scheme = parse_uri(listener.get_uri())[0]
-        for session in self._sessions:
-            if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
-                # debug("registering session", session.config.name, "to listener", listener)
-                try:
-                    listener.on_session_initialized_async(session)
-                except Exception as ex:
-                    message = f"failed to register session {session.config.name} to listener {listener}"
-                    exception_log(message, ex)
+    # def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
+    #     inside_workspace = self._workspace.contains(listener.view)
+    #     scheme = parse_uri(listener.get_uri())[0]
+    #     for session in self._sessions:
+    #         if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
+    #             # debug("registering session", session.config.name, "to listener", listener)
+    #             try:
+    #                 listener.on_session_initialized_async(session)
+    #             except Exception as ex:
+    #                 message = f"failed to register session {session.config.name} to listener {listener}"
+    #                 exception_log(message, ex)
 
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:
@@ -192,7 +202,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         return None
 
     def _needed_config(self, view: sublime.View) -> ClientConfig | None:
-        configs = self._config_manager.match_view(view)
+        configs = self._config_manager.match_view(view, self._workspace.get_workspace_folders())
         handled = False
         file_name = view.file_name()
         inside = self._workspace.contains(view)
@@ -204,8 +214,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     break
             if not handled:
                 if plugin := get_plugin(config.name):
-                    if plugin.should_ignore(view):  # TODO: remove after next release
-                        debug(view, "ignored by plugin", plugin.__name__)
+                    if issubclass(plugin, LspPlugin):
+                        context = IsApplicableContext(config, view, self._workspace.get_workspace_folders())
+                        if plugin.is_applicable_async(context):
+                            return config
                     elif plugin.is_applicable(view, config):
                         return config
                 else:
@@ -220,7 +232,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 if session.config.name == config_name and session.handles_path(file_path, inside):
                     # OK, this session is already initialized for this view.
                     self._listeners.add(listener)
-                    sublime.set_timeout_async(lambda: listener.on_session_initialized_async(session))
+                    sublime_aio.call_soon_threadsafe(lambda: listener.on_session_initialized(session))
                     return
 
             config = ClientConfig.from_config(config, {})
@@ -228,26 +240,30 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             loop = asyncio.get_running_loop()
 
             try:
-                workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
+                workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)                
                 plugin_class = get_plugin(config.name)
                 variables = extract_variables(self._window)
-                cwd: str | None = None
-                if plugin_class is not None:
-                    # TODO: Make needs_update_or_installation & install_or_update async somehow
-                    if await loop.run_in_executor(executor_async, plugin_class.needs_update_or_installation):
+                cwd = workspace_folders[0].path if workspace_folders else None
+                context = OnPreStartContext(config, variables, listener.view, cwd, workspace_folders)
+                if plugin_class:
+                    if issubclass(plugin_class, LspPlugin):
                         config.set_view_status(listener.view, "installing...")
-                        await loop.run_in_executor(executor_async, plugin_class.install_or_update)
-                    additional_variables = plugin_class.additional_variables()
-                    if isinstance(additional_variables, dict):
-                        variables.update(additional_variables)
-                    cannot_start_reason = plugin_class.can_start(self._window, listener.view, workspace_folders, config)
-                    if cannot_start_reason:
-                        config.erase_view_status(listener.view)
-                        message = f"cannot start {config.name}: {cannot_start_reason}"
-                        self._config_manager.disable_config(config.name, only_for_session=True)
-                        self._window.status_message(message)
-                        return
-                    cwd = plugin_class.on_pre_start(self._window, listener.view, workspace_folders, config)
+                        # plugin_class.on_pre_start_async(context)
+                        await plugin_class.on_pre_start(context)
+                        cwd = context.working_directory
+                    else:
+                        if plugin_class.needs_update_or_installation():
+                            config.set_view_status(listener.view, "installing...")
+                            plugin_class.install_or_update()
+                        additional_variables = plugin_class.additional_variables()
+                        if isinstance(additional_variables, dict):
+                            variables.update(additional_variables)
+                        cannot_start_reason = plugin_class.can_start(
+                            self._window, listener.view, workspace_folders, config)
+                        if cannot_start_reason:
+                            raise PluginStartError(cannot_start_reason)
+                        if new_cwd := plugin_class.on_pre_start(self._window, listener.view, workspace_folders, config):
+                            cwd = new_cwd
                 config.set_view_status(listener.view, "starting...")
                 session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
                 if cwd:
@@ -256,8 +272,13 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     transport_cwd = workspace_folders[0].path if workspace_folders else None
                 transport = await config.create_transport_config().start(
                     config.command, config.env, transport_cwd, variables, session)
-                if plugin_class:
+                if plugin_class and issubclass(plugin_class, AbstractPlugin):
                     plugin_class.on_post_start(self._window, listener.view, workspace_folders, config)
+            except PluginStartError as ex:
+                config.erase_view_status(listener.view)
+                message = f"cannot start {config.name}: {ex!s}"
+                self._config_manager.disable_config(config.name, only_for_session=True)
+                self._window.status_message(message)
             except Exception as e:
                 message = (f'Failed to start {config.name} - disabling for this window for the duration of the current '
                             'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '
@@ -278,7 +299,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._sessions.add(session)
                 debug(f"session {session} initialized")
                 self._listeners.add(listener)
-                sublime.set_timeout_async(lambda: listener.on_session_initialized_async(session))
+                sublime_aio.call_soon_threadsafe(lambda: listener.on_session_initialized(session))
             except Exception as e:
                     message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '
                                 'session.\nRe-enable by running "LSP: Enable Language Server In Project" from the Command '

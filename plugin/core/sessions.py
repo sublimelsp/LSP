@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ...protocol import AnnotatedTextEdit
 from ...protocol import ApplyWorkspaceEditParams
 from ...protocol import ApplyWorkspaceEditResult
 from ...protocol import ClientCapabilities
@@ -52,6 +53,7 @@ from ...protocol import ShowDocumentResult
 from ...protocol import ShowMessageParams
 from ...protocol import ShowMessageRequestParams
 from ...protocol import SignatureHelpTriggerKind
+from ...protocol import SnippetTextEdit
 from ...protocol import SymbolKind
 from ...protocol import SymbolTag
 from ...protocol import TextDocumentClientCapabilities
@@ -74,6 +76,7 @@ from ...protocol import WorkspaceFolder as LspWorkspaceFolder
 from ...protocol import WorkspaceFullDocumentDiagnosticReport
 from ..api import AbstractPlugin
 from ..api import APIHandler
+from ..api import LspPlugin
 from ..api import notification_handler
 from ..api import request_handler
 from ..diagnostics import DiagnosticsIdentifier
@@ -81,6 +84,7 @@ from ..diagnostics import DiagnosticsStorage
 from ..diagnostics import WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
 from ..locationpicker import LocationPicker
 from .constants import ChangeEventAction
+from .constants import MarkdownLangMap
 from .constants import MARKO_MD_PARSER_VERSION
 from .constants import RequestFlags
 from .constants import SEMANTIC_TOKENS_MAP
@@ -89,6 +93,8 @@ from .edit import apply_text_edits
 from .edit import parse_workspace_edit
 from .edit import WorkspaceChanges
 from .edit import WorkspaceEditSummary
+from .executors import executor_async
+from .executors import executor_main
 from .file_watcher import DEFAULT_WATCH_KIND
 from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
@@ -104,6 +110,9 @@ from .open import open_resource
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
+from .protocol import ClientNotification
+from .protocol import ClientRequest
+from .protocol import ClientResponse
 from .protocol import Error
 from .protocol import JSONRPCMessage
 from .protocol import Notification
@@ -113,6 +122,8 @@ from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
 from .protocol import ResponseException
+from .protocol import ServerNotification
+from .protocol import ServerResponse
 from .settings import globalprefs
 from .settings import userprefs
 from .transports import TransportCallbacks
@@ -131,10 +142,8 @@ from .url import filename_to_uri
 from .url import normalize_uri
 from .url import parse_uri
 from .version import __version__
-from .views import extract_variables
 from .views import get_uri_and_range_from_location
 from .views import kind_contains_other_kind
-from .views import MarkdownLangMap
 from .views import uri_from_view
 from .workspace import is_subpath_of
 from .workspace import WorkspaceFolder
@@ -155,9 +164,9 @@ from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
-from typing_extensions import deprecated
 from typing_extensions import TypeAlias
 from typing_extensions import TypeGuard
+from typing_extensions import deprecated
 from weakref import WeakSet
 import asyncio
 import itertools
@@ -533,7 +542,9 @@ def get_initialize_params(
             "failureHandling": FailureHandlingKind.Abort,
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
-            }
+            },
+            "metadataSupport": True,
+            "snippetEditSupport": True
         },
         "workspaceFolders": True,
         "symbol": {
@@ -774,7 +785,7 @@ class SessionBufferProtocol(Protocol):
         view: sublime.View,
         region: sublime.Region,
         diagnostics: list[Diagnostic],
-        kinds: list[CodeActionKind] | None = ...,
+        kinds: list[str | CodeActionKind] | None = ...,
         trigger_kind: CodeActionTriggerKind = ...
     ) -> list[Command | CodeAction] | Error | None:
         ...
@@ -1055,7 +1066,8 @@ _PARTIAL_RESULT_PROGRESS_PREFIX = "$ublime-partial-result-progress-"
 class Session(APIHandler, TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: list[WorkspaceFolder],
-                 config: ClientConfig, plugin_class: type[AbstractPlugin] | None) -> None:
+                 config: ClientConfig, plugin_class: type[AbstractPlugin | LspPlugin] | None,
+    ) -> None:
         self.transport: TransportWrapper | None = None
         self.working_directory: str | None = None
         self.request_id = 0  # Our request IDs are always integers.
@@ -1074,6 +1086,7 @@ class Session(APIHandler, TransportCallbacks):
         self._request_cv = threading.Condition()
         self._registrations: dict[str, _RegistrationData] = {}
         self._views_opened = 0
+        self._variables: dict[str, str] = {}
         self._workspace_folders = workspace_folders
         self._session_views: WeakSet[SessionViewProtocol] = WeakSet()
         self._session_buffers: WeakSet[SessionBufferProtocol] = WeakSet()
@@ -1082,7 +1095,7 @@ class Session(APIHandler, TransportCallbacks):
         self._static_file_watchers: list[FileWatcher] = []
         self._dynamic_file_watchers: dict[str, list[FileWatcher]] = {}
         self._plugin_class = plugin_class
-        self._plugin: AbstractPlugin | None = None
+        self._plugin: AbstractPlugin | LspPlugin | None = None
         self._status_messages: dict[str, str] = {}
         self._semantic_tokens_map = get_semantic_tokens_map(config.semantic_tokens)
         self._is_executing_refactoring_command = False
@@ -1097,7 +1110,7 @@ class Session(APIHandler, TransportCallbacks):
                 if handler_name := self._plugin.handler_attr_map.get(name):
                     return getattr(self._plugin, handler_name)
                 # Handler added through 'm_*' method.
-                if plugin_handler := getattr(self._plugin, name, None):
+                if isinstance(self._plugin, AbstractPlugin) and (plugin_handler := getattr(self._plugin, name, None)):
                     return plugin_handler
             if handler_name := self.handler_attr_map.get(name):
                 return getattr(self, handler_name)
@@ -1107,11 +1120,8 @@ class Session(APIHandler, TransportCallbacks):
     def get_workspace_folders(self) -> list[WorkspaceFolder]:
         return self._workspace_folders
 
-    def uses_plugin(self) -> bool:
-        return self._plugin is not None
-
     @property
-    def plugin(self) -> AbstractPlugin | None:
+    def plugin(self) -> AbstractPlugin | LspPlugin | None:
         return self._plugin
 
     # --- session view management --------------------------------------------------------------------------------------
@@ -1150,18 +1160,6 @@ class Session(APIHandler, TransportCallbacks):
     def _redraw_config_status_async(self) -> None:
         for sv in self.session_views():
             self.config.set_view_status(sv.view, self.config_status_message)
-
-    @deprecated("Use set_config_status_async(message) instead")
-    def set_window_status_async(self, key: str, message: str) -> None:
-        self._status_messages[key] = message
-        for sv in self.session_views():
-            sv.view.set_status(key, message)
-
-    @deprecated("Use set_config_status_async('') instead")
-    def erase_window_status_async(self, key: str) -> None:
-        self._status_messages.pop(key, None)
-        for sv in self.session_views():
-            sv.view.erase_status(key)
 
     # --- session buffer management ------------------------------------------------------------------------------------
 
@@ -1218,9 +1216,6 @@ class Session(APIHandler, TransportCallbacks):
     def can_handle(self, view: sublime.View, scheme: str, capability: str | None, inside_workspace: bool) -> bool:
         if self.state != ClientStates.READY:
             return False
-        if self._plugin and self._plugin.should_ignore(view):  # TODO: remove after next release
-            debug(view, "ignored by plugin", self._plugin.__class__.__name__)
-            return False
         if scheme == "file":
             file_name = view.file_name()
             if not file_name:
@@ -1228,7 +1223,7 @@ class Session(APIHandler, TransportCallbacks):
                 return False
             if not self.handles_path(file_name, inside_workspace):
                 return False
-        if self.config.match_view(view, scheme):
+        if self.config.match_view(view, scheme, self.window, self._workspace_folders):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
@@ -1296,7 +1291,11 @@ class Session(APIHandler, TransportCallbacks):
             sb.on_userprefs_changed_async()
 
     def markdown_language_id_to_st_syntax_map(self) -> MarkdownLangMap | None:
-        return self._plugin.markdown_language_id_to_st_syntax_map() if self._plugin is not None else None
+        if self.config.resolved_markdown_language_map is not None:
+            return self.config.resolved_markdown_language_map
+        if isinstance(self._plugin, AbstractPlugin):
+            return self._plugin.markdown_language_id_to_st_syntax_map()
+        return None
 
     def handles_path(self, file_path: str | None, inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():
@@ -1336,6 +1335,10 @@ class Session(APIHandler, TransportCallbacks):
         working_directory: str | None,
         transport: TransportWrapper
     ) -> InitializeResult:
+        if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
+            loop = asyncio.get_running_loop()
+            self._plugin = await loop.run_in_executor(executor_async, self._plugin_class, weakref.ref(self))
+            await loop.run_in_executor(executor_async, self._plugin.on_transport_ready_async, transport)
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -1351,11 +1354,13 @@ class Session(APIHandler, TransportCallbacks):
         if diagnostic_options := capabilities.get('diagnosticProvider'):
             self.diagnostics.register_provider(diagnostic_options.get('id'), diagnostic_options)
         self.state = ClientStates.READY
-        if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
+        if self._plugin_class:
             # We've missed calling the "on_server_response_async" API as plugin was not created yet.
             # Handle it now and use fake request ID since it shouldn't matter.
-            self._plugin.on_server_response_async('initialize', Response(-1, result))
+            if issubclass(self._plugin_class, AbstractPlugin):
+                loop = asyncio.get_running_loop()
+                self._plugin = await loop.run_in_executor(executor_async, self._plugin_class, weakref.ref(self))
+                await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, 'initialize', Response(-1, result))
         await self.notify(Notification.initialized())
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
@@ -1405,17 +1410,9 @@ class Session(APIHandler, TransportCallbacks):
             }))
 
     def _get_resolved_settings(self) -> dict[str, Any]:
-        if self._plugin:
+        if isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_settings_changed(self.config.settings)
-        variables = self._template_variables()
-        return self.config.settings.get_resolved(variables)
-
-    def _template_variables(self) -> dict[str, str]:
-        variables = extract_variables(self.window)
-        if self._plugin_class is not None:
-            if extra_vars := self._plugin_class.additional_variables():
-                variables.update(extra_vars)
-        return variables
+        return self.config.settings.get_resolved(self._variables)
 
     async def execute_command(
         self, command: ExecuteCommandParams, *, progress: bool = False, view: sublime.View | None = None,
@@ -1428,6 +1425,15 @@ class Session(APIHandler, TransportCallbacks):
             if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return await promise
         command_name = command['command']
+        if self._plugin:
+            if isinstance(self._plugin, LspPlugin):
+                if command_handler := self._plugin.get_command_handler(command_name):
+                    return await command_handler(command.get('arguments'))
+            else:
+                task: PackagedTask[R | Error | None] = Promise.packaged_task()
+                promise, resolve = task
+                if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
+                    return await promise
         # Handle VSCode-specific command for triggering AC/sighelp
         if command_name == "editor.action.triggerSuggest" and view:
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
@@ -1517,23 +1523,33 @@ class Session(APIHandler, TransportCallbacks):
         if uri.startswith('res:'):
             return await self._open_res_uri(uri, r, group)
         if uri.startswith('untitled:'):  # VSCode specific URI scheme for unsaved buffers
-            flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
-            if name := uri[len('untitled:'):]:
-                # Check if there is a pre-existing unsaved buffer with the given name
-                for view in self.window.views():
-                    if view.file_name() is None and view.name() == name:
-                        self.window.focus_view(view)
-                        return view
+
+            def open_untitled_buffer() -> sublime.View:
+                flags &= sublime.NewFileFlags.TRANSIENT | sublime.NewFileFlags.ADD_TO_SELECTION
+                if name := uri[len('untitled:'):]:
+                    # Check if there is a pre-existing unsaved buffer with the given name
+                    for view in self.window.views():
+                        if view.file_name() is None and view.name() == name:
+                            self.window.focus_view(view)
+                            return view
+                    view = self.window.new_file(flags)
+                    view.set_scratch(True)
+                    view.set_name(name)
+                    return view
                 view = self.window.new_file(flags)
                 view.set_scratch(True)
-                view.set_name(name)
                 return view
-            view = self.window.new_file(flags)
-            view.set_scratch(True)
-            return view
+
+            return await asyncio.get_running_loop().run_in_executor(executor_main, open_untitled_buffer)
         # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
-            return await self._open_uri_with_plugin(self._plugin, uri, r, flags, group)
+            if isinstance(self._plugin, LspPlugin):
+                scheme, _ = parse_uri(uri)
+                if handler := self._plugin.get_uri_handler(scheme):
+                    sheet = await handler(uri, flags)
+                    await asyncio.get_running_loop().run_in_executor(executor_main, self._on_sheet_opened, sheet, uri, r)
+                else:
+                    return await self._open_uri_with_plugin_async(self._plugin, uri, r, flags, group)
         return False
 
     async def open_uri(
@@ -1593,28 +1609,53 @@ class Session(APIHandler, TransportCallbacks):
         callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
         if plugin.on_open_uri_async(uri, callback):
             result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-
-            def maybe_open_scratch_buffer(title: str | None, content: str, syntax: str) -> None:
-                if title is not None:
-                    if group > -1:
-                        self.window.focus_group(group)
-                    view = self.window.new_file(syntax=syntax, flags=flags)
-                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
-                    # settings object here at our leisure.
-                    view.settings().set("lsp_uri", uri)
-                    view.set_scratch(True)
-                    view.set_name(title)
-                    view.run_command("append", {"characters": content})
-                    view.set_read_only(True)
-                    if r:
-                        center_selection(view, r)
-                    sublime.set_timeout_async(lambda: result[1](view))
-                else:
-                    sublime.set_timeout_async(lambda: result[1](None))
-
-            pair[0].then(lambda tup: sublime.set_timeout(lambda: maybe_open_scratch_buffer(*tup)))
-            return result[0]
+            pair[0].then(lambda tup: self.open_scratch_buffer(*tup, uri, r, flags, group)).then(result[1])
+            title, content, syntax = await pair[0]
+            return await self.open_scratch_buffer(title, content, syntax, uri, r, flags, group)
         return None
+
+    async def open_scratch_buffer(
+        self,
+        title: str | None,
+        content: str,
+        syntax: str,
+        uri: DocumentUri,
+        r: Range | None,
+        flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
+        group: int = -1,
+    ) -> sublime.View | None:
+
+        def continue_on_main_thread() -> sublime.View | None:
+            if title is None:
+                return None
+            if group > -1:
+                self.window.focus_group(group)
+            view = self.window.new_file(syntax=syntax, flags=flags)
+            # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+            # settings object here at our leisure.
+            view.set_scratch(True)
+            view.set_name(title)
+            view.run_command("append", {"characters": content})
+            view.set_read_only(True)
+            sheet = view.sheet()
+            if sheet and (view := sheet.view()):
+                view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+                if r:
+                    center_selection(view, r)
+                return view
+            return None
+
+        return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
+
+    def _on_sheet_opened(
+        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
+    ) -> Promise[sublime.View | None]:
+        if sheet and (view := sheet.view()):
+            view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
+            if r:
+                center_selection(view, r)
+            return Promise.resolve(view)
+        return Promise.resolve(None)
 
     async def open_location(
         self,
@@ -1626,7 +1667,11 @@ class Session(APIHandler, TransportCallbacks):
         return await self.open_uri(uri, r, flags, group)
 
     def notify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
-        if self._plugin:
+        if not self._plugin:
+            return
+        if isinstance(self._plugin, LspPlugin):
+            self._plugin.on_text_changed_async(session_buffer)
+        else:
             self._plugin.on_session_buffer_changed_async(session_buffer)
 
     async def _maybe_resolve_code_action(
@@ -1680,7 +1725,7 @@ class Session(APIHandler, TransportCallbacks):
     ) -> WorkspaceEditSummary:
 
         async def handle_view(
-            edits: list[TextEdit],
+            edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
             label: str | None,
             view_version: int | None,
             uri: str,
@@ -1802,8 +1847,6 @@ class Session(APIHandler, TransportCallbacks):
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
     def do_workspace_diagnostics(self) -> None:
-        if self.config.diagnostics_mode != 'workspace':
-            return
         if not self.get_workspace_folders():
             return
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:
@@ -1914,16 +1957,17 @@ class Session(APIHandler, TransportCallbacks):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
-            if self._plugin:
+            if isinstance(self._plugin, AbstractPlugin):
                 items.append(self._plugin.on_workspace_configuration(requested_item, configuration))
             else:
                 items.append(configuration)
-        return sublime.expand_variables(items, self._template_variables())
+        return sublime.expand_variables(items, self._variables)
 
     @request_handler('workspace/applyEdit')
     async def on_workspace_apply_edit(self, params: ApplyWorkspaceEditParams) -> ApplyWorkspaceEditResult:
-        await self.apply_workspace_edit_async(params.get('edit', {}), label=params.get('label'))
-        return {"applied": True}
+        is_refactoring = params.get('metadata', {}).get('isRefactoring', False)
+        await self.apply_workspace_edit(params['edit'], label=params.get('label'), is_refactoring=is_refactoring)
+        return {'applied': True}
 
     @request_handler('workspace/codeLens/refresh')
     async def on_workspace_code_lens_refresh(self, _: None) -> None:
@@ -1998,6 +2042,11 @@ class Session(APIHandler, TransportCallbacks):
         if session_buffer := self.get_session_buffer_for_uri(uri):
             self._publish_diagnostics_to_session_buffer_async(
                 session_buffer, self.diagnostics.get_diagnostics_for_uri(uri), version)
+
+    def clear_diagnostics_for_uri(self, uri: DocumentUri) -> None:
+        self.diagnostics.clear_diagnostics(uri)
+        if mgr := self.manager():
+            mgr.on_diagnostics_updated()
 
     @request_handler('client/registerCapability')
     async def on_client_register_capability(self, params: RegistrationParams) -> None:
@@ -2293,65 +2342,58 @@ class Session(APIHandler, TransportCallbacks):
 
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views_async(request, "on_request_started_async", request_id, request)
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_request_async(request_id, request)
+        elif self._plugin:
+            client_request = cast('ClientRequest', cast('object', {'method': request.method, 'params': request.params}))
+            self._plugin.on_pre_send_request_async(client_request, request.view)
+            request.params = cast('P', client_request['params'])
         self._logger.outgoing_request(request_id, request.method, request.params)
         sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
         return result
 
+    @deprecated("use Session.request or Session.stream instead")
     def send_request_async(
-            self,
-            request: Request[P, R],
-            on_result: Callable[[R], None],
-            on_error: Callable[[ResponseError], None] | None = None
+        self,
+        request: Request[P, R],
+        on_result: Callable[[R], None],
+        on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
         """
-        You must not call this method from the sublime_aio loop thread (or deadlock will occur).
-        Callbacks will run in Sublime's worker thread.
+        You must call this method from the asyncio loop thread. Callbacks will run in the asyncio thread.
         """
-        request_id: int | None = None
+        result = self.request(request)
 
-        async def wrap() -> None:
-            try:
-                result = self.request(request)
+        def on_done(future: asyncio.Future[R]) -> None:
+            if future.cancelled():
+                return
+            elif ex := future.exception():
+                if isinstance(ex, ResponseException):
+                    on_error(ex.error)
+            else:
+                on_done(future.result())
 
-                def on_done(future: asyncio.Future[R]) -> None:
-                    if future.cancelled():
-                        return
-                    if ex := future.exception():
-                        sublime.set_timeout_async(lambda: on_error(ex.error))
-                    else:
-                        sublime.set_timeout_async(lambda: on_result(future.result()))
+        result._future.add_done_callback(on_done)
+        return result.id
 
-                result._future.add_done_callback(on_done)
-                with self._request_cv:
-                    request_id = result.id
-                    self._request_cv.notify()
-                await result
-            except ResponseException as e:
-                pass
-
-        sublime_aio.run_coroutine(wrap())
-        with self._request_cv:
-            self._request_cv.wait_for(lambda: request_id is not None)
-        assert request_id is not None
-        return request_id
-
+    @deprecated("use Session.request or Session.stream instead")
     def send_request(
-            self,
-            request: Request[P, R],
-            on_result: Callable[[R], None],
-            on_error: Callable[[ResponseError], None] | None = None,
+        self,
+        request: Request[P, R],
+        on_result: Callable[[R], None],
+        on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
-        """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
-        sublime.set_timeout_async(lambda: self.send_request_async(request, on_result, on_error))
+        """You can call this method from any thread. Callbacks will run in the asyncio thread."""
+        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_done))
 
+    @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:
         task: PackagedTask[Any] = Promise.packaged_task()
         promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 
+    @deprecated("use Session.request or Session.stream instead")
     def send_request_task_2(self, request: Request[P, R]) -> tuple[Promise[R | Error], int]:
         task: PackagedTask[R | Error] = Promise.packaged_task()
         promise, resolver = task
@@ -2366,14 +2408,21 @@ class Session(APIHandler, TransportCallbacks):
             self._invoke_views_async(request, "on_request_canceled_async", request_id)
             self._response_handlers[request_id] = (request, lambda *args: None, lambda *args: None)
 
-    def send_notification(self, notification: Notification[P]) -> None:
-        sublime_aio.run_coroutine(self.notify(notification))
-
     async def notify(self, notification: Notification[P]) -> None:
-        if self._plugin:
+        if self._plugin and isinstance(self._plugin, AbstractPlugin):
             self._plugin.on_pre_send_notification_async(notification)
+        elif self._plugin:
+            client_notification = cast('ClientNotification',
+                                       cast('object', {'method': notification.method, 'params': notification.params}))
+            self._plugin.on_pre_send_notification_async(client_notification)
+            notification.params = cast('P', client_notification['params'])
         self._logger.outgoing_notification(notification.method, notification.params)
         await self.send_payload(notification.to_payload())
+
+    @deprecated("use Session.notify instead")
+    def send_notification(self, notification: Notification[P]) -> None:
+        self._logger.outgoing_notification(notification.method, notification.params)
+        sublime_aio.run_coroutine(self.notify(notification))
 
     async def send_response(self, response: Response[P]) -> None:
         self._logger.outgoing_response(response.request_id, response.result)
@@ -2413,10 +2462,12 @@ class Session(APIHandler, TransportCallbacks):
             else:
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
-                if self._plugin:
-                    sublime.set_timeout_async(
-                        lambda: self._plugin.on_server_notification_async(Notification(method, result))
-                    )
+                if self._plugin and isinstance(self._plugin, AbstractPlugin):
+                    sublime.set_timeout_async(lambda: self._plugin.on_server_notification_async(Notification(method, result)))
+                elif self._plugin:
+                    server_notification = cast('ServerNotification',
+                                               cast('object', {'method': method, 'result': result}))
+                    sublime.set_timeout_async(lambda: self._plugin.on_server_notification_async(server_notification))
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2426,17 +2477,23 @@ class Session(APIHandler, TransportCallbacks):
             handler, method, result, is_error = self.response_handler(response_id, payload)
             self._logger.incoming_response(response_id, result, is_error)
             response = Response(response_id, result)
-            if self._plugin and not is_error:
-                sublime.set_timeout_async(
-                    lambda: self._plugin.on_server_response_async(method, response)  # type: ignore
-                )
+            if not is_error and self._plugin:
+                if isinstance(self._plugin, AbstractPlugin):
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, cast('str', method), response)
+                else:
+                    server_response = cast('ServerResponse',
+                                           cast('object', {'method': method, 'result': response.result}))
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, server_response)
+                    response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
             debug("Unknown payload type: ", payload)  # pyright: ignore[reportUnreachable]
         return (None, None, None, None, None)
 
     async def on_payload(self, payload: JSONRPCMessage) -> None:
-        handler, result, req_id, typestr, _method = await self.deduce_payload(payload)
+        handler, result, req_id, typestr, method = await self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:
@@ -2445,9 +2502,9 @@ class Session(APIHandler, TransportCallbacks):
                 else:
                     # request
                     try:
-                        debug(f"start handling {typestr}: {req_id} {_method}")
+                        debug(f"start handling {typestr}: {req_id} {method}")
                         await self.send_response(await handler(result, req_id))
-                        debug(f"done  handling {typestr}: {req_id} {_method}")
+                        debug(f"done  handling {typestr}: {req_id} {method}")
                     except Error as err:
                         await self.send_error_response(req_id, err)
                     except Exception as ex:
@@ -2457,6 +2514,14 @@ class Session(APIHandler, TransportCallbacks):
                 exception_log(f"Error handling {typestr}", err)
         else:
             debug("no handler found for payload:", payload)
+
+    def _handle_plugin_on_pre_send_response_async(
+        self, method: str | None, params: Any, response: Response[Any]
+    ) -> Response[Any]:
+        if method and isinstance(self._plugin, LspPlugin):
+            obj = cast('ClientResponse', {'method': method, 'params': params, 'result': response.result})
+            self._plugin.on_pre_send_response_async(obj)
+        return response
 
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage

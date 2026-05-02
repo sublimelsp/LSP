@@ -60,11 +60,19 @@ class LspWindowCommand(sublime_plugin.WindowCommand):
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to a view in the window.
-    capability = ''
+    capability: str = ''
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # name attached to a view in the window.
-    session_name = ''
+    session_name: str = ''
+
+    def __init__(self, window: sublime.Window) -> None:
+        super().__init__(window)
+        if not self.session_name:
+            # Auto-detect session_name based on package name. In case of the LSP package use empty string.
+            package_name = self.__module__.split('.')[0]
+            if package_name != 'LSP':
+                self.session_name = package_name
 
     def is_enabled(self) -> bool:
         return self.session() is not None
@@ -112,11 +120,19 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
     # capability attached to the active view.
-    capability = ''
+    capability: str = ''
 
     # When this is defined in a derived class, the command is enabled only if there exists a session with the given
-    # name attached to the active view.
-    session_name = ''
+    # name attached to the active view. By default it will default to the name of the pacakge it's defined in.
+    session_name: str = ''
+
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        if not self.session_name:
+            # Auto-detect session_name based on package name. In case of the LSP package use empty string.
+            package_name = self.__module__.split('.')[0]
+            if package_name != 'LSP':
+                self.session_name = package_name
 
     def is_enabled(self, event: dict | None = None, point: int | None = None) -> bool:
         if self.capability:
@@ -150,12 +166,12 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def best_session(self, capability: str, point: int | None = None) -> Session | None:
         listener = self.get_listener()
-        return listener.session_async(capability, point) if listener else None
+        return listener.get_session(capability, point) if listener else None
 
     def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
         target = name or self.session_name
         if listener := self.get_listener():
-            for sv in listener.session_views_async():
+            for sv in listener.session_views():
                 if sv.session.config.name == target:
                     if capability_path is None or sv.has_capability_async(capability_path):
                         return sv.session
@@ -164,7 +180,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:
         if listener := self.get_listener():
-            for sv in listener.session_views_async():
+            for sv in listener.session_views():
                 if capability_path is None or sv.has_capability_async(capability_path):
                     yield sv.session
 
@@ -250,7 +266,7 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
                 debug(f'No listener for view {self.view}')
                 return
             scheme, _ = parse_uri(uri_from_view(self.view))
-            is_applicable = config.match_view(self.view, scheme)
+            is_applicable = config.match_view(self.view, scheme, wm.window, wm.workspace_folders)
             if session := wm.get_session(session_name, self.view.file_name() or ''):
                 session_view = session.session_view_for_view_async(self.view)
                 if is_applicable and not session_view:

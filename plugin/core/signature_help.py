@@ -8,12 +8,15 @@ from .registry import LspTextCommand
 from .views import FORMAT_MARKUP_CONTENT
 from .views import FORMAT_STRING
 from .views import html_wrapper
-from .views import MarkdownLangMap
 from .views import minihtml
+from typing import TYPE_CHECKING
 from typing import TypedDict
 import html
 import re
 import sublime
+
+if TYPE_CHECKING:
+    from .constants import MarkdownLangMap
 
 
 class SignatureHelpStyle(TypedDict):

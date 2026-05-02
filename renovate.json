@@ -14,6 +14,14 @@
       "minimumReleaseAge": "3 days"
     },
     {
+      "description": "Automerge zensical",
+      "matchCategories": [
+        "python"
+      ],
+      "matchPackageNames": ["zensical"],
+      "automerge": true
+    },
+    {
       "description": "Group GitHub Actions updates",
       "matchManagers": [
         "github-actions"

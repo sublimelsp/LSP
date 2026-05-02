@@ -24,6 +24,7 @@ from .core.constants import COMMAND_TO_CHANGE_EVENT_ACTION
 from .core.constants import DOCUMENT_HIGHLIGHT_KIND_SCOPES
 from .core.constants import HOVER_ENABLED_KEY
 from .core.constants import LIGHTBULB_SCOPE
+from .core.constants import MarkdownLangMap
 from .core.constants import RegionKey
 from .core.constants import RequestFlags
 from .core.constants import SIGNATURE_HELP_ACTIVE_PARAMETER_SCOPE
@@ -59,7 +60,6 @@ from .core.views import document_highlight_key
 from .core.views import first_selection_region
 from .core.views import format_diagnostics_for_html
 from .core.views import make_link
-from .core.views import MarkdownLangMap
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
@@ -84,6 +84,7 @@ from typing_extensions import override
 from typing_extensions import ParamSpec
 from weakref import WeakSet
 from weakref import WeakValueDictionary
+import asyncio
 import itertools
 import sublime
 import sublime_aio
@@ -118,7 +119,8 @@ def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), and not a special view like a console, output panel or find-in-files panels.
     if v.element() is not None:
         return False
-    if v.settings().get('is_widget'):
+    settings = v.settings()
+    if settings.get('is_widget') or settings.get('repl'):  # Input widgets or SublimeREPL views.
         return False
     # Not a syntax test file.
     if (filename := v.file_name()) and basename(filename).startswith('syntax_test_'):
@@ -160,11 +162,10 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         change_count = view.change_count()
         frozen_listeners = WeakSet(self.view_listeners)
 
-        def notify(action: ChangeEventAction) -> None:
-            for listener in list(frozen_listeners):
-                listener.on_text_changed(change_count, changes, action)
+        async def notify(action: ChangeEventAction) -> None:
+            await asyncio.gather(*[listener.on_text_changed(change_count, changes, action) for listener in list(frozen_listeners)])
 
-        sublime_aio.call_soon_threadsafe(partial(notify, self._last_edit_action))
+        sublime_aio.run_coroutine(notify(self._last_edit_action))
         self._reset_last_edit_action()
 
     def on_reload_async(self) -> None:
@@ -188,19 +189,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         return f"TextChangeListener({self.buffer.buffer_id})"
 
 
-class TestEventListener(sublime_aio.ViewEventListener):
-
-    async def on_load(self) -> None:
-        debug("on_load", self)
-
-    async def on_post_move(self) -> None:
-        debug("on_post_move", self)
-
-    async def on_activated(self) -> None:
-        debug("on_activated", self)
-
-
-class DocumentSyncListener(sublime_aio.ViewEventListener):
+class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     debounce_time = FEATURES_TIMEOUT
@@ -603,7 +592,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener):
         if userprefs().diagnostics_gutter_marker:
             region = self.view.line(point)
             if sb_diagnostics := self.get_diagnostics_async(region, userprefs().show_diagnostics_severity_level):
-                kinds = [CodeActionKind.QuickFix]
+                kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
                 code_action_promises = [
                     sb.request_code_actions_async(self.view, region, diagnostics, kinds)
                         .then(partial(filter_quickfix_actions, len(diagnostics) > 1))
@@ -849,7 +838,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener):
         version = self.view.change_count()
         region = self._stored_selection[0]
         diagnostics_by_config = dict(self.get_diagnostics_async(region))
-        kinds = [CodeActionKind.QuickFix]
+        kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
         code_action_promises: list[Promise[tuple[str, list[Command | CodeAction]]]] = []
         for sb in session_buffers:
             if diagnostics := diagnostics_by_config.get(sb):

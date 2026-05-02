@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .core.constants import ChangeEventAction
+from .core.edit import is_snippet_text_edit
 from .core.edit import parse_lsp_position
 from .core.edit import parse_workspace_edit
 from .core.edit import WorkspaceChanges
@@ -25,6 +26,8 @@ import sublime
 import sublime_plugin
 
 if TYPE_CHECKING:
+    from ..protocol import AnnotatedTextEdit
+    from ..protocol import SnippetTextEdit
     from ..protocol import TextEdit
     from ..protocol import WorkspaceEdit
     from .core.sessions import Session
@@ -94,6 +97,87 @@ class LspApplyWorkspaceEditCommand(LspWindowCommand):
                 lambda: session.apply_workspace_edit_async(edit, label=label, is_refactoring=is_refactoring))
         else:
             debug('Could not find session', session_name, 'required to apply WorkspaceEdit')
+
+
+class LspApplyTextDocumentEditCommand(sublime_plugin.TextCommand):
+
+    def description(self, **kwargs: dict[str, Any]) -> str | None:
+        # Displayed in the "Undo" menu
+        return kwargs.get('label')  # pyright: ignore[reportReturnType]
+
+    def run(
+        self,
+        edit: sublime.Edit,
+        edits: list[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
+        version: int | None = None,
+        label: str | None = None
+    ) -> None:
+        if not edits:
+            return
+        if version is not None and version != self.view.change_count():
+            debug('ignoring edit due to non-matching document version')
+            return
+        if listener := windows.listener_for_view(self.view):
+            listener.set_change_event_action(ChangeEventAction.OTHER)
+        topmost_edit, *other_edits = sorted(edits, key=lambda e: parse_lsp_position(e['range']['start']))
+        with temporary_setting(self.view.settings(), 'translate_tabs_to_spaces', False):
+            last_row = self.view.rowcol_utf16(self.view.size())[0]
+            for text_edit in reversed(other_edits):
+                start_row, region = self._get_region(text_edit)
+                new_text = self._get_new_text(text_edit)
+                if start_row > last_row and not new_text.startswith('\n'):
+                    self._apply_edit(edit, region, '\n' + new_text)
+                    last_row = self.view.rowcol_utf16(self.view.size())[0]
+                else:
+                    self._apply_edit(edit, region, new_text)
+            start_row, region = self._get_region(topmost_edit)
+            if is_snippet_text_edit(topmost_edit) and self.view == sublime.active_window().active_view():
+                new_text = self._get_new_text(topmost_edit, keep_placeholders=True)
+                if start_row > last_row and not new_text.startswith('\n'):
+                    start_row = last_row
+                    new_text = '\n' + new_text
+                # https://github.com/microsoft/language-server-protocol/pull/1892#issuecomment-1964186341
+                # The insert_snippet command automatically adds additional indentation to each row, based on the
+                # indentation level of the row where it gets inserted. Therefore we first have to remove that same
+                # indentation whitespace after each line break in the snippet text from the language server.
+                line_content = self.view.substr(self.view.line(self.view.text_point(start_row, 0)))
+                if leading_whitespace := line_content[:-len(line_content.lstrip())]:
+                    new_text = new_text.replace('\n' + leading_whitespace, '\n')
+                selection = self.view.sel()
+                selection.clear()
+                selection.add(region)
+                self.view.show(region.a)
+                self.view.run_command('insert_snippet', {'contents': new_text})
+            else:
+                new_text = self._get_new_text(topmost_edit)
+                if start_row > last_row and not new_text.startswith('\n'):
+                    new_text = '\n' + new_text
+                self._apply_edit(edit, region, new_text)
+
+    def _get_region(self, edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit) -> tuple[int, sublime.Region]:
+        range_ = edit['range']
+        start = parse_lsp_position(range_['start'])
+        end = parse_lsp_position(range_['end'])
+        region = sublime.Region(
+            self.view.text_point_utf16(*start, clamp_column=True),
+            self.view.text_point_utf16(*end, clamp_column=True)
+        )
+        return start[0], region
+
+    @staticmethod
+    def _get_new_text(edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit, *, keep_placeholders: bool = False) -> str:
+        if is_snippet_text_edit(edit):
+            new_text = edit['snippet']['value'].replace('\r', '')
+            return new_text if keep_placeholders else sublime.expand_variables(new_text, {})
+        return edit['newText'].replace('\r', '')  # pyright: ignore[reportGeneralTypeIssues]
+
+    def _apply_edit(self, edit: sublime.Edit, region: sublime.Region, new_text: str) -> None:
+        if region.empty():
+            self.view.insert(edit, region.a, new_text)
+        elif new_text:
+            self.view.replace(edit, region, new_text)
+        else:
+            self.view.erase(edit, region)
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
@@ -260,7 +344,9 @@ def _render_workspace_edit_panel(
             reference_document.append(original_line)
             if scheme == "file" and line_content:
                 end_row, end_col_utf16 = parse_lsp_position(edit['range']['end'])
-                new_text_rows = edit['newText'].split('\n')
+                new_text = sublime.expand_variables(edit['snippet']['value'], {}) if is_snippet_text_edit(edit) else \
+                    edit.get('newText', '')
+                new_text_rows = new_text.split('\n')
                 new_line_content = line_content[:start_col] + new_text_rows[0]
                 if start_row == end_row and len(new_text_rows) == 1:
                     end_col = start_col if end_col_utf16 <= start_col_utf16 else \

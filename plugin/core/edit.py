@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ...protocol import AnnotatedTextEdit
 from ...protocol import Position
+from ...protocol import SnippetTextEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
 from .logging import debug
@@ -10,13 +11,15 @@ from .protocol import UINT_MAX
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 from typing import TypedDict
 from typing import Union
 from typing_extensions import NotRequired
+from typing_extensions import TypeGuard
 import sublime
 
-WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit]], Optional[str], Optional[int]]]
+WorkspaceChanges = Dict[str, Tuple[List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]], Optional[str], Optional[int]]]  # noqa: E501
 
 
 class WorkspaceEditSummary(TypedDict):
@@ -25,6 +28,11 @@ class WorkspaceEditSummary(TypedDict):
     created_files: NotRequired[int]
     renamed_files: NotRequired[int]
     deleted_files: NotRequired[int]
+
+
+# TODO: change return type to TypeIs[SnippetTextEdit] when properly supported by Pyright
+def is_snippet_text_edit(edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit) -> TypeGuard[SnippetTextEdit]:
+    return 'snippet' in edit
 
 
 def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None) -> WorkspaceChanges:
@@ -42,9 +50,6 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
             version = text_document.get('version')
             edits = document_change.get('edits')
             for edit in edits:
-                if 'snippet' in edit:
-                    debug('Ignoring unsupported SnippetTextEdit')
-                    continue
                 description = change_annotations[id_]['label'] if (id_ := edit.get('annotationId')) else label
                 # Note that if the WorkspaceEdit contains multiple AnnotatedTextEdit with different labels for the same
                 # URI, we only show the first label in the undo menu, because all edits are combined into a single
@@ -54,7 +59,7 @@ def parse_workspace_edit(workspace_edit: WorkspaceEdit, label: str | None = None
         raw_changes = workspace_edit.get('changes')
         if isinstance(raw_changes, dict):
             for uri, edits in raw_changes.items():
-                changes[uri] = (edits, label, None)
+                changes[uri] = (edits, label, None)  # pyright: ignore[reportArgumentType]
     return changes
 
 
@@ -64,10 +69,10 @@ def parse_lsp_position(position: Position) -> tuple[int, int]:
 
 def apply_text_edits(
     view: sublime.View,
-    edits: list[TextEdit] | None,
+    edits: Sequence[TextEdit | AnnotatedTextEdit | SnippetTextEdit],
     *,
     label: str | None = None,
-    process_placeholders: bool | None = False,
+    process_placeholders: bool = False,
     required_view_version: int | None = None
 ) -> Promise[sublime.View | None]:
     if not edits:
@@ -75,15 +80,23 @@ def apply_text_edits(
     if not view.is_valid():
         print('LSP: ignoring edits due to view not being open')
         return Promise.resolve(None)
-    view.run_command(
-        'lsp_apply_document_edit',
-        {
-            'changes': edits,
-            'label': label,
-            'process_placeholders': process_placeholders,
-            'required_view_version': required_view_version,
-        }
-    )
+    if process_placeholders:
+        # TODO: remove rust-analyzer specific handling for placeholders in TextEdit, because SnippetTextEdit is now part
+        # of the LSP specs.
+        view.run_command(
+            'lsp_apply_document_edit',
+            {
+                'changes': edits,
+                'label': label,
+                'process_placeholders': True,
+                'required_view_version': required_view_version,
+            }
+        )
+    else:
+        view.run_command(
+            'lsp_apply_text_document_edit',
+            {'edits': edits, 'version': required_view_version, 'label': label}
+        )
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
     return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))

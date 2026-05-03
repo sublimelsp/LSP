@@ -451,15 +451,15 @@ class LspPlugin(APIHandler):
         return False
 
     @classmethod
-    def on_pre_start_async(cls, context: OnPreStartContext) -> None:
+    async def on_pre_start(cls, context: OnPreStartContext) -> None:
         """
         Called just before the language server process is started.
 
         Override to perform any preparation needed before startup - for example installing or updating server binaries,
         resolving the working directory, or injecting extra template variables into `context.variables`.
 
-        This method runs on a worker thread so perform any blocking I/O (e.g. downloading a binary, running
-        `npm install`) directly here without spawning additional threads.
+        Attempt to use non-blocking functionality for downloading binaries and running subprocesses in order to not
+        block the asyncio thread.
 
         Mutations to `context.working_directory` and `context.variables` are picked up and used when launching the
         server process.
@@ -489,7 +489,7 @@ class LspPlugin(APIHandler):
         cls.name = cls.__module__.split('.')[0]  # pyright: ignore[reportAttributeAccessIssue]
         cls.plugin_storage_path = Path(ST_STORAGE_PATH, cls.name)  # pyright: ignore[reportAttributeAccessIssue]
 
-    def on_transport_ready_async(self, transport: TransportWrapper) -> None:
+    async def on_transport_ready(self, transport: TransportWrapper) -> None:
         """
         Called after the transport is established but before the LSP `initialize` request is sent.
 
@@ -507,9 +507,11 @@ class LspPlugin(APIHandler):
         """
         pass
 
-    def on_initialize_async(self) -> None:
+    async def on_initialize(self) -> None:
         """
         Called after the `initialize` response has been received from the language server.
+
+        TODO: invoked before or after the `initialized` notification?
 
         Override to perform any post-initialization work, such as sending custom notifications or requests
         that depend on the server's capabilities reported in the `initialize` response.

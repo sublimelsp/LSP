@@ -38,7 +38,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
-from .core.logging import debug
+from .core.logging import debug, trace
 from functools import partial
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -117,18 +117,23 @@ class LspHoverCommand(LspTextCommand):
         # rather than just the hover point.
 
         async def run_async() -> None:
+            trace()
             listener = wm.listener_for_view(self.view)
             if not listener:
+                trace()
                 return
             if not only_diagnostics:
+                trace()
                 self.request_symbol_hover_async(listener, hover_point)
                 if userprefs().link_highlight_style in {"underline", "none"}:
                     self.request_document_link_async(listener, hover_point)
             self._diagnostics_by_config = listener.get_diagnostics_async(
                 hover_point, userprefs().show_diagnostics_severity_level)
             if self._diagnostics_by_config:
+                trace()
                 self.show_hover(listener, hover_point, only_diagnostics)
             if userprefs().show_code_actions_in_hover:
+                trace()
                 region = sublime.Region(hover_point, hover_point)
                 kinds: list[str | CodeActionKind] = [CodeActionKind.QuickFix]
                 code_action_promises = [
@@ -143,6 +148,7 @@ class LspHoverCommand(LspTextCommand):
         sublime_aio.run_coroutine(run_async())
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
+        trace()
         hover_promises: list[Promise[ResolvedHover]] = []
         language_maps: list[MarkdownLangMap | None] = []
         for session in listener.sessions('hoverProvider'):
@@ -150,6 +156,7 @@ class LspHoverCommand(LspTextCommand):
                 Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
             ))
             language_maps.append(session.markdown_language_id_to_st_syntax_map())
+        trace()
         Promise.all(hover_promises).then(partial(self._on_all_settled, listener, point, language_maps))
 
     def _on_all_settled(
@@ -159,6 +166,7 @@ class LspHoverCommand(LspTextCommand):
         language_maps: list[MarkdownLangMap | None],
         responses: list[ResolvedHover]
     ) -> None:
+        trace()
         hovers: list[tuple[Hover, MarkdownLangMap | None]] = []
         errors: list[Error] = []
         for response, language_map in zip(responses, language_maps):
@@ -174,8 +182,9 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
+        trace()
         link_promises: list[Promise[DocumentLink | None]] = []
-        for sv in listener.session_views_async():
+        for sv in listener.session_views():
             if not sv.has_capability_async("documentLinkProvider"):
                 continue
             link = sv.session_buffer.get_document_link_at_point(sv.view, point)
@@ -188,11 +197,13 @@ class LspHoverCommand(LspTextCommand):
                     sv.session.send_request_task(Request.resolveDocumentLink(link, sv.view))
                     .then(partial(self._on_resolved_link, sv.session_buffer)))
         if link_promises:
+            trace()
             Promise.all(link_promises).then(partial(self._on_all_document_links_resolved, listener, point))
 
     def _on_resolved_link(
         self, session_buffer: SessionBufferProtocol, link: DocumentLink | Error
     ) -> DocumentLink | None:
+        trace()
         if isinstance(link, Error):
             return None
         session_buffer.update_document_link(link)
@@ -201,6 +212,7 @@ class LspHoverCommand(LspTextCommand):
     def _on_all_document_links_resolved(
         self, listener: AbstractViewListener, point: int, links: list[DocumentLink | None]
     ) -> None:
+        trace()
         if document_links := list(filter(None, links)):
             self._document_links = document_links
             self.show_hover(listener, point, only_diagnostics=False)
@@ -211,7 +223,9 @@ class LspHoverCommand(LspTextCommand):
         point: int,
         responses: list[tuple[str, list[Command | CodeAction]]]
     ) -> None:
+        trace()
         if actions := {config_name: code_actions for config_name, code_actions in responses if code_actions}:
+            trace()
             self._actions_by_config = actions
             self.show_hover(listener, point, only_diagnostics=False)
 
@@ -256,10 +270,12 @@ class LspHoverCommand(LspTextCommand):
         return None
 
     def show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
+        trace()
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
         # TODO: clean up this method, it is a total mess currently with all that conditional logic
+        trace()
         contents = ''
         prefs = userprefs()
         if only_diagnostics or prefs.show_diagnostics_in_hover:
@@ -286,6 +302,7 @@ class LspHoverCommand(LspTextCommand):
             contents += html_wrapper(link_content)
 
         if contents:
+            trace()
             if prefs.hover_highlight_style:
                 hover_range = link_range if only_link_content else self.hover_range()
                 if hover_range:
@@ -296,8 +313,10 @@ class LspHoverCommand(LspTextCommand):
                         scope="region.cyanish markup.highlight.hover.lsp",
                         flags=flags)
             if self.view.is_popup_visible():
+                trace()
                 update_lsp_popup(self.view, contents)
             else:
+                trace()
                 show_lsp_popup(
                     self.view,
                     contents,
@@ -378,7 +397,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
     def _update_views_async(self, enable: bool) -> None:
         if window_manager := windows.lookup(self.window):
             for session in window_manager.get_sessions():
-                for session_view in session.session_views_async():
+                for session_view in session.session_views():
                     if enable:
                         session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
                     else:

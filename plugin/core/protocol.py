@@ -440,10 +440,23 @@ class ResponseError(TypedDict):
 
 
 class ResponseException(Exception):
-    error: ResponseError
+    def __init__(self, error: ResponseError) -> None:
+        super().__init__(self, error["message"])
+        self._code = error["code"]
+        self._data = error.get("data")
+        self._error = error
 
-    def __init__(error: ResponseError) -> None:
-        self.error = error
+    @property
+    def code(self) -> int:
+        return self._code
+
+    @property
+    def data(self) -> LSPAny | None:
+        return self._data
+
+    @property
+    def error(self) -> ResponseError:
+        return self._error
 
 
 class ResolvedCodeLens(TypedDict):

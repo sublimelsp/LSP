@@ -225,10 +225,8 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         self._should_format_on_paste = False
         self.hover_provider_count = 0
         self._setup()
-        debug("__init__", self)
 
     def __del__(self) -> None:
-        debug("__del__", self)
         self._cleanup()
 
     def __repr__(self) -> str:
@@ -266,7 +264,6 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         for session in self.sessions():
             session.diagnostics.clear_identifiers_cache_for_view(self.view)
         # But this has to run on the asyncio thread again
-        debug("_reset", self)
         sublime_aio.run_coroutine(self._activated_impl())
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
@@ -586,7 +583,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
                 if window.settings().get(HOVER_ENABLED_KEY, True):
                     self.view.run_command("lsp_hover", {"point": point})
             elif hover_zone == sublime.HoverZone.GUTTER:
-                sublime.set_timeout_async(partial(self._on_hover_gutter_async, point))
+                sublime_aio.call_soon_threadsafe(partial(self._on_hover_gutter_async, point))
 
     def _on_hover_gutter_async(self, point: int) -> None:
         if userprefs().diagnostics_gutter_marker:
@@ -625,7 +622,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         if scheme == CODE_ACTION_SCHEME:
             session_name, version, action = decode_code_action_uri(href)
             if version == self.view.change_count() and (session := self.session_by_name(session_name)):
-                sublime.set_timeout_async(lambda: session.run_code_action_async(action, progress=True, view=self.view))
+                sublime_aio.call_soon_threadsafe(lambda: session.run_code_action_async(action, progress=True, view=self.view))
                 self.view.hide_popup()
         elif scheme == 'file':
             if window := self.view.window():
@@ -668,7 +665,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
             if format_on_paste and self.get_session("documentRangeFormattingProvider"):
                 self._should_format_on_paste = True
         elif command_name in {"next_field", "prev_field"} and args is None:
-            sublime.set_timeout_async(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
+            sublime_aio.call_soon_threadsafe(lambda: self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange))
         if not self.view.is_popup_visible():
             return
         if self._is_documenation_popup_open and command_name in {"move", "commit_completion", "delete_word",
@@ -680,7 +677,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         completion_list = sublime.CompletionList()
         triggered_manually = self._auto_complete_triggered_manually
         self._auto_complete_triggered_manually = False  # reset state for next completion popup
-        sublime.set_timeout_async(
+        sublime_aio.call_soon_threadsafe(
             lambda: self._on_query_completions_async(completion_list, locations[0], triggered_manually))
         return completion_list
 

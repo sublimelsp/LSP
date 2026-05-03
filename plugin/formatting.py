@@ -75,7 +75,7 @@ class WillSaveWaitTask(LspTask):
     def _handle_next_session_async(self) -> None:
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
-            self._purge_changes_async()
+            self._purge_changes()
             view = self._task_runner.view
             session.send_request_task(will_save_wait_until(view, reason=TextDocumentSaveReason.Manual)) \
                 .then(self._on_response_async)
@@ -101,7 +101,7 @@ class FormatOnSaveTask(LspTask):
     @override
     def run_async(self) -> None:
         super().run_async()
-        self._purge_changes_async()
+        self._purge_changes()
         syntax = self._task_runner.view.syntax()
         if not syntax:
             return

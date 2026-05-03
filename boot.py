@@ -93,6 +93,9 @@ import os
 import sublime
 import sublime_aio
 import sublime_plugin
+import warnings
+
+warnings.simplefilter('always', DeprecationWarning)  # turn off filter
 
 __all__ = (
     "DocumentSyncListener",

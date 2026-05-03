@@ -57,7 +57,7 @@ class LspTask(ABC):
         if not self._cancelled:
             self._on_done()
 
-    def _purge_changes_async(self) -> None:
+    def _purge_changes(self) -> None:
         if listener := self._task_runner.get_listener():
             listener.purge_changes()
 

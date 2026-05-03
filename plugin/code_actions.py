@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING
 from typing import Union
 from typing_extensions import override
 import sublime
+import sublime_aio
 
 if TYPE_CHECKING:
     from .core.sessions import AbstractViewListener
@@ -182,7 +183,7 @@ class CodeActionsManager:
             session = sb.session
             if request := request_factory(sb):
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
-                listener.purge_changes_async()
+                listener.purge_changes()
                 sb.do_document_diagnostic(listener.view, listener.view.change_count())
                 response_handler = partial(on_response, sb)
                 task = session.send_request_task(request)
@@ -214,7 +215,7 @@ class CodeActionsManager:
         for sb in listener.session_buffers('codeActionProvider'):
             matching_kinds = get_matching_kinds(code_actions, get_session_kinds(sb))
             for kind in matching_kinds:
-                listener.purge_changes_async()
+                listener.purge_changes()
                 # Pull for diagnostics to ensure that server computes them before receiving code action request.
                 sb.do_document_diagnostic(view, view.change_count())
                 region = entire_content_region(view)
@@ -463,7 +464,7 @@ class LspMenuActionCommand(LspWindowCommand, ABC):
     def is_visible(self, index: int, event: dict | None = None) -> bool:
         if index == -1:
             if self._has_session(event):
-                sublime.set_timeout_async(partial(self._request_menu_actions_async, event))
+                sublime_aio.call_soon_threadsafe(partial(self._request_menu_actions_async, event))
             return False
         return index < len(self.actions_cache) and self._is_cache_valid(event)
 

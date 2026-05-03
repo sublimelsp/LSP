@@ -48,6 +48,7 @@ from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
+from .core.protocol import ResponseException
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -662,17 +663,17 @@ class SessionBuffer:
                 self._document_diagnostic_pending_requests[identifier] = None
                 self.session.diagnostics_result_ids[(self._last_known_uri, identifier)] = response.get('resultId')
                 if is_related_full_document_diagnostic_report(response):
-                    self.session.handle_diagnostics_async(self._last_known_uri, identifier, version, response['items'])
+                    self.session.handle_diagnostics(self._last_known_uri, identifier, version, response['items'])
                 if related_documents := response.get('relatedDocuments'):
                     for uri, diagnostic_report in related_documents.items():
                         uri = normalize_uri(uri)
                         self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                         if is_full_document_diagnostic_report(diagnostic_report):
-                            self.session.handle_diagnostics_async(uri, identifier, None, diagnostic_report['items'])
+                            self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
         except ResponseException as ex:
             self._document_diagnostic_pending_requests[identifier] = None
-            if ex.error['code'] == LSPErrorCodes.ServerCancelled:
-                data = ex.error.get('data')
+            if ex.code == LSPErrorCodes.ServerCancelled:
+                data = ex.data
                 if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
                     # Retrigger the request after a short delay, but only if there are no additional changes to the
                     # buffer in the meanwhile, because in that case a new request will be sent automatically after the

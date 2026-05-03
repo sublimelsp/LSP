@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from typing import Callable
+from typing import Generator
 from typing import Generic
 from typing import Protocol
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
+from .logging import trace
 import asyncio
 import functools
 import threading
@@ -208,17 +210,19 @@ class Promise(Generic[T]):
             return Promise(sync_wrapper)
         return Promise(async_wrapper)
 
-    def __await__(self):
+    def __await__(self) -> Generator[Any, None, T]:
         """You can `await` a Promise."""
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         with self.mutex:
             if self.resolved:
+                trace()
                 future.set_result(self.value)
             else:
 
                 def resolve_callback(value: T) -> None:
                     # We don't know from which thread we are resolving, so use call_soon_threadsafe.
+                    trace()
                     loop.call_soon_threadsafe(functools.partial(future.set_result, value))
 
                 self.callbacks.append(resolve_callback)

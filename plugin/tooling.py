@@ -459,7 +459,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
         if not file_name:
             return
         listener = wm.listener_for_view(self.view)
-        if not listener or not any(listener.session_views_async()):
+        if not listener or not any(listener.session_views()):
             sublime.error_message("There is no language server running for this view.")
             return
         v = wm.window.new_file()
@@ -473,7 +473,7 @@ class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
         def print_capabilities(capabilities: Capabilities) -> str:
             return f"```json\n{json.dumps(capabilities.get(), indent=4, sort_keys=True)}\n```"
 
-        for sv in listener.session_views_async():
+        for sv in listener.session_views():
             p(f"# {sv.session.config.name}\n")
             p("## Global capabilities\n")
             p(print_capabilities(sv.session.capabilities) + "\n")

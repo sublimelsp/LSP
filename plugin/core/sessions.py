@@ -1136,7 +1136,7 @@ class Session(APIHandler, TransportCallbacks):
         self._session_views.discard(sv)
         if not self._session_views:
             current_count = self._views_opened
-            debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
+            debounced(lambda: sublime_aio.run_coroutine(self.end()), 3000, lambda: self._views_opened == current_count)
 
     def session_views(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
@@ -1337,8 +1337,8 @@ class Session(APIHandler, TransportCallbacks):
     ) -> InitializeResult:
         if self._plugin_class and issubclass(self._plugin_class, LspPlugin):
             loop = asyncio.get_running_loop()
-            self._plugin = await loop.run_in_executor(executor_async, self._plugin_class, weakref.ref(self))
-            await loop.run_in_executor(executor_async, self._plugin.on_transport_ready_async, transport)
+            self._plugin = self._plugin_class(weakref.ref(self))
+            await self._plugin.on_transport_ready(transport)
         self.transport = transport
         self.working_directory = working_directory
         params = get_initialize_params(variables, self._workspace_folders, self.config)
@@ -1360,7 +1360,9 @@ class Session(APIHandler, TransportCallbacks):
             if issubclass(self._plugin_class, AbstractPlugin):
                 loop = asyncio.get_running_loop()
                 self._plugin = await loop.run_in_executor(executor_async, self._plugin_class, weakref.ref(self))
-                await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, 'initialize', Response(-1, result))
+                self._plugin.on_server_response_async('initialize', Response(-1, result))
+        if self._plugin and isinstance(self._plugin, LspPlugin):
+            await self._plugin.on_initialize()
         await self.notify(Notification.initialized())
         self._maybe_send_did_change_configuration()
         if execute_commands := self.get_capability('executeCommandProvider.commands'):
@@ -1865,9 +1867,8 @@ class Session(APIHandler, TransportCallbacks):
         if identifier is not None:
             params['identifier'] = identifier
 
-        self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.request(
-            Request.workspaceDiagnostic(params),
-            partial_results=True
+        self.workspace_diagnostics_pending_responses[identifier] = inflight_request = self.stream(
+            Request.workspaceDiagnostic(params)
         )
         try:
             async for partial_response in inflight_request:
@@ -1881,7 +1882,6 @@ class Session(APIHandler, TransportCallbacks):
                     self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                     if is_workspace_full_document_diagnostic_report(diagnostic_report):
                         self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
-            await inflight_request
             self.workspace_diagnostics_pending_responses[identifier] = None
         except ResponseException as e:
             if e.error['code'] == LSPErrorCodes.ServerCancelled:
@@ -2304,10 +2304,12 @@ class Session(APIHandler, TransportCallbacks):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
 
         def on_result(response: R) -> None:
+            debug(f"resolving future {request_id} normally with value: {response}")
             loop.call_soon(lambda: future.set_result(response))
 
-        def on_error(error: ErrorResponse) -> None:
-            loop.call_soon(lambda: future.set_exception(ResponseException(e)))
+        def on_error(error: Responseerror) -> None:
+            debug(f"resolving future {request_id} exceptionally with error: {error}")
+            loop.call_soon(lambda: future.set_exception(ResponseException(error)))
 
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views_async(request, "on_request_started_async", request_id, request)
@@ -2315,11 +2317,14 @@ class Session(APIHandler, TransportCallbacks):
             self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         sublime_aio.run_coroutine(self.send_payload(request.to_payload(request_id)))
+        debug(f"created new request future with ID {request_id}")
         return result
 
     def stream(self, request: Request[P, R]) -> CancellableInflightStreamingRequest[R]:
         """
-        Stream a request. Use in combination with `async for` syntax:
+        Stream a request.
+
+        Use in combination with `async for` syntax:
 
         ```py
         async for partial_result in session.stream(Request(...)):
@@ -2359,19 +2364,17 @@ class Session(APIHandler, TransportCallbacks):
         on_result: Callable[[R], None],
         on_error: Callable[[ResponseError], None] | None = None
     ) -> int:
-        """
-        You must call this method from the asyncio loop thread. Callbacks will run in the asyncio thread.
-        """
+        """You must call this method from the asyncio loop thread. Callbacks will run in the asyncio thread."""
         result = self.request(request)
 
         def on_done(future: asyncio.Future[R]) -> None:
             if future.cancelled():
                 return
-            elif ex := future.exception():
+            if ex := future.exception():
                 if isinstance(ex, ResponseException):
                     on_error(ex.error)
             else:
-                on_done(future.result())
+                on_result(future.result())
 
         result._future.add_done_callback(on_done)
         return result.id
@@ -2463,11 +2466,11 @@ class Session(APIHandler, TransportCallbacks):
                 res = (handler, result, None, "notification", method)
                 self._logger.incoming_notification(method, result, res[0] is None)
                 if self._plugin and isinstance(self._plugin, AbstractPlugin):
-                    sublime.set_timeout_async(lambda: self._plugin.on_server_notification_async(Notification(method, result)))
+                    self._plugin.on_server_notification_async(Notification(method, result))
                 elif self._plugin:
                     server_notification = cast('ServerNotification',
                                                cast('object', {'method': method, 'result': result}))
-                    sublime.set_timeout_async(lambda: self._plugin.on_server_notification_async(server_notification))
+                    self._plugin.on_server_notification_async(server_notification)
                 return res
         elif "id" in payload:
             response_id = payload["id"]
@@ -2479,13 +2482,11 @@ class Session(APIHandler, TransportCallbacks):
             response = Response(response_id, result)
             if not is_error and self._plugin:
                 if isinstance(self._plugin, AbstractPlugin):
-                    loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, cast('str', method), response)
+                    self._plugin.on_server_response_async(cast('str', method), response)
                 else:
                     server_response = cast('ServerResponse',
                                            cast('object', {'method': method, 'result': response.result}))
-                    loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(executor_async, self._plugin.on_server_response_async, server_response)
+                    self._plugin.on_server_response_async(server_response)
                     response.result = server_response['result']
             return handler, response.result, None, None, None
         else:
@@ -2497,14 +2498,15 @@ class Session(APIHandler, TransportCallbacks):
         if handler:
             try:
                 if req_id is None:
-                    # notification or response handler
+                    # server notification or client request
+                    debug(f"resolving {typestr} ({method})")
                     handler(result)
                 else:
-                    # request
+                    # server request
                     try:
-                        debug(f"start handling {typestr}: {req_id} {method}")
+                        debug(f"start handling server {typestr}: {req_id} {method}")
                         await self.send_response(await handler(result, req_id))
-                        debug(f"done  handling {typestr}: {req_id} {method}")
+                        debug(f"done  handling server {typestr}: {req_id} {method}")
                     except Error as err:
                         await self.send_error_response(req_id, err)
                     except Exception as ex:

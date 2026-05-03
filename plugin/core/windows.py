@@ -178,7 +178,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
         else:
             try:
                 listener = self._pending_listeners.pop()
-                if not listener.view.is_valid():
+                if not listener.view.is_valid() or listener in self._listeners:
                     # debug("listener", listener, "is no longer valid")
                     self._dequeue_listener_async()
                     return

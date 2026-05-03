@@ -271,11 +271,7 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
                 elif not is_applicable and session_view:
                     session.shutdown_session_view_async(session_view)
             elif is_applicable:
-                wm.start_async(config, self.view)
-                if wm._new_session:
-                    wm._sessions.add(wm._new_session)
-                    listener.on_session_initialized_async(wm._new_session)
-                    wm._new_session = None
+                wm.register_listener_async(listener)
 
 
 def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:

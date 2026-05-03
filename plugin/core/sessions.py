@@ -1856,7 +1856,7 @@ class Session(APIHandler, TransportCallbacks):
                 # The server is probably leaving the request open intentionally, in order to continuously stream updates
                 # via $/progress notifications.
                 continue
-            sublime_aio.run_coroutine(self._do_workspace_diagnostics(identifier))
+            asyncio.get_running_loop().create_task(self._do_workspace_diagnostics(identifier))
 
     async def _do_workspace_diagnostics(self, identifier: DiagnosticsIdentifier) -> None:
         previous_result_ids: list[PreviousResultId] = [
@@ -1884,40 +1884,19 @@ class Session(APIHandler, TransportCallbacks):
                         self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
             self.workspace_diagnostics_pending_responses[identifier] = None
         except ResponseException as e:
-            if e.error['code'] == LSPErrorCodes.ServerCancelled:
-                data = e.error.get('data')
-                if is_diagnostic_server_cancellation_data(data) and data['retriggerRequest']:
+            if e.code == LSPErrorCodes.ServerCancelled:
+                if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
                     # Retrigger the request after a short delay, but don't reset the pending response variable for this
                     # moment, to prevent new requests of this type in the meanwhile. The delay is used in order to prevent
                     # infinite cycles of cancel -> retrigger, in case the server is busy.
-                    sublime.set_timeout_async(
-                        lambda: self._do_workspace_diagnostics_async(identifier),
-                        WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY
-                    )
+
+                    async def retry_later() -> None:
+                        await asyncio.sleep(WORKSPACE_DIAGNOSTICS_RETRIGGER_DELAY / 1000.0)
+                        await self._do_workspace_diagnostics(identifier)
+
+                    asyncio.get_running_loop().create_task(retry_later())
                     return
             self.workspace_diagnostics_pending_responses[identifier] = None
-
-
-    def _on_workspace_diagnostics(
-        self,
-        identifier: DiagnosticsIdentifier,
-        response: WorkspaceDiagnosticReport,
-        *,
-        reset_pending_response: bool = True
-    ) -> None:
-        if reset_pending_response:
-            self.workspace_diagnostics_pending_responses[identifier] = None
-        for diagnostic_report in response['items']:
-            uri = normalize_uri(diagnostic_report['uri'])
-            version = diagnostic_report['version']
-            # Skip if outdated
-            if isinstance(version, int) and (session_buffer := self.get_session_buffer_for_uri(uri)) and \
-                    version < session_buffer.last_synced_version:
-                continue
-            self.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
-            if is_workspace_full_document_diagnostic_report(diagnostic_report):
-                self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
-
 
     # --- workspace/didChangeConfiguration -----------------------------------------------------------------------------
 

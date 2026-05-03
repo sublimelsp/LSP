@@ -397,7 +397,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return "matches a pattern in file_exclude_patterns"
         patterns = [
             sublime_pattern_to_glob(pattern, is_directory_pattern=True)
-            for pattern in settings.get("folder_exclude_patterns") or []
+            for pattern in settings.get("folder_exclude_patterns")
         ]
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"

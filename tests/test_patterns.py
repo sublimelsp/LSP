@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from LSP.plugin.core.types import sublime_pattern_to_glob
+import sys
 import unittest
 
 
@@ -42,5 +43,38 @@ class PatternToGlobTests(unittest.TestCase):
         self.assertEqual(
             sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False, root_path='/Users/me'), '/Users/me/**/*.pyo')
         # Without root_path those will be treated as absolute paths even when starting with multiple slashes.
+        self.assertEqual(sublime_pattern_to_glob('//foo', is_directory_pattern=True), '//foo/**')
+        self.assertEqual(sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False), '//**/*.pyo')
+
+
+@unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+class PatternToGlobWindowsTests(unittest.TestCase):
+
+    def test_project_relative_directory_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo', is_directory_pattern=True, root_path='C:/project'),
+            'C:/project/foo/**')
+
+    def test_project_relative_file_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False, root_path='C:/project'),
+            'C:/project/**/*.pyo')
+
+    def test_project_relative_nested_pattern_forward_slash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo/bar', is_directory_pattern=True, root_path='C:/project'),
+            'C:/project/foo/bar/**')
+
+    def test_project_relative_directory_pattern_backslash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//foo', is_directory_pattern=True, root_path=r'C:\project'),
+            'C:/project/foo/**')
+
+    def test_project_relative_file_pattern_backslash_root(self) -> None:
+        self.assertEqual(
+            sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False, root_path=r'C:\project'),
+            'C:/project/**/*.pyo')
+
+    def test_project_relative_without_root_path(self) -> None:
         self.assertEqual(sublime_pattern_to_glob('//foo', is_directory_pattern=True), '//foo/**')
         self.assertEqual(sublime_pattern_to_glob('//*.pyo', is_directory_pattern=False), '//**/*.pyo')

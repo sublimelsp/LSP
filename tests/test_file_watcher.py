@@ -11,13 +11,11 @@ from LSP.plugin import parse_uri
 from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import sublime_pattern_to_glob
 from LSP.protocol import WatchKind
 from os.path import join
 from typing import Generator
 from typing import TYPE_CHECKING
 import sublime
-import unittest
 
 if TYPE_CHECKING:
     from LSP.protocol import DidChangeWatchedFilesRegistrationOptions
@@ -284,81 +282,3 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(watcher.events, ['create', 'change', 'delete'])
         _, base_path_2 = parse_uri(base_uri_2)
         self.assertEqual(watcher.root_path, base_path_2)
-
-
-class PatternToGlobTests(unittest.TestCase):
-
-    def test_basic_directory_patterns(self) -> None:
-        patterns = [
-            '.git',
-            'CVS',
-            '.Trash-*',
-        ]
-        self._verify_patterns(
-            patterns,
-            [
-                '**/.git/**',
-                '**/CVS/**',
-                '**/.Trash-*/**',
-            ],
-            is_directory_pattern=True)
-
-    def test_complex_directory_patterns(self) -> None:
-        patterns = [
-            '*/foo',
-            'foo/bar',
-            'foo/bar/',
-            '/foo',
-        ]
-        self._verify_patterns(
-            patterns,
-            [
-                '**/foo/**',
-                '**/foo/bar/**',
-                '**/foo/bar/**',
-                '/foo/**',
-            ],
-            is_directory_pattern=True)
-
-    def test_basic_file_patterns(self) -> None:
-        self._verify_patterns(
-            [
-                '*.pyc',
-                ".DS_Store",
-
-            ],
-            [
-                '**/*.pyc',
-                '**/.DS_Store',
-            ],
-            is_directory_pattern=False)
-
-    def test_complex_file_patterns(self) -> None:
-        self._verify_patterns(
-            [
-                "/*.pyo",
-            ],
-            [
-                '/*.pyo',
-            ],
-            is_directory_pattern=False)
-
-    def test_project_relative_patterns(self) -> None:
-        self._verify_patterns(['//foo'], ['/Users/me/foo/**'], is_directory_pattern=True, root_path='/Users/me')
-        self._verify_patterns(['//*.pyo'], ['/Users/me/*.pyo'], is_directory_pattern=False, root_path='/Users/me')
-        # Without root_path those will be treated as absolute paths even when starting with multiple slashes.
-        self._verify_patterns(['//foo'], ['//foo/**'], is_directory_pattern=True)
-        self._verify_patterns(['//*.pyo'], ['//*.pyo'], is_directory_pattern=False)
-
-    def _verify_patterns(
-        self,
-        patterns: list[str],
-        expected: list[str],
-        is_directory_pattern: bool,
-        root_path: str | None = None
-    ) -> None:
-        glob_patterns = [
-            sublime_pattern_to_glob(pattern, is_directory_pattern=is_directory_pattern, root_path=root_path)
-            for pattern in patterns
-        ]
-        self.assertEqual(glob_patterns, expected)

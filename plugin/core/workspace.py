@@ -78,12 +78,14 @@ class ProjectFolders:
             path = folders[i]
             for pattern in folder.get('folder_exclude_patterns', []):
                 if pattern.startswith('//'):
-                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True, path))
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, is_directory_pattern=True, root_path=path))
                 elif pattern.startswith('/'):
-                    exclude_patterns.append(sublime_pattern_to_glob(pattern, True))
+                    exclude_patterns.append(sublime_pattern_to_glob(pattern, is_directory_pattern=True))
                 else:
-                    exclude_patterns.extend((sublime_pattern_to_glob('//' + pattern, True, path),
-                                             sublime_pattern_to_glob('//**/' + pattern, True, path)))
+                    exclude_patterns.extend((
+                        sublime_pattern_to_glob('//' + pattern, is_directory_pattern=True, root_path=path),
+                        sublime_pattern_to_glob('//**/' + pattern, is_directory_pattern=True, root_path=path)
+                    ))
             self._folders_exclude_patterns[i] = exclude_patterns
 
     def update(self) -> bool:

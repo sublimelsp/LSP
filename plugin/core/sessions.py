@@ -37,8 +37,10 @@ from ...protocol import LogMessageParams
 from ...protocol import LSPAny
 from ...protocol import LSPErrorCodes
 from ...protocol import LSPObject
+from ...protocol import MarkdownClientCapabilities
 from ...protocol import MarkupKind
 from ...protocol import MessageActionItem
+from ...protocol import PositionEncodingKind
 from ...protocol import PrepareSupportDefaultBehavior
 from ...protocol import PreviousResultId
 from ...protocol import ProgressParams
@@ -320,7 +322,18 @@ def get_initialize_params(
                 semantic_token_modifiers.append(token_modifier)
     supported_markup_kinds = [MarkupKind.Markdown, MarkupKind.PlainText]
     first_folder = workspace_folders[0] if workspace_folders else None
+    markdown_capabilities: MarkdownClientCapabilities = {
+        "parser": "marko",  # https://github.com/frostming/marko
+        "version": MARKO_MD_PARSER_VERSION
+    } if MARKO_MD_PARSER_VERSION else {
+        "parser": "Python-Markdown",  # https://python-markdown.github.io
+        "version": mdpopups.markdown.__version__  # pyright: ignore[reportAttributeAccessIssue]
+    }
     general_capabilities: GeneralClientCapabilities = {
+        "staleRequestSupport": {
+            "cancel": True,
+            "retryOnContentModified": []
+        },
         # https://microsoft.github.io/language-server-protocol/specification#regExp
         "regularExpressions": {
             # https://www.sublimetext.com/docs/completions.html#ver-dev
@@ -328,46 +341,33 @@ def get_initialize_params(
             # ECMAScript syntax is a subset of Perl syntax
             "engine": "ECMAScript"
         },
-        # https://microsoft.github.io/language-server-protocol/specification#markupContent
-        "markdown": {
-            # https://github.com/frostming/marko
-            "parser": "marko",
-            "version": MARKO_MD_PARSER_VERSION
-        } if MARKO_MD_PARSER_VERSION else {
-            # https://python-markdown.github.io
-            "parser": "Python-Markdown",
-            "version": mdpopups.markdown.__version__  # pyright: ignore[reportAttributeAccessIssue]
-
-        }
+        "markdown": markdown_capabilities,
+        "positionEncodings": [PositionEncodingKind.UTF16]
     }
     text_document_capabilities: TextDocumentClientCapabilities = {
         "synchronization": {
-            "dynamicRegistration": True,  # exceptional
-            "didSave": True,
-            "willSave": True,
-            "willSaveWaitUntil": True
-        },
-        "hover": {
             "dynamicRegistration": True,
-            "contentFormat": supported_markup_kinds
+            "willSave": True,
+            "willSaveWaitUntil": True,
+            "didSave": True
         },
         "completion": {
             "dynamicRegistration": True,
             "completionItem": {
                 "snippetSupport": True,
-                "deprecatedSupport": True,
                 "documentationFormat": supported_markup_kinds,
+                "deprecatedSupport": True,
                 "tagSupport": {
                     "valueSet": list(CompletionItemTag)
                 },
+                "insertReplaceSupport": True,
                 "resolveSupport": {
                     "properties": ["detail", "documentation", "additionalTextEdits"]
                 },
-                "insertReplaceSupport": True,
                 "insertTextModeSupport": {
                     "valueSet": [InsertTextMode.AdjustIndentation]
                 },
-                "labelDetailsSupport": True,
+                "labelDetailsSupport": True
             },
             "completionItemKind": {
                 "valueSet": list(CompletionItemKind)
@@ -377,43 +377,20 @@ def get_initialize_params(
                 "itemDefaults": ["editRange", "insertTextFormat", "data"]
             }
         },
+        "hover": {
+            "dynamicRegistration": True,
+            "contentFormat": supported_markup_kinds
+        },
         "signatureHelp": {
             "dynamicRegistration": True,
-            "contextSupport": True,
             "signatureInformation": {
-                "activeParameterSupport": True,
                 "documentationFormat": supported_markup_kinds,
                 "parameterInformation": {
                     "labelOffsetSupport": True
-                }
-            }
-        },
-        "references": {
-            "dynamicRegistration": True
-        },
-        "documentHighlight": {
-            "dynamicRegistration": True
-        },
-        "documentSymbol": {
-            "dynamicRegistration": True,
-            "hierarchicalDocumentSymbolSupport": True,
-            "symbolKind": {
-                "valueSet": symbol_kinds
+                },
+                "activeParameterSupport": True
             },
-            "tagSupport": {
-                "valueSet": symbol_tags
-            }
-        },
-        "documentLink": {
-            "dynamicRegistration": True,
-            "tooltipSupport": True
-        },
-        "formatting": {
-            "dynamicRegistration": True  # exceptional
-        },
-        "rangeFormatting": {
-            "dynamicRegistration": True,
-            "rangesSupport": True
+            "contextSupport": True
         },
         "declaration": {
             "dynamicRegistration": True,
@@ -431,6 +408,22 @@ def get_initialize_params(
             "dynamicRegistration": True,
             "linkSupport": True
         },
+        "references": {
+            "dynamicRegistration": True
+        },
+        "documentHighlight": {
+            "dynamicRegistration": True
+        },
+        "documentSymbol": {
+            "dynamicRegistration": True,
+            "symbolKind": {
+                "valueSet": symbol_kinds
+            },
+            "hierarchicalDocumentSymbolSupport": True,
+            "tagSupport": {
+                "valueSet": symbol_tags
+            }
+        },
         "codeAction": {
             "dynamicRegistration": True,
             "codeActionLiteralSupport": {
@@ -446,13 +439,33 @@ def get_initialize_params(
                     ]
                 }
             },
-            "dataSupport": True,
             "isPreferredSupport": True,
+            "dataSupport": True,
             "resolveSupport": {
                 "properties": [
                     "edit"
                 ]
             }
+        },
+        "codeLens": {
+            "dynamicRegistration": True,
+            "resolveSupport": {
+                "properties": ["command"]
+            }
+        },
+        "documentLink": {
+            "dynamicRegistration": True,
+            "tooltipSupport": True
+        },
+        "colorProvider": {
+            "dynamicRegistration": True
+        },
+        "formatting": {
+            "dynamicRegistration": True
+        },
+        "rangeFormatting": {
+            "dynamicRegistration": True,
+            "rangesSupport": True
         },
         "onTypeFormatting": {
             "dynamicRegistration": True
@@ -461,9 +474,7 @@ def get_initialize_params(
             "dynamicRegistration": True,
             "prepareSupport": True,
             "prepareSupportDefaultBehavior": PrepareSupportDefaultBehavior.Identifier,
-        },
-        "colorProvider": {
-            "dynamicRegistration": True  # exceptional
+            "honorsChangeAnnotations": True
         },
         "publishDiagnostics": {
             "relatedInformation": True,
@@ -474,34 +485,17 @@ def get_initialize_params(
             "codeDescriptionSupport": True,
             "dataSupport": True
         },
-        "diagnostic": {
-            "dynamicRegistration": True,
-            "relatedDocumentSupport": True,
-            "relatedInformation": True,
-            "tagSupport": {
-                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
-            },
-            "codeDescriptionSupport": True,
-            "markupMessageSupport": True,
-            "dataSupport": True
-        },
-        "selectionRange": {
-            "dynamicRegistration": True
-        },
         "foldingRange": {
             "dynamicRegistration": True,
             "foldingRangeKind": {
                 "valueSet": list(FoldingRangeKind)
             }
         },
-        "codeLens": {
+        "selectionRange": {
             "dynamicRegistration": True
         },
-        "inlayHint": {
-            "dynamicRegistration": True,
-            "resolveSupport": {
-                "properties": ["textEdits", "label.command"]
-            }
+        "callHierarchy": {
+            "dynamicRegistration": True
         },
         "semanticTokens": {
             "dynamicRegistration": True,
@@ -518,54 +512,71 @@ def get_initialize_params(
             "multilineTokenSupport": True,
             "augmentsSyntaxTokens": True
         },
-        "callHierarchy": {
-            "dynamicRegistration": True
-        },
         "typeHierarchy": {
             "dynamicRegistration": True
+        },
+        "inlayHint": {
+            "dynamicRegistration": True,
+            "resolveSupport": {
+                "properties": ["textEdits", "label.command"]
+            }
+        },
+        "diagnostic": {
+            "dynamicRegistration": True,
+            "relatedDocumentSupport": True,
+            "relatedInformation": True,
+            "tagSupport": {
+                "valueSet": SUPPORTED_DIAGNOSTIC_TAGS
+            },
+            "codeDescriptionSupport": True,
+            "markupMessageSupport": True,
+            "dataSupport": True
         }
     }
     workspace_capabilites: WorkspaceClientCapabilities = {
         "applyEdit": True,
-        "didChangeConfiguration": {
-            "dynamicRegistration": True
-        },
-        "executeCommand": {},
         "workspaceEdit": {
             "documentChanges": True,
             "failureHandling": FailureHandlingKind.Abort,
+            "normalizesLineEndings": True,
             "changeAnnotationSupport": {
                 "groupsOnLabel": False
             },
             "metadataSupport": True,
             "snippetEditSupport": True
         },
-        "workspaceFolders": True,
+        "didChangeConfiguration": {
+            "dynamicRegistration": True
+        },
         "symbol": {
-            "dynamicRegistration": True,  # exceptional
-            "resolveSupport": {
-                "properties": ["location.range"]
-            },
+            "dynamicRegistration": True,
             "symbolKind": {
                 "valueSet": symbol_kinds
             },
             "tagSupport": {
                 "valueSet": symbol_tags
+            },
+            "resolveSupport": {
+                "properties": ["location.range"]
             }
         },
+        "executeCommand": {
+            "dynamicRegistration": True
+        },
+        "workspaceFolders": True,
         "configuration": True,
+        "semanticTokens": {
+            "refreshSupport": True
+        },
         "codeLens": {
             "refreshSupport": True
         },
         "fileOperations": {
             "dynamicRegistration": True,
-            "willRename": True,
-            "didRename": True
+            "didRename": True,
+            "willRename": True
         },
         "inlayHint": {
-            "refreshSupport": True
-        },
-        "semanticTokens": {
             "refreshSupport": True
         },
         "diagnostics": {
@@ -573,15 +584,15 @@ def get_initialize_params(
         }
     }
     window_capabilities: WindowClientCapabilities = {
-        "showDocument": {
-            "support": True
-        },
+        "workDoneProgress": True,
         "showMessage": {
             "messageActionItem": {
                 "additionalPropertiesSupport": True
             }
         },
-        "workDoneProgress": True
+        "showDocument": {
+            "support": True
+        }
     }
     capabilities: ClientCapabilities = {
         "general": general_capabilities,

@@ -169,7 +169,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return listener
         return None
 
-    def recheck_is_applicable_async(self, view: sublime.View) -> None:
+    def recheck_is_applicable_async(self, view: sublime.View, config_name: str) -> None:
         if not (listener := self.listener_for_view(view)):
             debug(f'No listener for view {view}')
             return
@@ -177,9 +177,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             debug(f'Already starting relevant sessions for view {view}.')
             return
         scheme = parse_uri(listener.get_uri())[0]
-        for config in self._config_manager.get_configs():
-            if not config.enabled:
-                continue
+        if (config := self._config_manager.get_config(config_name)) and config.enabled:
             is_applicable = config.match_view(view, scheme, self.window, self.workspace_folders)
             if session := self.get_session(config.name, view.file_name()):
                 session_view = session.session_view_for_view_async(view)

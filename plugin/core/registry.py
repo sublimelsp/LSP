@@ -250,7 +250,7 @@ class LspCheckApplicableCommand(sublime_plugin.TextCommand):
 
     def _run_async(self, session_name: str) -> None:
         if wm := windows.lookup(self.view.window()):
-            wm.recheck_is_applicable_async(self.view)
+            wm.recheck_is_applicable_async(self.view, session_name)
 
 
 def navigate_diagnostics(view: sublime.View, point: int | None, forward: bool = True) -> None:

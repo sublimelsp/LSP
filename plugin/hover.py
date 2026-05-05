@@ -151,7 +151,7 @@ class LspHoverCommand(LspTextCommand):
         trace()
         hover_promises: list[Promise[ResolvedHover]] = []
         language_maps: list[MarkdownLangMap | None] = []
-        for session in listener.sessions('hoverProvider'):
+        for session in listener.sessions_async('hoverProvider'):
             hover_promises.append(session.send_request_task(
                 Request("textDocument/hover", text_document_position_params(self.view, point), self.view)
             ))
@@ -184,7 +184,7 @@ class LspHoverCommand(LspTextCommand):
     def request_document_link_async(self, listener: AbstractViewListener, point: int) -> None:
         trace()
         link_promises: list[Promise[DocumentLink | None]] = []
-        for sv in listener.session_views():
+        for sv in listener.session_views_async():
             if not sv.has_capability_async("documentLinkProvider"):
                 continue
             link = sv.session_buffer.get_document_link_at_point(sv.view, point)
@@ -230,7 +230,7 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
-        return bool(listener.get_session(f'{link.lsp_name}Provider'))
+        return bool(listener.session_async(f'{link.lsp_name}Provider'))
 
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
         actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(listener, lk)]
@@ -397,7 +397,7 @@ class LspToggleHoverPopupsCommand(sublime_plugin.WindowCommand):
     def _update_views_async(self, enable: bool) -> None:
         if window_manager := windows.lookup(self.window):
             for session in window_manager.get_sessions():
-                for session_view in session.session_views():
+                for session_view in session.session_views_async():
                     if enable:
                         session_view.view.settings().set(SHOW_DEFINITIONS_KEY, False)
                     else:

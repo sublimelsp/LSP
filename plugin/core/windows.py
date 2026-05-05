@@ -159,7 +159,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             debug("found config for", listener)
             sublime_aio.run_coroutine(self.start(config, listener))
 
-    def unregister_listener(self, listener: AbstractViewListener) -> None:
+    def unregister_listener_async(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
 
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
@@ -238,7 +238,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                     self._listeners.add(listener)
                     debug("found existing session for", listener)
                     session.config.set_view_status(listener.view, "")
-                    listener.on_session_initialized(session)
+                    listener.on_session_initialized_async(session)
                     trace()
                     return
 
@@ -307,7 +307,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 self._sessions.add(session)
                 debug(f"session {session} initialized")
                 self._listeners.add(listener)
-                listener.on_session_initialized(session)
+                listener.on_session_initialized_async(session)
             except Exception as e:
                 trace()
                 message = (f'Failed to initialize {config.name} - disabling for this window for the duration of the current '

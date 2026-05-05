@@ -102,7 +102,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: int | None = None
     ) -> None:
         if listener := self.get_listener():
-            listener.purge_changes()
+            listener.purge_changes_async()
         location = get_position(self.view, event, point)
         session = self._get_prepare_rename_session(point, session_name)
         if new_name or placeholder or not session:

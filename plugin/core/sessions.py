@@ -721,7 +721,7 @@ class SessionBufferProtocol(Protocol):
     def get_view_in_group(self, group: int = ...) -> sublime.View:
         ...
 
-    def register_capability(
+    def register_capability_async(
         self,
         registration_id: str,
         capability_path: str,
@@ -731,7 +731,7 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def unregister_capability(
+    def unregister_capability_async(
         self,
         registration_id: str,
         capability_path: str,
@@ -777,7 +777,7 @@ class SessionBufferProtocol(Protocol):
     def remove_all_inlay_hints(self) -> None:
         ...
 
-    def do_document_diagnostic(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
+    def do_document_diagnostic_async(self, view: sublime.View, version: int, *, forced_update: bool = ...) -> None:
         ...
 
     async def request_code_actions(
@@ -790,7 +790,7 @@ class SessionBufferProtocol(Protocol):
     ) -> list[Command | CodeAction] | Error | None:
         ...
 
-    def do_code_lenses(self, view: sublime.View) -> None:
+    def do_code_lenses_async(self, view: sublime.View) -> None:
         ...
 
     def set_pending_refresh(self, flags: RequestFlags) -> None:
@@ -806,23 +806,23 @@ class AbstractViewListener(ABC):
     lightbulb_color: str = ''
 
     @abstractmethod
-    def get_session(self, capability: str, point: int | None = None) -> Session | None:
+    def session_async(self, capability: str, point: int | None = None) -> Session | None:
         raise NotImplementedError
 
     @abstractmethod
-    def sessions(self, capability: str | None = None) -> list[Session]:
+    def sessions_async(self, capability: str | None = None) -> list[Session]:
         raise NotImplementedError
 
     @abstractmethod
-    def session_buffers(self, capability: str | None = None) -> list[SessionBufferProtocol]:
+    def session_buffers_async(self, capability: str | None = None) -> list[SessionBufferProtocol]:
         raise NotImplementedError
 
     @abstractmethod
-    def session_views(self) -> list[SessionViewProtocol]:
+    def session_views_async(self) -> list[SessionViewProtocol]:
         raise NotImplementedError
 
     @abstractmethod
-    def purge_changes(self) -> None:
+    def purge_changes_async(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -830,11 +830,11 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_session_initialized(self, session: Session) -> None:
+    def on_session_initialized_async(self, session: Session) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def on_session_shutdown(self, session: Session) -> None:
+    def on_session_shutdown_async(self, session: Session) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -882,7 +882,7 @@ class AbstractViewListener(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_post_move_window(self) -> None:
+    def on_post_move_window_async(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -1138,12 +1138,12 @@ class Session(APIHandler, TransportCallbacks):
             current_count = self._views_opened
             debounced(lambda: sublime_aio.run_coroutine(self.end()), 3000, lambda: self._views_opened == current_count)
 
-    def session_views(self) -> Generator[SessionViewProtocol, None, None]:
+    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """It is only safe to iterate over this in the async thread."""
         yield from self._session_views
 
     def session_view_for_view_async(self, view: sublime.View) -> SessionViewProtocol | None:
-        for sv in self.session_views():
+        for sv in self.session_views_async():
             if sv.view == view:
                 return sv
         return None
@@ -1158,7 +1158,7 @@ class Session(APIHandler, TransportCallbacks):
         self._redraw_config_status_async()
 
     def _redraw_config_status_async(self) -> None:
-        for sv in self.session_views():
+        for sv in self.session_views_async():
             self.config.set_view_status(sv.view, self.config_status_message)
 
     # --- session buffer management ------------------------------------------------------------------------------------
@@ -1640,24 +1640,17 @@ class Session(APIHandler, TransportCallbacks):
             view.run_command("append", {"characters": content})
             view.set_read_only(True)
             sheet = view.sheet()
-            if sheet and (view := sheet.view()):
-                view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
-                if r:
-                    center_selection(view, r)
-                return view
-            return None
+            return self._on_sheet_opened(view.sheet(), uri, r)
 
         return await asyncio.get_running_loop().run_in_executor(executor_main, continue_on_main_thread)
 
-    def _on_sheet_opened(
-        self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None
-    ) -> Promise[sublime.View | None]:
+    def _on_sheet_opened(self, sheet: sublime.Sheet | None, uri: DocumentUri, r: Range | None) -> sublime.View | None:
         if sheet and (view := sheet.view()):
             view.settings().set('lsp_uri', uri)  # Preserve original URI given by the language server
             if r:
                 center_selection(view, r)
-            return Promise.resolve(view)
-        return Promise.resolve(None)
+            return view
+        return None
 
     async def open_location(
         self,
@@ -1668,7 +1661,7 @@ class Session(APIHandler, TransportCallbacks):
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
-    def notify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
+    def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):
@@ -1844,7 +1837,7 @@ class Session(APIHandler, TransportCallbacks):
         return visible_session_buffers, not_visible_session_buffers
 
     def visible_session_views(self) -> set[SessionViewProtocol]:
-        return set(sv for sv in self.session_views() if (sheet := sv.view.sheet()) and sheet.is_selected())
+        return set(sv for sv in self.session_views_async() if (sheet := sv.view.sheet()) and sheet.is_selected())
 
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
@@ -1998,7 +1991,7 @@ class Session(APIHandler, TransportCallbacks):
         visible_session_buffers, not_visible_session_buffers = self.session_buffers_by_visibility()
         for session_buffer, session_view in visible_session_buffers:
             view = session_view.view
-            session_buffer.do_document_diagnostic(view, view.change_count(), forced_update=True)
+            session_buffer.do_document_diagnostic_async(view, view.change_count(), forced_update=True)
         for session_buffer in not_visible_session_buffers:
             session_buffer.set_pending_refresh(RequestFlags.DIAGNOSTIC)
 
@@ -2151,7 +2144,7 @@ class Session(APIHandler, TransportCallbacks):
             if sv := self.session_view_for_view_async(request.view):
                 getattr(sv, method)(*args)
         else:
-            for sv in self.session_views():
+            for sv in self.session_views_async():
                 getattr(sv, method)(*args)
 
     def _create_window_progress_reporter(self, token: ProgressToken, value: WorkDoneProgressBegin) -> None:
@@ -2286,7 +2279,7 @@ class Session(APIHandler, TransportCallbacks):
             debug(f"resolving future {request_id} normally with value: {response}")
             loop.call_soon(lambda: future.set_result(response))
 
-        def on_error(error: Responseerror) -> None:
+        def on_error(error: ResponseError) -> None:
             debug(f"resolving future {request_id} exceptionally with error: {error}")
             loop.call_soon(lambda: future.set_exception(ResponseException(error)))
 
@@ -2347,6 +2340,7 @@ class Session(APIHandler, TransportCallbacks):
         result = self.request(request)
 
         def on_done(future: asyncio.Future[R]) -> None:
+            trace()
             if future.cancelled():
                 return
             if ex := future.exception():
@@ -2366,7 +2360,7 @@ class Session(APIHandler, TransportCallbacks):
         on_error: Callable[[ResponseError], None] | None = None,
     ) -> None:
         """You can call this method from any thread. Callbacks will run in the asyncio thread."""
-        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result))
+        sublime_aio.call_soon_threadsafe(lambda: self.send_request_async(request, on_result, on_error))
 
     @deprecated("use Session.request or Session.stream instead")
     def send_request_task(self, request: Request[P, R]) -> Promise[R | Error]:

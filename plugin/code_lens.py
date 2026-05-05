@@ -135,7 +135,7 @@ class LspToggleCodeLensesCommand(LspWindowCommand):
         if not window_manager:
             return
         for session in window_manager.get_sessions():
-            for session_view in session.session_views():
+            for session_view in session.session_views_async():
                 if enable:
                     session_view.session_buffer.do_code_lenses_async(session_view.view)
                 else:
@@ -152,7 +152,7 @@ class LspCodeLensCommand(LspTextCommand):
             return
         commands: list[tuple[str, Command]] = []
         for region in self.view.sel():
-            for sv in listener.session_views():
+            for sv in listener.session_views_async():
                 session_name = sv.session.config.name
                 commands.extend((session_name, command) for command in sv.get_code_lenses_for_region(region))
         if not commands:

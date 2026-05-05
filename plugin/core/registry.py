@@ -166,12 +166,12 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def best_session(self, capability: str, point: int | None = None) -> Session | None:
         listener = self.get_listener()
-        return listener.get_session(capability, point) if listener else None
+        return listener.session_async(capability, point) if listener else None
 
     def session_by_name(self, name: str | None = None, capability_path: str | None = None) -> Session | None:
         target = name or self.session_name
         if listener := self.get_listener():
-            for sv in listener.session_views():
+            for sv in listener.session_views_async():
                 if sv.session.config.name == target:
                     if capability_path is None or sv.has_capability_async(capability_path):
                         return sv.session
@@ -180,7 +180,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def sessions(self, capability_path: str | None = None) -> Generator[Session, None, None]:
         if listener := self.get_listener():
-            for sv in listener.session_views():
+            for sv in listener.session_views_async():
                 if capability_path is None or sv.has_capability_async(capability_path):
                     yield sv.session
 

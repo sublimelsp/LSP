@@ -46,7 +46,7 @@ class LspToggleInlayHintsCommand(LspWindowCommand):
         status = 'on' if enable else 'off'
         sublime.status_message(f'Inlay Hints are {status}')
         for session in self.sessions():
-            for sv in session.session_views():
+            for sv in session.session_views_async():
                 if not enable:
                     sv.session_buffer.remove_all_inlay_hints()
                 elif sv.get_request_flags() & RequestFlags.INLAY_HINT:
@@ -85,7 +85,7 @@ class LspInlayHintClickCommand(LspTextCommand):
         text_edits = inlay_hint.get('textEdits')
         if not text_edits:
             return
-        for sb in session.session_buffers():
+        for sb in session.session_buffers_async():
             sb.remove_inlay_hint_phantom(phantom_uuid)
         apply_text_edits(self.view, text_edits, label="Insert Inlay Hint")
 

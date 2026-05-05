@@ -75,7 +75,7 @@ class WillSaveWaitTask(LspTask):
     def _handle_next_session_async(self) -> None:
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
-            self._purge_changes()
+            self._purge_changes_async()
             view = self._task_runner.view
             session.send_request_task(will_save_wait_until(view, reason=TextDocumentSaveReason.Manual)) \
                 .then(self._on_response_async)
@@ -101,7 +101,7 @@ class FormatOnSaveTask(LspTask):
     @override
     def run_async(self) -> None:
         super().run_async()
-        self._purge_changes()
+        self._purge_changes_async()
         syntax = self._task_runner.view.syntax()
         if not syntax:
             return
@@ -142,7 +142,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
             self.select_formatter(base_scope, session_names)
             return
         if listener := self.get_listener():
-            listener.purge_changes()
+            listener.purge_changes_async()
         if len(session_names) > 1:
             formatter = get_formatter(self.view.window(), base_scope)
             if formatter:
@@ -184,7 +184,7 @@ class LspFormatDocumentCommand(LspTextCommandWithTasks):
                 window_manager.formatters[base_scope] = session_name
         if session := self.session_by_name(session_name, self.capability):
             if listener := self.get_listener():
-                listener.purge_changes()
+                listener.purge_changes_async()
             session.send_request_task(text_document_formatting(self.view)).then(self.on_result_async)
 
 
@@ -204,7 +204,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: dict | None = None) -> None:
         if listener := self.get_listener():
-            listener.purge_changes()
+            listener.purge_changes_async()
         if has_single_nonempty_selection(self.view):
             session = self.best_session(self.capability)
             selection = first_selection_region(self.view)

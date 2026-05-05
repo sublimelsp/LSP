@@ -362,10 +362,10 @@ class SessionView:
         if request := self._active_requests.get(request_id, None):
             request.update_progress_async(params)
 
-    def on_text_changed(
+    def on_text_changed_async(
         self, change_count: int, changes: list[sublime.TextChange], action: ChangeEventAction
     ) -> None:
-        self.session_buffer.on_text_changed(self.view, change_count, changes, action)
+        self.session_buffer.on_text_changed_async(self.view, change_count, changes, action)
 
     def on_revert_async(self) -> None:
         self.session_buffer.on_revert_async(self.view)
@@ -373,8 +373,8 @@ class SessionView:
     def on_reload_async(self) -> None:
         self.session_buffer.on_reload_async(self.view)
 
-    def purge_changes(self) -> None:
-        self.session_buffer.purge_changes(self.view)
+    def purge_changes_async(self) -> None:
+        self.session_buffer.purge_changes_async(self.view)
 
     def on_pre_save_async(self) -> None:
         self.session_buffer.on_pre_save_async(self.view)

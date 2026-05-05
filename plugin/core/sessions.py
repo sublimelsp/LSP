@@ -103,6 +103,7 @@ from .file_watcher import get_file_watcher_implementation
 from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
+from .logging import trace
 from .open import center_selection
 from .open import open_externally
 from .open import open_file

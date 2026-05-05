@@ -1382,7 +1382,7 @@ class Session(APIHandler, TransportCallbacks):
                     ignores = config.get('ignores') or self._get_global_ignore_globs(folder.path)
                     watcher = self._watcher_impl.create(folder.path, patterns, events, ignores, self)
                     self._static_file_watchers.append(watcher)
-        self.do_workspace_diagnostics()
+        self.do_workspace_diagnostics_async()
         return result
 
     def _get_global_ignore_globs(self, root_path: str) -> list[str]:
@@ -1662,7 +1662,7 @@ class Session(APIHandler, TransportCallbacks):
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
-    def notify_plugin_on_session_buffer_change(self, session_buffer: SessionBufferProtocol) -> None:
+    def bnotify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):
@@ -1842,7 +1842,7 @@ class Session(APIHandler, TransportCallbacks):
 
     # --- Workspace Pull Diagnostics -----------------------------------------------------------------------------------
 
-    def do_workspace_diagnostics(self) -> None:
+    def do_workspace_diagnostics_async(self) -> None:
         if not self.get_workspace_folders():
             return
         for identifier in self.diagnostics.workspace_diagnostics_identifiers:

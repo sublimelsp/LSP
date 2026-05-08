@@ -171,17 +171,24 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
                 return listener
         return None
 
-    # def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
-    #     inside_workspace = self._workspace.contains(listener.view)
-    #     scheme = parse_uri(listener.get_uri())[0]
-    #     for session in self._sessions:
-    #         if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
-    #             # debug("registering session", session.config.name, "to listener", listener)
-    #             try:
-    #                 listener.on_session_initialized_async(session)
-    #             except Exception as ex:
-    #                 message = f"failed to register session {session.config.name} to listener {listener}"
-    #                 exception_log(message, ex)
+    def recheck_is_applicable_async(self, view: sublime.View, config_name: str) -> None:
+        if not (listener := self.listener_for_view(view)):
+            debug(f'No listener for view {view}')
+            return
+        if listener == self._new_listener:
+            debug(f'Already starting relevant sessions for view {view}.')
+            return
+        scheme = parse_uri(listener.get_uri())[0]
+        if (config := self._config_manager.get_config(config_name)) and config.enabled:
+            is_applicable = config.match_view(view, scheme, self.window, self.workspace_folders)
+            if session := self.get_session(config.name, view.file_name()):
+                session_view = session.session_view_for_view_async(view)
+                if is_applicable and not session_view:
+                    listener.on_session_initialized_async(session)
+                elif not is_applicable and session_view:
+                    session.shutdown_session_view_async(session_view)
+            elif is_applicable:
+                sublime_aio.run_coroutine(self.start(config, listener))
 
     def get_session(self, config_name: str, file_path: str | None = None) -> Session | None:
         if file_path:
@@ -248,7 +255,7 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
 
             try:
                 trace()
-                workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)                
+                workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
                 plugin_class = get_plugin(config.name)
                 variables = extract_variables(self._window)
                 cwd = workspace_folders[0].path if workspace_folders else None
@@ -385,7 +392,10 @@ class WindowManager(Manager, WindowConfigChangeListener, ViewStatusHandler):
             return "matches a pattern in binary_file_patterns"
         if matches_pattern(path, settings.get("file_exclude_patterns")):
             return "matches a pattern in file_exclude_patterns"
-        patterns = [sublime_pattern_to_glob(pattern, True) for pattern in settings.get("folder_exclude_patterns") or []]
+        patterns = [
+            sublime_pattern_to_glob(pattern, is_directory_pattern=True)
+            for pattern in settings.get("folder_exclude_patterns")
+        ]
         if matches_pattern(path, patterns):
             return "matches a pattern in folder_exclude_patterns"
         if self._workspace.includes_excluded_path(path):

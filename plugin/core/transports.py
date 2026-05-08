@@ -3,23 +3,16 @@ from __future__ import annotations
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
-from .promise import PackagedTask
-from .promise import Promise
 from abc import ABC
 from abc import abstractmethod
 from asyncio.subprocess import Process
-from contextlib import closing
-from functools import partial
-from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import final
-from typing import IO
 from typing import TYPE_CHECKING
 from typing_extensions import override
 import asyncio
 import contextlib
-import http.client
 import json
 import os
 import shutil
@@ -27,13 +20,10 @@ import socket
 import sublime
 import sublime_aio
 import subprocess
-import threading
-import time
 import weakref
 
 if TYPE_CHECKING:
     from .protocol import JSONRPCMessage
-    from io import BufferedIOBase
 
 try:
     import orjson
@@ -369,6 +359,7 @@ class TransportWrapper:
 
     async def send(self, payload: JSONRPCMessage) -> None:
         if self._transport:
+            debug("sending payload:", payload)
             await self._transport.write(payload)
 
     async def send_bytes(self, payload: bytes) -> None:
@@ -389,16 +380,20 @@ class TransportWrapper:
         try:
             while self._transport:
                 if (payload := await self._transport.read()) is None:
+                    debug("payload is None")
                     continue
 
                 async def process_payload() -> None:
                     if callback_object := self._callback_object():
                         await callback_object.on_payload(payload)
 
+                debug("received payload:", payload)
                 asyncio.get_running_loop().create_task(process_payload())
         except (AttributeError, BrokenPipeError, StopLoopError):
+            debug("exiting from _read_loop")
             pass
         except Exception as ex:
+            exception_log("exiting from _read_loop with exception", ex)
             exception = ex
         if exception:
             await self._end(exception)
@@ -481,7 +476,7 @@ class ErrorReader:
                 else:
                     break
         except (BrokenPipeError, AttributeError, asyncio.CancelledError):
-            pass
+            debug("exiting from ErrorReader._loop with expected error")
         except Exception as ex:
             exception_log("unexpected exception type in error reader", ex)
 

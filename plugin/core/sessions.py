@@ -122,7 +122,6 @@ from .protocol import Request
 from .protocol import ResolvedCodeLens
 from .protocol import Response
 from .protocol import ResponseError
-from .protocol import ResponseException
 from .protocol import ServerNotification
 from .protocol import ServerResponse
 from .settings import globalprefs
@@ -1004,7 +1003,7 @@ class CancellableInflightStreamingRequest(CancellableRequest[R]):
 
     def on_error(self, error: ResponseError) -> None:
         if self._future:
-            self._future.set_exception(ResponseException(error))
+            self._future.set_exception(Error.from_lsp(error))
         else:
             debug(f"streaming request with ID {self.id} got an error response without a future set: {error}")
 
@@ -1345,7 +1344,7 @@ class Session(APIHandler, TransportCallbacks):
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         try:
             result = await self.request(Request.initialize(params))
-        except ResponseException as e:
+        except Error as e:
             await self.end()
             raise
         capabilities = result['capabilities']
@@ -1877,7 +1876,7 @@ class Session(APIHandler, TransportCallbacks):
                     if is_workspace_full_document_diagnostic_report(diagnostic_report):
                         self.handle_diagnostics(uri, identifier, version, diagnostic_report['items'])
             self.workspace_diagnostics_pending_responses[identifier] = None
-        except ResponseException as e:
+        except Error as e:
             if e.code == LSPErrorCodes.ServerCancelled:
                 if is_diagnostic_server_cancellation_data(e.data) and e.data['retriggerRequest']:
                     # Retrigger the request after a short delay, but don't reset the pending response variable for this
@@ -2269,7 +2268,6 @@ class Session(APIHandler, TransportCallbacks):
         self.request_id += 1
         request_id = self.request_id
         future: asyncio.Future[R] = asyncio.Future()
-        loop = asyncio.get_running_loop()
         result = CancellableInflightRequest(future, request_id, self)
         if request.progress and isinstance(request.params, dict):
             request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
@@ -2277,12 +2275,12 @@ class Session(APIHandler, TransportCallbacks):
             request.params["partialResultToken"] = _PARTIAL_RESULT_PROGRESS_PREFIX + str(request_id)
 
         def on_result(response: R) -> None:
-            debug(f"resolving future {request_id} normally with value: {response}")
-            loop.call_soon(lambda: future.set_result(response))
+            trace()
+            future.set_result(response)
 
         def on_error(error: ResponseError) -> None:
-            debug(f"resolving future {request_id} exceptionally with error: {error}")
-            loop.call_soon(lambda: future.set_exception(ResponseException(error)))
+            trace()
+            future.set_exception(Error.from_lsp(error))
 
         self._response_handlers[request_id] = (request, on_result, on_error)
         self._invoke_views_async(request, "on_request_started_async", request_id, request)
@@ -2315,7 +2313,7 @@ class Session(APIHandler, TransportCallbacks):
         def on_result(response: R) -> None:
             result.on_partial_result(response)
 
-        def on_error(error: ErrorResponse) -> None:
+        def on_error(error: ResponseError) -> None:
             result.on_error(error)
 
         self._response_handlers[request_id] = (request, on_result, on_error)
@@ -2345,8 +2343,8 @@ class Session(APIHandler, TransportCallbacks):
             if future.cancelled():
                 return
             if ex := future.exception():
-                if isinstance(ex, ResponseException):
-                    on_error(ex.error)
+                if isinstance(ex, Error):
+                    on_error(ex.to_lsp())
             else:
                 on_result(future.result())
 
@@ -2473,7 +2471,7 @@ class Session(APIHandler, TransportCallbacks):
             try:
                 if req_id is None:
                     # server notification or client request
-                    debug(f"resolving {typestr} ({method})")
+                    debug(f"resolving {typestr} ({method}) with params: {result}")
                     handler(result)
                 else:
                     # server request
@@ -2502,12 +2500,14 @@ class Session(APIHandler, TransportCallbacks):
     def response_handler(
         self, response_id: str | int, response: JSONRPCMessage
     ) -> tuple[Callable[[ResponseError], None], str | None, Any, bool]:
+        debug("looking up response handler for request ID", response_id)
         matching_handler = self._response_handlers.pop(response_id, None)
         if not matching_handler:
+            trace()
             error = {"code": ErrorCodes.InvalidParams, "message": f"unknown response ID {response_id}"}
             return (print_to_status_bar, None, error, True)
         request, handler, error_handler = matching_handler
-        sublime.set_timeout_async(lambda: self._invoke_views_async(request, "on_request_finished_async", response_id))
+        self._invoke_views_async(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
             return (handler, request.method, response["result"], False)
         if "result" not in response and "error" in response:

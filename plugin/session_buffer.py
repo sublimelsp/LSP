@@ -48,7 +48,6 @@ from .core.protocol import Error
 from .core.protocol import Request
 from .core.protocol import ResolvedCodeLens
 from .core.protocol import ResponseError
-from .core.protocol import ResponseException
 from .core.sessions import is_diagnostic_server_cancellation_data
 from .core.sessions import Session
 from .core.sessions import SessionViewProtocol
@@ -670,7 +669,7 @@ class SessionBuffer:
                         self.session.diagnostics_result_ids[(uri, identifier)] = diagnostic_report.get('resultId')
                         if is_full_document_diagnostic_report(diagnostic_report):
                             self.session.handle_diagnostics(uri, identifier, None, diagnostic_report['items'])
-        except ResponseException as ex:
+        except Error as ex:
             self._document_diagnostic_pending_requests[identifier] = None
             if ex.code == LSPErrorCodes.ServerCancelled:
                 data = ex.data

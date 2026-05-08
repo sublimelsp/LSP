@@ -1058,13 +1058,13 @@ class _RegistrationData:
 
     def __del__(self) -> None:
         for sb in self.session_buffers:
-            sb.unregister_capability(self.registration_id, self.capability_path, self.registration_path)
+            sb.unregister_capability_async(self.registration_id, self.capability_path, self.registration_path)
 
     def check_applicable(self, sb: SessionBufferProtocol, *, suppress_requests: bool = False) -> None:
         for sv in sb.session_views:
             if self.selector.matches(sv.view):
                 self.session_buffers.add(sb)
-                sb.register_capability(
+                sb.register_capability_async(
                     self.registration_id, self.capability_path, self.registration_path, self.options, suppress_requests)
                 return
 
@@ -1672,7 +1672,7 @@ class Session(APIHandler, TransportCallbacks):
         uri, r = get_uri_and_range_from_location(location)
         return await self.open_uri(uri, r, flags, group)
 
-    def bnotify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
+    def notify_plugin_on_session_buffer_change_async(self, session_buffer: SessionBufferProtocol) -> None:
         if not self._plugin:
             return
         if isinstance(self._plugin, LspPlugin):

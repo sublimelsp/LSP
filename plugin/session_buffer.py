@@ -235,7 +235,7 @@ class SessionBuffer:
             self.do_code_lenses_async(view)
             if userprefs().link_highlight_style in {"underline", "none"}:
                 self._do_document_link_async(view, version)
-            self.session.bnotify_plugin_on_session_buffer_change_async(self)
+            self.session.notify_plugin_on_session_buffer_change_async(self)
 
     def _check_did_close(self, view: sublime.View) -> None:
         if self.opened and self.should_notify_did_close():

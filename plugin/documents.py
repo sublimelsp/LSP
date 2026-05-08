@@ -481,7 +481,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     def _on_selection_modified_debounced(self) -> None:
         if userprefs().document_highlight_style:
-            self._do_highlights()
+            self._do_highlights_async()
         if userprefs().show_code_actions:
             self._do_code_actions_for_selection_async(self.session_buffers_async('codeActionProvider'))
         code_lenses_enabled = LspToggleCodeLensesCommand.are_enabled(self.view.window())
@@ -903,7 +903,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
                 return True
         return False
 
-    def _do_highlights(self) -> None:
+    def _do_highlights_async(self) -> None:
         region = first_selection_region(self.view)
         if region is None:
             return
@@ -1049,7 +1049,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
         if userprefs().document_highlight_style:
             self._clear_highlight_regions()
             self._when_selection_remains_stable(
-                self._do_highlights, first_region, after_ms=self.debounce_time)
+                self._do_highlights_async, first_region, after_ms=self.debounce_time)
         if userprefs().show_signature_help and (selection := self._stored_selection):
             if self._sighelp:
                 self.do_signature_help_async(SignatureHelpTriggerKind.ContentChange)
@@ -1133,7 +1133,7 @@ class DocumentSyncListener(sublime_aio.ViewEventListener, AbstractViewListener):
 
     def on_userprefs_changed_async(self) -> None:
         if userprefs().document_highlight_style:
-            self._do_highlights()
+            self._do_highlights_async()
         else:
             self._clear_highlight_regions()
         self._code_actions_for_selection.clear()

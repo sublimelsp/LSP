@@ -3,6 +3,7 @@ from __future__ import annotations
 from .constants import ST_PLATFORM
 from .logging import debug
 from .logging import exception_log
+from .logging import trace
 from abc import ABC
 from abc import abstractmethod
 from asyncio.subprocess import Process
@@ -315,6 +316,7 @@ class StreamTransport(Transport):
     async def write(self, payload: JSONRPCMessage) -> None:
         body = self._encoder(payload)
         self._writer.writelines((f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body))
+        trace()
         await self._writer.drain()
 
     @override
@@ -325,6 +327,7 @@ class StreamTransport(Transport):
     @override
     async def close(self) -> None:
         self._writer.close()
+        trace()
         await self._writer.wait_closed()
 
 
@@ -403,6 +406,7 @@ class TransportWrapper:
         if self._process:
             if not exception:
                 try:
+                    trace()
                     # Allow the process to stop itself.
                     exit_code = await asyncio.wait_for(self._process.wait(), timeout=1)
                 except (AttributeError, ProcessLookupError, asyncio.TimeoutError):
@@ -415,10 +419,13 @@ class TransportWrapper:
                     # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
                     await self._process.wait()
                 except (AttributeError, ProcessLookupError):
+                    trace()
                     pass
                 except Exception as ex:
+                    trace()
                     exception = ex  # TODO: Old captured exception is overwritten
-        await callback_object.on_transport_close(exit_code or 0, exception)
+        if callback_object := self._callback_object():
+            await callback_object.on_transport_close(exit_code or 0, exception)
         await self.close()
 
 

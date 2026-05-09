@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from ...protocol import AnnotatedTextEdit
+from ...protocol import CreateFile
+from ...protocol import DeleteFile
 from ...protocol import Position
+from ...protocol import RenameFile
 from ...protocol import SnippetTextEdit
+from ...protocol import TextDocumentEdit
 from ...protocol import TextEdit
 from ...protocol import WorkspaceEdit
 from .logging import debug
@@ -30,7 +34,24 @@ class WorkspaceEditSummary(TypedDict):
     deleted_files: NotRequired[int]
 
 
-# TODO: change return type to TypeIs[SnippetTextEdit] when properly supported by Pyright
+def is_text_document_edit(
+    document_change: TextDocumentEdit | CreateFile | RenameFile | DeleteFile
+) -> TypeGuard[TextDocumentEdit]:
+    return 'edits' in document_change
+
+
+def is_create_file(document_change: TextDocumentEdit | CreateFile | RenameFile | DeleteFile) -> TypeGuard[CreateFile]:
+    return document_change.get('kind') == 'create'
+
+
+def is_rename_file(document_change: TextDocumentEdit | CreateFile | RenameFile | DeleteFile) -> TypeGuard[RenameFile]:
+    return document_change.get('kind') == 'rename'
+
+
+def is_delete_file(document_change: TextDocumentEdit | CreateFile | RenameFile | DeleteFile) -> TypeGuard[DeleteFile]:
+    return document_change.get('kind') == 'rename'
+
+
 def is_snippet_text_edit(edit: TextEdit | AnnotatedTextEdit | SnippetTextEdit) -> TypeGuard[SnippetTextEdit]:
     return 'snippet' in edit
 
@@ -92,11 +113,8 @@ def apply_text_edits(
                 'required_view_version': required_view_version,
             }
         )
-    else:
-        view.run_command(
-            'lsp_apply_text_document_edit',
-            {'edits': edits, 'version': required_view_version, 'label': label}
-        )
+    elif required_view_version is None or required_view_version == view.change_count():
+        view.run_command('lsp_apply_text_document_edit', {'edits': edits, 'label': label})
     # Resolving from the next message loop iteration guarantees that the edits have already been applied in the main
     # thread, and that we've received view changes in the asynchronous thread.
     return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(view if view.is_valid() else None)))

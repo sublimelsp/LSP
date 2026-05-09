@@ -267,7 +267,9 @@ class Transport(ABC):
 async def parse_headers(reader: asyncio.StreamReader) -> dict[str, str] | None:
     headers: dict[str, str] = {}
     while True:
+        debug("parse headers: reading one line")
         line = await reader.readline()
+        debug("parse headers: read line:", line)
         if not line:
             return None
         line = line.decode("ascii").strip()
@@ -294,7 +296,9 @@ class StreamTransport(Transport):
     async def read(self) -> JSONRPCMessage:
         headers: dict[str, str] | None = None
         try:
+            debug("parsing headers...")
             headers = await parse_headers(self._reader)
+            debug("parsed headers:", headers)
             if headers is None:
                 raise StopLoopError
             content_length = headers.get("content-length")
@@ -364,6 +368,7 @@ class TransportWrapper:
         if self._transport:
             debug("sending payload:", payload)
             await self._transport.write(payload)
+            debug("sent payload:", payload)
 
     async def send_bytes(self, payload: bytes) -> None:
         if self._transport:
@@ -473,12 +478,10 @@ class ErrorReader:
     async def _loop(self) -> None:
         try:
             while self._reader:
-                raw = await self._reader.readline()
-                if not raw:
-                    break
-                message = raw.decode("utf-8", "replace")
-                callback_object = self._callback_object()
-                if callback_object:
+                message = self._reader.readline().decode("utf-8", "replace")
+                if not message:
+                    continue
+                if callback_object := self._callback_object():
                     callback_object.on_stderr_message(message.rstrip())
                 else:
                     break

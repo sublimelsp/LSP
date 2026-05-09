@@ -1470,7 +1470,7 @@ class Session(APIHandler, TransportCallbacks):
             if (arguments := command.get('arguments')) and len(arguments) == 3:
                 if references := cast('list[Location]', arguments[2]):
                     if len(references) == 1:
-                        self.open_location_async(references[0])
+                        await self.open_location(references[0])
                     else:
                         view_uri = uri_from_view(view)
                         locations = sorted(
@@ -1581,15 +1581,10 @@ class Session(APIHandler, TransportCallbacks):
         flags: sublime.NewFileFlags = sublime.NewFileFlags.NONE,
         group: int = -1
     ) -> sublime.View | None:
-        result: PackagedTask[sublime.View | None] = Promise.packaged_task()
-
-        def handle_continuation(view: sublime.View | None) -> None:
-            if view and r:
-                center_selection(view, r)
-            sublime.set_timeout_async(lambda: result[1](view))
-
-        sublime.set_timeout(lambda: open_file(self.window, uri, flags, group).then(handle_continuation))
-        await result[0]
+        view = await open_file(self.window, uri, flags, group)
+        if view and r:
+            center_selection(view, r)
+        return view
 
     async def _open_res_uri(
         self,

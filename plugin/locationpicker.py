@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from urllib.request import url2pathname
 import functools
 import sublime
+import sublime_aio
 import weakref
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from .core.sessions import Session
 
 
-def open_location_async(
+async def open_location(
     session: Session,
     location: Location | LocationLink,
     side_by_side: bool,
@@ -32,15 +33,12 @@ def open_location_async(
         flags |= sublime.NewFileFlags.FORCE_GROUP
     if side_by_side:
         flags |= sublime.NewFileFlags.ADD_TO_SELECTION | sublime.NewFileFlags.SEMI_TRANSIENT
-
-    def check_success_async(view: sublime.View | None) -> None:
-        if not view:
-            uri = get_uri_and_position_from_location(location)[0]
-            msg = f"Unable to open URI {uri}"
-            debug(msg)
-            session.window.status_message(msg)
-
-    session.open_location_async(location, flags, group).then(check_success_async)
+    view = await session.open_location(location, flags, group)
+    if not view:
+        uri = get_uri_and_position_from_location(location)[0]
+        msg = f"Unable to open URI {uri}"
+        debug(msg)
+        session.window.status_message(msg)
 
 
 def open_basic_file(
@@ -128,9 +126,9 @@ class LocationPicker:
                     if not open_basic_file(session, uri, position, flags):
                         self._window.status_message(f"Unable to open {uri}")
             else:
-                sublime.set_timeout_async(
-                    functools.partial(
-                        open_location_async, session, location, self._side_by_side, self._force_group, self._group))
+                sublime_aio.run_coroutine(
+                    open_location(session, location, self._side_by_side, self._force_group, self._group)
+                )
         else:
             self._window.focus_view(self._view)
             # When a group was specified close the current highlighted
